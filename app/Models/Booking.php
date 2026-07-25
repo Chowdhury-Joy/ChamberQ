@@ -26,4 +26,9 @@ class Booking extends Model
     {
         return $this->morphTo();
     }
+
+    public function labTests()
+    {
+        return $this->belongsToMany(LabTest::class);
+    }
 }
