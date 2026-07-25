@@ -26,6 +26,7 @@ class SuperAdminPanelProvider extends PanelProvider
         return $panel
             ->id('superAdmin')
             ->path('admin')
+            ->login()
             ->domains(config('tenancy.central_domains') ?? [])
             ->colors([
                 'primary' => Color::Amber,

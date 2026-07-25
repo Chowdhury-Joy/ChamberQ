@@ -37,8 +37,8 @@ Route::middleware([
     Route::get('/manifest.webmanifest', [\App\Http\Controllers\PWAController::class, 'manifest']);
     Route::get('/sw.js', [\App\Http\Controllers\PWAController::class, 'serviceWorker']);
     
-    // Catch-all for WebPages
-    Route::get('/{slug?}', [\App\Http\Controllers\WebPageController::class, 'show'])->where('slug', '.*');
-
     Route::get('/api/queue/{type}/{bookableId}/{date}', [\App\Http\Controllers\QueueStatusController::class, 'show']);
+
+    // Catch-all for WebPages
+    Route::get('/{slug?}', [\App\Http\Controllers\WebPageController::class, 'show'])->where('slug', '^(?!tenant|admin|api|lang).*$');
 });
