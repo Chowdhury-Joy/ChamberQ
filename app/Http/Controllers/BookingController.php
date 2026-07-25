@@ -6,7 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Chamber;
 use App\Models\Doctor;
 use App\Models\ScheduleSession;
-use Carbon\Carbon;
+use App\Models\LabCollectionSlot;
 use App\Services\BookingService;
 use Exception;
 
@@ -17,24 +17,30 @@ class BookingController extends Controller
         $chambers = Chamber::all();
         $doctors = Doctor::all();
         $sessions = ScheduleSession::with(['chamber', 'doctor'])->get();
+        $labSlots = LabCollectionSlot::with('chamber')->get();
 
-        return view('tenant.book', compact('chambers', 'doctors', 'sessions'));
+        return view('tenant.book', compact('chambers', 'doctors', 'sessions', 'labSlots'));
     }
 
     public function store(Request $request, BookingService $bookingService)
     {
         $request->validate([
-            'session_id' => 'required|exists:schedule_sessions,id',
+            'bookable_type' => 'required|in:session,lab',
+            'bookable_id' => 'required|integer',
             'booking_date' => 'required|date',
             'patient_name' => 'required|string|max:255',
             'patient_phone' => 'required|string|max:20',
         ]);
 
         try {
-            $session = ScheduleSession::findOrFail($request->session_id);
+            if ($request->bookable_type === 'session') {
+                $bookable = ScheduleSession::findOrFail($request->bookable_id);
+            } else {
+                $bookable = LabCollectionSlot::findOrFail($request->bookable_id);
+            }
             
-            $booking = $bookingService->createBookingForSession(
-                $session,
+            $booking = $bookingService->createBookingForBookable(
+                $bookable,
                 $request->booking_date,
                 $request->patient_name,
                 $request->patient_phone

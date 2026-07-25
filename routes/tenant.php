@@ -22,7 +22,14 @@ Route::middleware([
     'web',
     InitializeTenancyByDomain::class,
     PreventAccessFromCentralDomains::class,
+    \App\Http\Middleware\Localization::class,
 ])->group(function () {
+    Route::get('/lang/{locale}', function ($locale) {
+        if (in_array($locale, ['en', 'bn'])) {
+            session()->put('locale', $locale);
+        }
+        return back();
+    });
     Route::get('/book', [\App\Http\Controllers\BookingController::class, 'create']);
     Route::post('/api/bookings', [\App\Http\Controllers\BookingController::class, 'store']);
     
@@ -33,5 +40,5 @@ Route::middleware([
     // Catch-all for WebPages
     Route::get('/{slug?}', [\App\Http\Controllers\WebPageController::class, 'show'])->where('slug', '.*');
 
-    Route::get('/api/queue/{sessionId}/{date}', [\App\Http\Controllers\QueueStatusController::class, 'show']);
+    Route::get('/api/queue/{type}/{bookableId}/{date}', [\App\Http\Controllers\QueueStatusController::class, 'show']);
 });

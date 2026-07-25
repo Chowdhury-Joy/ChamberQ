@@ -19,8 +19,10 @@
     <nav class="navbar">
         <a href="/" class="navbar-brand">{{ tenant('id') }}</a>
         <div class="navbar-nav">
-            <a href="/">Home</a>
-            <a href="/book" class="btn btn-primary">Book Appointment</a>
+            <a href="/">{{ __('Home') }}</a>
+            <a href="/lang/en" style="margin-left: 1rem; font-size: 0.8rem;">EN</a>
+            <a href="/lang/bn" style="margin-left: 0.5rem; font-size: 0.8rem;">BN</a>
+            <a href="/book" class="btn btn-primary" style="margin-left: 1.5rem;">{{ __('Book Appointment') }}</a>
         </div>
     </nav>
 
@@ -51,12 +53,12 @@
 
                 @case('doctors_list')
                     <section class="section">
-                        <h2 class="section-heading">{{ $block['data']['heading'] }}</h2>
+                        <h2 class="section-heading">{{ __($block['data']['heading']) }}</h2>
                         <div class="grid">
                             @foreach(App\Models\Doctor::all() as $doctor)
                                 <div class="card">
                                     <h3>{{ $doctor->name }}</h3>
-                                    <p>Specialist at {{ tenant('id') }}</p>
+                                    <p>{{ __('Specialist at') }} {{ tenant('id') }}</p>
                                 </div>
                             @endforeach
                         </div>
@@ -65,7 +67,7 @@
 
                 @case('services')
                     <section class="section">
-                        <h2 class="section-heading">{{ $block['data']['heading'] }}</h2>
+                        <h2 class="section-heading">{{ __($block['data']['heading']) }}</h2>
                         <div class="grid">
                             @foreach($block['data']['items'] ?? [] as $item)
                                 <div class="card">
