@@ -19,6 +19,7 @@ class Tenant extends BaseTenant
             'custom_code_approved_at',
             'billing_status',
             'plan_tier',
+            'slot_cap_mode',
             'feature_flags',
             'created_at',
             'updated_at',
