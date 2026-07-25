@@ -12,8 +12,6 @@ class SlotBlockForm
     {
         return $schema
             ->components([
-                TextInput::make('tenant_id')
-                    ->required(),
                 TextInput::make('chamber_id')
                     ->numeric(),
                 TextInput::make('doctor_id')

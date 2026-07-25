@@ -10,7 +10,6 @@ class SlotBlock extends Model
     use BelongsToTenant;
 
     protected $fillable = [
-        'tenant_id',
         'chamber_id',
         'doctor_id',
         'date',

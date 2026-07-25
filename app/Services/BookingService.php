@@ -9,7 +9,7 @@ use App\Models\SlotBlock;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Model;
-use Exception;
+use App\Exceptions\BookingUnavailableException;
 
 class BookingService
 {
@@ -20,24 +20,29 @@ class BookingService
         string $patientPhone
     ): Booking {
         return DB::transaction(function () use ($bookable, $bookingDate, $patientName, $patientPhone) {
+            $tenant = tenant();
+            $capMode = $tenant->slot_cap_mode ?? 'per_session';
+
             // Pessimistic lock
-            $lockedBookable = get_class($bookable)::where('id', $bookable->id)->lockForUpdate()->first();
+            if ($bookable instanceof ScheduleSession && $capMode === 'per_doctor_chamber') {
+                \App\Models\Doctor::where('id', $bookable->doctor_id)->lockForUpdate()->first();
+                $lockedBookable = get_class($bookable)::find($bookable->id);
+            } else {
+                $lockedBookable = get_class($bookable)::where('id', $bookable->id)->lockForUpdate()->first();
+            }
 
             $date = Carbon::parse($bookingDate);
-            $dayOfWeek = strtolower($date->format('l'));
 
-            // 1. Validate day of week
-            if ($bookable instanceof ScheduleSession) {
-                 if ($date->dayOfWeek !== $lockedBookable->day_of_week) {
-                     throw new Exception("The requested date does not match the session's configured day of week.");
-                 }
-            } else if ($bookable instanceof LabCollectionSlot) {
-                 if ($dayOfWeek !== strtolower($lockedBookable->day_of_week)) {
-                     throw new Exception("The requested date does not match the slot's configured day of week.");
-                 }
+            // 1. Validate day of week. Both bookable types store Carbon's
+            // dayOfWeek (0 = Sunday .. 6 = Saturday), so one comparison covers both.
+            if ($date->dayOfWeek !== $lockedBookable->day_of_week) {
+                throw BookingUnavailableException::dayOfWeekMismatch(
+                    $bookable instanceof LabCollectionSlot
+                );
             }
 
             // 2. Validate against SlotBlocks
+            $isBlocked = false;
             if ($bookable instanceof ScheduleSession) {
                 $isBlocked = SlotBlock::where('date', $bookingDate)
                     ->where(function ($query) use ($lockedBookable) {
@@ -48,16 +53,22 @@ class BookingService
                             ->orWhere('doctor_id', $lockedBookable->doctor_id);
                     })
                     ->exists();
+            } elseif ($bookable instanceof LabCollectionSlot) {
+                $isBlocked = SlotBlock::where('date', $bookingDate)
+                    ->where(function ($query) use ($lockedBookable) {
+                        $query->whereNull('chamber_id')->whereNull('doctor_id')
+                            ->orWhere(function ($q) use ($lockedBookable) {
+                                $q->where('chamber_id', $lockedBookable->chamber_id)->whereNull('doctor_id');
+                            });
+                    })
+                    ->exists();
+            }
 
-                if ($isBlocked) {
-                    throw new Exception("The requested date is blocked for this session.");
-                }
+            if ($isBlocked) {
+                throw BookingUnavailableException::dateBlocked();
             }
 
             // 3. Enforce capacity
-            $tenant = tenant();
-            $capMode = $tenant->slot_cap_mode ?? 'per_session';
-
             $currentBookingsCountQuery = Booking::where('booking_date', $bookingDate)
                 ->where('status', '!=', 'cancelled');
 
@@ -76,7 +87,7 @@ class BookingService
             $currentBookingsCount = $currentBookingsCountQuery->count();
 
             if ($currentBookingsCount >= $capLimit) {
-                throw new Exception("Capacity exceeded for the requested date.");
+                throw BookingUnavailableException::capacityExceeded();
             }
 
             // 4. Allocate MAX(serial_number) + 1
@@ -85,7 +96,7 @@ class BookingService
                 ->where('booking_date', $bookingDate)
                 ->max('serial_number');
 
-            $nextSerial = $maxSerial ? $maxSerial + 1 : 1;
+            $nextSerial = ($maxSerial ?? 0) + 1;
 
             return Booking::create([
                 'bookable_type' => get_class($bookable),

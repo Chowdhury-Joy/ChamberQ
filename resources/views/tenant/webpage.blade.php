@@ -46,7 +46,7 @@
                 @case('rich_text')
                     <section class="section">
                         <div class="rich-text-content">
-                            {!! $block['data']['content'] !!}
+                            {!! clean($block['data']['content'] ?? '') !!}
                         </div>
                     </section>
                     @break

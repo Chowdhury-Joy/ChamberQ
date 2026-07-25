@@ -2,6 +2,8 @@
 
 namespace App\Filament\TenantAdmin\Resources\ScheduleSessions\Schemas;
 
+use App\Support\DayOfWeek;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
 use Filament\Schemas\Schema;
@@ -12,17 +14,15 @@ class ScheduleSessionForm
     {
         return $schema
             ->components([
-                TextInput::make('tenant_id')
-                    ->required(),
                 TextInput::make('chamber_id')
                     ->required()
                     ->numeric(),
                 TextInput::make('doctor_id')
                     ->required()
                     ->numeric(),
-                TextInput::make('day_of_week')
+                Select::make('day_of_week')
                     ->required()
-                    ->numeric(),
+                    ->options(DayOfWeek::options()),
                 TextInput::make('session_name')
                     ->required(),
                 TimePicker::make('start_time')

@@ -12,8 +12,6 @@ class ChamberForm
     {
         return $schema
             ->components([
-                TextInput::make('tenant_id')
-                    ->required(),
                 TextInput::make('name')
                     ->required(),
                 Textarea::make('address')

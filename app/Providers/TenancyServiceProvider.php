@@ -9,7 +9,6 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Stancl\JobPipeline\JobPipeline;
 use Stancl\Tenancy\Events;
-use Stancl\Tenancy\Jobs;
 use Stancl\Tenancy\Listeners;
 use Stancl\Tenancy\Middleware;
 
@@ -22,32 +21,22 @@ class TenancyServiceProvider extends ServiceProvider
     {
         return [
             // Tenant events
+            //
+            // This application runs a SINGLE SHARED DATABASE. The stock stancl
+            // CreateDatabase / MigrateDatabase / DeleteDatabase pipelines are
+            // deliberately absent: enabling them would issue CREATE DATABASE and
+            // DROP DATABASE per tenant, which contradicts the shared-database data
+            // model and is not possible on the shared cPanel target. Tenant
+            // isolation is enforced at the application layer via BelongsToTenant.
+            // Do not re-enable them.
             Events\CreatingTenant::class => [],
-            Events\TenantCreated::class => [
-                JobPipeline::make([
-                    Jobs\CreateDatabase::class,
-                    Jobs\MigrateDatabase::class,
-                    // Jobs\SeedDatabase::class,
-
-                    // Your own jobs to prepare the tenant.
-                    // Provision API keys, create S3 buckets, anything you want!
-
-                ])->send(function (Events\TenantCreated $event) {
-                    return $event->tenant;
-                })->shouldBeQueued(false), // `false` by default, but you probably want to make this `true` for production.
-            ],
+            Events\TenantCreated::class => [],
             Events\SavingTenant::class => [],
             Events\TenantSaved::class => [],
             Events\UpdatingTenant::class => [],
             Events\TenantUpdated::class => [],
             Events\DeletingTenant::class => [],
-            Events\TenantDeleted::class => [
-                JobPipeline::make([
-                    Jobs\DeleteDatabase::class,
-                ])->send(function (Events\TenantDeleted $event) {
-                    return $event->tenant;
-                })->shouldBeQueued(false), // `false` by default, but you probably want to make this `true` for production.
-            ],
+            Events\TenantDeleted::class => [],
 
             // Domain events
             Events\CreatingDomain::class => [],

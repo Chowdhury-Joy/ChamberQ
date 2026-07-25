@@ -31,14 +31,26 @@ Route::middleware([
         return back();
     });
     Route::get('/book', [\App\Http\Controllers\BookingController::class, 'create']);
-    Route::post('/api/bookings', [\App\Http\Controllers\BookingController::class, 'store']);
-    
+
+    // Booking creation is IP rate limited, and refused outright for tenants
+    // whose billing status is read_only.
+    Route::post('/api/bookings', [\App\Http\Controllers\BookingController::class, 'store'])
+        ->middleware(['throttle:10,1', \App\Http\Middleware\EnsureTenantAcceptsBookings::class]);
+
     // PWA Routes
     Route::get('/manifest.webmanifest', [\App\Http\Controllers\PWAController::class, 'manifest']);
     Route::get('/sw.js', [\App\Http\Controllers\PWAController::class, 'serviceWorker']);
-    
-    Route::get('/api/queue/{type}/{bookableId}/{date}', [\App\Http\Controllers\QueueStatusController::class, 'show']);
+
+    // Keyed by the booking UUID: no sequential id is ever exposed, and a
+    // patient can only poll a queue they hold a place in. Polled by the ticket
+    // page, so the limit is generous but present.
+    Route::get('/api/queue/{booking}', [\App\Http\Controllers\QueueStatusController::class, 'show'])
+        ->middleware('throttle:120,1')
+        ->name('queue.status');
+
+    Route::get('/bookings/{booking}', [\App\Http\Controllers\BookingController::class, 'show'])
+        ->name('bookings.show');
 
     // Catch-all for WebPages
-    Route::get('/{slug?}', [\App\Http\Controllers\WebPageController::class, 'show'])->where('slug', '^(?!tenant|admin|api|lang).*$');
+    Route::get('/{slug?}', [\App\Http\Controllers\WebPageController::class, 'show'])->where('slug', '^(?!tenant|admin|api|lang|bookings).*$');
 });

@@ -13,8 +13,6 @@ class WebPageForm
     {
         return $schema
             ->components([
-                TextInput::make('tenant_id')
-                    ->required(),
                 TextInput::make('title')
                     ->required(),
                 TextInput::make('slug')

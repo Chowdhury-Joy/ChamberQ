@@ -11,6 +11,5 @@ class Doctor extends Model
     
     protected $fillable = [
         'name',
-        'tenant_id',
     ];
 }

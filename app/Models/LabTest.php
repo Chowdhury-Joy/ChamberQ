@@ -10,7 +10,6 @@ class LabTest extends Model
     use BelongsToTenant;
 
     protected $fillable = [
-        'tenant_id',
         'name',
         'description',
         'price',

@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->string('tenant_id');
             $table->unsignedBigInteger('chamber_id')->nullable();
-            $table->string('day_of_week');
+            $table->tinyInteger('day_of_week');
             $table->time('start_time');
             $table->time('end_time');
             $table->integer('slot_cap');

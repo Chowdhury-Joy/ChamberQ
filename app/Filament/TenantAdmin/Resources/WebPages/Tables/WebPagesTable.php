@@ -15,8 +15,6 @@ class WebPagesTable
     {
         return $table
             ->columns([
-                TextColumn::make('tenant_id')
-                    ->searchable(),
                 TextColumn::make('title')
                     ->searchable(),
                 TextColumn::make('slug')

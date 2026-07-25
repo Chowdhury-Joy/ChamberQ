@@ -14,8 +14,6 @@ class LabCollectionSlotsTable
     {
         return $table
             ->columns([
-                TextColumn::make('tenant_id')
-                    ->searchable(),
                 TextColumn::make('chamber_id')
                     ->numeric()
                     ->sortable(),

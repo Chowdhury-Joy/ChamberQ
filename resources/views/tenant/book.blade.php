@@ -70,7 +70,7 @@
                         <option value="">{{ __('-- Choose a lab slot --') }}</option>
                         @foreach($labSlots as $slot)
                             <option value="{{ $slot->id }}" data-day="{{ $slot->day_of_week }}">
-                                {{ ucfirst($slot->day_of_week) }} ({{ \Carbon\Carbon::parse($slot->start_time)->format('h:i A') }} - {{ \Carbon\Carbon::parse($slot->end_time)->format('h:i A') }}) at {{ $slot->chamber ? $slot->chamber->name : 'Main Lab' }}
+                                {{ \App\Support\DayOfWeek::label($slot->day_of_week) }} ({{ \Carbon\Carbon::parse($slot->start_time)->format('h:i A') }} - {{ \Carbon\Carbon::parse($slot->end_time)->format('h:i A') }}) at {{ $slot->chamber ? $slot->chamber->name : __('Main Lab') }}
                             </option>
                         @endforeach
                     </select>
@@ -130,12 +130,10 @@
                 const data = await response.json();
                 
                 if (response.ok && data.success) {
-                    this.classList.add('hidden');
-                    document.getElementById('successView').classList.remove('hidden');
-                    document.getElementById('serialBadge').innerText = data.booking.serial_number;
-                    const queueUrl = window.location.origin + '/api/queue/' + bookableType + '/' + data.booking.bookable_id + '/' + data.booking.booking_date;
-                    document.getElementById('queueLink').href = queueUrl;
-                    document.getElementById('queueLink').innerText = queueUrl;
+                    // Straight to the ticket page — it is the screen the patient
+                    // will actually re-read, and its URL is UUID-keyed.
+                    window.location.href = data.booking.ticket_url;
+                    return;
                 } else {
                     msgEl.innerText = data.message || 'Validation error.';
                     msgEl.className = 'alert alert-error';

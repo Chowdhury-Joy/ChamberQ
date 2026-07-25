@@ -11,7 +11,6 @@ class Booking extends Model
     use HasUuids, BelongsToTenant;
 
     protected $fillable = [
-        'tenant_id',
         'bookable_type',
         'bookable_id',
         'booking_date',

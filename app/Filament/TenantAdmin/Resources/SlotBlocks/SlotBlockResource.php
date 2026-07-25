@@ -13,6 +13,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use Filament\Forms;
 
 class SlotBlockResource extends Resource
 {
@@ -36,14 +37,18 @@ class SlotBlockResource extends Resource
                 ->maxLength(255),
             Forms\Components\Checkbox::make('confirm_cancellation')
                 ->label('Conflict Detected: Confirm cancellation of active bookings')
-                ->visible(function (Forms\Get $get) {
+                ->visible(function (\Filament\Schemas\Components\Utilities\Get $get) {
                     $date = $get('date');
                     if (!$date) return false;
                     
                     $query = \App\Models\Booking::where('booking_date', $date)->where('status', '!=', 'cancelled');
                     if ($get('chamber_id')) {
-                        $query->whereHasMorph('bookable', [\App\Models\ScheduleSession::class], function($q) use($get) {
-                            $q->where('chamber_id', $get('chamber_id'));
+                        $query->where(function($q) use ($get) {
+                            $q->whereHasMorph('bookable', [\App\Models\ScheduleSession::class], function($sub) use($get) {
+                                $sub->where('chamber_id', $get('chamber_id'));
+                            })->orWhereHasMorph('bookable', [\App\Models\LabCollectionSlot::class], function($sub) use($get) {
+                                $sub->where('chamber_id', $get('chamber_id'));
+                            });
                         });
                     }
                     if ($get('doctor_id')) {

@@ -10,7 +10,6 @@ class Chamber extends Model
     use BelongsToTenant;
 
     protected $fillable = [
-        'tenant_id',
         'name',
         'address',
         'latitude',

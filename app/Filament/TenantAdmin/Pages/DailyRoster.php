@@ -9,7 +9,7 @@ use Filament\Forms\Contracts\HasForms;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Actions\Action;
+use Filament\Actions\Action;
 use App\Models\Booking;
 use Carbon\Carbon;
 use App\Services\BookingService;
@@ -30,8 +30,8 @@ class DailyRoster extends Page implements HasTable, HasForms
         return $table
             ->query(
                 Booking::query()
-                    ->where('booking_date', Carbon::today())
-                    ->orderByRaw("FIELD(status, 'in_chamber', 'waiting', 'completed', 'cancelled')")
+                    ->whereDate('booking_date', today())
+                    ->orderByRaw("CASE WHEN status = 'in_chamber' THEN 1 WHEN status = 'waiting' THEN 2 WHEN status = 'completed' THEN 3 WHEN status = 'cancelled' THEN 4 ELSE 5 END")
                     ->orderBy('serial_number')
             )
             ->columns([
@@ -48,7 +48,7 @@ class DailyRoster extends Page implements HasTable, HasForms
                         default => 'primary',
                     }),
             ])
-            ->actions([
+            ->recordActions([
                 Action::make('call')
                     ->label('Call to Chamber')
                     ->color('primary')

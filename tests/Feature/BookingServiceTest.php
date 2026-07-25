@@ -5,12 +5,13 @@ namespace Tests\Feature;
 use App\Models\Booking;
 use App\Models\Chamber;
 use App\Models\Doctor;
+use App\Models\LabCollectionSlot;
 use App\Models\ScheduleSession;
 use App\Models\SlotBlock;
 use App\Models\Tenant;
 use App\Services\BookingService;
 use Carbon\Carbon;
-use Exception;
+use App\Exceptions\BookingUnavailableException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -60,8 +61,8 @@ class BookingServiceTest extends TestCase
     {
         $tuesdayDate = Carbon::now()->next(2)->format('Y-m-d');
         
-        $this->expectException(Exception::class);
-        $this->expectExceptionMessage("The requested date does not match the session's configured day of week.");
+        $this->expectException(BookingUnavailableException::class);
+        $this->expectExceptionMessage('not a day this doctor sees patients');
         
         $this->bookingService->createBookingForSession($this->session, $tuesdayDate, 'John Doe', '01711111111');
     }
@@ -71,8 +72,8 @@ class BookingServiceTest extends TestCase
         $this->bookingService->createBookingForSession($this->session, $this->mondayDate, 'Patient 1', '01711111111');
         $this->bookingService->createBookingForSession($this->session, $this->mondayDate, 'Patient 2', '01711111111');
         
-        $this->expectException(Exception::class);
-        $this->expectExceptionMessage("Capacity exceeded for the requested date.");
+        $this->expectException(BookingUnavailableException::class);
+        $this->expectExceptionMessage('fully booked');
         
         $this->bookingService->createBookingForSession($this->session, $this->mondayDate, 'Patient 3', '01711111111');
     }
@@ -89,6 +90,50 @@ class BookingServiceTest extends TestCase
         $this->assertEquals(2, $booking2->serial_number);
     }
 
+    public function test_lab_collection_slots_use_the_same_day_of_week_convention_as_sessions()
+    {
+        // Regression: lab slots once stored a lowercase day name while sessions
+        // stored an integer, so every lab booking was rejected as a day mismatch.
+        $slot = LabCollectionSlot::create([
+            'chamber_id' => $this->chamber->id,
+            'day_of_week' => 1, // Monday, same convention as ScheduleSession
+            'start_time' => '08:00',
+            'end_time' => '10:00',
+            'slot_cap' => 5,
+        ]);
+
+        $booking = $this->bookingService->createBookingForBookable(
+            $slot,
+            $this->mondayDate,
+            'Lab Patient',
+            '01711111111'
+        );
+
+        $this->assertEquals(1, $booking->serial_number);
+        $this->assertEquals(LabCollectionSlot::class, $booking->bookable_type);
+    }
+
+    public function test_lab_booking_rejects_a_date_on_the_wrong_day_of_week()
+    {
+        $slot = LabCollectionSlot::create([
+            'chamber_id' => $this->chamber->id,
+            'day_of_week' => 1, // Monday
+            'start_time' => '08:00',
+            'end_time' => '10:00',
+            'slot_cap' => 5,
+        ]);
+
+        $this->expectException(BookingUnavailableException::class);
+        $this->expectExceptionMessage('not a collection day for this slot');
+
+        $this->bookingService->createBookingForBookable(
+            $slot,
+            Carbon::parse($this->mondayDate)->addDay()->format('Y-m-d'),
+            'Lab Patient',
+            '01711111111'
+        );
+    }
+
     public function test_slot_blocks_prevent_booking()
     {
         SlotBlock::create([
@@ -97,8 +142,8 @@ class BookingServiceTest extends TestCase
             'reason' => 'Holiday',
         ]);
 
-        $this->expectException(Exception::class);
-        $this->expectExceptionMessage("The requested date is blocked for this session.");
+        $this->expectException(BookingUnavailableException::class);
+        $this->expectExceptionMessage('The clinic is closed');
         
         $this->bookingService->createBookingForSession($this->session, $this->mondayDate, 'Patient 1', '017');
     }

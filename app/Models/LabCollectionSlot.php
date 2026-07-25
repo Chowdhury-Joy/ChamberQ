@@ -10,12 +10,15 @@ class LabCollectionSlot extends Model
     use BelongsToTenant;
 
     protected $fillable = [
-        'tenant_id',
         'chamber_id',
         'day_of_week',
         'start_time',
         'end_time',
         'slot_cap',
+    ];
+
+    protected $casts = [
+        'day_of_week' => 'integer',
     ];
 
     public function chamber()

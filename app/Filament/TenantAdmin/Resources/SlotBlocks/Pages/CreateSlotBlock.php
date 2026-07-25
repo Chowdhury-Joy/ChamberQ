@@ -20,8 +20,12 @@ class CreateSlotBlock extends CreateRecord
         $query = Booking::where('booking_date', $block->date)->where('status', '!=', 'cancelled');
         
         if ($block->chamber_id) {
-            $query->whereHasMorph('bookable', [ScheduleSession::class], function($q) use($block) {
-                $q->where('chamber_id', $block->chamber_id);
+            $query->where(function($q) use ($block) {
+                $q->whereHasMorph('bookable', [ScheduleSession::class], function($sub) use($block) {
+                    $sub->where('chamber_id', $block->chamber_id);
+                })->orWhereHasMorph('bookable', [\App\Models\LabCollectionSlot::class], function($sub) use($block) {
+                    $sub->where('chamber_id', $block->chamber_id);
+                });
             });
         }
         if ($block->doctor_id) {

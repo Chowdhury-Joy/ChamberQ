@@ -13,7 +13,13 @@ class TenantsTable
     {
         return $table
             ->columns([
-                //
+                \Filament\Tables\Columns\TextColumn::make('id')
+                    ->searchable()
+                    ->label('Tenant ID'),
+                \Filament\Tables\Columns\TextColumn::make('created_at')
+                    ->dateTime()
+                    ->sortable()
+                    ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
                 //

@@ -35,4 +35,33 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Payment gateways
+    |--------------------------------------------------------------------------
+    |
+    | Every value here is deliberately left null when unset. The webhook
+    | verifiers fail closed on a missing credential — do not add fallback
+    | defaults, and never commit real values to the repository.
+    |
+    */
+
+    'bkash' => [
+        'base_url' => env('BKASH_BASE_URL'),
+        'app_key' => env('BKASH_APP_KEY'),
+        'app_secret' => env('BKASH_APP_SECRET'),
+        'username' => env('BKASH_USERNAME'),
+        'password' => env('BKASH_PASSWORD'),
+    ],
+
+    'nagad' => [
+        'base_url' => env('NAGAD_BASE_URL'),
+        'merchant_id' => env('NAGAD_MERCHANT_ID'),
+    ],
+
+    'sslcommerz' => [
+        'store_id' => env('SSLCOMMERZ_STORE_ID'),
+        'store_password' => env('SSLCOMMERZ_STORE_PASSWORD'),
+    ],
+
 ];

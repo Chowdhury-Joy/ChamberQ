@@ -59,7 +59,14 @@ class User extends Authenticatable implements FilamentUser
         }
 
         if ($panel->getId() === 'tenantAdmin') {
-            return $this->role === 'tenant_admin' && $this->tenant_id !== null;
+            // The tenant_id must match the tenant whose subdomain is being
+            // served. Checking only that *a* tenant is set would let any tenant
+            // admin open any other tenant's panel whenever the session cookie is
+            // shared across subdomains (which wildcard SSL setups commonly do).
+            return $this->role === 'tenant_admin'
+                && $this->tenant_id !== null
+                && tenancy()->initialized
+                && $this->tenant_id === tenant('id');
         }
 
         return false;

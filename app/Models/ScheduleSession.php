@@ -10,7 +10,6 @@ class ScheduleSession extends Model
     use BelongsToTenant;
 
     protected $fillable = [
-        'tenant_id',
         'chamber_id',
         'doctor_id',
         'day_of_week',
@@ -18,6 +17,10 @@ class ScheduleSession extends Model
         'start_time',
         'end_time',
         'slot_cap',
+    ];
+
+    protected $casts = [
+        'day_of_week' => 'integer',
     ];
     
     public function chamber()

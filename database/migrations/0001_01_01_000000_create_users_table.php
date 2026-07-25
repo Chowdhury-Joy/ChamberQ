@@ -16,7 +16,7 @@ return new class extends Migration
             $table->string('tenant_id')->nullable();
             $table->string('role')->default('patient');
             $table->string('name');
-            $table->string('email')->unique();
+            $table->string('email');
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();
@@ -26,6 +26,7 @@ return new class extends Migration
             
             // To support composite foreign keys for models that reference users
             $table->unique(['tenant_id', 'id']);
+            $table->unique(['tenant_id', 'email']);
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {

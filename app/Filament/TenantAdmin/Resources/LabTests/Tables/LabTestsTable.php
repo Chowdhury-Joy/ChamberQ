@@ -14,8 +14,6 @@ class LabTestsTable
     {
         return $table
             ->columns([
-                TextColumn::make('tenant_id')
-                    ->searchable(),
                 TextColumn::make('name')
                     ->searchable(),
                 TextColumn::make('price')
