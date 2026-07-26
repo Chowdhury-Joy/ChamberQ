@@ -13,9 +13,13 @@ class ChamberForm
         return $schema
             ->components([
                 TextInput::make('name')
+                    ->extraInputAttributes(['name' => 'name'])
+                    ->autocomplete('name')
                     ->required()
                     ->maxLength(255),
                 TextInput::make('address')
+                    ->extraInputAttributes(['name' => 'address'])
+                    ->autocomplete('street-address')
                     ->columnSpanFull()
                     ->maxLength(500),
                 TextInput::make('latitude')
@@ -32,6 +36,8 @@ class ChamberForm
                     ->valuePlaceholder('e.g. 09:00–17:00')
                     ->columnSpanFull(),
                 TextInput::make('contact')
+                    ->extraInputAttributes(['name' => 'contact'])
+                    ->autocomplete('tel')
                     ->tel()
                     ->maxLength(20),
             ]);

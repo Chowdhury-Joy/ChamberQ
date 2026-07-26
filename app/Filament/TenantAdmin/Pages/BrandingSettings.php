@@ -66,6 +66,8 @@ class BrandingSettings extends Page implements HasForms
                     ->schema([
                         TextInput::make('name')
                             ->label(__('Practice / Clinic Name'))
+                            ->extraInputAttributes(['name' => 'name'])
+                            ->autocomplete('organization')
                             ->required()
                             ->maxLength(255),
                         TextInput::make('tagline')
@@ -105,10 +107,14 @@ class BrandingSettings extends Page implements HasForms
                     ->schema([
                         TextInput::make('contact_phone')
                             ->label(__('Contact Phone'))
+                            ->extraInputAttributes(['name' => 'contact_phone'])
+                            ->autocomplete('tel')
                             ->tel()
                             ->maxLength(20),
                         TextInput::make('whatsapp_number')
                             ->label(__('WhatsApp Number'))
+                            ->extraInputAttributes(['name' => 'whatsapp_number'])
+                            ->autocomplete('tel')
                             ->placeholder('8801XXXXXXXXX')
                             ->maxLength(20),
                         Select::make('default_locale')

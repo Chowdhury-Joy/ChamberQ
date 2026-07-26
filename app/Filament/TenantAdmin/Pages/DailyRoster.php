@@ -75,9 +75,13 @@ class DailyRoster extends Page implements HasTable, HasForms
                     ->schema([
                         TextInput::make('patient_name')
                             ->label(__('Patient name'))
+                            ->extraInputAttributes(['name' => 'patient_name'])
+                            ->autocomplete('name')
                             ->required(),
                         TextInput::make('patient_phone')
                             ->label(__('Phone number'))
+                            ->extraInputAttributes(['name' => 'patient_phone'])
+                            ->autocomplete('tel')
                             ->tel()
                             ->required()
                             ->rule('regex:/^(?:\+?88)?01[3-9]\d{8}$/')

@@ -36,10 +36,14 @@ class UserResource extends Resource
         return $schema
             ->schema([
                 Forms\Components\TextInput::make('name')
+                    ->extraInputAttributes(['name' => 'name'])
+                    ->autocomplete('name')
                     ->required()
                     ->maxLength(255),
 
                 Forms\Components\TextInput::make('email')
+                    ->extraInputAttributes(['name' => 'email'])
+                    ->autocomplete('email')
                     ->email()
                     ->required()
                     ->maxLength(255),
@@ -55,6 +59,8 @@ class UserResource extends Resource
                     ->required(),
 
                 Forms\Components\TextInput::make('password')
+                    ->extraInputAttributes(['name' => 'password'])
+                    ->autocomplete('new-password')
                     ->password()
                     ->dehydrated(fn ($state) => filled($state))
                     ->required(fn (string $operation): bool => $operation === 'create')

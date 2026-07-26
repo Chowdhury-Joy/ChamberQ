@@ -12,6 +12,8 @@ class DoctorForm
         return $schema
             ->components([
                 TextInput::make('name')
+                    ->extraInputAttributes(['name' => 'name'])
+                    ->autocomplete('name')
                     ->required(),
             ]);
     }

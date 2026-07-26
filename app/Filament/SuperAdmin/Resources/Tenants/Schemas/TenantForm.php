@@ -27,14 +27,20 @@ class TenantForm
                             ->dehydrated(),
                         TextInput::make('name')
                             ->label(__('Display Name'))
+                            ->extraInputAttributes(['name' => 'name'])
+                            ->autocomplete('organization')
                             ->maxLength(255)
                             ->placeholder('e.g. Shefa Diagnostic Centre'),
                         TextInput::make('contact_phone')
                             ->label(__('Contact Phone'))
+                            ->extraInputAttributes(['name' => 'contact_phone'])
+                            ->autocomplete('tel')
                             ->tel()
                             ->maxLength(20),
                         TextInput::make('whatsapp_number')
                             ->label(__('WhatsApp Number'))
+                            ->extraInputAttributes(['name' => 'whatsapp_number'])
+                            ->autocomplete('tel')
                             ->placeholder('8801XXXXXXXXX')
                             ->maxLength(20),
                     ]),
