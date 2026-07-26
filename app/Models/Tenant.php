@@ -33,6 +33,10 @@ class Tenant extends BaseTenant
             'plan_tier',
             'slot_cap_mode',
             'feature_flags',
+            'call_timeout_seconds',
+            'estimated_time_buffer_minutes',
+            'first_n_patients',
+            'first_n_arrival_offset_minutes',
             'created_at',
             'updated_at',
         ];

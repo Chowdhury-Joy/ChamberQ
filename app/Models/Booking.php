@@ -23,6 +23,12 @@ class Booking extends Model
         'cancelled_at',
         'cancellation_reason',
         'patient_notified',
+        'called_at',
+        'in_chamber_at',
+        'completed_at',
+        'skip_count',
+        'retry_queue_position',
+        'refund_eligible',
     ];
 
     protected $casts = [
@@ -30,6 +36,10 @@ class Booking extends Model
         'serial_number' => 'integer',
         'cancelled_at' => 'datetime',
         'patient_notified' => 'boolean',
+        'called_at' => 'datetime',
+        'in_chamber_at' => 'datetime',
+        'completed_at' => 'datetime',
+        'refund_eligible' => 'boolean',
     ];
 
     /**
@@ -111,5 +121,16 @@ class Booking extends Model
             ])
             ->values()
             ->all();
+    }
+
+    public function liveSession()
+    {
+        if ($this->bookable_type !== ScheduleSession::class) {
+            return null;
+        }
+
+        return LiveSession::where('schedule_session_id', $this->bookable_id)
+            ->whereDate('session_date', $this->booking_date)
+            ->first();
     }
 }

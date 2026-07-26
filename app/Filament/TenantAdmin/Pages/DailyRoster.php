@@ -63,6 +63,12 @@ class DailyRoster extends Page implements HasTable, HasForms
                     ->action(fn (Booking $record) => $record->update(['status' => 'completed'])),
             ])
             ->headerActions([
+                Action::make('manageQueue')
+                    ->label('Manage Live Queue')
+                    ->icon('heroicon-o-queue-list')
+                    ->url(LiveQueueControl::getUrl())
+                    ->color('primary'),
+
                 Action::make('newWalkIn')
                     ->label(__('New Walk-In'))
                     ->icon('heroicon-o-user-plus')

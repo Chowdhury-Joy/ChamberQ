@@ -49,6 +49,10 @@ class BrandingSettings extends Page implements HasForms
                 'contact_phone' => $tenant->contact_phone,
                 'whatsapp_number' => $tenant->whatsapp_number,
                 'default_locale' => $tenant->default_locale ?? 'bn',
+                'call_timeout_seconds' => $tenant->call_timeout_seconds ?? 10,
+                'estimated_time_buffer_minutes' => $tenant->estimated_time_buffer_minutes ?? 30,
+                'first_n_patients' => $tenant->first_n_patients ?? 2,
+                'first_n_arrival_offset_minutes' => $tenant->first_n_arrival_offset_minutes ?? 15,
             ]);
         }
     }
@@ -116,6 +120,30 @@ class BrandingSettings extends Page implements HasForms
                             ->default('bn')
                             ->required(),
                     ]),
+
+                Fieldset::make(__('Live Queue Settings'))
+                    ->schema([
+                        TextInput::make('call_timeout_seconds')
+                            ->label('Call Timeout (seconds)')
+                            ->numeric()
+                            ->default(10)
+                            ->required(),
+                        TextInput::make('estimated_time_buffer_minutes')
+                            ->label('Hidden Wait Buffer (minutes)')
+                            ->numeric()
+                            ->default(30)
+                            ->required(),
+                        TextInput::make('first_n_patients')
+                            ->label('First N Patients (Early Arrival)')
+                            ->numeric()
+                            ->default(2)
+                            ->required(),
+                        TextInput::make('first_n_arrival_offset_minutes')
+                            ->label('Early Arrival Offset (minutes)')
+                            ->numeric()
+                            ->default(15)
+                            ->required(),
+                    ]),
             ]);
     }
 
@@ -135,6 +163,10 @@ class BrandingSettings extends Page implements HasForms
                 'contact_phone' => $data['contact_phone'],
                 'whatsapp_number' => $data['whatsapp_number'],
                 'default_locale' => $data['default_locale'],
+                'call_timeout_seconds' => $data['call_timeout_seconds'],
+                'estimated_time_buffer_minutes' => $data['estimated_time_buffer_minutes'],
+                'first_n_patients' => $data['first_n_patients'],
+                'first_n_arrival_offset_minutes' => $data['first_n_arrival_offset_minutes'],
             ]);
 
             Notification::make()

@@ -51,6 +51,12 @@ Route::middleware([
         ->middleware('throttle:120,1')
         ->name('queue.status');
 
+    Route::get('/screen/{session}/{date}', [\App\Http\Controllers\ScreenController::class, 'show'])
+        ->name('tenant.screen');
+        
+    Route::get('/api/screen/{session}/{date}', [\App\Http\Controllers\ScreenController::class, 'api'])
+        ->name('api.tenant.screen');
+
     Route::get('/bookings/{booking}', [\App\Http\Controllers\BookingController::class, 'show'])
         ->name('bookings.show');
 
