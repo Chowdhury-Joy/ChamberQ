@@ -42,6 +42,16 @@ class BookingUnavailableException extends Exception
         return new self(__('That session is no longer available. Please choose another.'));
     }
 
+    public static function labTestUnavailable(): self
+    {
+        return new self(__('One of the tests you selected is no longer available. Please review your selection.'));
+    }
+
+    public static function labTestsNotBookable(): self
+    {
+        return new self(__('Lab tests cannot be booked here.'));
+    }
+
     /**
      * Render consistently wherever it is thrown — including from middleware,
      * which runs before any controller try/catch could see it.

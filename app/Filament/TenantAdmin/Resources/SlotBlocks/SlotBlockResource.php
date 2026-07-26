@@ -8,6 +8,7 @@ use App\Filament\TenantAdmin\Resources\SlotBlocks\Pages\ListSlotBlocks;
 use App\Filament\TenantAdmin\Resources\SlotBlocks\Schemas\SlotBlockForm;
 use App\Filament\TenantAdmin\Resources\SlotBlocks\Tables\SlotBlocksTable;
 use App\Models\SlotBlock;
+use App\Services\SlotBlockService;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -36,31 +37,35 @@ class SlotBlockResource extends Resource
             Forms\Components\TextInput::make('reason')
                 ->maxLength(255),
             Forms\Components\Checkbox::make('confirm_cancellation')
-                ->label('Conflict Detected: Confirm cancellation of active bookings')
-                ->visible(function (\Filament\Schemas\Components\Utilities\Get $get) {
-                    $date = $get('date');
-                    if (!$date) return false;
-                    
-                    $query = \App\Models\Booking::where('booking_date', $date)->where('status', '!=', 'cancelled');
-                    if ($get('chamber_id')) {
-                        $query->where(function($q) use ($get) {
-                            $q->whereHasMorph('bookable', [\App\Models\ScheduleSession::class], function($sub) use($get) {
-                                $sub->where('chamber_id', $get('chamber_id'));
-                            })->orWhereHasMorph('bookable', [\App\Models\LabCollectionSlot::class], function($sub) use($get) {
-                                $sub->where('chamber_id', $get('chamber_id'));
-                            });
-                        });
-                    }
-                    if ($get('doctor_id')) {
-                        $query->whereHasMorph('bookable', [\App\Models\ScheduleSession::class], function($q) use($get) {
-                            $q->where('doctor_id', $get('doctor_id'));
-                        });
-                    }
-                    return $query->exists();
-                })
+                ->label(fn (\Filament\Schemas\Components\Utilities\Get $get) => __(
+                    'I understand :count existing booking(s) will be cancelled. I will notify these patients.',
+                    ['count' => static::affectedCount($get)]
+                ))
+                ->helperText(__('After saving you will get a list of WhatsApp links, one per patient.'))
+                ->visible(fn (\Filament\Schemas\Components\Utilities\Get $get) => static::affectedCount($get) > 0)
                 ->accepted()
                 ->dehydrated(false),
         ]);
+    }
+
+    /**
+     * Counts what saving this block would cancel, using the same query the
+     * service uses when it actually cancels — so the warning can never disagree
+     * with what happens.
+     */
+    private static function affectedCount(\Filament\Schemas\Components\Utilities\Get $get): int
+    {
+        if (blank($get('date'))) {
+            return 0;
+        }
+
+        $draft = new SlotBlock([
+            'date' => $get('date'),
+            'chamber_id' => $get('chamber_id'),
+            'doctor_id' => $get('doctor_id'),
+        ]);
+
+        return app(SlotBlockService::class)->affectedCount($draft);
     }
 
     public static function table(Table $table): Table

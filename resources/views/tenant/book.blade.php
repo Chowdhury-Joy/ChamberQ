@@ -21,6 +21,7 @@
         @keyframes slideIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
         .alert { padding: 1rem; border-radius: var(--radius-md); margin-bottom: 1.5rem; display: none; }
         .alert-error { background: #fef2f2; color: #991b1b; border: 1px solid #f87171; display: block; }
+        .field-error { color: #dc2626; font-size: 0.85rem; margin-top: 0.35rem; display: block; }
         .selection-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 1.5rem; }
         .selection-grid.list-view { grid-template-columns: 1fr; }
         .selection-card { border: 2px solid #e2e8f0; border-radius: var(--radius-md); padding: 1.25rem; cursor: pointer; transition: all 0.2s ease; background: #fff; text-align: left; }
@@ -55,7 +56,7 @@
                 <div class="progress-bar" id="progressBar"></div>
             </div>
             
-            <div id="message" class="alert"></div>
+            <div id="message" class="alert" role="alert" aria-live="polite"></div>
 
             <form id="bookingForm">
                 @csrf
@@ -148,24 +149,25 @@
                     <h3>{{ __('Patient Details') }}</h3>
                     
                     <div class="form-group" style="margin-top:1.5rem;">
-                        <label class="form-label">{{ __('Booking Date') }}</label>
+                        <label class="form-label" for="booking_date">{{ __('Booking Date') }}</label>
                         <input type="date" name="booking_date" id="booking_date" class="form-control" required>
                         <small class="text-muted" id="date-helper" style="display:block;margin-top:0.5rem"></small>
+                        <span class="field-error" id="date-error" role="alert" aria-live="polite" style="display:none"></span>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">{{ __('Patient Name') }}</label>
+                        <label class="form-label" for="patient_name">{{ __('Patient Name') }}</label>
                         <input type="text" name="patient_name" id="patient_name" class="form-control" required>
                     </div>
 
                     <div class="form-group">
-                        <label class="form-label">{{ __('Phone Number') }}</label>
+                        <label class="form-label" for="patient_phone">{{ __('Phone Number') }}</label>
                         <input type="tel" name="patient_phone" id="patient_phone" class="form-control" placeholder="017..." required>
                     </div>
 
                     <div class="btn-group">
                         <button type="button" class="btn btn-back" onclick="prevStep()">{{ __('Back') }}</button>
-                        <button type="submit" class="btn btn-primary">{{ __('Confirm Booking') }}</button>
+                        <button type="submit" class="btn btn-primary" id="submitBtn">{{ __('Confirm Booking') }}</button>
                     </div>
                 </div>
             </form>
@@ -261,8 +263,59 @@
             if (currentStepId === 'step-session') {
                 renderSessions();
             } else if (currentStepId === 'step-identity') {
-                const dayName = dayLabels[state.dayOfWeek];
-                document.getElementById('date-helper').innerText = `Please select a date that falls on a ${dayName}.`;
+                setupDateConstraint();
+            }
+        }
+
+        function setupDateConstraint() {
+            const dateInput = document.getElementById('booking_date');
+            const dateError = document.getElementById('date-error');
+            const submitBtn = document.getElementById('submitBtn');
+            const dayName = dayLabels[state.dayOfWeek];
+            
+            // Set min date to today
+            const today = new Date();
+            dateInput.min = today.toISOString().split('T')[0];
+            
+            // Compute next valid date
+            const nextValid = new Date(today);
+            while (nextValid.getDay() !== state.dayOfWeek) {
+                nextValid.setDate(nextValid.getDate() + 1);
+            }
+            const formatted = nextValid.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+            document.getElementById('date-helper').innerText = `Next available: ${formatted}`;
+            dateInput.value = nextValid.toISOString().split('T')[0];
+            
+            // Live validation on change
+            dateInput.addEventListener('change', validateDate);
+            // Clear any previous error state
+            dateError.style.display = 'none';
+            submitBtn.disabled = false;
+        }
+
+        function validateDate() {
+            const dateInput = document.getElementById('booking_date');
+            const dateError = document.getElementById('date-error');
+            const submitBtn = document.getElementById('submitBtn');
+            
+            if (!dateInput.value) {
+                dateError.style.display = 'none';
+                submitBtn.disabled = false;
+                return;
+            }
+            
+            const selected = new Date(dateInput.value + 'T00:00:00');
+            const selectedDay = selected.getDay();
+            
+            if (selectedDay !== state.dayOfWeek) {
+                const expected = dayLabels[state.dayOfWeek];
+                const got = dayLabels[selectedDay];
+                dateError.innerText = `This date is a ${got}. You need to pick a ${expected}.`;
+                dateError.style.display = 'block';
+                submitBtn.disabled = true;
+            } else {
+                dateError.style.display = 'none';
+                submitBtn.disabled = false;
             }
         }
 
@@ -421,6 +474,16 @@
                 msgEl.className = 'alert alert-error';
             }
         });
+
+        // Deep link support: ?doctor=ID or ?test=ID
+        const params = new URLSearchParams(window.location.search);
+        if (params.has('doctor')) {
+            state.type = 'session';
+            state.doctorId = params.get('doctor');
+        }
+        if (params.has('test')) {
+            state.type = 'lab';
+        }
 
         rebuildFlow();
         showStep();

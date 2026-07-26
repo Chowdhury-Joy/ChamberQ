@@ -11,8 +11,16 @@ class Tenant extends BaseTenant
 
     public static function getCustomColumns(): array
     {
+        // Every real column MUST be listed here. Anything omitted is folded into
+        // the `data` JSON blob by stancl's VirtualColumn: PHP attribute reads
+        // appear to work while SQL filters silently match nothing.
         return [
             'id',
+            'name',
+            'contact_phone',
+            'whatsapp_number',
+            'theme_color',
+            'default_locale',
             'template_id',
             'layout_id',
             'custom_code',
@@ -24,6 +32,12 @@ class Tenant extends BaseTenant
             'created_at',
             'updated_at',
         ];
+    }
+
+    /** The name patients see. Falls back to the subdomain rather than showing nothing. */
+    public function displayName(): string
+    {
+        return filled($this->name) ? $this->name : (string) $this->id;
     }
 
     protected function casts(): array

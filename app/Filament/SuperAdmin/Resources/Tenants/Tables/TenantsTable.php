@@ -5,6 +5,7 @@ namespace App\Filament\SuperAdmin\Resources\Tenants\Tables;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
 class TenantsTable
@@ -13,16 +14,37 @@ class TenantsTable
     {
         return $table
             ->columns([
-                \Filament\Tables\Columns\TextColumn::make('id')
+                TextColumn::make('id')
                     ->searchable()
                     ->label('Tenant ID'),
-                \Filament\Tables\Columns\TextColumn::make('created_at')
+                TextColumn::make('name')
+                    ->searchable()
+                    ->placeholder('—'),
+                TextColumn::make('plan_tier')
+                    ->label('Tier')
+                    ->badge()
+                    ->color(fn (?string $state): string => match ($state) {
+                        'clinic' => 'success',
+                        'solo' => 'info',
+                        default => 'gray',
+                    }),
+                TextColumn::make('billing_status')
+                    ->label('Billing')
+                    ->badge()
+                    ->color(fn (?string $state): string => match ($state) {
+                        'active' => 'success',
+                        'trial' => 'info',
+                        'past_due' => 'warning',
+                        'suspended' => 'danger',
+                        default => 'gray',
+                    }),
+                TextColumn::make('domains_count')
+                    ->counts('domains')
+                    ->label('Domains'),
+                TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
-            ])
-            ->filters([
-                //
             ])
             ->recordActions([
                 EditAction::make(),

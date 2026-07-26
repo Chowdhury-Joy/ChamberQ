@@ -2,12 +2,13 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Doctor;
 use App\Models\WebPage;
 use Illuminate\Http\Request;
 
 class WebPageController extends Controller
 {
-    public function show(Request $request, string $slug = null)
+    public function show(Request $request, ?string $slug = null)
     {
         $slug = $slug ? '/' . ltrim($slug, '/') : '/';
 
@@ -26,6 +27,8 @@ class WebPageController extends Controller
 
         return view('tenant.webpage', [
             'page' => $page,
+            // Loaded here rather than queried from inside the template.
+            'doctors' => Doctor::orderBy('name')->get(),
         ]);
     }
 }

@@ -40,6 +40,9 @@ Route::middleware([
     // PWA Routes
     Route::get('/manifest.webmanifest', [\App\Http\Controllers\PWAController::class, 'manifest']);
     Route::get('/sw.js', [\App\Http\Controllers\PWAController::class, 'serviceWorker']);
+    Route::get('/pwa-icon-{size}.svg', [\App\Http\Controllers\PWAController::class, 'icon'])
+        ->whereIn('size', [192, 512])
+        ->name('pwa.icon');
 
     // Keyed by the booking UUID: no sequential id is ever exposed, and a
     // patient can only poll a queue they hold a place in. Polled by the ticket

@@ -20,7 +20,11 @@ class BookingController extends Controller
             'doctors' => Doctor::all(),
             'sessions' => ScheduleSession::with(['chamber', 'doctor'])->get(),
             'labSlots' => LabCollectionSlot::with('chamber')->get(),
-            'labTests' => \App\Models\LabTest::all(),
+            // Only offered when the tenant actually has the capability, and
+            // only tests the clinic has left switched on.
+            'labTests' => tenant()->hasFeature('lab_tests')
+                ? \App\Models\LabTest::active()->ordered()->get()
+                : collect(),
         ]);
     }
 
@@ -33,8 +37,12 @@ class BookingController extends Controller
             'patient_name' => 'required|string|max:255',
             // Bangladeshi mobile: optional +88 prefix, then 01[3-9] and 8 digits.
             'patient_phone' => ['required', 'string', 'regex:/^(?:\+?88)?01[3-9]\d{8}$/'],
+            // Deliberately NOT `exists:lab_tests,id` — that rule is not tenant
+            // scoped and would accept another tenant's test ids. The service
+            // resolves them through the tenant scope and rejects the booking if
+            // any id fails to resolve.
             'lab_tests' => 'nullable|array',
-            'lab_tests.*' => 'exists:lab_tests,id',
+            'lab_tests.*' => 'integer',
         ], [
             'patient_phone.regex' => __('Please enter a valid Bangladeshi mobile number, for example 01712345678.'),
         ]);
@@ -46,16 +54,15 @@ class BookingController extends Controller
             : LabCollectionSlot::findOrFail($validated['bookable_id']);
 
         try {
+            // Line items are attached inside the service transaction, so a
+            // booking can never be persisted without the tests it was made for.
             $booking = $bookingService->createBookingForBookable(
                 $bookable,
                 $validated['booking_date'],
                 $validated['patient_name'],
-                $validated['patient_phone']
+                $validated['patient_phone'],
+                $validated['lab_tests'] ?? []
             );
-
-            if ($bookable instanceof LabCollectionSlot && !empty($validated['lab_tests'])) {
-                $booking->labTests()->sync($validated['lab_tests']);
-            }
         } catch (BookingUnavailableException $e) {
             // Only this exception type is safe to echo back to an anonymous
             // visitor. Anything else is a genuine fault and must surface as a
@@ -78,7 +85,7 @@ class BookingController extends Controller
 
     public function show(Booking $booking)
     {
-        $booking->load('bookable');
+        $booking->load(['bookable', 'labTests']);
 
         return view('tenant.ticket', [
             'booking' => $booking,

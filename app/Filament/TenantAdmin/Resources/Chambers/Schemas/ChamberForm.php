@@ -2,8 +2,8 @@
 
 namespace App\Filament\TenantAdmin\Resources\Chambers\Schemas;
 
+use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Components\Textarea;
 use Filament\Schemas\Schema;
 
 class ChamberForm
@@ -13,14 +13,27 @@ class ChamberForm
         return $schema
             ->components([
                 TextInput::make('name')
-                    ->required(),
-                Textarea::make('address')
+                    ->required()
+                    ->maxLength(255),
+                TextInput::make('address')
+                    ->columnSpanFull()
+                    ->maxLength(500),
+                TextInput::make('latitude')
+                    ->numeric()
+                    ->rule('between:-90,90'),
+                TextInput::make('longitude')
+                    ->numeric()
+                    ->rule('between:-180,180'),
+                KeyValue::make('hours')
+                    ->label(__('Operating Hours'))
+                    ->keyLabel(__('Day'))
+                    ->valueLabel(__('Hours'))
+                    ->keyPlaceholder('e.g. Saturday')
+                    ->valuePlaceholder('e.g. 09:00–17:00')
                     ->columnSpanFull(),
-                TextInput::make('latitude'),
-                TextInput::make('longitude'),
-                Textarea::make('hours')
-                    ->columnSpanFull(),
-                TextInput::make('contact'),
+                TextInput::make('contact')
+                    ->tel()
+                    ->maxLength(20),
             ]);
     }
 }

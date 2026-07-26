@@ -226,6 +226,43 @@ class SecurityTest extends TestCase
         $this->assertStringContainsString('Hello', $stored);
     }
 
+    /**
+     * Payloads that naive tag-stripping and regex filters commonly let through.
+     *
+     * @dataProvider evasionPayloads
+     */
+    public function test_sanitiser_resists_common_xss_evasions(string $payload): void
+    {
+        tenancy()->initialize($this->alpha);
+
+        $page = WebPage::create([
+            'title' => 'Evasion', 'slug' => 'evasion', 'is_published' => true,
+            'content' => [['type' => 'rich_text', 'data' => ['content' => $payload]]],
+        ]);
+
+        $stored = strtolower($page->fresh()->content[0]['data']['content']);
+
+        foreach (['<script', '<iframe', '<svg', '<object', '<embed', 'javascript:', 'onerror', 'onload', 'onclick', 'srcdoc'] as $forbidden) {
+            $this->assertStringNotContainsString($forbidden, $stored, "Leaked [{$forbidden}] from: {$payload}");
+        }
+    }
+
+    public static function evasionPayloads(): array
+    {
+        return [
+            'nested script tags' => ['<scr<script>ipt>alert(1)</scr</script>ipt>'],
+            'uppercase tag' => ['<SCRIPT>alert(1)</SCRIPT>'],
+            'svg onload' => ['<svg/onload=alert(1)>'],
+            'iframe srcdoc' => ['<iframe srcdoc="<script>alert(1)</script>"></iframe>'],
+            'entity-encoded scheme' => ['<a href="&#106;avascript:alert(1)">x</a>'],
+            'whitespace in scheme' => ['<a href="java\tscript:alert(1)">x</a>'],
+            'malformed attribute quoting' => ['<a href=javascript:alert(1)>x</a>'],
+            'body onload' => ['<body onload=alert(1)>'],
+            'style expression' => ['<div style="width:expression(alert(1))">x</div>'],
+            'object data' => ['<object data="javascript:alert(1)"></object>'],
+        ];
+    }
+
     public function test_slugs_are_normalised_so_authored_pages_resolve(): void
     {
         tenancy()->initialize($this->alpha);

@@ -13,6 +13,7 @@ use Filament\Actions\Action;
 use App\Models\Booking;
 use Carbon\Carbon;
 use App\Services\BookingService;
+use App\Models\LabCollectionSlot;
 use App\Models\ScheduleSession;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -63,26 +64,89 @@ class DailyRoster extends Page implements HasTable, HasForms
             ])
             ->headerActions([
                 Action::make('newWalkIn')
-                    ->label('New Walk-In')
-                    ->form([
-                        TextInput::make('patient_name')->required(),
-                        TextInput::make('patient_phone')->required(),
-                        Select::make('session_id')
-                            ->label('Session')
-                            ->options(function () {
-                                return ScheduleSession::where('day_of_week', Carbon::today()->dayOfWeek)->pluck('session_name', 'id');
-                            })
+                    ->label(__('New Walk-In'))
+                    ->icon('heroicon-o-user-plus')
+                    ->schema([
+                        TextInput::make('patient_name')
+                            ->label(__('Patient name'))
                             ->required(),
+                        TextInput::make('patient_phone')
+                            ->label(__('Phone number'))
+                            ->tel()
+                            ->required()
+                            ->rule('regex:/^(?:\+?88)?01[3-9]\d{8}$/')
+                            ->validationMessages([
+                                'regex' => __('Please enter a valid Bangladeshi mobile number, for example 01712345678.'),
+                            ]),
+                        Select::make('bookable')
+                            ->label(__('Session'))
+                            // Resolved names, never raw ids: two sessions both
+                            // labelled "Morning Shift" are indistinguishable.
+                            ->options(fn () => static::todaysBookableOptions())
+                            ->required()
+                            ->native(false)
+                            ->searchable(),
                     ])
                     ->action(function (array $data, BookingService $bookingService) {
-                        $session = ScheduleSession::find($data['session_id']);
-                        $bookingService->createBookingForSession(
-                            $session,
-                            Carbon::today()->toDateString(),
+                        [$type, $id] = explode(':', $data['bookable']);
+
+                        $bookable = $type === 'lab'
+                            ? LabCollectionSlot::findOrFail($id)
+                            : ScheduleSession::findOrFail($id);
+
+                        // Same service as online bookings — a separate write path
+                        // would bypass the lock and duplicate serial numbers.
+                        $bookingService->createBookingForBookable(
+                            $bookable,
+                            today()->toDateString(),
                             $data['patient_name'],
                             $data['patient_phone']
                         );
                     })
+                    ->successNotificationTitle(__('Walk-in added to today\'s queue.'))
             ]);
+    }
+
+    /**
+     * Today's bookable sessions and lab windows, labelled so staff can tell two
+     * identically-named sessions apart.
+     *
+     * @return array<string, string>
+     */
+    protected static function todaysBookableOptions(): array
+    {
+        $today = today()->dayOfWeek;
+        $options = [];
+
+        $sessions = ScheduleSession::with(['doctor', 'chamber'])
+            ->where('day_of_week', $today)
+            ->get();
+
+        foreach ($sessions as $session) {
+            $options['session:' . $session->id] = sprintf(
+                '%s — %s (%s, %s–%s)',
+                $session->doctor?->name ?? __('Unknown doctor'),
+                $session->chamber?->name ?? __('Unknown chamber'),
+                $session->session_name,
+                Carbon::parse($session->start_time)->format('g:i A'),
+                Carbon::parse($session->end_time)->format('g:i A'),
+            );
+        }
+
+        if (tenant()?->hasFeature('lab_tests')) {
+            $slots = LabCollectionSlot::with('chamber')->where('day_of_week', $today)->get();
+
+            foreach ($slots as $slot) {
+                $options['lab:' . $slot->id] = sprintf(
+                    '%s — %s (%s–%s)',
+                    __('Lab collection'),
+                    $slot->chamber?->name ?? __('Main lab'),
+                    Carbon::parse($slot->start_time)->format('g:i A'),
+                    Carbon::parse($slot->end_time)->format('g:i A'),
+                );
+            }
+        }
+
+        return $options;
     }
 }

@@ -1,0 +1,135 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Domain;
+use App\Models\Tenant;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
+use Tests\TestCase;
+
+class LoginTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private Tenant $soloTenant;
+    private Tenant $clinicTenant;
+    private User $superAdmin;
+    private User $soloAdmin;
+    private User $clinicAdmin;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->superAdmin = User::create([
+            'name' => 'Super Admin',
+            'email' => 'super@demo.com',
+            'password' => Hash::make('password'),
+            'role' => 'super_admin',
+            'tenant_id' => null,
+        ]);
+
+        $this->soloTenant = Tenant::create(['id' => 'solo', 'plan_tier' => 'solo']);
+        Domain::create(['domain' => 'solo.localhost', 'tenant_id' => 'solo']);
+        $this->soloAdmin = User::create([
+            'name' => 'Solo Admin',
+            'email' => 'admin@solo.com',
+            'password' => Hash::make('password'),
+            'role' => 'tenant_admin',
+            'tenant_id' => 'solo',
+        ]);
+
+        $this->clinicTenant = Tenant::create(['id' => 'demo', 'plan_tier' => 'clinic']);
+        Domain::create(['domain' => 'demo.localhost', 'tenant_id' => 'demo']);
+        $this->clinicAdmin = User::create([
+            'name' => 'Demo Admin',
+            'email' => 'admin@demo.com',
+            'password' => Hash::make('password'),
+            'role' => 'tenant_admin',
+            'tenant_id' => 'demo',
+        ]);
+    }
+
+    public function test_super_admin_can_access_central_admin_login(): void
+    {
+        $response = $this->get('http://localhost/admin/login');
+        $response->assertStatus(200);
+    }
+
+    public function test_solo_admin_can_access_tenant_admin_login(): void
+    {
+        $response = $this->get('http://solo.localhost/admin/login');
+        $response->assertStatus(200);
+    }
+
+    public function test_clinic_admin_can_access_tenant_admin_login(): void
+    {
+        $response = $this->get('http://demo.localhost/admin/login');
+        $response->assertStatus(200);
+    }
+
+    public function test_solo_admin_user_resolves_under_solo_subdomain_request(): void
+    {
+        $this->get('http://solo.localhost/admin/login');
+
+        $user = User::where('email', 'admin@solo.com')->first();
+        $this->assertNotNull($user);
+        $this->assertEquals('solo', $user->tenant_id);
+    }
+
+    public function test_clinic_admin_user_resolves_under_clinic_subdomain_request(): void
+    {
+        $this->get('http://demo.localhost/admin/login');
+
+        $user = User::where('email', 'admin@demo.com')->first();
+        $this->assertNotNull($user);
+        $this->assertEquals('demo', $user->tenant_id);
+    }
+
+    public function test_solo_admin_can_authenticate_on_solo_subdomain(): void
+    {
+        $this->get('http://solo.localhost/admin/login');
+
+        \Livewire\Livewire::test(\Filament\Auth\Pages\Login::class)
+            ->fillForm([
+                'email' => 'admin@solo.com',
+                'password' => 'password',
+            ])
+            ->call('authenticate')
+            ->assertHasNoFormErrors();
+
+        $this->assertAuthenticatedAs($this->soloAdmin);
+    }
+
+    public function test_clinic_admin_can_authenticate_on_clinic_subdomain(): void
+    {
+        $this->get('http://demo.localhost/admin/login');
+
+        \Livewire\Livewire::test(\Filament\Auth\Pages\Login::class)
+            ->fillForm([
+                'email' => 'admin@demo.com',
+                'password' => 'password',
+            ])
+            ->call('authenticate')
+            ->assertHasNoFormErrors();
+
+        $this->assertAuthenticatedAs($this->clinicAdmin);
+    }
+
+    public function test_super_admin_can_authenticate_on_central_domain(): void
+    {
+        $this->get('http://localhost/admin/login');
+
+        \Livewire\Livewire::test(\Filament\Auth\Pages\Login::class)
+            ->fillForm([
+                'email' => 'super@demo.com',
+                'password' => 'password',
+            ])
+            ->call('authenticate')
+            ->assertHasNoFormErrors();
+
+        $this->assertAuthenticatedAs($this->superAdmin);
+    }
+}

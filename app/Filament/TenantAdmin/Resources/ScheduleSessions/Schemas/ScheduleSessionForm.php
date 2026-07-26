@@ -14,24 +14,30 @@ class ScheduleSessionForm
     {
         return $schema
             ->components([
-                TextInput::make('chamber_id')
+                Select::make('chamber_id')
+                    ->relationship('chamber', 'name')
                     ->required()
-                    ->numeric(),
-                TextInput::make('doctor_id')
+                    ->searchable()
+                    ->preload(),
+                Select::make('doctor_id')
+                    ->relationship('doctor', 'name')
                     ->required()
-                    ->numeric(),
+                    ->searchable()
+                    ->preload(),
                 Select::make('day_of_week')
                     ->required()
                     ->options(DayOfWeek::options()),
                 TextInput::make('session_name')
-                    ->required(),
+                    ->required()
+                    ->maxLength(255),
                 TimePicker::make('start_time')
                     ->required(),
                 TimePicker::make('end_time')
                     ->required(),
                 TextInput::make('slot_cap')
                     ->required()
-                    ->numeric(),
+                    ->numeric()
+                    ->minValue(1),
             ]);
     }
 }

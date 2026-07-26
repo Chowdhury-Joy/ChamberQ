@@ -65,7 +65,14 @@ return [
     |
     */
 
-    'timezone' => 'UTC',
+    /*
+     * Every clinic on this platform operates in Bangladesh. Leaving this at UTC
+     * meant `today()` rolled over at 6:00 AM Dhaka time — during morning chamber
+     * hours — so the daily roster showed the wrong day to staff who had just
+     * opened up. Booking dates are calendar dates in local time; they must be
+     * resolved in the clinic's timezone, not the server's.
+     */
+    'timezone' => env('APP_TIMEZONE', 'Asia/Dhaka'),
 
     /*
     |--------------------------------------------------------------------------

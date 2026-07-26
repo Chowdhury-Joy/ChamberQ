@@ -20,7 +20,48 @@ class Booking extends Model
         'status',
         'payment_status',
         'payment_reference',
+        'cancelled_at',
+        'cancellation_reason',
+        'patient_notified',
     ];
+
+    protected $casts = [
+        'booking_date' => 'date',
+        'serial_number' => 'integer',
+        'cancelled_at' => 'datetime',
+        'patient_notified' => 'boolean',
+    ];
+
+    /**
+     * A `wa.me` deep link staff can tap to message this patient.
+     *
+     * v1 has no WhatsApp API integration by design — this is a link a human
+     * presses, not an automated send.
+     */
+    public function whatsappLink(?string $message = null): string
+    {
+        // wa.me needs a bare international number: 8801XXXXXXXXX.
+        $digits = preg_replace('/\D/', '', (string) $this->patient_phone);
+
+        if (str_starts_with($digits, '0')) {
+            $digits = '88' . $digits;
+        } elseif (! str_starts_with($digits, '88')) {
+            $digits = '88' . ltrim($digits, '8');
+        }
+
+        $message ??= __('Hello :name, your appointment (serial :serial) on :date has been cancelled because the clinic is closed. Please contact us to rebook.', [
+            'name' => $this->patient_name,
+            'serial' => $this->serial_number,
+            'date' => $this->booking_date?->translatedFormat('j F Y'),
+        ]);
+
+        return 'https://wa.me/' . $digits . '?text=' . rawurlencode($message);
+    }
+
+    public function slotBlock()
+    {
+        return $this->belongsTo(SlotBlock::class, 'slot_block_id');
+    }
     
     public function bookable()
     {
@@ -29,6 +70,46 @@ class Booking extends Model
 
     public function labTests()
     {
-        return $this->belongsToMany(LabTest::class);
+        return $this->belongsToMany(LabTest::class)
+            ->using(BookingLabTest::class)
+            ->withPivot('price_at_booking')
+            ->withTimestamps();
+    }
+
+    public function paymentTransactions()
+    {
+        return $this->hasMany(PaymentTransaction::class);
+    }
+
+    /** Sum of the line items as quoted at booking time, not today's prices. */
+    public function totalPrice(): string
+    {
+        return number_format(
+            (float) $this->labTests->sum(fn ($test) => (float) $test->pivot->price_at_booking),
+            2,
+            '.',
+            ''
+        );
+    }
+
+    /**
+     * The union of every booked test's preparation instructions.
+     *
+     * Shown prominently on the ticket page — this is the screen the patient
+     * re-reads the night before, and a missed fasting requirement means a
+     * wasted test, a wasted trip, or a clinically wrong result.
+     *
+     * @return array<int, array{test: string, instructions: string}>
+     */
+    public function preparationInstructions(): array
+    {
+        return $this->labTests
+            ->filter(fn ($test) => filled($test->preparation_instructions))
+            ->map(fn ($test) => [
+                'test' => $test->name,
+                'instructions' => $test->preparation_instructions,
+            ])
+            ->values()
+            ->all();
     }
 }

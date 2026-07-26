@@ -25,7 +25,7 @@ class TenantAdminPanelProvider extends PanelProvider
     {
         return $panel
             ->id('tenantAdmin')
-            ->path('tenant')
+            ->path('admin')
             ->login()
             ->colors([
                 'primary' => Color::Amber,

@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0ea5e9">
-    <title>{{ $page->title }} | {{ tenant('id') }}</title>
+    <title>{{ $page->title }} | {{ tenant()->displayName() }}</title>
     <link rel="manifest" href="/manifest.webmanifest">
     <link rel="stylesheet" href="/css/theme.css">
     <script>
@@ -17,7 +17,7 @@
 </head>
 <body>
     <nav class="navbar">
-        <a href="/" class="navbar-brand">{{ tenant('id') }}</a>
+        <a href="/" class="navbar-brand">{{ tenant()->displayName() }}</a>
         <div class="navbar-nav">
             <a href="/">{{ __('Home') }}</a>
             <a href="/lang/en" style="margin-left: 1rem; font-size: 0.8rem;">EN</a>
@@ -53,12 +53,11 @@
 
                 @case('doctors_list')
                     <section class="section">
-                        <h2 class="section-heading">{{ __($block['data']['heading']) }}</h2>
+                        <h2 class="section-heading">{{ $block['data']['heading'] ?? '' }}</h2>
                         <div class="grid">
-                            @foreach(App\Models\Doctor::all() as $doctor)
+                            @foreach($doctors as $doctor)
                                 <div class="card">
                                     <h3>{{ $doctor->name }}</h3>
-                                    <p>{{ __('Specialist at') }} {{ tenant('id') }}</p>
                                 </div>
                             @endforeach
                         </div>
@@ -67,7 +66,7 @@
 
                 @case('services')
                     <section class="section">
-                        <h2 class="section-heading">{{ __($block['data']['heading']) }}</h2>
+                        <h2 class="section-heading">{{ $block['data']['heading'] ?? '' }}</h2>
                         <div class="grid">
                             @foreach($block['data']['items'] ?? [] as $item)
                                 <div class="card">
