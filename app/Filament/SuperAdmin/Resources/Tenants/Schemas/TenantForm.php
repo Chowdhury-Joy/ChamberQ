@@ -2,8 +2,8 @@
 
 namespace App\Filament\SuperAdmin\Resources\Tenants\Schemas;
 
+use Filament\Schemas\Components\Fieldset;
 use Filament\Forms\Components\ColorPicker;
-use Filament\Forms\Components\Fieldset;
 use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;

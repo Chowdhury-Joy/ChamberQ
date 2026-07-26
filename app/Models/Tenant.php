@@ -20,6 +20,10 @@ class Tenant extends BaseTenant
             'contact_phone',
             'whatsapp_number',
             'theme_color',
+            'logo_url',
+            'favicon_url',
+            'font_family',
+            'tagline',
             'default_locale',
             'template_id',
             'layout_id',
@@ -72,5 +76,15 @@ class Tenant extends BaseTenant
             },
             default => false,
         };
+    }
+
+    public function isClinic(): bool
+    {
+        return $this->plan_tier === 'clinic';
+    }
+
+    public function isSoloDoctor(): bool
+    {
+        return ! $this->isClinic();
     }
 }

@@ -52,6 +52,21 @@ class User extends Authenticatable implements FilamentUser
         ];
     }
 
+    public function isTenantAdmin(): bool
+    {
+        return $this->role === 'tenant_admin';
+    }
+
+    public function isWebDeveloper(): bool
+    {
+        return in_array($this->role, ['tenant_admin', 'web_developer']);
+    }
+
+    public function isContentEditor(): bool
+    {
+        return $this->role === 'content_editor';
+    }
+
     public function canAccessPanel(Panel $panel): bool
     {
         if ($panel->getId() === 'superAdmin') {
@@ -59,11 +74,8 @@ class User extends Authenticatable implements FilamentUser
         }
 
         if ($panel->getId() === 'tenantAdmin') {
-            // The tenant_id must match the tenant whose subdomain is being
-            // served. Checking only that *a* tenant is set would let any tenant
-            // admin open any other tenant's panel whenever the session cookie is
-            // shared across subdomains (which wildcard SSL setups commonly do).
-            return $this->role === 'tenant_admin'
+            // Allow tenant_admin, web_developer, and content_editor to access panel
+            return in_array($this->role, ['tenant_admin', 'web_developer', 'content_editor'])
                 && $this->tenant_id !== null
                 && tenancy()->initialized
                 && $this->tenant_id === tenant('id');

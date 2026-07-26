@@ -2,18 +2,38 @@
     use App\Support\DayOfWeek;
     $bookable = $booking->bookable;
     $isLab = $bookable instanceof \App\Models\LabCollectionSlot;
+    $tenant = tenant();
+    $fontFamily = $tenant->font_family ?? 'Inter';
+    $themeColor = $tenant->theme_color ?? '#0ea5e9';
+    $fontUrl = match($fontFamily) {
+        'Outfit' => 'https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap',
+        'Roboto' => 'https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap',
+        'Hind Siliguri' => 'https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap',
+        default => 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
+    };
 @endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#0ea5e9">
+    <meta name="theme-color" content="{{ $themeColor }}">
     <meta name="robots" content="noindex">
-    <title>{{ __('Your Appointment') }} | {{ tenant()->displayName() }}</title>
+    <title>{{ __('Your Appointment') }} | {{ $tenant->displayName() }}</title>
     <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="{{ $fontUrl }}">
+    @if($tenant->favicon_url)
+    <link rel="icon" href="{{ $tenant->favicon_url }}">
+    @endif
     <link rel="stylesheet" href="/css/theme.css">
     <style>
+        :root {
+            --color-primary: {{ $themeColor }};
+            --font-family-base: '{{ $fontFamily }}', system-ui, -apple-system, sans-serif;
+        }
+        body { font-family: var(--font-family-base); }
         .ticket { max-width: 520px; margin: 2rem auto; padding: 0 1rem; }
         .ticket-card { background: var(--bg-surface); padding: 2rem; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); text-align: center; }
         .serial { font-size: 3.5rem; font-weight: 700; color: var(--color-primary); line-height: 1; margin: .5rem 0 1.5rem; }
@@ -33,6 +53,9 @@
 <body>
     <main class="ticket">
         <div class="ticket-card">
+            @if($tenant->logo_url)
+                <img src="{{ $tenant->logo_url }}" alt="{{ $tenant->displayName() }}" style="height: 48px; margin-bottom: 1rem; display: inline-block;">
+            @endif
             <p class="text-muted">{{ __('Your serial number') }}</p>
             <p class="serial">{{ $booking->serial_number }}</p>
 

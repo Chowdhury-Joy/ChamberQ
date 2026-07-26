@@ -39,7 +39,8 @@ class SuperAdminPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/SuperAdmin/Widgets'), for: 'App\Filament\SuperAdmin\Widgets')
             ->widgets([
                 AccountWidget::class,
-                FilamentInfoWidget::class,
+                \App\Filament\SuperAdmin\Widgets\SuperAdminStatsOverview::class,
+                \App\Filament\SuperAdmin\Widgets\RecentTenantsWidget::class,
             ])
             ->middleware([
                 EncryptCookies::class,

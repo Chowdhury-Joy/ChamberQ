@@ -20,6 +20,11 @@ class DoctorResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
+    public static function shouldRegisterNavigation(): bool
+    {
+        return tenant()?->hasFeature('multiple_doctors') ?? false;
+    }
+
     public static function form(Schema $schema): Schema
     {
         return DoctorForm::configure($schema);

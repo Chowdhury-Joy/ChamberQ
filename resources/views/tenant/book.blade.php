@@ -3,17 +3,36 @@
     $hasLabTests = $tenant->hasFeature('lab_tests');
     $hasMultipleDoctors = $tenant->hasFeature('multiple_doctors');
     $hasMultipleChambers = $tenant->hasFeature('multiple_chambers');
+    $fontFamily = $tenant->font_family ?? 'Inter';
+    $themeColor = $tenant->theme_color ?? '#0ea5e9';
+    $fontUrl = match($fontFamily) {
+        'Outfit' => 'https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap',
+        'Roboto' => 'https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap',
+        'Hind Siliguri' => 'https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap',
+        default => 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
+    };
 @endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#0ea5e9">
-    <title>{{ __('Book Appointment') }} | {{ $tenant->id }}</title>
+    <meta name="theme-color" content="{{ $themeColor }}">
+    <title>{{ __('Book Appointment') }} | {{ $tenant->displayName() }}</title>
     <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="{{ $fontUrl }}">
+    @if($tenant->favicon_url)
+    <link rel="icon" href="{{ $tenant->favicon_url }}">
+    @endif
     <link rel="stylesheet" href="/css/theme.css">
     <style>
+        :root {
+            --color-primary: {{ $themeColor }};
+            --font-family-base: '{{ $fontFamily }}', system-ui, -apple-system, sans-serif;
+        }
+        body { font-family: var(--font-family-base); }
         .booking-container { max-width: 650px; margin: 3rem auto; background: var(--bg-surface); padding: 3rem; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); position: relative; }
         .booking-header { text-align: center; margin-bottom: 2.5rem; }
         .step { display: none; animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
@@ -43,7 +62,13 @@
 </head>
 <body>
     <nav class="navbar">
-        <a href="/" class="navbar-brand">{{ $tenant->id }}</a>
+        <a href="/" class="navbar-brand">
+            @if($tenant->logo_url)
+                <img src="{{ $tenant->logo_url }}" alt="{{ $tenant->displayName() }}" style="height: 36px; vertical-align: middle;">
+            @else
+                {{ $tenant->displayName() }}
+            @endif
+        </a>
         <div class="navbar-nav">
             <a href="/">{{ __('Home') }}</a>
         </div>

@@ -91,4 +91,23 @@ class BookingController extends Controller
             'booking' => $booking,
         ]);
     }
+
+    public function portal(Request $request)
+    {
+        $phone = $request->query('phone');
+        $bookings = collect();
+
+        if (filled($phone)) {
+            $bookings = Booking::where('patient_phone', 'like', '%' . trim((string) $phone) . '%')
+                ->with(['bookable'])
+                ->latest()
+                ->take(10)
+                ->get();
+        }
+
+        return view('tenant.portal.index', [
+            'bookings' => $bookings,
+            'phone' => $phone,
+        ]);
+    }
 }

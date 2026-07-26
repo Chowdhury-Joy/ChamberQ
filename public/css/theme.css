@@ -117,3 +117,21 @@ body {
 .icon { font-size: 2rem; margin-bottom: 1rem; color: var(--color-primary); }
 
 @keyframes fadeUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Filament Builder High-Visibility Action Buttons */
+.fi-fo-builder-block-add-btn,
+.fi-fo-builder-add-between-btn,
+button[title*="Insert"],
+button[title*="insert"],
+.fi-fo-builder-block-header-actions button {
+  background-color: #0284c7 !important;
+  color: #ffffff !important;
+  font-weight: 700 !important;
+  border: 2px solid #0369a1 !important;
+  box-shadow: 0 4px 12px rgba(2, 132, 199, 0.3) !important;
+}
+
+.fi-fo-builder-add-between-btn:hover {
+  background-color: #0369a1 !important;
+  transform: scale(1.08) !important;
+}
