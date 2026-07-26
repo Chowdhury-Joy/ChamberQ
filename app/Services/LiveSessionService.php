@@ -49,19 +49,21 @@ class LiveSessionService
     public function callNextPatient(LiveSession $liveSession): ?Booking
     {
         return DB::transaction(function () use ($liveSession) {
-            // First check if any skipped patients are due for retry
-            // If current booking has a serial, we check for retry_queue_position <= current serial + 1
             $currentBooking = $liveSession->currentBooking;
             
+            // First check if any skipped patients are due for retry based on serial position
+            $retryQuery = $liveSession->bookings()
+                ->where('status', 'skipped')
+                ->whereNotNull('retry_queue_position');
+                
             if ($currentBooking) {
-                $retryBooking = $liveSession->skippedBookings()
-                    ->whereNotNull('retry_queue_position')
-                    ->where('retry_queue_position', '<=', $currentBooking->serial_number + 1)
-                    ->first();
-                    
-                if ($retryBooking) {
-                    return $this->setAsCurrent($liveSession, $retryBooking);
-                }
+                $retryQuery->where('retry_queue_position', '<=', $currentBooking->serial_number + 1);
+            }
+            
+            $retryBooking = $retryQuery->orderBy('retry_queue_position')->first();
+                
+            if ($retryBooking) {
+                return $this->setAsCurrent($liveSession, $retryBooking);
             }
 
             // Normal queue: next waiting patient
@@ -77,8 +79,21 @@ class LiveSessionService
             if ($nextBooking) {
                 return $this->setAsCurrent($liveSession, $nextBooking);
             }
+            
+            // If the normal queue is empty, but there are still skipped patients waiting for their retry position
+            // (e.g. they were skipped near the end of the queue and their retry position is higher than the max serial)
+            // we should just call the next available skipped patient.
+            $anyRemainingRetry = $liveSession->bookings()
+                ->where('status', 'skipped')
+                ->whereNotNull('retry_queue_position')
+                ->orderBy('retry_queue_position')
+                ->first();
+                
+            if ($anyRemainingRetry) {
+                return $this->setAsCurrent($liveSession, $anyRemainingRetry);
+            }
 
-            // If no normal patient, just clear current
+            // If no normal patient and no retries, just clear current
             $liveSession->update([
                 'current_booking_id' => null,
                 'current_called_at' => null,

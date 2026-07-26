@@ -52,18 +52,20 @@
                     <span>🏥 {{ $tenant->displayName() }}</span>
                 @endif
             </a>
-            <div class="navbar-nav flex items-center gap-4 text-sm font-medium text-slate-700">
+            <div class="navbar-nav flex items-center gap-4 text-sm font-medium text-black">
                 <a href="/" class="hover:text-sky-600 transition-colors">{{ __('Home') }}</a>
                 @foreach($customPages as $customPage)
                     <a href="{{ $customPage->slug }}" class="hover:text-sky-600 transition-colors">{{ $customPage->title }}</a>
                 @endforeach
-                <a href="/portal" class="hover:text-sky-600 transition-colors">{{ __('Patient Portal') }}</a>
+                <a href="/book" class="hover:text-sky-600 transition-colors">{{ __('Book Appointment') }}</a>
+                
                 <div class="flex items-center gap-1 border-l border-slate-200 pl-3">
-                    <a href="/lang/en" class="text-xs text-slate-500 hover:text-slate-900">EN</a>
+                    <a href="/lang/en" class="text-xs text-slate-500 hover:text-black">EN</a>
                     <span class="text-slate-300">|</span>
-                    <a href="/lang/bn" class="text-xs text-slate-500 hover:text-slate-900">BN</a>
+                    <a href="/lang/bn" class="text-xs text-slate-500 hover:text-black">BN</a>
                 </div>
-                <a href="/book" class="btn btn-primary ml-2 shadow-sm">{{ __('Book Appointment') }}</a>
+                
+                <a href="/portal" class="btn btn-primary ml-2 shadow-sm">{{ __('Patient Portal') }}</a>
             </div>
         </div>
     </nav>

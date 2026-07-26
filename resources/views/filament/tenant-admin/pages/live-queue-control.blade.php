@@ -1,19 +1,31 @@
 <x-filament-panels::page>
     <div class="space-y-6">
         
-        {{-- Session Selector --}}
-        <div class="p-6 bg-white rounded-xl shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-            <h3 class="text-lg font-medium mb-4">Select Session for Today</h3>
-            <div class="flex gap-4 items-end">
-                <div class="flex-1">
-                    <select wire:model.live="selectedSessionId" class="w-full rounded-lg border-gray-300 dark:bg-gray-900 dark:border-gray-600">
-                        <option value="">-- Choose a Session --</option>
-                        @foreach($this->sessions as $id => $label)
-                            <option value="{{ $id }}">{{ $label }}</option>
-                        @endforeach
-                    </select>
+        {{-- Session Selector & Header Actions --}}
+        <div style="margin-bottom: 24px;">
+            <x-filament::section>
+                <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                    <div class="flex-1 max-w-xl">
+                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
+                            Select Session for Today ({{ now()->translatedFormat('l, j F Y') }})
+                        </label>
+                        <select wire:model.live="selectedSessionId" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500">
+                            <option value="">-- Choose a Session --</option>
+                            @foreach($this->sessions as $id => $label)
+                                <option value="{{ $id }}">{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    @if($this->selectedSessionId)
+                        <div>
+                            <x-filament::button wire:click="addMockPatients" color="gray" icon="heroicon-m-user-plus">
+                                + Add Sample Patients
+                            </x-filament::button>
+                        </div>
+                    @endif
                 </div>
-            </div>
+            </x-filament::section>
         </div>
 
         @if($this->selectedSessionId)
@@ -24,170 +36,128 @@
                 $status = $liveSession?->status ?? 'scheduled';
             @endphp
 
-            {{-- Main Control Panel --}}
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {{-- Main Control Grid --}}
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6" style="gap: 24px;">
                 
-                {{-- Status & Quick Actions --}}
-                <div class="md:col-span-1 space-y-4">
-                    <div class="p-6 bg-white rounded-xl shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
-                        <h3 class="text-lg font-medium mb-2">Session Status</h3>
-                        
-                        <div class="mb-6">
+                {{-- Left Column: Session Controls & Currently Serving --}}
+                <div class="lg:col-span-1 space-y-6" style="display: flex; flex-direction: column; gap: 24px;">
+                    
+                    {{-- Status & Quick Control Card --}}
+                    <x-filament::section>
+                        <x-slot name="heading">
+                            Session Status
+                        </x-slot>
+                        <x-slot name="headerEnd">
                             @if($status === 'scheduled')
-                                <span class="px-3 py-1 rounded-full text-sm font-semibold bg-gray-100 text-gray-800">Scheduled</span>
+                                <x-filament::badge color="gray">Scheduled</x-filament::badge>
                             @elseif($status === 'delayed')
-                                <span class="px-3 py-1 rounded-full text-sm font-semibold bg-warning-100 text-warning-800">Delayed ({{ $liveSession->delay_minutes }}m)</span>
+                                <x-filament::badge color="warning">Delayed ({{ $liveSession->delay_minutes }}m)</x-filament::badge>
                             @elseif($status === 'active')
-                                <span class="px-3 py-1 rounded-full text-sm font-semibold bg-success-100 text-success-800 animate-pulse">Live</span>
+                                <x-filament::badge color="success">● Live Active</x-filament::badge>
                             @elseif($status === 'paused')
-                                <span class="px-3 py-1 rounded-full text-sm font-semibold bg-gray-100 text-gray-800">Paused</span>
+                                <x-filament::badge color="gray">Paused</x-filament::badge>
                             @elseif($status === 'completed')
-                                <span class="px-3 py-1 rounded-full text-sm font-semibold bg-primary-100 text-primary-800">Completed</span>
+                                <x-filament::badge color="info">Completed</x-filament::badge>
                             @elseif($status === 'cancelled')
-                                <span class="px-3 py-1 rounded-full text-sm font-semibold bg-danger-100 text-danger-800">Cancelled</span>
+                                <x-filament::badge color="danger">Cancelled</x-filament::badge>
                             @endif
-                        </div>
+                        </x-slot>
 
-                        <div class="space-y-3">
+                        <div class="space-y-4">
                             @if(in_array($status, ['scheduled', 'delayed']))
-                                <button wire:click="startSession" class="w-full flex justify-center items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-lg font-medium">
-                                    <x-heroicon-o-play class="w-5 h-5"/> Start Session
-                                </button>
+                                <x-filament::button wire:click="startSession" color="success" icon="heroicon-m-play" size="lg" class="w-full">
+                                    Start Live Session
+                                </x-filament::button>
                             @endif
 
                             @if($status === 'active')
-                                <div class="p-4 bg-gray-50 dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 mb-4">
-                                    <div class="text-sm text-gray-500">Currently Serving</div>
+                                {{-- Currently Serving Box --}}
+                                <div class="p-6 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
+                                    <div class="text-sm text-gray-500 dark:text-gray-400 mb-4">Currently serving</div>
+                                    
                                     @if($liveSession->currentBooking)
-                                        <div class="text-2xl font-bold">#{{ $liveSession->currentBooking->serial_number }}</div>
-                                        <div class="font-medium mt-1">{{ $liveSession->currentBooking->patient_name }}</div>
+                                        <div class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
+                                            #{{ $liveSession->currentBooking->serial_number }}
+                                        </div>
                                         
-                                        @if($liveSession->currentBooking->status === 'called')
-                                            <div class="mt-2 text-warning-600 text-sm flex items-center gap-1">
-                                                <x-heroicon-m-bell-alert class="w-4 h-4 animate-bounce" /> Waiting for patient...
+                                        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;">
+                                            {{-- Patient Info & Badge --}}
+                                            <div style="display: flex; align-items: center; gap: 1rem;">
+                                                <div class="text-lg font-medium text-gray-900 dark:text-gray-100">
+                                                    {{ $liveSession->currentBooking->patient_name }}
+                                                </div>
+                                                @if($liveSession->currentBooking->status === 'called')
+                                                    <x-filament::badge color="warning" icon="heroicon-m-bell-alert">
+                                                        Called — Waiting for Patient
+                                                    </x-filament::badge>
+                                                @elseif($liveSession->currentBooking->status === 'in_chamber')
+                                                    <x-filament::badge color="success" icon="heroicon-m-check-circle">
+                                                        Inside Doctor Chamber
+                                                    </x-filament::badge>
+                                                @endif
                                             </div>
-                                        @elseif($liveSession->currentBooking->status === 'in_chamber')
-                                            <div class="mt-2 text-success-600 text-sm flex items-center gap-1">
-                                                <x-heroicon-m-check-circle class="w-4 h-4" /> In Chamber
+
+                                            {{-- Action Buttons --}}
+                                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                                @if($liveSession->currentBooking->status === 'called')
+                                                    <x-filament::button wire:click="patientArrived" color="success" icon="heroicon-m-check">
+                                                        Patient arrived
+                                                    </x-filament::button>
+                                                    
+                                                    @if($liveSession->isCallTimedOut())
+                                                        <x-filament::button wire:click="skipPatient" color="danger" icon="heroicon-m-forward">
+                                                            Timeout
+                                                        </x-filament::button>
+                                                    @else
+                                                        <x-filament::button wire:click="skipPatient" color="gray" icon="heroicon-m-forward">
+                                                            Timeout
+                                                        </x-filament::button>
+                                                    @endif
+                                                @elseif($liveSession->currentBooking->status === 'in_chamber')
+                                                    <x-filament::button wire:click="nextPatient" color="primary" icon="heroicon-m-check-badge" class="!text-white shadow-sm">
+                                                        Complete & Call Next Patient
+                                                    </x-filament::button>
+                                                @endif
                                             </div>
-                                        @endif
+                                        </div>
                                     @else
-                                        <div class="text-lg text-gray-400">None</div>
+                                        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;">
+                                            <div class="text-lg font-medium text-gray-400">No Active Call</div>
+                                            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                                                <x-filament::button wire:click="nextPatient" color="primary" icon="heroicon-m-megaphone" class="!text-white shadow-sm">
+                                                    Call Next Patient (#{{ optional($bookings->where('status', 'waiting')->first())->serial_number ?? 'End' }})
+                                                </x-filament::button>
+                                            </div>
+                                        </div>
                                     @endif
                                 </div>
-
-                                @if($liveSession->currentBooking)
-                                    @if($liveSession->currentBooking->status === 'called')
-                                        <button wire:click="patientArrived" class="w-full flex justify-center items-center gap-2 px-4 py-2 bg-success-600 hover:bg-success-500 text-white rounded-lg font-medium">
-                                            <x-heroicon-o-check class="w-5 h-5"/> Patient Arrived
-                                        </button>
-                                        
-                                        @if($liveSession->isCallTimedOut())
-                                            <button wire:click="skipPatient" class="w-full flex justify-center items-center gap-2 px-4 py-2 bg-danger-600 hover:bg-danger-500 text-white rounded-lg font-medium mt-2 animate-pulse shadow-[0_0_15px_rgba(220,38,38,0.5)]">
-                                                <x-heroicon-o-forward class="w-5 h-5"/> Skip (No Show)
-                                            </button>
-                                        @else
-                                            <button wire:click="skipPatient" class="w-full flex justify-center items-center gap-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-lg font-medium mt-2">
-                                                <x-heroicon-o-forward class="w-5 h-5"/> Skip (No Show)
-                                            </button>
-                                        @endif
-                                    @elseif($liveSession->currentBooking->status === 'in_chamber')
-                                        <button wire:click="nextPatient" class="w-full flex justify-center items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-lg font-medium">
-                                            <x-heroicon-o-forward class="w-5 h-5"/> Complete & Next
-                                        </button>
-                                    @endif
-                                @else
-                                    <button wire:click="nextPatient" class="w-full flex justify-center items-center gap-2 px-4 py-2 bg-primary-600 hover:bg-primary-500 text-white rounded-lg font-medium">
-                                        <x-heroicon-o-forward class="w-5 h-5"/> Call Next Patient
-                                    </button>
-                                @endif
-                                
                             @endif
+                        </div>
+                    </x-filament::section>
 
-                            <div class="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-2">
-                                {{ $this->markLateAction }}
-                                {{ $this->pauseSessionAction }}
-                                {{ $this->resumeSessionAction }}
-                                {{ $this->markAbsentAction }}
-                                
-                                @if(in_array($status, ['active', 'paused']))
-                                    <button wire:click="endSession" class="w-full flex justify-center items-center gap-2 px-4 py-2 border-2 border-danger-600 text-danger-600 hover:bg-danger-50 rounded-lg font-medium mt-4">
-                                        <x-heroicon-o-flag class="w-5 h-5"/> End Session
-                                    </button>
-                                @endif
+                    {{-- TV Screen Link Widget --}}
+                    <x-filament::section>
+                        <div class="flex items-center justify-between">
+                            <div class="flex items-center gap-2 font-medium">
+                                <x-filament::icon icon="heroicon-m-tv" class="w-5 h-5 text-primary-500" style="width: 1.25rem; height: 1.25rem;" />
+                                Outdoor TV Screen
                             </div>
+                            <x-filament::button href="{{ route('tenant.screen', ['session' => $this->selectedSessionId, 'date' => now()->format('Y-m-d')]) }}" tag="a" target="_blank" color="gray" icon="heroicon-m-arrow-top-right-on-square" size="sm">
+                                Open Screen
+                            </x-filament::button>
                         </div>
-                    </div>
-                    
-                    <div class="p-4 bg-white rounded-xl shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700 text-sm">
-                        <div class="flex justify-between mb-2">
-                            <span class="text-gray-500">Screen URL:</span>
-                            <a href="{{ route('tenant.screen', ['session' => $this->selectedSessionId, 'date' => now()->format('Y-m-d')]) }}" target="_blank" class="text-primary-600 hover:underline flex items-center gap-1">
-                                Open Screen <x-heroicon-m-arrow-top-right-on-square class="w-4 h-4"/>
-                            </a>
-                        </div>
-                    </div>
+                    </x-filament::section>
                 </div>
 
-                {{-- Queue List --}}
-                <div class="md:col-span-2">
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700 overflow-hidden">
-                        <table class="w-full text-left text-sm">
-                            <thead class="bg-gray-50 dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700">
-                                <tr>
-                                    <th class="px-4 py-3 font-medium text-gray-500">Serial</th>
-                                    <th class="px-4 py-3 font-medium text-gray-500">Patient</th>
-                                    <th class="px-4 py-3 font-medium text-gray-500">Status</th>
-                                    <th class="px-4 py-3 font-medium text-gray-500">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                                @forelse($bookings as $booking)
-                                    <tr class="@if($currentBookingId === $booking->id) bg-primary-50 dark:bg-primary-900/20 @endif">
-                                        <td class="px-4 py-3 font-medium">#{{ $booking->serial_number }}</td>
-                                        <td class="px-4 py-3">
-                                            {{ $booking->patient_name }}
-                                            <div class="text-xs text-gray-500">{{ $booking->patient_phone }}</div>
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            @if($booking->status === 'waiting')
-                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-gray-100 text-gray-800">Waiting</span>
-                                            @elseif($booking->status === 'called')
-                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-warning-100 text-warning-800">Called</span>
-                                            @elseif($booking->status === 'in_chamber')
-                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-success-100 text-success-800">In Chamber</span>
-                                            @elseif($booking->status === 'completed')
-                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-primary-100 text-primary-800">Completed</span>
-                                            @elseif($booking->status === 'skipped')
-                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-orange-100 text-orange-800">Skipped ({{ $booking->skip_count }}/2)</span>
-                                            @elseif($booking->status === 'no_show')
-                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-danger-100 text-danger-800">No Show</span>
-                                            @elseif($booking->status === 'cancelled')
-                                                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-danger-100 text-danger-800">Cancelled</span>
-                                            @endif
-                                            
-                                            @if($booking->retry_queue_position)
-                                                <div class="text-xs text-orange-600 mt-1">Retrying after #{{ $booking->retry_queue_position - 1 }}</div>
-                                            @endif
-                                        </td>
-                                        <td class="px-4 py-3">
-                                            @if($booking->status === 'no_show')
-                                                <button wire:click="reinstatePatient('{{ $booking->id }}')" class="text-sm text-primary-600 hover:underline">Reinstate</button>
-                                            @endif
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="4" class="px-4 py-8 text-center text-gray-500">No bookings for this session today.</td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
+                {{-- Right Column: Queue Table --}}
+                <div class="lg:col-span-2">
+                    {{ $this->table }}
                 </div>
             </div>
         @endif
     </div>
-    
-    <div wire:poll.3s></div>
+
+    {{-- Filament Action Modals --}}
+    <x-filament-actions::modals />
+
 </x-filament-panels::page>

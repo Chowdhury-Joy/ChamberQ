@@ -12,11 +12,20 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Support\Colors\Color;
-use Illuminate\Support\Facades\DB;
+use Filament\Actions\Concerns\InteractsWithActions;
+use Filament\Actions\Contracts\HasActions;
+use Filament\Tables\Contracts\HasTable;
+use Filament\Tables\Concerns\InteractsWithTable;
+use App\Services\BookingService;
+use Filament\Tables\Table;
+use Filament\Tables\Columns\TextColumn;
+use Illuminate\Support\Str;
 use App\Models\Booking;
 
-class LiveQueueControl extends Page
+class LiveQueueControl extends Page implements HasActions, HasTable
 {
+    use InteractsWithActions, InteractsWithTable;
+
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-queue-list';
     protected static string|\UnitEnum|null $navigationGroup = 'Operations';
     protected static ?string $navigationLabel = 'Live Queue Control';
@@ -40,7 +49,63 @@ class LiveQueueControl extends Page
 
     protected function getHeaderActions(): array
     {
-        return [];
+        return [
+            $this->markLateAction(),
+            $this->pauseSessionAction(),
+            $this->resumeSessionAction(),
+            $this->markAbsentAction(),
+            $this->endSessionAction(),
+            
+            \Filament\Actions\Action::make('newWalkIn')
+                ->label(__('New Walk-In'))
+                ->icon('heroicon-o-user-plus')
+                ->visible(fn () => $this->selectedSessionId !== null)
+                ->schema([
+                    \Filament\Forms\Components\TextInput::make('patient_name')
+                        ->label(__('Patient name'))
+                        ->required(),
+                    \Filament\Forms\Components\TextInput::make('patient_phone')
+                        ->label(__('Phone number'))
+                        ->tel()
+                        ->required()
+                        ->rule('regex:/^(?:\+?88)?01[3-9]\d{8}$/')
+                        ->validationMessages([
+                            'regex' => __('Please enter a valid Bangladeshi mobile number, for example 01712345678.'),
+                        ]),
+                ])
+                ->action(function (array $data, \App\Services\BookingService $bookingService) {
+                    $bookable = \App\Models\ScheduleSession::findOrFail($this->selectedSessionId);
+
+                    $bookingService->createBookingForBookable(
+                        $bookable,
+                        \Carbon\Carbon::today()->toDateString(),
+                        $data['patient_name'],
+                        $data['patient_phone']
+                    );
+                })
+                ->successNotificationTitle(__('Walk-in added directly to this session\'s live queue.')),
+        ];
+    }
+    
+    public function endSessionAction(): Action
+    {
+        return Action::make('endSession')
+            ->label('Finish / End Session')
+            ->color('danger')
+            ->outlined()
+            ->icon('heroicon-s-flag')
+            ->requiresConfirmation()
+            ->modalDescription('Are you sure you want to completely end this session? All remaining patients will be cancelled.')
+            ->extraAttributes([
+                'style' => 'background-color: #fef2f2 !important; border: 1px solid #dc2626 !important; color: #dc2626 !important;',
+                'class' => 'font-bold [&_svg]:!text-red-600 [&_svg]:!fill-red-600'
+            ])
+            ->action(function () {
+                if (!$this->activeLiveSession) return;
+                app(LiveSessionService::class)->endSession($this->activeLiveSession);
+                Notification::make()->title('Session Ended')->success()->send();
+            })
+            ->visible(fn () => $this->activeLiveSession && in_array($this->activeLiveSession->status, ['active', 'paused']));
     }
 
     public function getSessionsProperty()
@@ -70,6 +135,64 @@ class LiveQueueControl extends Page
             ->whereDate('booking_date', Carbon::today())
             ->orderBy('serial_number')
             ->get();
+    }
+
+    public function table(Table $table): Table
+    {
+        return $table
+            ->query(
+                Booking::query()
+                    ->when($this->selectedSessionId, function ($query) {
+                        $query->where('bookable_type', ScheduleSession::class)
+                              ->where('bookable_id', $this->selectedSessionId)
+                              ->whereDate('booking_date', Carbon::today());
+                    }, function ($query) {
+                        $query->whereRaw('1 = 0');
+                    })
+                    ->orderByRaw("CASE WHEN status = 'in_chamber' THEN 1 WHEN status = 'waiting' THEN 2 WHEN status = 'completed' THEN 3 WHEN status = 'cancelled' THEN 4 ELSE 5 END")
+                    ->orderBy('serial_number')
+            )
+            ->columns([
+                TextColumn::make('serial_number')
+                    ->label('Serial')
+                    ->weight('bold')
+                    ->formatStateUsing(fn ($state) => "#{$state}"),
+                TextColumn::make('patient_name')
+                    ->label('Patient Details')
+                    ->description(fn (Booking $record) => $record->patient_phone)
+                    ->searchable(),
+                TextColumn::make('status')
+                    ->badge()
+                    ->color(fn (string $state): string => match ($state) {
+                        'waiting' => 'gray',
+                        'called' => 'warning',
+                        'in_chamber' => 'success',
+                        'completed' => 'info',
+                        'skipped' => 'warning',
+                        'no_show' => 'danger',
+                        'cancelled' => 'danger',
+                        default => 'primary',
+                    })
+                    ->formatStateUsing(function ($state, Booking $record) {
+                        if ($state === 'skipped') return "Skipped ({$record->skip_count}/2)";
+                        return str_replace('_', ' ', Str::title($state));
+                    }),
+                TextColumn::make('retry_queue_position')
+                    ->label('Retry After')
+                    ->formatStateUsing(fn ($state) => $state ? "#" . ($state - 1) : null)
+                    ->color('warning')
+                    ->visible(fn () => $this->bookings->whereNotNull('retry_queue_position')->count() > 0),
+            ])
+            ->actions([
+                \Filament\Actions\Action::make('reinstate')
+                    ->label('Reinstate')
+                    ->icon('heroicon-m-arrow-path')
+                    ->color('gray')
+                    ->visible(fn (Booking $record) => $record->status === 'no_show')
+                    ->action(fn (Booking $record) => $this->reinstatePatient($record->id)),
+            ])
+            ->poll('3s')
+            ->paginated(false);
     }
 
     public function startSession()
@@ -124,6 +247,40 @@ class LiveQueueControl extends Page
         $booking = Booking::findOrFail($bookingId);
         app(LiveSessionService::class)->reinstatePatient($booking);
         Notification::make()->title('Patient Reinstated')->success()->send();
+    }
+
+    public function addMockPatients()
+    {
+        if (!$this->selectedSessionId) return;
+
+        $session = ScheduleSession::findOrFail($this->selectedSessionId);
+        $today = Carbon::today();
+        
+        // Ensure session operates today
+        $session->update(['day_of_week' => $today->dayOfWeek]);
+
+        $bookingService = app(BookingService::class);
+        $mockNames = ['ফাতেমা বেগম', 'মোহাম্মদ করিম', 'রশিদা আক্তার', 'আবদুল হাসান', 'নুসরাত জাহান', 'আমিনুল ইসলাম'];
+
+        $added = 0;
+        foreach ($mockNames as $index => $name) {
+            try {
+                $bookingService->createBookingForBookable(
+                    $session,
+                    $today->toDateString(),
+                    $name,
+                    '0170000000' . ($index + 1)
+                );
+                $added++;
+            } catch (\Throwable $e) {
+                // Ignore if duplicate or full
+            }
+        }
+
+        Notification::make()
+            ->title("Added {$added} Sample Patients")
+            ->success()
+            ->send();
     }
 
     // Action for Mark Late
@@ -218,11 +375,11 @@ class LiveQueueControl extends Page
     public function markAbsentAction(): Action
     {
         return Action::make('markAbsent')
-            ->label('Mark Absent')
+            ->label('Cancel Session (Doctor Absent)')
             ->color('danger')
             ->icon('heroicon-o-x-circle')
             ->requiresConfirmation()
-            ->modalDescription('Are you sure? This will cancel all bookings and issue credits.')
+            ->modalDescription('Are you sure? This will cancel the session and all active patient bookings.')
             ->action(function () {
                 if (!$this->selectedSessionId) return;
                 $scheduleSession = ScheduleSession::findOrFail($this->selectedSessionId);
