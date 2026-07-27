@@ -76,6 +76,24 @@
 
     <main class="section">
         <div class="booking-container">
+            @if(! $bookingAvailable)
+                <div class="booking-header">
+                    <h2>{{ __('Booking unavailable') }}</h2>
+                    <p class="text-muted" style="margin-top: 1rem; line-height: 1.6;">
+                        {{ __('This clinic has not published schedules yet. Please contact the clinic and try again later.') }}
+                    </p>
+                    @if(filled($tenant->contact_phone))
+                        <p style="margin-top: 1.5rem;">
+                            <a href="tel:{{ $tenant->contact_phone }}" class="btn" style="display: inline-block;">
+                                {{ __('Call') }} {{ $tenant->contact_phone }}
+                            </a>
+                        </p>
+                    @endif
+                    <p style="margin-top: 1.5rem;">
+                        <a href="/" class="btn btn-back" style="display: inline-block;">{{ __('Back to home') }}</a>
+                    </p>
+                </div>
+            @else
             <div class="booking-header">
                 <h2>{{ __('Book Your Appointment') }}</h2>
                 <div class="progress-bar" id="progressBar"></div>
@@ -90,11 +108,13 @@
                 <div class="step" id="step-type" data-step-name="type">
                     <h3>{{ __('What would you like to book?') }}</h3>
                     <div class="selection-grid">
+                        @if($canBookConsultation)
                         <div class="selection-card" onclick="selectType('session')">
                             <h4>{{ __('Doctor Consultation') }}</h4>
                             <p>{{ __('Book a visit with one of our specialists.') }}</p>
                         </div>
-                        @if($hasLabTests)
+                        @endif
+                        @if($hasLabTests && $canBookLab)
                         <div class="selection-card" onclick="selectType('lab')">
                             <h4>{{ __('Lab Tests') }}</h4>
                             <p>{{ __('Book pathology and imaging tests.') }}</p>
@@ -203,9 +223,11 @@
                 <div style="font-size: 3rem; font-weight:700; color: var(--color-primary); margin: 1rem 0;" id="serialBadge"></div>
                 <p class="text-muted">{{ __('Redirecting to your live queue ticket...') }}</p>
             </div>
+            @endif
         </div>
     </main>
 
+    @if($bookingAvailable)
     <!-- Data passed from backend -->
     <script>
         const config = {
@@ -214,6 +236,8 @@
             hasMultipleChambers: @json($hasMultipleChambers),
             chambersCount: @json(count($chambers)),
             doctorsCount: @json(count($doctors)),
+            canBookConsultation: @json($canBookConsultation),
+            canBookLab: @json($canBookLab),
         };
         
         const sessionsData = @json($sessions);
@@ -233,8 +257,10 @@
         function rebuildFlow() {
             flow = [];
             
-            if (config.hasLabTests) {
+            if (config.hasLabTests && config.canBookConsultation && config.canBookLab) {
                 flow.push('step-type');
+            } else if (config.canBookLab && !config.canBookConsultation) {
+                state.type = 'lab';
             } else {
                 state.type = 'session';
             }
@@ -403,7 +429,7 @@
                 );
                 
                 if (filtered.length === 0) {
-                    grid.innerHTML = '<p class="text-muted">No schedules found for this selection.</p>';
+                    grid.innerHTML = '<div class="text-muted" style="padding:1rem 0;line-height:1.5;"><p style="margin:0 0 0.5rem;font-weight:600;color:#0f172a;">No schedules available</p><p style="margin:0;">There are no consultation sessions for this selection. Please go back and try another option, or contact the clinic.</p></div>';
                     return;
                 }
                 
@@ -426,7 +452,7 @@
                 );
                 
                 if (filtered.length === 0) {
-                    grid.innerHTML = '<p class="text-muted">No lab slots found for this chamber.</p>';
+                    grid.innerHTML = '<div class="text-muted" style="padding:1rem 0;line-height:1.5;"><p style="margin:0 0 0.5rem;font-weight:600;color:#0f172a;">No lab slots available</p><p style="margin:0;">There are no collection windows for this location. Please go back or contact the clinic.</p></div>';
                     return;
                 }
                 
@@ -526,6 +552,13 @@
 
         rebuildFlow();
         showStep();
+    </script>
+    @endif
+
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('/sw.js').catch(() => {});
+        }
     </script>
 </body>
 </html>

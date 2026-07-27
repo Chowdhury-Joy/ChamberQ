@@ -2,14 +2,16 @@
 
 namespace App\Filament\TenantAdmin\Pages;
 
-use Filament\Schemas\Components\Fieldset;
 use Filament\Forms\Components\ColorPicker;
+use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Components\Fieldset;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 
 class BrandingSettings extends Page implements HasForms
@@ -53,6 +55,8 @@ class BrandingSettings extends Page implements HasForms
                 'estimated_time_buffer_minutes' => $tenant->estimated_time_buffer_minutes ?? 30,
                 'first_n_patients' => $tenant->first_n_patients ?? 2,
                 'first_n_arrival_offset_minutes' => $tenant->first_n_arrival_offset_minutes ?? 15,
+                'call_audio_preset' => $tenant->call_audio_preset ?? 'chime',
+                'call_audio_path' => $tenant->call_audio_path,
             ]);
         }
     }
@@ -149,6 +153,34 @@ class BrandingSettings extends Page implements HasForms
                             ->numeric()
                             ->default(15)
                             ->required(),
+                        Select::make('call_audio_preset')
+                            ->label(__('Call Audio'))
+                            ->helperText(__('Played on the waiting-room screen when a patient is called.'))
+                            ->options([
+                                'chime' => 'Default chime',
+                                'soft-bell' => 'Soft bell',
+                                'alert' => 'Alert tone',
+                                'custom' => 'Custom upload',
+                            ])
+                            ->default('chime')
+                            ->live()
+                            ->required(),
+                        FileUpload::make('call_audio_path')
+                            ->label(__('Custom Call Audio'))
+                            ->helperText(__('Upload a short WAV or MP3 (under ~2 MB).'))
+                            ->acceptedFileTypes([
+                                'audio/mpeg',
+                                'audio/mp3',
+                                'audio/wav',
+                                'audio/x-wav',
+                                'audio/wave',
+                            ])
+                            ->maxSize(2048)
+                            ->disk('public')
+                            ->directory(fn () => 'call-audio/'.(tenant('id') ?? 'shared'))
+                            ->visibility('public')
+                            ->visible(fn (Get $get): bool => $get('call_audio_preset') === 'custom')
+                            ->required(fn (Get $get): bool => $get('call_audio_preset') === 'custom'),
                     ]),
             ]);
     }
@@ -159,6 +191,12 @@ class BrandingSettings extends Page implements HasForms
         $tenant = tenant();
 
         if ($tenant) {
+            $preset = $data['call_audio_preset'] ?? 'chime';
+            $customPath = $data['call_audio_path'] ?? null;
+            if (is_array($customPath)) {
+                $customPath = $customPath[0] ?? null;
+            }
+
             $tenant->update([
                 'name' => $data['name'],
                 'tagline' => $data['tagline'],
@@ -173,6 +211,8 @@ class BrandingSettings extends Page implements HasForms
                 'estimated_time_buffer_minutes' => $data['estimated_time_buffer_minutes'],
                 'first_n_patients' => $data['first_n_patients'],
                 'first_n_arrival_offset_minutes' => $data['first_n_arrival_offset_minutes'],
+                'call_audio_preset' => $preset,
+                'call_audio_path' => $preset === 'custom' ? $customPath : null,
             ]);
 
             Notification::make()

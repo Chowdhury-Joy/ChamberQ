@@ -7,15 +7,23 @@ Solo-doctor v1 work lives on branch `Solo-Doc-V1`.
 
 ## [Unreleased]
 
-### Planned — Phase 2 (screen / ticket polish)
-- Configurable call-audio track for the waiting-room screen
-- End-session cleanup for remaining waiting patients
-- Empty states on book/queue flows
-
 ### Planned — Phase 3 (pre-patient-data hardening)
 - Escape `innerHTML` in booking wizard and screen pause reason
 - URL scheme allowlist on page-builder links
 - Feature-flag boolean handling; basic form validation (`end > start`, `slot_cap ≥ 1`)
+
+## [Solo-Doc-V1 Phase 2] — 2026-07-27
+
+### Added
+- Waiting-room call audio presets (`chime`, `soft-bell`, `alert`) plus custom upload in Branding → Live Queue Settings
+- Visible **Tap to enable sound** overlay and mute toggle on the outdoor screen (browser autoplay unlock)
+- Default WAV chimes under `public/audio/`
+- Book page empty state when the clinic has no bookable doctors/sessions (or lab slots)
+- Live Queue empty state when no sessions are scheduled for today (ops users get a link to schedules)
+
+### Fixed
+- `endSession` now cancels remaining non-terminal bookings (`waiting` / `called` / `skipped` / `in_chamber`) with reason “Session ended”, clears the current call, and marks the live session completed (modal copy already promised this)
+- Screen shows a clear “session ended” state after finish
 
 ## [Solo-Doc-V1] — 2026-07-27
 

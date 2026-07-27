@@ -9,6 +9,7 @@
         $tenant = tenant();
         $themeColor = $tenant->theme_color ?? '#0ea5e9';
         $fontFamily = $tenant->font_family ?? 'Inter';
+        $callAudioUrl = $tenant->callAudioUrl();
         
         $fontUrl = match($fontFamily) {
             'Outfit' => 'https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap',
@@ -133,9 +134,72 @@
             font-weight: 700;
             color: var(--color-primary);
         }
+
+        .sound-overlay {
+            position: fixed;
+            inset: 0;
+            z-index: 50;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(15, 23, 42, 0.92);
+            cursor: pointer;
+        }
+
+        .sound-overlay.hidden {
+            display: none;
+        }
+
+        .sound-enable-btn {
+            border: 2px solid var(--color-primary);
+            background: rgba(255,255,255,0.06);
+            color: #fff;
+            border-radius: 1rem;
+            padding: 1.5rem 2.5rem;
+            font-size: 1.5rem;
+            font-family: inherit;
+            cursor: pointer;
+        }
+
+        .sound-enable-btn small {
+            display: block;
+            margin-top: 0.5rem;
+            font-size: 1rem;
+            color: #94a3b8;
+        }
+
+        .sound-toggle {
+            position: fixed;
+            top: 1.25rem;
+            right: 1.25rem;
+            z-index: 40;
+            border: 1px solid rgba(255,255,255,0.2);
+            background: rgba(0,0,0,0.35);
+            color: #e2e8f0;
+            border-radius: 999px;
+            padding: 0.6rem 1rem;
+            font-size: 0.95rem;
+            font-family: inherit;
+            cursor: pointer;
+        }
+
+        .sound-toggle.hidden {
+            display: none;
+        }
     </style>
 </head>
 <body>
+    <div id="soundOverlay" class="sound-overlay" role="button" tabindex="0" aria-label="{{ __('Tap to enable sound') }}">
+        <button type="button" class="sound-enable-btn" id="soundEnableBtn">
+            {{ __('Tap to enable sound') }}
+            <small>{{ __('Required once so call chimes can play on this screen') }}</small>
+        </button>
+    </div>
+
+    <button type="button" id="soundToggle" class="sound-toggle hidden" aria-pressed="true">
+        {{ __('Sound on') }}
+    </button>
+
     <div class="header">
         <div>
             <div class="chamber-name">{{ $scheduleSession->chamber->name }}</div>
@@ -165,13 +229,62 @@
         {{ __('Next:') }} <span id="nextSerial"></span>
     </div>
 
-    <!-- Audio element for chime -->
-    <audio id="chimeAudio" src="/audio/chime.mp3" preload="auto"></audio>
+    <audio id="chimeAudio" src="{{ $callAudioUrl }}" preload="auto"></audio>
 
     <script>
         const statusUrl = @json(route('api.tenant.screen', ['session' => $scheduleSession->id, 'date' => $sessionDate]));
-        let lastCalledSerial = null;
         let lastCalledTime = null;
+        let soundUnlocked = false;
+        let soundMuted = false;
+
+        const audio = document.getElementById('chimeAudio');
+        const overlay = document.getElementById('soundOverlay');
+        const toggle = document.getElementById('soundToggle');
+
+        async function unlockSound() {
+            try {
+                audio.muted = true;
+                await audio.play();
+                audio.pause();
+                audio.currentTime = 0;
+                audio.muted = false;
+            } catch (e) {
+                console.log('Audio unlock failed', e);
+            }
+
+            soundUnlocked = true;
+            overlay.classList.add('hidden');
+            toggle.classList.remove('hidden');
+            updateToggleLabel();
+        }
+
+        function updateToggleLabel() {
+            toggle.textContent = soundMuted ? @json(__('Sound off')) : @json(__('Sound on'));
+            toggle.setAttribute('aria-pressed', soundMuted ? 'false' : 'true');
+        }
+
+        function playChime() {
+            if (!soundUnlocked || soundMuted) return;
+            audio.currentTime = 0;
+            audio.play().catch(e => console.log('Audio play blocked by browser', e));
+        }
+
+        overlay.addEventListener('click', unlockSound);
+        document.getElementById('soundEnableBtn').addEventListener('click', function (e) {
+            e.stopPropagation();
+            unlockSound();
+        });
+        overlay.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                unlockSound();
+            }
+        });
+
+        toggle.addEventListener('click', function () {
+            soundMuted = !soundMuted;
+            updateToggleLabel();
+        });
 
         async function updateScreen() {
             try {
@@ -188,6 +301,7 @@
                     defaultView.style.display = 'none';
                     messageView.style.display = 'block';
                     document.getElementById('messageText').textContent = 'সেশন এখনো শুরু হয়নি';
+                    document.getElementById('messageText').style.color = '#f59e0b';
                     document.getElementById('messageSubtext').textContent = 'দয়া করে অপেক্ষা করুন';
                     box.className = 'now-serving-box';
                     nextUp.style.display = 'none';
@@ -205,11 +319,23 @@
                     return;
                 }
 
+                if (data.status === 'completed') {
+                    defaultView.style.display = 'none';
+                    messageView.style.display = 'block';
+                    document.getElementById('messageText').textContent = 'সেশন শেষ হয়েছে';
+                    document.getElementById('messageText').style.color = '#94a3b8';
+                    document.getElementById('messageSubtext').textContent = 'আজকের কিউ শেষ';
+                    box.className = 'now-serving-box';
+                    nextUp.style.display = 'none';
+                    return;
+                }
+
                 if (data.status === 'paused') {
                     defaultView.style.display = 'none';
                     messageView.style.display = 'block';
                     document.getElementById('messageText').textContent = '⏸ বিরতি চলছে';
-                    document.getElementById('messageSubtext').innerHTML = `${data.pause_reason}<br>আনুমানিক শুরু: ${data.estimated_resume_time}`;
+                    document.getElementById('messageText').style.color = '#f59e0b';
+                    document.getElementById('messageSubtext').textContent = (data.pause_reason || '') + (data.estimated_resume_time ? (' — আনুমানিক শুরু: ' + data.estimated_resume_time) : '');
                     box.className = 'now-serving-box';
                     
                     if (data.next_booking) {
@@ -240,12 +366,9 @@
                     box.className = 'now-serving-box calling';
                     document.getElementById('mainLabel').textContent = 'আপনাকে ডাকা হচ্ছে';
                     
-                    // Play chime if this is a new call
                     if (data.called_at !== lastCalledTime) {
                         lastCalledTime = data.called_at;
-                        const audio = document.getElementById('chimeAudio');
-                        // Play requires user interaction normally, but screens might be configured to allow autoplay
-                        audio.play().catch(e => console.log('Audio play blocked by browser', e));
+                        playChime();
                     }
                 } else {
                     box.className = 'now-serving-box';
@@ -257,13 +380,8 @@
             }
         }
 
-        // Must click screen once to allow audio to play (browser policy)
-        document.body.addEventListener('click', function() {
-            document.getElementById('chimeAudio').load();
-        }, { once: true });
-
         updateScreen();
-        setInterval(updateScreen, 2000); // Fast polling for screen
+        setInterval(updateScreen, 2000);
     </script>
 </body>
 </html>

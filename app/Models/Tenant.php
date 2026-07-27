@@ -37,6 +37,8 @@ class Tenant extends BaseTenant
             'estimated_time_buffer_minutes',
             'first_n_patients',
             'first_n_arrival_offset_minutes',
+            'call_audio_preset',
+            'call_audio_path',
             'created_at',
             'updated_at',
         ];
@@ -46,6 +48,25 @@ class Tenant extends BaseTenant
     public function displayName(): string
     {
         return filled($this->name) ? $this->name : (string) $this->id;
+    }
+
+    /**
+     * Public URL for the waiting-room call chime.
+     * Relative paths keep tenant domains (e.g. solo.localhost) working.
+     */
+    public function callAudioUrl(): string
+    {
+        $preset = $this->call_audio_preset ?? 'chime';
+
+        if ($preset === 'custom' && filled($this->call_audio_path)) {
+            return '/storage/'.ltrim((string) $this->call_audio_path, '/');
+        }
+
+        return match ($preset) {
+            'soft-bell' => '/audio/soft-bell.wav',
+            'alert' => '/audio/alert.wav',
+            default => '/audio/chime.wav',
+        };
     }
 
     protected function casts(): array

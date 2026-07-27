@@ -15,16 +15,32 @@ class BookingController extends Controller
 {
     public function create()
     {
+        $chambers = Chamber::all();
+        $doctors = Doctor::all();
+        $sessions = ScheduleSession::with(['chamber', 'doctor'])->get();
+        $labSlots = LabCollectionSlot::with('chamber')->get();
+        $hasLabTests = tenant()->hasFeature('lab_tests');
+
+        $canBookConsultation = $chambers->isNotEmpty()
+            && $doctors->isNotEmpty()
+            && $sessions->isNotEmpty();
+        $canBookLab = $hasLabTests
+            && $chambers->isNotEmpty()
+            && $labSlots->isNotEmpty();
+
         return view('tenant.book', [
-            'chambers' => Chamber::all(),
-            'doctors' => Doctor::all(),
-            'sessions' => ScheduleSession::with(['chamber', 'doctor'])->get(),
-            'labSlots' => LabCollectionSlot::with('chamber')->get(),
+            'chambers' => $chambers,
+            'doctors' => $doctors,
+            'sessions' => $sessions,
+            'labSlots' => $labSlots,
             // Only offered when the tenant actually has the capability, and
             // only tests the clinic has left switched on.
-            'labTests' => tenant()->hasFeature('lab_tests')
+            'labTests' => $hasLabTests
                 ? \App\Models\LabTest::active()->ordered()->get()
                 : collect(),
+            'bookingAvailable' => $canBookConsultation || $canBookLab,
+            'canBookConsultation' => $canBookConsultation,
+            'canBookLab' => $canBookLab,
         ]);
     }
 

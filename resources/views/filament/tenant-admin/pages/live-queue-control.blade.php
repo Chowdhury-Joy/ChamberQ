@@ -4,6 +4,26 @@
         {{-- Session Selector & Header Actions --}}
         <div style="margin-bottom: 24px;">
             <x-filament::section>
+                @if($this->sessions->isEmpty())
+                    <div class="py-8 text-center">
+                        <div class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                            No sessions scheduled for today
+                        </div>
+                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
+                            Live Queue only lists sessions that run on {{ now()->translatedFormat('l') }}. Add or edit a schedule that includes today, then return here.
+                        </p>
+                        @if(auth()->user()?->canManageOps())
+                            <x-filament::button
+                                href="{{ \App\Filament\TenantAdmin\Resources\ScheduleSessions\ScheduleSessionResource::getUrl('index') }}"
+                                tag="a"
+                                color="primary"
+                                icon="heroicon-m-calendar-days"
+                            >
+                                Manage schedules
+                            </x-filament::button>
+                        @endif
+                    </div>
+                @else
                 <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
                     <div class="flex-1 max-w-xl">
                         <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
@@ -25,6 +45,7 @@
                         </div>
                     @endif
                 </div>
+                @endif
             </x-filament::section>
         </div>
 
@@ -154,6 +175,12 @@
                     {{ $this->table }}
                 </div>
             </div>
+        @elseif($this->sessions->isNotEmpty())
+            <x-filament::section>
+                <div class="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                    Choose a session above to open today’s live queue.
+                </div>
+            </x-filament::section>
         @endif
     </div>
 

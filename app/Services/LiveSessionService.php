@@ -187,12 +187,24 @@ class LiveSessionService
         ]);
     }
 
-    public function endSession(LiveSession $liveSession)
+    public function endSession(LiveSession $liveSession, string $reason = 'Session ended')
     {
-        $liveSession->update([
-            'status' => 'completed',
-            'completed_at' => now(),
-        ]);
+        DB::transaction(function () use ($liveSession, $reason) {
+            $liveSession->bookings()
+                ->whereNotIn('status', ['completed', 'cancelled', 'no_show'])
+                ->update([
+                    'status' => 'cancelled',
+                    'cancellation_reason' => $reason,
+                    'cancelled_at' => now(),
+                ]);
+
+            $liveSession->update([
+                'status' => 'completed',
+                'completed_at' => now(),
+                'current_booking_id' => null,
+                'current_called_at' => null,
+            ]);
+        });
     }
 
     public function markDelay(LiveSession $liveSession, int $minutes)
