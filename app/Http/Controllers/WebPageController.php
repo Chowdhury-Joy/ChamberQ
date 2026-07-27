@@ -25,7 +25,11 @@ class WebPageController extends Controller
             abort(404);
         }
 
-        return view('tenant.webpage', [
+        $view = tenant()?->isSoloDoctor()
+            ? 'tenant.solo.webpage'
+            : 'tenant.webpage';
+
+        return view($view, [
             'page' => $page,
             // Loaded here rather than queried from inside the template.
             'doctors' => Doctor::orderBy('name')->get(),

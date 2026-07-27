@@ -59,7 +59,7 @@ class MarketingSiteUiTest extends TestCase
         $response->assertSee('Dr. UI Chamber', false);
         $response->assertSee('Care that respects your time', false);
         $response->assertSee('Book Appointment', false);
-        $response->assertSee('Patient Portal', false);
+        $response->assertSee('Patient’s Portal', false);
         $response->assertDontSee('🏥', false);
         // Marketing EN/BN gated off without bangla_homepage
         $html = $response->getContent();

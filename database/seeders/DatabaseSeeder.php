@@ -34,15 +34,15 @@ class DatabaseSeeder extends Seeder
     private function seedSoloTenant(): void
     {
         $tenant = Tenant::updateOrCreate(['id' => 'solo'], [
-            'name' => 'Dr. Rahman Chamber',
+            'name' => "Dr. Mahfuz's Care",
             'plan_tier' => 'solo',
             'slot_cap_mode' => 'per_session',
             'contact_phone' => '01712345678',
             'whatsapp_number' => '8801712345678',
-            'theme_color' => Tenant::DEFAULT_THEME_COLOR,
+            'theme_color' => '#30A9E5',
             'font_family' => 'Outfit',
             'default_locale' => 'en',
-            'tagline' => 'Consultant physician care with online serial booking',
+            'tagline' => 'Consultant physician care in Dhanmondi — book online, pay at the chamber.',
         ]);
 
         Domain::firstOrCreate(['domain' => 'solo.localhost'], ['tenant_id' => 'solo']);
@@ -82,35 +82,161 @@ class DatabaseSeeder extends Seeder
             ['session_name' => 'Evening', 'start_time' => '17:00', 'end_time' => '21:00', 'slot_cap' => 12]
         );
 
-        // A person-led landing page, per the solo tier's emphasis.
+        // Person-led homepage matching the solo client-site design.
         WebPage::updateOrCreate(['slug' => '/'], [
-            'title' => 'Dr. Rahman Chamber',
+            'title' => "Dr. Mahfuz's Care",
             'is_published' => true,
             'content' => [
                 ['type' => 'hero', 'data' => [
-                    'headline' => 'Care that respects your time',
-                    'subheadline' => 'Book a serial online and follow the live queue from your phone — pay at the chamber.',
+                    'headline' => 'Dr. Mahfuzur Rahman',
+                    'credentials' => 'MBBS, FCPS (Medicine)',
+                    'role_location' => 'Consultant Physician, Dhanmondi',
                     'cta_text' => 'Book Appointment',
                     'cta_link' => '/book',
-                    'image_url' => 'https://images.unsplash.com/photo-1631217868264-e5b90bb7e133?auto=format&fit=crop&w=1800&q=80',
+                    'image_url' => 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=1200&q=80',
                 ]],
-                ['type' => 'rich_text', 'data' => [
-                    'content' => '<h2>About</h2><p>Dr. Mahfuzur Rahman has been practising internal medicine '
-                        . 'in Dhaka for over fifteen years, with a focus on diabetes, hypertension and general '
-                        . 'medicine. Appointments are by serial — book online and track the queue from your phone '
-                        . 'instead of waiting at the chamber.</p>',
+                ['type' => 'condition_library', 'data' => [
+                    'heading' => 'Conditions I Treat',
+                    'conditions' => [
+                        [
+                            'name' => 'General Medicine',
+                            'description' => 'Everyday adult medicine with clear plans you can follow at home between visits.',
+                            'features' => [
+                                'Fever, infection & flu care',
+                                'Fatigue and unexplained symptoms',
+                                'Routine health check-ups',
+                                'Medication review & counselling',
+                            ],
+                        ],
+                        [
+                            'name' => 'Chronic Disease Care',
+                            'description' => 'Long-term control for conditions that need steady monitoring, not rushed visits.',
+                            'features' => [
+                                'Type 2 diabetes management',
+                                'High blood pressure control',
+                                'Thyroid disorders',
+                                'Cholesterol & metabolic risk',
+                            ],
+                        ],
+                        [
+                            'name' => 'Heart & Respiratory',
+                            'description' => 'Focused evaluation when chest symptoms, breathlessness, or heart risk need a physician’s eye.',
+                            'features' => [
+                                'Chest pain evaluation',
+                                'Asthma & COPD follow-up',
+                                'Palpitations & rhythm concerns',
+                            ],
+                        ],
+                    ],
                 ]],
-                ['type' => 'doctor_grid', 'data' => [
-                    'heading' => 'Your Doctor',
-                    'subheadline' => 'Book a consultation with Dr. Mahfuzur Rahman.',
+                ['type' => 'about_doctor', 'data' => [
+                    'heading' => 'Meet Dr. Mahfuzur Rahman',
+                    'subheadline' => 'Dedicated to delivering compassionate, personalized care that puts your health and well-being first.',
+                    'cta_text' => 'Book Appointment',
+                    'cta_link' => '/book',
+                    'highlights' => [
+                        [
+                            'title' => 'Study',
+                            'description' => 'FCPS (Medicine) with clinical training at Dhaka Medical College and postgraduate medicine at BSMMU (PG Hospital).',
+                        ],
+                        [
+                            'title' => 'Awards & Honors',
+                            'description' => 'Recognized for patient teaching, diabetes clinic leadership, and consistent chamber practice in Dhanmondi.',
+                        ],
+                    ],
                 ]],
-                ['type' => 'service_matrix', 'data' => [
-                    'heading' => 'Why patients choose this chamber',
-                    'description' => 'Simple online serials and a live queue on your phone.',
+                ['type' => 'video_gallery', 'data' => [
+                    'heading' => 'Latest Educational Videos',
+                    'follow_text' => 'Follow for More',
+                    'follow_url' => 'https://www.youtube.com/@Osmosis',
+                    'videos' => [
+                        [
+                            'title' => 'Diabetes mellitus explained',
+                            'type' => 'link',
+                            'video_url' => 'https://www.youtube.com/watch?v=-B-RVybvffU',
+                        ],
+                        [
+                            'title' => 'Hypertension: causes and treatment',
+                            'type' => 'link',
+                            'video_url' => 'https://www.youtube.com/watch?v=Qm5kB5X70oA',
+                        ],
+                        [
+                            'title' => 'Cholesterol numbers — Mayo Clinic',
+                            'type' => 'link',
+                            'video_url' => 'https://www.youtube.com/watch?v=SMcIfrki97k',
+                        ],
+                        [
+                            'title' => 'Asthma medicines explained',
+                            'type' => 'link',
+                            'video_url' => 'https://www.youtube.com/watch?v=h6DVjzDcHMA',
+                        ],
+                    ],
+                ]],
+                ['type' => 'testimonials', 'data' => [
+                    'heading' => 'What My Patients Say About My Treatments',
                     'items' => [
-                        ['title' => 'Online serial', 'description' => 'Book from home and track the queue live.'],
-                        ['title' => 'Live waiting room screen', 'description' => 'See who is being called in the chamber.'],
-                        ['title' => 'Pay at the clinic', 'description' => 'No online payment — settle at reception.'],
+                        [
+                            'quote' => 'He explained my diabetes plan in plain language and never rushed me. Serial booking from my phone means I no longer waste a morning in the waiting room.',
+                            'name' => 'Rashida Begum',
+                            'label' => 'Verified Patient',
+                        ],
+                        [
+                            'quote' => 'My blood pressure finally settled after years of guesswork. Follow-ups are clear, and I can check my queue status before I leave home.',
+                            'name' => 'Karim Hossain',
+                            'label' => 'Verified Patient',
+                        ],
+                        [
+                            'quote' => 'Thoughtful, careful medicine. He reviewed every medicine I was taking and cut the ones I did not need. I trust this chamber completely.',
+                            'name' => 'Nasreen Akhtar',
+                            'label' => 'Verified Patient',
+                        ],
+                        [
+                            'quote' => 'From the first visit I felt heard. The online serial and live queue updates made the whole process calm instead of stressful.',
+                            'name' => 'Imran Chowdhury',
+                            'label' => 'Verified Patient',
+                        ],
+                        [
+                            'quote' => 'Clear diagnosis, clear next steps, and a doctor who treats you like a person — not a ticket number.',
+                            'name' => 'Farzana Islam',
+                            'label' => 'Verified Patient',
+                        ],
+                    ],
+                ]],
+                ['type' => 'faq', 'data' => [
+                    'heading' => 'Everything You Need To Know',
+                    'faqs' => [
+                        [
+                            'question' => 'Where is your chamber located?',
+                            'answer' => 'House 42, Road 9/A, Dhanmondi, Dhaka 1209. The chamber is easy to reach by rickshaw, CNG, or private car. Call ahead if you need landmark help.',
+                        ],
+                        [
+                            'question' => 'What are your consultation hours?',
+                            'answer' => 'Monday mornings 9:00 am – 1:00 pm and Wednesday evenings 5:00 pm – 9:00 pm. Book a serial online before you arrive.',
+                        ],
+                        [
+                            'question' => 'How many patients do you see per session?',
+                            'answer' => 'Each session has a fixed serial cap so visits stay unhurried. Once the cap is reached, later patients are asked to book the next available session.',
+                        ],
+                        [
+                            'question' => 'Do I need an appointment or can I walk in?',
+                            'answer' => 'Online serial booking is preferred. Limited walk-ins may be taken if slots remain, but booking ahead guarantees your place in the queue.',
+                        ],
+                        [
+                            'question' => 'What types of conditions do you treat?',
+                            'answer' => 'General medicine for adults — diabetes, hypertension, thyroid issues, infections, respiratory complaints, and ongoing chronic disease follow-up.',
+                        ],
+                        [
+                            'question' => 'Do you offer telemedicine or online consultations?',
+                            'answer' => 'Consultations are in-chamber. Booking and live queue tracking are online so you spend less time waiting on site.',
+                        ],
+                        [
+                            'question' => 'What should I bring to my first visit?',
+                            'answer' => 'Bring a photo ID, previous prescriptions, recent lab reports, and a list of medicines you currently take — including supplements.',
+                        ],
+                        [
+                            'question' => 'What payment methods do you accept?',
+                            'answer' => 'Pay at the chamber after your visit. Cash and common mobile financial services are accepted at reception.',
+                        ],
                     ],
                 ]],
             ],

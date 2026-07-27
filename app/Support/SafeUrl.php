@@ -81,6 +81,7 @@ class SafeUrl
             'link_url',
             'link',
             'image_url',
+            'follow_url',
         ];
 
         foreach ($urlKeys as $key) {

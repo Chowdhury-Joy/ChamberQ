@@ -110,6 +110,8 @@ class WebPageResource extends Resource
                             ->schema([
                                 Forms\Components\TextInput::make('headline')->required()->default('Care that respects your time')->columnSpan(2),
                                 Forms\Components\Textarea::make('subheadline')->default('Book a serial online and follow the live queue from your phone — pay at the chamber.')->columnSpan(2),
+                                Forms\Components\TextInput::make('credentials')->label('Credentials (solo hero)')->placeholder('MBBS, FCPS (Medicine)'),
+                                Forms\Components\TextInput::make('role_location')->label('Role & Location (solo hero)')->placeholder('Consultant Physician, Dhanmondi'),
                                 Forms\Components\TextInput::make('cta_text')->default('Book Appointment'),
                                 Forms\Components\TextInput::make('cta_link')->default('/book'),
                                 Forms\Components\TextInput::make('secondary_cta_text')->default('Our Services'),
@@ -212,6 +214,8 @@ class WebPageResource extends Resource
                             ->label('Video Showcase Gallery (Max 10 Videos)')
                             ->schema([
                                 Forms\Components\TextInput::make('heading')->default('Video Showcase & Patient Guides'),
+                                Forms\Components\TextInput::make('follow_text')->label('Follow CTA label')->default('Follow for More'),
+                                Forms\Components\TextInput::make('follow_url')->label('Follow CTA URL')->placeholder('https://www.youtube.com/@...'),
                                 Forms\Components\Repeater::make('videos')
                                     ->columns(2)
                                     ->maxItems(10)
@@ -274,14 +278,59 @@ class WebPageResource extends Resource
                             ->schema([
                                 Forms\Components\TextInput::make('heading')->default('Conditions We Treat'),
                                 Forms\Components\Repeater::make('conditions')
-                                    ->columns(2)
                                     ->schema([
                                         Forms\Components\TextInput::make('name')->required(),
-                                        Forms\Components\TextInput::make('description'),
+                                        Forms\Components\Textarea::make('description'),
+                                        Forms\Components\Repeater::make('features')
+                                            ->label('Included treatments / focus areas')
+                                            ->simple(
+                                                Forms\Components\TextInput::make('label')->required()
+                                            )
+                                            ->default([]),
                                     ])
                                     ->default([
-                                        ['name' => 'Hypertension & Cardiac Health', 'description' => 'Comprehensive blood pressure monitoring and heart care.'],
-                                        ['name' => 'Diabetes & Endocrine Disorders', 'description' => 'Personalized management plans for diabetes care.'],
+                                        ['name' => 'Hypertension & Cardiac Health', 'description' => 'Comprehensive blood pressure monitoring and heart care.', 'features' => []],
+                                        ['name' => 'Diabetes & Endocrine Disorders', 'description' => 'Personalized management plans for diabetes care.', 'features' => []],
+                                    ]),
+                            ]),
+
+                        // 10b. About the Doctor (solo person-led)
+                        Forms\Components\Builder\Block::make('about_doctor')
+                            ->label('About the Doctor')
+                            ->schema([
+                                Forms\Components\TextInput::make('heading')->default('Meet Your Doctor')->columnSpanFull(),
+                                Forms\Components\Textarea::make('subheadline')->columnSpanFull(),
+                                Forms\Components\TextInput::make('cta_text')->default('Book Appointment'),
+                                Forms\Components\TextInput::make('cta_link')->default('/book'),
+                                Forms\Components\Repeater::make('highlights')
+                                    ->columns(2)
+                                    ->schema([
+                                        Forms\Components\TextInput::make('title')->required(),
+                                        Forms\Components\Textarea::make('description')->required()->columnSpan(2),
+                                    ])
+                                    ->default([
+                                        ['title' => 'Study', 'description' => 'FCPS (Medicine); MD training from leading Dhaka teaching hospitals.'],
+                                        ['title' => 'Awards & Honors', 'description' => 'Recognized for clinical teaching and patient-centred medicine.'],
+                                    ]),
+                            ]),
+
+                        // 10c. Patient Testimonials
+                        Forms\Components\Builder\Block::make('testimonials')
+                            ->label('Patient Testimonials')
+                            ->schema([
+                                Forms\Components\TextInput::make('heading')->default('What My Patients Say'),
+                                Forms\Components\Repeater::make('items')
+                                    ->schema([
+                                        Forms\Components\Textarea::make('quote')->required()->columnSpanFull(),
+                                        Forms\Components\TextInput::make('name')->required(),
+                                        Forms\Components\TextInput::make('label')->default('Verified Patient'),
+                                    ])
+                                    ->default([
+                                        [
+                                            'quote' => 'Every visit is calm and clear — I leave knowing exactly what to do next.',
+                                            'name' => 'Rashida Begum',
+                                            'label' => 'Verified Patient',
+                                        ],
                                     ]),
                             ]),
 
