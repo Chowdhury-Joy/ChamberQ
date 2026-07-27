@@ -152,7 +152,15 @@ class BookingController extends Controller
 
     public function show(Booking $booking)
     {
-        $booking->load(['bookable', 'labTests']);
+        $booking->load([
+            'labTests',
+            'bookable' => function ($morphTo) {
+                $morphTo->morphWith([
+                    ScheduleSession::class => ['chamber', 'doctor'],
+                    LabCollectionSlot::class => ['chamber'],
+                ]);
+            },
+        ]);
 
         return view('tenant.ticket', [
             'booking' => $booking,

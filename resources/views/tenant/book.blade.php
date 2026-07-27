@@ -245,7 +245,11 @@
                 <h3>{{ __('Booking Confirmed!') }}</h3>
                 <p>{{ __('Your serial number is:') }}</p>
                 <div style="font-size: 3rem; font-weight:700; color: var(--color-primary); margin: 1rem 0;" id="serialBadge"></div>
-                <p class="text-muted">{{ __('Redirecting to your live queue ticket...') }}</p>
+                <p style="line-height:1.5;margin:0 0 0.75rem;">{{ __('Show this serial at reception. Keep the next page open or save its link.') }}</p>
+                <p class="text-muted" id="successTicketHint">{{ __('Opening your ticket…') }}</p>
+                <p style="margin-top:1.25rem;">
+                    <a href="#" class="btn btn-primary" id="openTicketNow" style="display:inline-block;">{{ __('Open ticket') }}</a>
+                </p>
             </div>
             @endif
         </div>
@@ -789,10 +793,12 @@
                     const successView = document.getElementById('successView');
                     successView.classList.remove('hidden');
                     document.getElementById('serialBadge').innerText = data.booking.serial_number;
+                    const openBtn = document.getElementById('openTicketNow');
+                    openBtn.href = data.booking.ticket_url;
                     
                     setTimeout(() => {
                         window.location.href = data.booking.ticket_url;
-                    }, 2500);
+                    }, 1800);
                 } else {
                     let message = data.message || 'Validation error. Please check your inputs.';
                     if (data.errors) {

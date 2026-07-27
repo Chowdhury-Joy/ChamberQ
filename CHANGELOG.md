@@ -11,6 +11,7 @@ Solo-doctor v1 work lives on branch `Solo-Doc-V1`.
 - Patient marketing site: brand-first full-bleed hero with Book CTA; Portal quiet in nav; mobile menu; default theme blue (`#2563eb`) and English locale
 - Homepage EN/BN switch only when Super Admin enables `bangla_homepage` (paid add-on); Book/Ticket/Portal always offer EN/BN for system strings
 - Booking Phase A: session cards show seats left / Full / Closed for the next matching day; identity step review strip; local (not UTC) dates; BD phone check before submit; “Booking…” while saving; capacity race returns a clear code + message; phones stored normalized as `01…`
+- Booking Phase B: ticket handoff for reception + WhatsApp/copy link; “Now serving” i18n fixed; people-ahead ignores skipped serials; WhatsApp/copy include chamber Google Maps link when lat/lng or address exists
 
 ## [Solo-Doc-V1 Phase 3] — 2026-07-27
 

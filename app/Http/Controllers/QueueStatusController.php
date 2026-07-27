@@ -34,9 +34,10 @@ class QueueStatusController extends Controller
         }
 
         $aheadOfYou = (clone $queue)
-            ->whereIn('status', ['waiting', 'in_chamber', 'called', 'skipped']) // Including skipped in case they are re-inserted ahead? Wait, simple count is fine.
+            // Only people still in line ahead of Fatima — not skipped serials
+            // that already passed (those inflate “2 ahead” and confuse patients).
+            ->whereIn('status', ['waiting', 'called', 'in_chamber'])
             ->where('serial_number', '<', $booking->serial_number)
-            ->whereNotIn('status', ['completed', 'cancelled', 'no_show'])
             ->count();
             
         $estimateData = $this->liveSessionService->estimatedTimeForBooking($booking);
