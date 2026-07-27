@@ -84,5 +84,7 @@ class MarketingSiteUiTest extends TestCase
         $response->assertSee('/lang/en', false);
         $response->assertSee('/lang/bn', false);
         $response->assertSee('locale-chip', false);
+        $response->assertSee('Instrument Serif', false);
+        $response->assertSee('Patient’s Portal', false);
     }
 }

@@ -28,7 +28,11 @@ class BookingController extends Controller
             && $chambers->isNotEmpty()
             && $labSlots->isNotEmpty();
 
-        return view('tenant.book', [
+        $view = tenant()?->isSoloDoctor()
+            ? 'tenant.solo.book'
+            : 'tenant.book';
+
+        return view($view, [
             'chambers' => $chambers,
             'doctors' => $doctors,
             'sessions' => $sessions,
@@ -162,7 +166,7 @@ class BookingController extends Controller
             },
         ]);
 
-        return view('tenant.ticket', [
+        return view(tenant()?->isSoloDoctor() ? 'tenant.solo.ticket' : 'tenant.ticket', [
             'booking' => $booking,
         ]);
     }

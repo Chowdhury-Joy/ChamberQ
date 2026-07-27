@@ -111,7 +111,9 @@ class BrandingTest extends TestCase
         $response->assertStatus(200);
         $response->assertSee('Dr. Custom Branding');
         $response->assertSee('#8b5cf6');
-        $response->assertSee('Outfit');
+        // Solo booking matches the Figma homepage type system, not the admin font picker.
+        $response->assertSee('Instrument Serif', false);
+        $response->assertSee('DM Sans', false);
         $response->assertSee('https://example.com/clinic-logo.png');
     }
 }
