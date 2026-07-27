@@ -34,8 +34,21 @@
             --font-family-base: '{{ $fontFamily }}', system-ui, -apple-system, sans-serif;
         }
         body { font-family: var(--font-family-base); }
-        .booking-container { max-width: 650px; margin: 3rem auto; background: var(--bg-surface); padding: 3rem; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); position: relative; }
-        .booking-header { text-align: center; margin-bottom: 2.5rem; }
+        .booking-container { max-width: 650px; margin: 1.25rem auto; background: var(--bg-surface); padding: 1.25rem; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); position: relative; }
+        @media (min-width: 640px) {
+            .booking-container { margin: 2rem auto; padding: 2rem; }
+        }
+        @media (min-width: 768px) {
+            .booking-container { margin: 3rem auto; padding: 3rem; }
+        }
+        .booking-header { text-align: center; margin-bottom: 1.5rem; }
+        @media (min-width: 640px) {
+            .booking-header { margin-bottom: 2.5rem; }
+        }
+        main.section { padding: 1rem 0.75rem 2rem; }
+        @media (min-width: 640px) {
+            main.section { padding: 2rem 1.5rem; }
+        }
         .step { display: none; animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         .step.active { display: block; }
         @keyframes slideIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
@@ -200,9 +213,10 @@
                     <div class="lab-total">
                         {{ __('Total:') }} <span id="labTotalAmount">৳0.00</span>
                     </div>
+                    <p class="lab-test-error" id="labTestError" role="alert" aria-live="polite">{{ __('Please select at least one lab test.') }}</p>
                     <div class="btn-group">
                         <button type="button" class="btn btn-back" onclick="prevStep()">{{ __('Back') }}</button>
-                        <button type="button" class="btn btn-primary" onclick="nextStep()">{{ __('Continue') }}</button>
+                        <button type="button" class="btn btn-primary" onclick="continueLabTests()">{{ __('Continue') }}</button>
                     </div>
                 </div>
 
@@ -264,17 +278,43 @@
             hasMultipleChambers: @json($hasMultipleChambers),
             chambersCount: @json(count($chambers)),
             doctorsCount: @json(count($doctors)),
+            chamberIds: @json($chambers->pluck('id')->map(fn ($id) => (string) $id)->values()),
+            doctorIds: @json($doctors->pluck('id')->map(fn ($id) => (string) $id)->values()),
             canBookConsultation: @json($canBookConsultation),
             canBookLab: @json($canBookLab),
             payAtClinic: @json(__('Pay at the clinic')),
             confirmLabel: @json(__('Confirm Booking')),
             bookingLabel: @json(__('Booking…')),
             phoneInvalid: @json(__('Please enter a valid Bangladeshi mobile number, for example 01712345678.')),
+            localeTag: @json(app()->getLocale() === 'bn' ? 'bn-BD' : 'en-GB'),
+        };
+
+        const i18n = {
+            nextAvailable: @json(__('Next available: :date')),
+            dateMismatch: @json(__('This date is a :got. You need to pick a :expected.')),
+            selectSchedule: @json(__('Select a Schedule')),
+            selectLabWindow: @json(__('Select a Lab Collection Window')),
+            noSchedulesTitle: @json(__('No schedules available')),
+            noSchedulesBody: @json(__('There are no consultation sessions for this selection. Please go back and try another option, or contact the clinic.')),
+            noLabTitle: @json(__('No lab slots available')),
+            noLabBody: @json(__('There are no collection windows for this location. Please go back or contact the clinic.')),
+            doctorChamber: @json(__('Doctor: :doctor | Chamber: :chamber')),
+            seatsLeft: @json(__(':remaining of :cap left')),
+            full: @json(__('Full')),
+            closed: @json(__('Closed')),
+            nextDay: @json(__('next :date')),
+            checkingSeats: @json(__('Checking seats…')),
+            labCollection: @json(__(':day collection')),
+            sessionFallback: @json(__('Session')),
+            mainLab: @json(__('Main Lab')),
+            selectLabTest: @json(__('Please select at least one lab test.')),
+            validationError: @json(__('Validation error. Please check your inputs.')),
+            submitError: @json(__('An error occurred submitting the booking.')),
         };
         
         const sessionsData = @json($sessions);
         const labSlotsData = @json($labSlots);
-        const dayLabels = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+        const dayLabels = @json(array_values(\App\Support\DayOfWeek::options()));
 
         let state = {
             type: null,
@@ -296,26 +336,32 @@
             flow = [];
             
             if (config.hasLabTests && config.canBookConsultation && config.canBookLab) {
-                flow.push('step-type');
+                if (!state.type) {
+                    flow.push('step-type');
+                }
             } else if (config.canBookLab && !config.canBookConsultation) {
                 state.type = 'lab';
-            } else {
+            } else if (!state.type) {
                 state.type = 'session';
             }
             
             if (config.hasMultipleChambers && config.chambersCount > 1) {
-                flow.push('step-chamber');
+                if (!state.chamberId || !config.chamberIds.includes(String(state.chamberId))) {
+                    flow.push('step-chamber');
+                }
             } else {
                 @if(count($chambers) > 0)
-                state.chamberId = "{{ $chambers->first()->id }}";
+                state.chamberId = state.chamberId || "{{ $chambers->first()->id }}";
                 @endif
             }
             
             if (state.type !== 'lab' && config.hasMultipleDoctors && config.doctorsCount > 1) {
-                flow.push('step-doctor');
+                if (!state.doctorId || !config.doctorIds.includes(String(state.doctorId))) {
+                    flow.push('step-doctor');
+                }
             } else if (state.type !== 'lab') {
                 @if(count($doctors) > 0)
-                state.doctorId = "{{ $doctors->first()->id }}";
+                state.doctorId = state.doctorId || "{{ $doctors->first()->id }}";
                 @endif
             }
             
@@ -362,9 +408,12 @@
 
         function seatsLabel(info) {
             if (!info || info.missing) return { text: '', className: '' };
-            if (info.blocked) return { text: 'Closed', className: 'is-closed' };
-            if (info.remaining <= 0) return { text: 'Full', className: 'is-full' };
-            return { text: `${info.remaining} of ${info.cap} left`, className: '' };
+            if (info.blocked) return { text: i18n.closed, className: 'is-closed' };
+            if (info.remaining <= 0) return { text: i18n.full, className: 'is-full' };
+            return {
+                text: i18n.seatsLeft.replace(':remaining', info.remaining).replace(':cap', info.cap),
+                className: '',
+            };
         }
 
         async function fetchAvailability(bookableType, ids, dateYmd) {
@@ -427,8 +476,8 @@
             dateInput.max = toLocalYmd(max);
             
             const nextValid = nextDateForDow(state.dayOfWeek, today);
-            const formatted = nextValid.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-            document.getElementById('date-helper').innerText = `Next available: ${formatted}`;
+            const formatted = nextValid.toLocaleDateString(config.localeTag, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+            document.getElementById('date-helper').innerText = i18n.nextAvailable.replace(':date', formatted);
             dateInput.value = toLocalYmd(nextValid);
             
             dateInput.onchange = () => {
@@ -453,11 +502,11 @@
             let dateLabel = dateInput.value || '';
             if (dateInput.value) {
                 const d = new Date(dateInput.value + 'T00:00:00');
-                dateLabel = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+                dateLabel = d.toLocaleDateString(config.localeTag, { weekday: 'short', day: 'numeric', month: 'short' });
             }
             const title = state.type === 'lab'
-                ? (dayLabels[state.dayOfWeek] + 's collection')
-                : (state.sessionName || 'Session');
+                ? i18n.labCollection.replace(':day', dayLabels[state.dayOfWeek] || '')
+                : (state.sessionName || i18n.sessionFallback);
             const parts = [
                 state.doctorName,
                 dateLabel,
@@ -476,7 +525,7 @@
             const dateInput = document.getElementById('booking_date');
             if (!state.bookableId || !dateInput.value) return;
 
-            seatsEl.textContent = 'Checking seats…';
+            seatsEl.textContent = i18n.checkingSeats;
             seatsEl.className = 'seats-line';
 
             try {
@@ -511,7 +560,7 @@
             if (selectedDay !== state.dayOfWeek) {
                 const expected = dayLabels[state.dayOfWeek];
                 const got = dayLabels[selectedDay];
-                dateError.innerText = `This date is a ${got}. You need to pick a ${expected}.`;
+                dateError.innerText = i18n.dateMismatch.replace(':got', got).replace(':expected', expected);
                 dateError.style.display = 'block';
                 if (!silent) submitBtn.disabled = true;
                 return false;
@@ -578,7 +627,7 @@
             grid.replaceChildren();
             
             if (state.type === 'session') {
-                title.innerText = 'Select a Schedule';
+                title.innerText = i18n.selectSchedule;
                 const filtered = sessionsData.filter(s => 
                     (!state.chamberId || s.chamber_id == state.chamberId) && 
                     (!state.doctorId || s.doctor_id == state.doctorId)
@@ -590,10 +639,10 @@
                     empty.style.cssText = 'padding:1rem 0;line-height:1.5;';
                     const heading = document.createElement('p');
                     heading.style.cssText = 'margin:0 0 0.5rem;font-weight:600;color:#0f172a;';
-                    heading.textContent = 'No schedules available';
+                    heading.textContent = i18n.noSchedulesTitle;
                     const body = document.createElement('p');
                     body.style.margin = '0';
-                    body.textContent = 'There are no consultation sessions for this selection. Please go back and try another option, or contact the clinic.';
+                    body.textContent = i18n.noSchedulesBody;
                     empty.append(heading, body);
                     grid.appendChild(empty);
                     return;
@@ -620,7 +669,7 @@
                 filtered.forEach(s => {
                     const tStart = formatTime(s.start_time);
                     const tEnd = formatTime(s.end_time);
-                    const day = dayLabels[s.day_of_week];
+                    const day = dayLabels[s.day_of_week] || '';
                     const nextYmd = toLocalYmd(nextDateForDow(s.day_of_week));
                     const info = itemsById[String(s.id)];
                     const seats = seatsLabel(info);
@@ -643,23 +692,27 @@
                     heading.textContent = s.session_name ?? '';
 
                     const meta = document.createElement('p');
-                    meta.textContent = `${day}s • ${tStart} - ${tEnd}`;
+                    meta.textContent = `${day} • ${tStart} - ${tEnd}`;
 
                     const detail = document.createElement('p');
                     detail.className = 'text-muted';
                     detail.style.cssText = 'font-size:0.8rem; margin-top:0.5rem;';
-                    detail.textContent = `Doctor: ${s.doctor?.name ?? ''} | Chamber: ${s.chamber?.name ?? ''}`;
+                    detail.textContent = i18n.doctorChamber
+                        .replace(':doctor', s.doctor?.name ?? '')
+                        .replace(':chamber', s.chamber?.name ?? '');
 
                     const seatsEl = document.createElement('div');
                     seatsEl.className = 'seats ' + (seats.className || '');
-                    const nextLabel = nextDateForDow(s.day_of_week).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-                    seatsEl.textContent = seats.text ? `${seats.text} · next ${nextLabel}` : `Next ${nextLabel}`;
+                    const nextLabel = nextDateForDow(s.day_of_week).toLocaleDateString(config.localeTag, { day: 'numeric', month: 'short' });
+                    seatsEl.textContent = seats.text
+                        ? `${seats.text} · ${i18n.nextDay.replace(':date', nextLabel)}`
+                        : i18n.nextDay.replace(':date', nextLabel);
 
                     card.append(heading, meta, detail, seatsEl);
                     grid.appendChild(card);
                 });
             } else {
-                title.innerText = 'Select a Lab Collection Window';
+                title.innerText = i18n.selectLabWindow;
                 const filtered = labSlotsData.filter(s => 
                     (!state.chamberId || s.chamber_id == state.chamberId)
                 );
@@ -670,10 +723,10 @@
                     empty.style.cssText = 'padding:1rem 0;line-height:1.5;';
                     const heading = document.createElement('p');
                     heading.style.cssText = 'margin:0 0 0.5rem;font-weight:600;color:#0f172a;';
-                    heading.textContent = 'No lab slots available';
+                    heading.textContent = i18n.noLabTitle;
                     const body = document.createElement('p');
                     body.style.margin = '0';
-                    body.textContent = 'There are no collection windows for this location. Please go back or contact the clinic.';
+                    body.textContent = i18n.noLabBody;
                     empty.append(heading, body);
                     grid.appendChild(empty);
                     return;
@@ -699,7 +752,7 @@
                     const tStart = formatTime(s.start_time);
                     const tEnd = formatTime(s.end_time);
                     const day = dayLabels[s.day_of_week];
-                    const chamberName = s.chamber ? s.chamber.name : 'Main Lab';
+                    const chamberName = s.chamber ? s.chamber.name : i18n.mainLab;
                     const info = itemsById[String(s.id)];
                     const seats = seatsLabel(info);
                     const disabled = info && (info.blocked || info.remaining <= 0 || info.missing);
@@ -718,15 +771,17 @@
                     }
 
                     const heading = document.createElement('h4');
-                    heading.textContent = `${day}s`;
+                    heading.textContent = `${dayLabels[s.day_of_week] || ''}`;
 
                     const meta = document.createElement('p');
                     meta.textContent = `${tStart} - ${tEnd} • ${chamberName}`;
 
                     const seatsEl = document.createElement('div');
                     seatsEl.className = 'seats ' + (seats.className || '');
-                    const nextLabel = nextDateForDow(s.day_of_week).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
-                    seatsEl.textContent = seats.text ? `${seats.text} · next ${nextLabel}` : `Next ${nextLabel}`;
+                    const nextLabel = nextDateForDow(s.day_of_week).toLocaleDateString(config.localeTag, { day: 'numeric', month: 'short' });
+                    seatsEl.textContent = seats.text
+                        ? `${seats.text} · ${i18n.nextDay.replace(':date', nextLabel)}`
+                        : i18n.nextDay.replace(':date', nextLabel);
 
                     card.append(heading, meta, seatsEl);
                     grid.appendChild(card);
@@ -740,6 +795,22 @@
                 total += parseFloat(cb.dataset.price);
             });
             document.getElementById('labTotalAmount').innerText = '৳' + total.toFixed(2);
+            const err = document.getElementById('labTestError');
+            if (err) err.style.display = 'none';
+        }
+
+        function continueLabTests() {
+            const checked = document.querySelectorAll('input[name="lab_tests[]"]:checked');
+            const err = document.getElementById('labTestError');
+            if (checked.length === 0) {
+                if (err) {
+                    err.textContent = i18n.selectLabTest;
+                    err.style.display = 'block';
+                }
+                return;
+            }
+            if (err) err.style.display = 'none';
+            nextStep();
         }
 
         document.getElementById('bookingForm').addEventListener('submit', async function(e) {
@@ -800,7 +871,7 @@
                         window.location.href = data.booking.ticket_url;
                     }, 1800);
                 } else {
-                    let message = data.message || 'Validation error. Please check your inputs.';
+                    let message = data.message || i18n.validationError;
                     if (data.errors) {
                         const first = Object.values(data.errors).flat()[0];
                         if (first) message = first;
@@ -818,7 +889,7 @@
                     }
                 }
             } catch (err) {
-                msgEl.innerText = 'An error occurred submitting the booking.';
+                msgEl.innerText = i18n.submitError;
                 msgEl.className = 'alert alert-error';
                 msgEl.style.display = 'block';
                 submitBtn.disabled = false;
@@ -826,19 +897,34 @@
             }
         });
 
-        // Deep link support: ?doctor=ID (also accept legacy ?doctor_id=) or ?test=ID
+        // Deep link: ?doctor=ID skips doctor pick; ?test=ID opens lab and pre-checks that test
         const params = new URLSearchParams(window.location.search);
         const doctorParam = params.get('doctor') || params.get('doctor_id');
-        if (doctorParam) {
+        const testParam = params.get('test');
+        if (doctorParam && config.doctorIds.includes(String(doctorParam))) {
             state.type = 'session';
-            state.doctorId = doctorParam;
+            state.doctorId = String(doctorParam);
+            const doctorSessions = sessionsData.filter(s => String(s.doctor_id) === String(doctorParam));
+            const chamberIds = [...new Set(doctorSessions.map(s => String(s.chamber_id)))];
+            if (chamberIds.length === 1) {
+                state.chamberId = chamberIds[0];
+            }
         }
-        if (params.has('test')) {
+        if (testParam) {
             state.type = 'lab';
+            state.preselectedTestId = String(testParam);
         }
 
         rebuildFlow();
         showStep();
+
+        if (state.preselectedTestId) {
+            const cb = document.querySelector(`input[name="lab_tests[]"][value="${state.preselectedTestId}"]`);
+            if (cb) {
+                cb.checked = true;
+                updateTotal();
+            }
+        }
     </script>
     @endif
 

@@ -68,12 +68,23 @@ class LiveSessionEndCleanupTest extends TestCase
             'called_at' => now(),
         ]);
 
+        $inChamber = Booking::create([
+            'bookable_type' => ScheduleSession::class,
+            'bookable_id' => $schedule->id,
+            'booking_date' => $today,
+            'patient_name' => 'Fatima In Chamber',
+            'patient_phone' => '01744444444',
+            'serial_number' => 4,
+            'status' => 'in_chamber',
+            'in_chamber_at' => now(),
+        ]);
+
         $liveSession = LiveSession::create([
             'schedule_session_id' => $schedule->id,
             'session_date' => $today,
             'status' => 'active',
             'started_at' => now(),
-            'current_booking_id' => $called->id,
+            'current_booking_id' => $inChamber->id,
             'current_called_at' => now(),
         ]);
 
@@ -83,6 +94,7 @@ class LiveSessionEndCleanupTest extends TestCase
         $completed->refresh();
         $waiting->refresh();
         $called->refresh();
+        $inChamber->refresh();
 
         $this->assertEquals('completed', $liveSession->status);
         $this->assertNull($liveSession->current_booking_id);
@@ -92,6 +104,8 @@ class LiveSessionEndCleanupTest extends TestCase
         $this->assertEquals('Session ended', $waiting->cancellation_reason);
         $this->assertEquals('cancelled', $called->status);
         $this->assertNotNull($called->cancelled_at);
+        $this->assertEquals('completed', $inChamber->status);
+        $this->assertNotNull($inChamber->completed_at);
 
         tenancy()->end();
     }

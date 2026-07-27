@@ -12,7 +12,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('tenants', function (Blueprint $table) {
-            $table->string('slot_cap_mode')->default('per_session'); // per_session / per_day
+            $table->string('slot_cap_mode')->default('per_session'); // per_session / per_doctor_chamber (legacy alias: per_day)
         });
     }
 

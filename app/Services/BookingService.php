@@ -22,6 +22,10 @@ class BookingService
     public function availabilityFor(Model $bookable, string $bookingDate): array
     {
         $capMode = tenant()->slot_cap_mode ?? 'per_session';
+        // Legacy alias from early migration comment (`per_day`).
+        if ($capMode === 'per_day') {
+            $capMode = 'per_doctor_chamber';
+        }
 
         return $this->availabilitySnapshot($bookable, $bookingDate, $capMode);
     }
@@ -39,6 +43,9 @@ class BookingService
         return DB::transaction(function () use ($bookable, $bookingDate, $patientName, $patientPhone, $labTestIds) {
             $tenant = tenant();
             $capMode = $tenant->slot_cap_mode ?? 'per_session';
+            if ($capMode === 'per_day') {
+                $capMode = 'per_doctor_chamber';
+            }
 
             // Pessimistic lock — Fatima and Rahim cannot both take the last seat.
             if ($bookable instanceof ScheduleSession && $capMode === 'per_doctor_chamber') {

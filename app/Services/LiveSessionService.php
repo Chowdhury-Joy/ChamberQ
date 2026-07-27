@@ -190,8 +190,17 @@ class LiveSessionService
     public function endSession(LiveSession $liveSession, string $reason = 'Session ended')
     {
         DB::transaction(function () use ($liveSession, $reason) {
+            // Fatima is already with the doctor — do not cancel mid-consult.
+            // Mark her completed; cancel everyone still waiting / called / skipped.
             $liveSession->bookings()
-                ->whereNotIn('status', ['completed', 'cancelled', 'no_show'])
+                ->where('status', 'in_chamber')
+                ->update([
+                    'status' => 'completed',
+                    'completed_at' => now(),
+                ]);
+
+            $liveSession->bookings()
+                ->whereNotIn('status', ['completed', 'cancelled', 'no_show', 'in_chamber'])
                 ->update([
                     'status' => 'cancelled',
                     'cancellation_reason' => $reason,

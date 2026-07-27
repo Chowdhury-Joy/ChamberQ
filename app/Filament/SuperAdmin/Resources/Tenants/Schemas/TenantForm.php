@@ -57,6 +57,7 @@ class TenantForm
                             ->required(),
                         Select::make('slot_cap_mode')
                             ->label(__('Slot Cap Mode'))
+                            ->helperText(__('Per session: each schedule has its own daily cap. Per doctor & chamber: all that doctor’s sessions at one chamber share one daily cap.'))
                             ->options([
                                 'per_session' => 'Per Session',
                                 'per_doctor_chamber' => 'Per Doctor & Chamber',
