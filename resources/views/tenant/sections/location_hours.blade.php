@@ -36,9 +36,10 @@
                     </div>
                 @endif
 
-                @if(!empty($data['google_maps_url']))
+                @php $mapsUrl = \App\Support\SafeUrl::href($data['google_maps_url'] ?? '', ''); @endphp
+                @if($mapsUrl !== '')
                     <div class="pt-2">
-                        <a href="{{ $data['google_maps_url'] }}" target="_blank" rel="noopener noreferrer" class="btn btn-primary inline-flex items-center gap-2">
+                        <a href="{{ $mapsUrl }}" target="_blank" rel="noopener noreferrer" class="btn btn-primary inline-flex items-center gap-2">
                             <span>Open Google Maps Directions</span>
                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"/></svg>
                         </a>
@@ -50,8 +51,8 @@
                 <div class="text-4xl mb-3">🗺️</div>
                 <h4 class="text-base font-bold text-slate-800 mb-1">Interactive Map & Directions</h4>
                 <p class="text-xs text-slate-500 max-w-xs mb-4">Click the button to open direct navigation on Google Maps.</p>
-                @if(!empty($data['google_maps_url']))
-                    <a href="{{ $data['google_maps_url'] }}" target="_blank" rel="noopener noreferrer" class="text-xs font-bold text-sky-600 underline">
+                @if($mapsUrl !== '')
+                    <a href="{{ $mapsUrl }}" target="_blank" rel="noopener noreferrer" class="text-xs font-bold text-sky-600 underline">
                         View Location Link
                     </a>
                 @endif

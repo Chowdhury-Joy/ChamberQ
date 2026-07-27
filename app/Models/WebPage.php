@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
 use App\Support\HtmlSanitizer;
+use App\Support\SafeUrl;
 use Illuminate\Database\Eloquent\Model;
 
 class WebPage extends Model
@@ -35,9 +36,15 @@ class WebPage extends Model
             }
 
             foreach ($content as $index => $block) {
-                if (($block['type'] ?? null) === 'rich_text' && isset($block['data']['content'])) {
-                    $content[$index]['data']['content'] = HtmlSanitizer::clean($block['data']['content']);
+                if (! is_array($block)) {
+                    continue;
                 }
+
+                if (($block['type'] ?? null) === 'rich_text' && isset($block['data']['content'])) {
+                    $block['data']['content'] = HtmlSanitizer::clean($block['data']['content']);
+                }
+
+                $content[$index] = SafeUrl::sanitizeBuilderBlock($block);
             }
 
             $page->content = $content;

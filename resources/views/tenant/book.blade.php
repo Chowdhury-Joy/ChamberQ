@@ -419,7 +419,7 @@
         function renderSessions() {
             const grid = document.getElementById('session-grid');
             const title = document.getElementById('session-title');
-            grid.innerHTML = '';
+            grid.replaceChildren();
             
             if (state.type === 'session') {
                 title.innerText = 'Select a Schedule';
@@ -429,7 +429,17 @@
                 );
                 
                 if (filtered.length === 0) {
-                    grid.innerHTML = '<div class="text-muted" style="padding:1rem 0;line-height:1.5;"><p style="margin:0 0 0.5rem;font-weight:600;color:#0f172a;">No schedules available</p><p style="margin:0;">There are no consultation sessions for this selection. Please go back and try another option, or contact the clinic.</p></div>';
+                    const empty = document.createElement('div');
+                    empty.className = 'text-muted';
+                    empty.style.cssText = 'padding:1rem 0;line-height:1.5;';
+                    const heading = document.createElement('p');
+                    heading.style.cssText = 'margin:0 0 0.5rem;font-weight:600;color:#0f172a;';
+                    heading.textContent = 'No schedules available';
+                    const body = document.createElement('p');
+                    body.style.margin = '0';
+                    body.textContent = 'There are no consultation sessions for this selection. Please go back and try another option, or contact the clinic.';
+                    empty.append(heading, body);
+                    grid.appendChild(empty);
                     return;
                 }
                 
@@ -437,13 +447,24 @@
                     const tStart = s.start_time.substring(0, 5);
                     const tEnd = s.end_time.substring(0, 5);
                     const day = dayLabels[s.day_of_week];
-                    grid.innerHTML += `
-                        <div class="selection-card" onclick="selectBookable('${s.id}', ${s.day_of_week})">
-                            <h4>${s.session_name}</h4>
-                            <p>${day}s • ${tStart} - ${tEnd}</p>
-                            <p class="text-muted" style="font-size:0.8rem; margin-top:0.5rem;">Doctor: ${s.doctor.name} | Chamber: ${s.chamber.name}</p>
-                        </div>
-                    `;
+
+                    const card = document.createElement('div');
+                    card.className = 'selection-card';
+                    card.addEventListener('click', () => selectBookable(String(s.id), s.day_of_week));
+
+                    const heading = document.createElement('h4');
+                    heading.textContent = s.session_name ?? '';
+
+                    const meta = document.createElement('p');
+                    meta.textContent = `${day}s • ${tStart} - ${tEnd}`;
+
+                    const detail = document.createElement('p');
+                    detail.className = 'text-muted';
+                    detail.style.cssText = 'font-size:0.8rem; margin-top:0.5rem;';
+                    detail.textContent = `Doctor: ${s.doctor?.name ?? ''} | Chamber: ${s.chamber?.name ?? ''}`;
+
+                    card.append(heading, meta, detail);
+                    grid.appendChild(card);
                 });
             } else {
                 title.innerText = 'Select a Lab Collection Window';
@@ -452,7 +473,17 @@
                 );
                 
                 if (filtered.length === 0) {
-                    grid.innerHTML = '<div class="text-muted" style="padding:1rem 0;line-height:1.5;"><p style="margin:0 0 0.5rem;font-weight:600;color:#0f172a;">No lab slots available</p><p style="margin:0;">There are no collection windows for this location. Please go back or contact the clinic.</p></div>';
+                    const empty = document.createElement('div');
+                    empty.className = 'text-muted';
+                    empty.style.cssText = 'padding:1rem 0;line-height:1.5;';
+                    const heading = document.createElement('p');
+                    heading.style.cssText = 'margin:0 0 0.5rem;font-weight:600;color:#0f172a;';
+                    heading.textContent = 'No lab slots available';
+                    const body = document.createElement('p');
+                    body.style.margin = '0';
+                    body.textContent = 'There are no collection windows for this location. Please go back or contact the clinic.';
+                    empty.append(heading, body);
+                    grid.appendChild(empty);
                     return;
                 }
                 
@@ -461,12 +492,19 @@
                     const tEnd = s.end_time.substring(0, 5);
                     const day = dayLabels[s.day_of_week];
                     const chamberName = s.chamber ? s.chamber.name : 'Main Lab';
-                    grid.innerHTML += `
-                        <div class="selection-card" onclick="selectBookable('${s.id}', ${s.day_of_week})">
-                            <h4>${day}s</h4>
-                            <p>${tStart} - ${tEnd} • ${chamberName}</p>
-                        </div>
-                    `;
+
+                    const card = document.createElement('div');
+                    card.className = 'selection-card';
+                    card.addEventListener('click', () => selectBookable(String(s.id), s.day_of_week));
+
+                    const heading = document.createElement('h4');
+                    heading.textContent = `${day}s`;
+
+                    const meta = document.createElement('p');
+                    meta.textContent = `${tStart} - ${tEnd} • ${chamberName}`;
+
+                    card.append(heading, meta);
+                    grid.appendChild(card);
                 });
             }
         }

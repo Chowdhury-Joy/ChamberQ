@@ -8,13 +8,11 @@ use App\Filament\TenantAdmin\Resources\LabCollectionSlots\Pages\ListLabCollectio
 use App\Filament\TenantAdmin\Resources\LabCollectionSlots\Schemas\LabCollectionSlotForm;
 use App\Filament\TenantAdmin\Resources\LabCollectionSlots\Tables\LabCollectionSlotsTable;
 use App\Models\LabCollectionSlot;
-use App\Support\DayOfWeek;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
-use Filament\Forms;
 
 class LabCollectionSlotResource extends Resource
 {
@@ -37,20 +35,7 @@ class LabCollectionSlotResource extends Resource
 
     public static function form(Schema $schema): Schema
     {
-        return $schema->schema([
-            Forms\Components\Select::make('chamber_id')
-                ->relationship('chamber', 'name'),
-            Forms\Components\Select::make('day_of_week')
-                ->required()
-                ->options(DayOfWeek::options()),
-            Forms\Components\TimePicker::make('start_time')
-                ->required(),
-            Forms\Components\TimePicker::make('end_time')
-                ->required(),
-            Forms\Components\TextInput::make('slot_cap')
-                ->required()
-                ->numeric(),
-        ]);
+        return LabCollectionSlotForm::configure($schema);
     }
 
     public static function table(Table $table): Table

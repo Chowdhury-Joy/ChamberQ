@@ -82,7 +82,8 @@ class Tenant extends BaseTenant
         // Check feature_flags JSON column first
         $flags = $this->feature_flags ?? [];
         if (array_key_exists($feature, $flags)) {
-            return (bool) $flags[$feature];
+            // Filament KeyValue stores string "true"/"false"; (bool)"false" === true.
+            return filter_var($flags[$feature], FILTER_VALIDATE_BOOLEAN);
         }
         
         // Fall back to tier defaults

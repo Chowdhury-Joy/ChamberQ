@@ -43,4 +43,43 @@ class TieredFeatureTest extends TestCase
         // Still defaults
         $this->assertFalse($tenant->hasFeature('multiple_chambers'));
     }
+
+    public function test_string_false_feature_flag_is_treated_as_disabled(): void
+    {
+        $tenant = Tenant::create([
+            'id' => 'string-false-solo',
+            'plan_tier' => 'solo',
+            'feature_flags' => [
+                'lab_tests' => 'false',
+            ],
+        ]);
+
+        $this->assertFalse($tenant->hasFeature('lab_tests'));
+
+        $clinic = Tenant::create([
+            'id' => 'string-false-clinic',
+            'plan_tier' => 'clinic',
+            'feature_flags' => [
+                'lab_tests' => 'false',
+                'multiple_doctors' => '0',
+            ],
+        ]);
+
+        $this->assertFalse($clinic->hasFeature('lab_tests'));
+        $this->assertFalse($clinic->hasFeature('multiple_doctors'));
+        $this->assertTrue($clinic->hasFeature('multiple_chambers'));
+    }
+
+    public function test_string_true_feature_flag_enables_override(): void
+    {
+        $tenant = Tenant::create([
+            'id' => 'string-true-solo',
+            'plan_tier' => 'solo',
+            'feature_flags' => [
+                'lab_tests' => 'true',
+            ],
+        ]);
+
+        $this->assertTrue($tenant->hasFeature('lab_tests'));
+    }
 }

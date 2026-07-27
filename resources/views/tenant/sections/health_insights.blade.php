@@ -20,9 +20,10 @@
                             @endif
                         </div>
                     </div>
-                    @if(!empty($article['link']))
+                    @php $articleLink = \App\Support\SafeUrl::href($article['link'] ?? '', ''); @endphp
+                    @if($articleLink !== '')
                         <div class="px-5 pb-5 pt-0">
-                            <a href="{{ $article['link'] }}" class="text-xs font-bold text-sky-600 hover:text-sky-700 inline-flex items-center gap-1">
+                            <a href="{{ $articleLink }}" class="text-xs font-bold text-sky-600 hover:text-sky-700 inline-flex items-center gap-1">
                                 <span>Read Full Article</span>
                                 <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                             </a>

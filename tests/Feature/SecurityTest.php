@@ -212,6 +212,51 @@ class SecurityTest extends TestCase
         $this->get('http://alpha.localhost/about')->assertOk();
     }
 
+    public function test_builder_cta_javascript_urls_are_stripped_on_save(): void
+    {
+        tenancy()->initialize($this->alpha);
+
+        $page = WebPage::create([
+            'title' => 'Home',
+            'slug' => '/',
+            'is_published' => true,
+            'content' => [[
+                'type' => 'hero',
+                'data' => [
+                    'headline' => 'Care',
+                    'cta_link' => 'javascript:alert(1)',
+                    'secondary_cta_link' => 'javascript:alert(2)',
+                    'image_url' => 'https://example.com/hero.jpg',
+                ],
+            ], [
+                'type' => 'cta_banner',
+                'data' => [
+                    'headline' => 'Book',
+                    'cta_link' => 'javascript:alert(3)',
+                ],
+            ]],
+        ]);
+
+        $hero = $page->fresh()->content[0]['data'];
+        $banner = $page->fresh()->content[1]['data'];
+
+        $this->assertSame('', $hero['cta_link']);
+        $this->assertSame('', $hero['secondary_cta_link']);
+        $this->assertSame('https://example.com/hero.jpg', $hero['image_url']);
+        $this->assertSame('', $banner['cta_link']);
+    }
+
+    public function test_safe_url_allowlist_accepts_relative_and_https(): void
+    {
+        $this->assertSame('/book', \App\Support\SafeUrl::href('/book'));
+        $this->assertSame('#services', \App\Support\SafeUrl::href('#services'));
+        $this->assertSame('https://maps.google.com/?q=Dhaka', \App\Support\SafeUrl::href('https://maps.google.com/?q=Dhaka'));
+        $this->assertSame('tel:+8801712345678', \App\Support\SafeUrl::href('tel:+8801712345678'));
+        $this->assertSame('#', \App\Support\SafeUrl::href('javascript:alert(1)'));
+        $this->assertSame('#', \App\Support\SafeUrl::href('data:text/html,<script>alert(1)</script>'));
+        $this->assertSame('#', \App\Support\SafeUrl::href('//evil.example/path'));
+    }
+
     private function sessionForAlpha(): ScheduleSession
     {
         $chamber = Chamber::create(['name' => 'Alpha Chamber']);

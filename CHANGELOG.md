@@ -7,10 +7,14 @@ Solo-doctor v1 work lives on branch `Solo-Doc-V1`.
 
 ## [Unreleased]
 
-### Planned — Phase 3 (pre-patient-data hardening)
-- Escape `innerHTML` in booking wizard and screen pause reason
-- URL scheme allowlist on page-builder links
-- Feature-flag boolean handling; basic form validation (`end > start`, `slot_cap ≥ 1`)
+## [Solo-Doc-V1 Phase 3] — 2026-07-27
+
+### Fixed
+- Booking wizard session/lab cards now use `textContent` / `createElement` (no `innerHTML` interpolation of doctor/chamber/session names)
+- Waiting-room screen pause reason already uses `textContent` (confirmed safe)
+- Page-builder CTA and media links allowlisted to `http` / `https` / `mailto` / `tel` plus relative `/` and `#` paths (`SafeUrl`); scrubbed on `WebPage` save and at render
+- Feature-flag string `"false"` / `"0"` now correctly disables overrides (Filament KeyValue no longer forces features on via `(bool)"false"`)
+- Schedule sessions and lab collection slots require `end_time > start_time` and `slot_cap ≥ 1`
 
 ## [Solo-Doc-V1 Phase 2] — 2026-07-27
 

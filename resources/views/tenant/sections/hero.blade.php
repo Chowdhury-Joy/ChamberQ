@@ -20,12 +20,12 @@
                 @endif
 
                 <div class="flex flex-wrap gap-4 pt-2">
-                    <a href="{{ $data['cta_link'] ?? '/book' }}" class="btn btn-primary inline-flex items-center gap-2 shadow-lg shadow-sky-500/25">
+                    <a href="{{ \App\Support\SafeUrl::href($data['cta_link'] ?? '/book', '/book') }}" class="btn btn-primary inline-flex items-center gap-2 shadow-lg shadow-sky-500/25">
                         <span>{{ $data['cta_text'] ?? 'Book Appointment' }}</span>
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
                     </a>
                     @if(!empty($data['secondary_cta_text']))
-                        <a href="{{ $data['secondary_cta_link'] ?? '#services' }}" class="btn border border-slate-300 text-slate-700 hover:bg-slate-100">
+                        <a href="{{ \App\Support\SafeUrl::href($data['secondary_cta_link'] ?? '#services', '#services') }}" class="btn border border-slate-300 text-slate-700 hover:bg-slate-100">
                             {{ $data['secondary_cta_text'] }}
                         </a>
                     @endif

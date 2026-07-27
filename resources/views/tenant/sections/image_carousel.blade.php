@@ -40,8 +40,9 @@
                              x-transition:leave-end="opacity-0 scale-95"
                              class="absolute inset-0 w-full h-full">
                             
-                            @if(!empty($item['link_url']))
-                                <a href="{{ $item['link_url'] }}" class="block w-full h-full">
+                            @php $slideLink = \App\Support\SafeUrl::href($item['link_url'] ?? '', ''); @endphp
+                            @if($slideLink !== '')
+                                <a href="{{ $slideLink }}" class="block w-full h-full">
                             @endif
 
                             <img src="{{ $item['image_url'] }}" alt="{{ $item['title'] ?? 'Slide' }}" class="w-full h-full object-cover">
@@ -57,7 +58,7 @@
                                 </div>
                             @endif
 
-                            @if(!empty($item['link_url']))
+                            @if($slideLink !== '')
                                 </a>
                             @endif
                         </div>
