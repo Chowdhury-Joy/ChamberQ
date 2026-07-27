@@ -296,11 +296,13 @@
             const dateInput = document.getElementById('booking_date');
             const dateError = document.getElementById('date-error');
             const submitBtn = document.getElementById('submitBtn');
-            const dayName = dayLabels[state.dayOfWeek];
             
-            // Set min date to today
+            // Today .. +60 days — matches server-side booking_date rules
             const today = new Date();
             dateInput.min = today.toISOString().split('T')[0];
+            const max = new Date(today);
+            max.setDate(max.getDate() + 60);
+            dateInput.max = max.toISOString().split('T')[0];
             
             // Compute next valid date
             const nextValid = new Date(today);
@@ -311,9 +313,8 @@
             document.getElementById('date-helper').innerText = `Next available: ${formatted}`;
             dateInput.value = nextValid.toISOString().split('T')[0];
             
-            // Live validation on change
-            dateInput.addEventListener('change', validateDate);
-            // Clear any previous error state
+            // Assign once so revisiting this step does not stack listeners
+            dateInput.onchange = validateDate;
             dateError.style.display = 'none';
             submitBtn.disabled = false;
         }
@@ -455,8 +456,11 @@
         document.getElementById('bookingForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             const msgEl = document.getElementById('message');
+            const submitBtn = document.getElementById('submitBtn');
             msgEl.className = 'alert';
             msgEl.style.display = 'none';
+            msgEl.innerText = '';
+            submitBtn.disabled = true;
             
             const formData = new FormData();
             formData.append('_token', document.querySelector('input[name="_token"]').value);
@@ -491,20 +495,30 @@
                         window.location.href = data.booking.ticket_url;
                     }, 2500);
                 } else {
-                    msgEl.innerText = data.message || 'Validation error. Please check your inputs.';
+                    let message = data.message || 'Validation error. Please check your inputs.';
+                    if (data.errors) {
+                        const first = Object.values(data.errors).flat()[0];
+                        if (first) message = first;
+                    }
+                    msgEl.innerText = message;
                     msgEl.className = 'alert alert-error';
+                    msgEl.style.display = 'block';
+                    submitBtn.disabled = false;
                 }
             } catch (err) {
                 msgEl.innerText = 'An error occurred submitting the booking.';
                 msgEl.className = 'alert alert-error';
+                msgEl.style.display = 'block';
+                submitBtn.disabled = false;
             }
         });
 
-        // Deep link support: ?doctor=ID or ?test=ID
+        // Deep link support: ?doctor=ID (also accept legacy ?doctor_id=) or ?test=ID
         const params = new URLSearchParams(window.location.search);
-        if (params.has('doctor')) {
+        const doctorParam = params.get('doctor') || params.get('doctor_id');
+        if (doctorParam) {
             state.type = 'session';
-            state.doctorId = params.get('doctor');
+            state.doctorId = doctorParam;
         }
         if (params.has('test')) {
             state.type = 'lab';

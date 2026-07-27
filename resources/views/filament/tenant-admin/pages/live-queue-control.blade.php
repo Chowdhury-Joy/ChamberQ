@@ -17,7 +17,7 @@
                         </select>
                     </div>
 
-                    @if($this->selectedSessionId)
+                    @if($this->selectedSessionId && app()->isLocal())
                         <div>
                             <x-filament::button wire:click="addMockPatients" color="gray" icon="heroicon-m-user-plus">
                                 + Add Sample Patients

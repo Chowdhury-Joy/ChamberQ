@@ -255,13 +255,32 @@ class LiveQueueControl extends Page implements HasActions, HasTable
 
     public function addMockPatients()
     {
-        if (!$this->selectedSessionId) return;
+        // Demo tooling only — never available outside local, and never mutates the real schedule.
+        if (! app()->isLocal()) {
+            Notification::make()
+                ->title('Sample patients are only available in local development')
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        if (! $this->selectedSessionId) {
+            return;
+        }
 
         $session = ScheduleSession::findOrFail($this->selectedSessionId);
         $today = Carbon::today();
-        
-        // Ensure session operates today
-        $session->update(['day_of_week' => $today->dayOfWeek]);
+
+        if ((int) $session->day_of_week !== $today->dayOfWeek) {
+            Notification::make()
+                ->title('This session does not run today')
+                ->body('Pick a session scheduled for ' . $today->translatedFormat('l') . ', or change the session day in Schedules.')
+                ->warning()
+                ->send();
+
+            return;
+        }
 
         $bookingService = app(BookingService::class);
         $mockNames = ['ফাতেমা বেগম', 'মোহাম্মদ করিম', 'রশিদা আক্তার', 'আবদুল হাসান', 'নুসরাত জাহান', 'আমিনুল ইসলাম'];

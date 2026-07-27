@@ -60,7 +60,9 @@ Route::middleware([
     Route::get('/bookings/{booking}', [\App\Http\Controllers\BookingController::class, 'show'])
         ->name('bookings.show');
 
-    Route::get('/portal', [\App\Http\Controllers\BookingController::class, 'portal'])->name('patient.portal');
+    Route::get('/portal', [\App\Http\Controllers\BookingController::class, 'portal'])
+        ->middleware('throttle:30,1')
+        ->name('patient.portal');
 
     // Catch-all for WebPages
     Route::get('/{slug?}', [\App\Http\Controllers\WebPageController::class, 'show'])->where('slug', '^(?!tenant|admin|api|lang|bookings|portal).*$');

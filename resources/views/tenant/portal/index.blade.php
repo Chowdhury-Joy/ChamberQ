@@ -33,15 +33,20 @@
             </p>
 
             <form action="/portal" method="GET" class="flex flex-col sm:flex-row gap-3">
-                <input type="text" name="phone" value="{{ $phone ?? '' }}" placeholder="Enter mobile number (e.g. 01712345678)" required
-                       class="flex-1 px-4 py-3 rounded-full border border-slate-300 focus:outline-none focus:border-sky-500 text-sm">
+                <label for="portal-phone" class="sr-only">Mobile phone number</label>
+                <input id="portal-phone" type="text" name="phone" value="{{ $phone ?? '' }}" placeholder="Enter mobile number (e.g. 01712345678)" required
+                       class="flex-1 px-4 py-3 rounded-full border border-slate-300 focus:outline-none focus:border-sky-500 text-sm"
+                       autocomplete="tel">
                 <button type="submit" class="btn btn-primary px-8 py-3 rounded-full text-sm">
                     Search Appointments
                 </button>
             </form>
+            @if(! empty($error))
+                <p class="mt-4 text-sm text-center text-red-600" role="alert">{{ $error }}</p>
+            @endif
         </div>
 
-        @if(filled($phone))
+        @if(filled($phone) && empty($error))
             <div class="max-w-4xl mx-auto">
                 <h2 class="text-xl font-bold text-slate-900 mb-4">Search Results for "{{ $phone }}"</h2>
                 
@@ -67,7 +72,7 @@
                                     <p class="text-xs text-slate-500 mt-1">Phone: {{ $booking->patient_phone }}</p>
                                 </div>
                                 <div>
-                                    <a href="{{ route('bookings.show', $booking) }}" target="_blank" class="btn border border-sky-500 text-sky-600 hover:bg-sky-50 text-xs px-4 py-2">
+                                    <a href="{{ route('bookings.show', $booking) }}" target="_blank" rel="noopener noreferrer" class="btn border border-sky-500 text-sky-600 hover:bg-sky-50 text-xs px-4 py-2">
                                         View Digital Ticket
                                     </a>
                                 </div>

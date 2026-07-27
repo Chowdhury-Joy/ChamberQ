@@ -26,7 +26,7 @@
                         </p>
                     </div>
 
-                    <a href="/book?doctor_id={{ $doctor->id }}" class="btn btn-primary w-full text-center text-sm">
+                    <a href="/book?doctor={{ $doctor->id }}" class="btn btn-primary w-full text-center text-sm">
                         Book Consultation
                     </a>
                 </div>
