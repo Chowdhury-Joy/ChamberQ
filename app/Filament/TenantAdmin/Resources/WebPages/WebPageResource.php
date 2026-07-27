@@ -108,14 +108,14 @@ class WebPageResource extends Resource
                             ->label('Hero Banner (50/50 Content & Image)')
                             ->columns(2)
                             ->schema([
-                                Forms\Components\TextInput::make('headline')->required()->default('Expert Care for Your Health & Well-being')->columnSpan(2),
-                                Forms\Components\Textarea::make('subheadline')->default('Book appointments online, consult with leading specialists, and receive personalized medical care.')->columnSpan(2),
+                                Forms\Components\TextInput::make('headline')->required()->default('Care that respects your time')->columnSpan(2),
+                                Forms\Components\Textarea::make('subheadline')->default('Book a serial online and follow the live queue from your phone — pay at the chamber.')->columnSpan(2),
                                 Forms\Components\TextInput::make('cta_text')->default('Book Appointment'),
                                 Forms\Components\TextInput::make('cta_link')->default('/book'),
                                 Forms\Components\TextInput::make('secondary_cta_text')->default('Our Services'),
                                 Forms\Components\TextInput::make('secondary_cta_link')->default('#services'),
-                                Forms\Components\TextInput::make('emergency_phone')->label('Emergency Hotline')->placeholder('+1 (800) 555-0199'),
-                                Forms\Components\TextInput::make('image_url')->label('Hero Image URL')->placeholder('https://images.unsplash.com/photo-1629909613654-28e377c37b09'),
+                                Forms\Components\TextInput::make('emergency_phone')->label('Emergency Hotline (shown below hero)')->placeholder('017XXXXXXXX'),
+                                Forms\Components\TextInput::make('image_url')->label('Hero Image URL')->placeholder('https://images.unsplash.com/...'),
                             ]),
 
                         // 2. Text-Based Trust Bar

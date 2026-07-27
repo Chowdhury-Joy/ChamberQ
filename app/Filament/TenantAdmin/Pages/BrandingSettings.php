@@ -46,11 +46,11 @@ class BrandingSettings extends Page implements HasForms
                 'tagline' => $tenant->tagline,
                 'logo_url' => $tenant->logo_url,
                 'favicon_url' => $tenant->favicon_url,
-                'theme_color' => $tenant->theme_color ?? '#0ea5e9',
-                'font_family' => $tenant->font_family ?? 'Inter',
+                'theme_color' => $tenant->theme_color ?? \App\Models\Tenant::DEFAULT_THEME_COLOR,
+                'font_family' => $tenant->font_family ?? 'Outfit',
                 'contact_phone' => $tenant->contact_phone,
                 'whatsapp_number' => $tenant->whatsapp_number,
-                'default_locale' => $tenant->default_locale ?? 'bn',
+                'default_locale' => $tenant->default_locale ?? 'en',
                 'call_timeout_seconds' => $tenant->call_timeout_seconds ?? 10,
                 'estimated_time_buffer_minutes' => $tenant->estimated_time_buffer_minutes ?? 30,
                 'first_n_patients' => $tenant->first_n_patients ?? 2,
@@ -98,12 +98,12 @@ class BrandingSettings extends Page implements HasForms
                         Select::make('font_family')
                             ->label(__('Font Family'))
                             ->options([
-                                'Inter' => 'Inter (Modern & Clean)',
                                 'Outfit' => 'Outfit (Friendly & Contemporary)',
+                                'Hind Siliguri' => 'Hind Siliguri (English & Bengali)',
+                                'Inter' => 'Inter (Modern & Clean)',
                                 'Roboto' => 'Roboto (Classic & Highly Readable)',
-                                'Hind Siliguri' => 'Hind Siliguri (Dual English & Bengali)',
                             ])
-                            ->default('Inter')
+                            ->default('Outfit')
                             ->required(),
                     ]),
 
@@ -122,12 +122,13 @@ class BrandingSettings extends Page implements HasForms
                             ->placeholder('8801XXXXXXXXX')
                             ->maxLength(20),
                         Select::make('default_locale')
-                            ->label(__('Default Website Language'))
+                            ->label(__('Default Language (Book / Ticket / Portal)'))
+                            ->helperText(__('Controls system UI strings. Homepage Bangla content is a separate paid add-on (bangla_homepage) enabled by Super Admin; staff then author that copy manually.'))
                             ->options([
                                 'en' => 'English',
                                 'bn' => 'বাংলা (Bengali)',
                             ])
-                            ->default('bn')
+                            ->default('en')
                             ->required(),
                     ]),
 

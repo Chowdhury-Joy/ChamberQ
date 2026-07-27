@@ -82,4 +82,13 @@ class TieredFeatureTest extends TestCase
 
         $this->assertTrue($tenant->hasFeature('lab_tests'));
     }
+
+    public function test_bangla_homepage_is_off_by_default_and_flaggable(): void
+    {
+        $solo = Tenant::create(['id' => 'bn-home-solo', 'plan_tier' => 'solo']);
+        $this->assertFalse($solo->hasFeature('bangla_homepage'));
+
+        $solo->update(['feature_flags' => ['bangla_homepage' => true]]);
+        $this->assertTrue($solo->fresh()->hasFeature('bangla_homepage'));
+    }
 }

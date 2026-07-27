@@ -7,6 +7,10 @@ Solo-doctor v1 work lives on branch `Solo-Doc-V1`.
 
 ## [Unreleased]
 
+### Changed
+- Patient marketing site: brand-first full-bleed hero with Book CTA; Portal quiet in nav; mobile menu; default theme blue (`#2563eb`) and English locale
+- Homepage EN/BN switch only when Super Admin enables `bangla_homepage` (paid add-on); Book/Ticket/Portal always offer EN/BN for system strings
+
 ## [Solo-Doc-V1 Phase 3] — 2026-07-27
 
 ### Fixed

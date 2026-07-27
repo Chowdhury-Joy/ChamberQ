@@ -7,7 +7,7 @@ use Illuminate\Support\Str;
 
 class PWAController extends Controller
 {
-    private const DEFAULT_THEME = '#0ea5e9';
+    private const DEFAULT_THEME = '#2563eb';
 
     public function manifest()
     {

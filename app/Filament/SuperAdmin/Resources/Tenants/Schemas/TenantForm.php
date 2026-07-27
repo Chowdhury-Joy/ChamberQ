@@ -76,23 +76,26 @@ class TenantForm
                 Fieldset::make(__('Appearance & Locale'))
                     ->schema([
                         ColorPicker::make('theme_color')
-                            ->label(__('Theme Color')),
+                            ->label(__('Theme Color'))
+                            ->default(\App\Models\Tenant::DEFAULT_THEME_COLOR),
                         Select::make('default_locale')
                             ->label(__('Default Locale'))
+                            ->helperText(__('System UI default (book/ticket/portal). Homepage Bangla requires the bangla_homepage feature flag.'))
                             ->options([
                                 'en' => 'English',
                                 'bn' => 'বাংলা (Bengali)',
                             ])
-                            ->default('bn'),
+                            ->default('en'),
                     ]),
 
                 Fieldset::make(__('Feature Overrides'))
                     ->schema([
                         KeyValue::make('feature_flags')
                             ->label(__('Feature Flags'))
+                            ->helperText(__('Paid add-on example: bangla_homepage = true. Other keys: lab_tests, multiple_doctors, multiple_chambers.'))
                             ->keyLabel('Feature')
                             ->valueLabel('Enabled (true/false)')
-                            ->keyPlaceholder('e.g. lab_tests')
+                            ->keyPlaceholder('e.g. bangla_homepage')
                             ->valuePlaceholder('true')
                             ->columnSpanFull(),
                     ]),

@@ -1,15 +1,16 @@
-@php
+    @php
     $tenant = tenant();
     $hasLabTests = $tenant->hasFeature('lab_tests');
     $hasMultipleDoctors = $tenant->hasFeature('multiple_doctors');
     $hasMultipleChambers = $tenant->hasFeature('multiple_chambers');
-    $fontFamily = $tenant->font_family ?? 'Inter';
-    $themeColor = $tenant->theme_color ?? '#0ea5e9';
+    $fontFamily = $tenant->font_family ?? 'Outfit';
+    $themeColor = $tenant->theme_color ?: \App\Models\Tenant::DEFAULT_THEME_COLOR;
+    $locale = app()->getLocale();
     $fontUrl = match($fontFamily) {
-        'Outfit' => 'https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap',
+        'Inter' => 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
         'Roboto' => 'https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap',
         'Hind Siliguri' => 'https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap',
-        default => 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
+        default => 'https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap',
     };
 @endphp
 <!DOCTYPE html>
@@ -69,7 +70,12 @@
                 {{ $tenant->displayName() }}
             @endif
         </a>
-        <div class="navbar-nav">
+        <div class="navbar-nav" style="display:flex;align-items:center;gap:1rem;">
+            <div class="locale-chip" aria-label="{{ __('Language') }}">
+                <a href="/lang/en" class="{{ $locale === 'en' ? 'is-active' : '' }}">EN</a>
+                <span aria-hidden="true">|</span>
+                <a href="/lang/bn" class="{{ $locale === 'bn' ? 'is-active' : '' }}">BN</a>
+            </div>
             <a href="/">{{ __('Home') }}</a>
         </div>
     </nav>

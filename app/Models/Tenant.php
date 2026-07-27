@@ -9,6 +9,8 @@ class Tenant extends BaseTenant
 {
     use HasDomains;
 
+    public const DEFAULT_THEME_COLOR = '#2563eb';
+
     public static function getCustomColumns(): array
     {
         // Every real column MUST be listed here. Anything omitted is folded into
@@ -92,12 +94,14 @@ class Tenant extends BaseTenant
                 'lab_tests' => false,
                 'multiple_chambers' => false,
                 'multiple_doctors' => false,
+                'bangla_homepage' => false,
                 default => false,
             },
             'clinic' => match ($feature) {
                 'lab_tests' => true,
                 'multiple_chambers' => true,
                 'multiple_doctors' => true,
+                'bangla_homepage' => false,
                 default => false,
             },
             default => false,

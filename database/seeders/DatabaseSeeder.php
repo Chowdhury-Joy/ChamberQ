@@ -33,14 +33,16 @@ class DatabaseSeeder extends Seeder
 
     private function seedSoloTenant(): void
     {
-        $tenant = Tenant::firstOrCreate(['id' => 'solo'], [
+        $tenant = Tenant::updateOrCreate(['id' => 'solo'], [
             'name' => 'Dr. Rahman Chamber',
             'plan_tier' => 'solo',
             'slot_cap_mode' => 'per_session',
             'contact_phone' => '01712345678',
             'whatsapp_number' => '8801712345678',
-            'theme_color' => '#0d9488',
-            'default_locale' => 'bn',
+            'theme_color' => Tenant::DEFAULT_THEME_COLOR,
+            'font_family' => 'Outfit',
+            'default_locale' => 'en',
+            'tagline' => 'Consultant physician care with online serial booking',
         ]);
 
         Domain::firstOrCreate(['domain' => 'solo.localhost'], ['tenant_id' => 'solo']);
@@ -86,10 +88,11 @@ class DatabaseSeeder extends Seeder
             'is_published' => true,
             'content' => [
                 ['type' => 'hero', 'data' => [
-                    'headline' => 'Dr. Mahfuzur Rahman',
-                    'subheadline' => 'MBBS, FCPS (Medicine) — Consultant Physician, Dhanmondi',
+                    'headline' => 'Care that respects your time',
+                    'subheadline' => 'Book a serial online and follow the live queue from your phone — pay at the chamber.',
                     'cta_text' => 'Book Appointment',
                     'cta_link' => '/book',
+                    'image_url' => 'https://images.unsplash.com/photo-1631217868264-e5b90bb7e133?auto=format&fit=crop&w=1800&q=80',
                 ]],
                 ['type' => 'rich_text', 'data' => [
                     'content' => '<h2>About</h2><p>Dr. Mahfuzur Rahman has been practising internal medicine '
@@ -97,7 +100,19 @@ class DatabaseSeeder extends Seeder
                         . 'medicine. Appointments are by serial — book online and track the queue from your phone '
                         . 'instead of waiting at the chamber.</p>',
                 ]],
-                ['type' => 'doctors_list', 'data' => ['heading' => 'Your Doctor']],
+                ['type' => 'doctor_grid', 'data' => [
+                    'heading' => 'Your Doctor',
+                    'subheadline' => 'Book a consultation with Dr. Mahfuzur Rahman.',
+                ]],
+                ['type' => 'service_matrix', 'data' => [
+                    'heading' => 'Why patients choose this chamber',
+                    'description' => 'Simple online serials and a live queue on your phone.',
+                    'items' => [
+                        ['title' => 'Online serial', 'description' => 'Book from home and track the queue live.'],
+                        ['title' => 'Live waiting room screen', 'description' => 'See who is being called in the chamber.'],
+                        ['title' => 'Pay at the clinic', 'description' => 'No online payment — settle at reception.'],
+                    ],
+                ]],
             ],
         ]);
 
@@ -106,14 +121,16 @@ class DatabaseSeeder extends Seeder
 
     private function seedClinicTenant(): void
     {
-        $tenant = Tenant::firstOrCreate(['id' => 'demo'], [
+        $tenant = Tenant::updateOrCreate(['id' => 'demo'], [
             'name' => 'Shefa Diagnostic & Consultation Centre',
             'plan_tier' => 'clinic',
             'slot_cap_mode' => 'per_session',
             'contact_phone' => '029876543',
             'whatsapp_number' => '8801812345678',
-            'theme_color' => '#1d4ed8',
-            'default_locale' => 'bn',
+            'theme_color' => Tenant::DEFAULT_THEME_COLOR,
+            'font_family' => 'Outfit',
+            'default_locale' => 'en',
+            'tagline' => 'Diagnostics and consultations under one roof',
         ]);
 
         Domain::firstOrCreate(['domain' => 'demo.localhost'], ['tenant_id' => 'demo']);
@@ -196,23 +213,28 @@ class DatabaseSeeder extends Seeder
             'is_published' => true,
             'content' => [
                 ['type' => 'hero', 'data' => [
-                    'headline' => 'Shefa Diagnostic & Consultation Centre',
-                    'subheadline' => 'Consultants and diagnostics under one roof in Mirpur and Uttara.',
+                    'headline' => 'Consultants and diagnostics, one roof',
+                    'subheadline' => 'Book a doctor or lab serial online and follow the queue from your phone.',
                     'cta_text' => 'Book Appointment',
                     'cta_link' => '/book',
+                    'image_url' => 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=1800&q=80',
                 ]],
                 ['type' => 'rich_text', 'data' => [
                     'content' => '<h2>About us</h2><p>Shefa has served Dhaka since 2009, offering consultant '
                         . 'appointments alongside a full diagnostic laboratory. Book a doctor or a test online, '
                         . 'get a serial number, and follow the queue from your phone.</p>',
                 ]],
-                ['type' => 'doctors_list', 'data' => ['heading' => 'Our Consultants']],
-                ['type' => 'services', 'data' => [
+                ['type' => 'doctor_grid', 'data' => [
+                    'heading' => 'Our Consultants',
+                    'subheadline' => 'Experienced physicians across key specialties.',
+                ]],
+                ['type' => 'service_matrix', 'data' => [
                     'heading' => 'Why choose us',
+                    'description' => 'Book online, get a serial, and follow the queue from your phone.',
                     'items' => [
-                        ['title' => 'Online serial', 'description' => 'Book from home and track the queue live — no waiting room queueing.', 'icon' => '📱'],
-                        ['title' => 'Two branches', 'description' => 'Mirpur and Uttara, both with full diagnostic facilities.', 'icon' => '🏥'],
-                        ['title' => 'Same-day reports', 'description' => 'Most routine tests are reported the same day.', 'icon' => '⚡'],
+                        ['title' => 'Online serial', 'description' => 'Book from home and track the queue live — no waiting room guessing.'],
+                        ['title' => 'Two branches', 'description' => 'Mirpur and Uttara, both with full diagnostic facilities.'],
+                        ['title' => 'Same-day reports', 'description' => 'Most routine tests are reported the same day.'],
                     ],
                 ]],
             ],

@@ -1,24 +1,38 @@
 @php
     $tenant = tenant();
+    $locale = app()->getLocale();
 @endphp
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="{{ str_replace('_', '-', $locale) }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="{{ $tenant->theme_color ?: \App\Models\Tenant::DEFAULT_THEME_COLOR }}">
     <title>Patient Portal | {{ $tenant->displayName() }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="/css/theme.css">
+    <style>
+        :root { --color-primary: {{ $tenant->theme_color ?: \App\Models\Tenant::DEFAULT_THEME_COLOR }}; }
+    </style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col pt-20">
     <nav class="navbar fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200 py-3">
         <div class="max-w-[1320px] w-full mx-auto px-4 md:px-6 xl:px-8 flex items-center justify-between">
-            <a href="/" class="navbar-brand text-lg font-bold text-sky-600 flex items-center gap-2">
-                <span>🏥 {{ $tenant->displayName() }}</span>
+            <a href="/" class="navbar-brand text-lg font-bold flex items-center gap-2" style="color: var(--color-primary);">
+                @if($tenant->logo_url)
+                    <img src="{{ $tenant->logo_url }}" alt="{{ $tenant->displayName() }}" style="height: 36px;">
+                @else
+                    <span>{{ $tenant->displayName() }}</span>
+                @endif
             </a>
             <div class="navbar-nav flex items-center gap-4 text-sm font-medium text-slate-700">
-                <a href="/" class="hover:text-sky-600 transition-colors">Home</a>
-                <a href="/book" class="btn btn-primary ml-2">Book Appointment</a>
+                <div class="locale-chip">
+                    <a href="/lang/en" class="{{ $locale === 'en' ? 'is-active' : '' }}">EN</a>
+                    <span aria-hidden="true">|</span>
+                    <a href="/lang/bn" class="{{ $locale === 'bn' ? 'is-active' : '' }}">BN</a>
+                </div>
+                <a href="/" class="hover:opacity-80 transition-colors">{{ __('Home') }}</a>
+                <a href="/book" class="btn btn-primary ml-2">{{ __('Book Appointment') }}</a>
             </div>
         </div>
     </nav>
