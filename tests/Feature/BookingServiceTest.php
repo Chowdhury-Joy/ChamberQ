@@ -73,7 +73,7 @@ class BookingServiceTest extends TestCase
         $this->bookingService->createBookingForSession($this->session, $this->mondayDate, 'Patient 2', '01711111111');
         
         $this->expectException(BookingUnavailableException::class);
-        $this->expectExceptionMessage('fully booked');
+        $this->expectExceptionMessage('just filled up');
         
         $this->bookingService->createBookingForSession($this->session, $this->mondayDate, 'Patient 3', '01711111111');
     }

@@ -15,41 +15,72 @@ use Illuminate\Http\Request;
  */
 class BookingUnavailableException extends Exception
 {
+    public string $errorCode = 'unavailable';
+
     public static function dayOfWeekMismatch(bool $isLabSlot = false): self
     {
-        return new self($isLabSlot
-            ? __('The date you chose is not a collection day for this slot. Please pick one of the available dates.')
-            : __('The date you chose is not a day this doctor sees patients. Please pick one of the available dates.'));
+        return self::make(
+            $isLabSlot
+                ? __('The date you chose is not a collection day for this slot. Please pick one of the available dates.')
+                : __('The date you chose is not a day this doctor sees patients. Please pick one of the available dates.'),
+            'day_mismatch'
+        );
     }
 
     public static function dateBlocked(): self
     {
-        return new self(__('The clinic is closed on the date you chose. Please pick another date.'));
+        return self::make(
+            __('The clinic is closed on the date you chose. Please pick another date.'),
+            'blocked'
+        );
     }
 
     public static function capacityExceeded(): self
     {
-        return new self(__('This session is fully booked for the date you chose. Please pick another date or session.'));
+        return self::make(
+            __('This session just filled up. Please pick another session or date.'),
+            'capacity'
+        );
     }
 
     public static function bookingClosed(): self
     {
-        return new self(__('Online booking is temporarily unavailable. Please call the clinic to book your appointment.'));
+        return self::make(
+            __('Online booking is temporarily unavailable. Please call the clinic to book your appointment.'),
+            'closed'
+        );
     }
 
     public static function bookableUnavailable(): self
     {
-        return new self(__('That session is no longer available. Please choose another.'));
+        return self::make(
+            __('That session is no longer available. Please choose another.'),
+            'unavailable'
+        );
     }
 
     public static function labTestUnavailable(): self
     {
-        return new self(__('One of the tests you selected is no longer available. Please review your selection.'));
+        return self::make(
+            __('One of the tests you selected is no longer available. Please review your selection.'),
+            'lab_unavailable'
+        );
     }
 
     public static function labTestsNotBookable(): self
     {
-        return new self(__('Lab tests cannot be booked here.'));
+        return self::make(
+            __('Lab tests cannot be booked here.'),
+            'lab_not_bookable'
+        );
+    }
+
+    private static function make(string $message, string $code): self
+    {
+        $exception = new self($message);
+        $exception->errorCode = $code;
+
+        return $exception;
     }
 
     /**
@@ -62,6 +93,7 @@ class BookingUnavailableException extends Exception
             return response()->json([
                 'success' => false,
                 'message' => $this->getMessage(),
+                'code' => $this->errorCode,
             ], 422);
         }
 

@@ -37,6 +37,9 @@ Route::middleware([
     Route::post('/api/bookings', [\App\Http\Controllers\BookingController::class, 'store'])
         ->middleware(['throttle:10,1', \App\Http\Middleware\EnsureTenantAcceptsBookings::class]);
 
+    Route::get('/api/bookings/availability', [\App\Http\Controllers\BookingController::class, 'availability'])
+        ->middleware(['throttle:60,1']);
+
     // PWA Routes
     Route::get('/manifest.webmanifest', [\App\Http\Controllers\PWAController::class, 'manifest']);
     Route::get('/sw.js', [\App\Http\Controllers\PWAController::class, 'serviceWorker']);

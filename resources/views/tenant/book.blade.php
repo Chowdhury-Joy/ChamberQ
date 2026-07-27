@@ -50,6 +50,17 @@
         .selection-card h4 { margin: 0 0 0.5rem 0; color: #0f172a; font-size: 1.1rem; }
         .selection-card p { margin: 0; color: #64748b; font-size: 0.9rem; line-height: 1.4; }
         .selection-card .price { color: var(--color-primary); font-weight: 600; font-size: 1.1rem; float: right; }
+        .selection-card.is-disabled { opacity: 0.55; cursor: not-allowed; pointer-events: none; background: #f8fafc; }
+        .selection-card .seats { margin-top: 0.65rem; font-size: 0.85rem; font-weight: 600; color: var(--color-primary); }
+        .selection-card .seats.is-full { color: #b91c1c; }
+        .selection-card .seats.is-closed { color: #92400e; }
+        .booking-review {
+            background: #f8fafc; border: 1px solid #e2e8f0; border-radius: var(--radius-md);
+            padding: 1rem 1.15rem; margin: 0 0 1.5rem; font-size: 0.95rem; line-height: 1.5; color: #334155;
+        }
+        .booking-review strong { color: #0f172a; }
+        .booking-review .seats-line { margin-top: 0.35rem; font-weight: 600; color: var(--color-primary); }
+        .booking-review .seats-line.is-full, .booking-review .seats-line.is-closed { color: #b91c1c; }
         .btn-group { display: flex; justify-content: space-between; margin-top: 2rem; border-top: 1px solid #e2e8f0; padding-top: 1.5rem; }
         .btn-back { background: #f1f5f9; color: #475569; border: none; }
         .btn-back:hover { background: #e2e8f0; }
@@ -198,6 +209,12 @@
                 <!-- STEP 6: Identity & Date -->
                 <div class="step" id="step-identity" data-step-name="identity">
                     <h3>{{ __('Patient Details') }}</h3>
+
+                    <div class="booking-review" id="bookingReview" aria-live="polite">
+                        <div id="reviewSummary"></div>
+                        <div class="seats-line" id="reviewSeats"></div>
+                        <div style="margin-top:0.35rem;color:#64748b;font-size:0.9rem;">{{ __('Pay at the clinic') }}</div>
+                    </div>
                     
                     <div class="form-group" style="margin-top:1.5rem;">
                         <label class="form-label" for="booking_date">{{ __('Booking Date') }}</label>
@@ -214,6 +231,7 @@
                     <div class="form-group">
                         <label class="form-label" for="patient_phone">{{ __('Phone Number') }}</label>
                         <input type="tel" name="patient_phone" id="patient_phone" class="form-control" placeholder="017..." required>
+                        <span class="field-error" id="phone-error" role="alert" aria-live="polite" style="display:none"></span>
                     </div>
 
                     <div class="btn-group">
@@ -244,6 +262,10 @@
             doctorsCount: @json(count($doctors)),
             canBookConsultation: @json($canBookConsultation),
             canBookLab: @json($canBookLab),
+            payAtClinic: @json(__('Pay at the clinic')),
+            confirmLabel: @json(__('Confirm Booking')),
+            bookingLabel: @json(__('Booking…')),
+            phoneInvalid: @json(__('Please enter a valid Bangladeshi mobile number, for example 01712345678.')),
         };
         
         const sessionsData = @json($sessions);
@@ -255,10 +277,16 @@
             chamberId: null,
             doctorId: null,
             bookableId: null,
-            dayOfWeek: null
+            dayOfWeek: null,
+            sessionName: null,
+            startTime: null,
+            endTime: null,
+            doctorName: null,
+            chamberName: null,
         };
 
         let flow = [];
+        let availabilityCache = {};
         
         function rebuildFlow() {
             flow = [];
@@ -299,6 +327,64 @@
 
         let currentStepIndex = 0;
 
+        function localToday() {
+            const d = new Date();
+            return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+        }
+
+        function toLocalYmd(date) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${day}`;
+        }
+
+        function nextDateForDow(dayOfWeek, fromDate = null) {
+            const start = fromDate ? new Date(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate()) : localToday();
+            const next = new Date(start);
+            while (next.getDay() !== dayOfWeek) {
+                next.setDate(next.getDate() + 1);
+            }
+            return next;
+        }
+
+        function isValidBdPhone(value) {
+            return /^(?:\+?88)?01[3-9]\d{8}$/.test(String(value).trim());
+        }
+
+        function formatTime(t) {
+            return String(t || '').substring(0, 5);
+        }
+
+        function seatsLabel(info) {
+            if (!info || info.missing) return { text: '', className: '' };
+            if (info.blocked) return { text: 'Closed', className: 'is-closed' };
+            if (info.remaining <= 0) return { text: 'Full', className: 'is-full' };
+            return { text: `${info.remaining} of ${info.cap} left`, className: '' };
+        }
+
+        async function fetchAvailability(bookableType, ids, dateYmd) {
+            const key = `${bookableType}:${dateYmd}:${ids.slice().sort().join(',')}`;
+            if (availabilityCache[key]) return availabilityCache[key];
+
+            const params = new URLSearchParams();
+            params.set('bookable_type', bookableType);
+            params.set('booking_date', dateYmd);
+            ids.forEach(id => params.append('bookable_ids[]', id));
+
+            const response = await fetch(`/api/bookings/availability?${params.toString()}`, {
+                headers: { 'Accept': 'application/json' },
+            });
+            if (!response.ok) throw new Error('availability failed');
+            const data = await response.json();
+            availabilityCache[key] = data.items || {};
+            return availabilityCache[key];
+        }
+
+        function invalidateAvailability() {
+            availabilityCache = {};
+        }
+
         function renderProgress() {
             const bar = document.getElementById('progressBar');
             bar.innerHTML = '';
@@ -328,38 +414,91 @@
             const dateInput = document.getElementById('booking_date');
             const dateError = document.getElementById('date-error');
             const submitBtn = document.getElementById('submitBtn');
+            const phoneError = document.getElementById('phone-error');
             
-            // Today .. +60 days — matches server-side booking_date rules
-            const today = new Date();
-            dateInput.min = today.toISOString().split('T')[0];
+            const today = localToday();
+            dateInput.min = toLocalYmd(today);
             const max = new Date(today);
             max.setDate(max.getDate() + 60);
-            dateInput.max = max.toISOString().split('T')[0];
+            dateInput.max = toLocalYmd(max);
             
-            // Compute next valid date
-            const nextValid = new Date(today);
-            while (nextValid.getDay() !== state.dayOfWeek) {
-                nextValid.setDate(nextValid.getDate() + 1);
-            }
+            const nextValid = nextDateForDow(state.dayOfWeek, today);
             const formatted = nextValid.toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
             document.getElementById('date-helper').innerText = `Next available: ${formatted}`;
-            dateInput.value = nextValid.toISOString().split('T')[0];
+            dateInput.value = toLocalYmd(nextValid);
             
-            // Assign once so revisiting this step does not stack listeners
-            dateInput.onchange = validateDate;
+            dateInput.onchange = () => {
+                validateDate();
+                refreshIdentityAvailability();
+                updateReviewSummary();
+            };
+            document.getElementById('patient_phone').oninput = () => {
+                phoneError.style.display = 'none';
+            };
             dateError.style.display = 'none';
+            phoneError.style.display = 'none';
             submitBtn.disabled = false;
+            submitBtn.textContent = config.confirmLabel;
+            updateReviewSummary();
+            refreshIdentityAvailability();
         }
 
-        function validateDate() {
+        function updateReviewSummary() {
+            const summary = document.getElementById('reviewSummary');
+            const dateInput = document.getElementById('booking_date');
+            let dateLabel = dateInput.value || '';
+            if (dateInput.value) {
+                const d = new Date(dateInput.value + 'T00:00:00');
+                dateLabel = d.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' });
+            }
+            const title = state.type === 'lab'
+                ? (dayLabels[state.dayOfWeek] + 's collection')
+                : (state.sessionName || 'Session');
+            const parts = [
+                state.doctorName,
+                dateLabel,
+                `${title} ${formatTime(state.startTime)}–${formatTime(state.endTime)}`,
+                state.chamberName,
+            ].filter(Boolean);
+            summary.innerHTML = '';
+            const strong = document.createElement('strong');
+            strong.textContent = parts.join(' · ');
+            summary.appendChild(strong);
+        }
+
+        async function refreshIdentityAvailability() {
+            const seatsEl = document.getElementById('reviewSeats');
+            const submitBtn = document.getElementById('submitBtn');
+            const dateInput = document.getElementById('booking_date');
+            if (!state.bookableId || !dateInput.value) return;
+
+            seatsEl.textContent = 'Checking seats…';
+            seatsEl.className = 'seats-line';
+
+            try {
+                const items = await fetchAvailability(state.type === 'lab' ? 'lab' : 'session', [state.bookableId], dateInput.value);
+                const info = items[String(state.bookableId)];
+                const label = seatsLabel(info);
+                seatsEl.textContent = label.text || '—';
+                seatsEl.className = 'seats-line ' + (label.className || '');
+
+                const dateOk = validateDate(true);
+                const open = info && info.available && !info.missing;
+                submitBtn.disabled = !dateOk || !open;
+            } catch (e) {
+                seatsEl.textContent = '';
+                submitBtn.disabled = !validateDate(true);
+            }
+        }
+
+        function validateDate(silent = false) {
             const dateInput = document.getElementById('booking_date');
             const dateError = document.getElementById('date-error');
             const submitBtn = document.getElementById('submitBtn');
             
             if (!dateInput.value) {
-                dateError.style.display = 'none';
-                submitBtn.disabled = false;
-                return;
+                if (!silent) dateError.style.display = 'none';
+                return false;
             }
             
             const selected = new Date(dateInput.value + 'T00:00:00');
@@ -370,11 +509,12 @@
                 const got = dayLabels[selectedDay];
                 dateError.innerText = `This date is a ${got}. You need to pick a ${expected}.`;
                 dateError.style.display = 'block';
-                submitBtn.disabled = true;
-            } else {
-                dateError.style.display = 'none';
-                submitBtn.disabled = false;
+                if (!silent) submitBtn.disabled = true;
+                return false;
             }
+
+            dateError.style.display = 'none';
+            return true;
         }
 
         function nextStep() {
@@ -414,15 +554,21 @@
             setTimeout(nextStep, 200);
         }
         
-        function selectBookable(id, dayOfWeek) {
+        function selectBookable(id, dayOfWeek, meta = {}) {
             state.bookableId = id;
             state.dayOfWeek = dayOfWeek;
+            state.sessionName = meta.sessionName || null;
+            state.startTime = meta.startTime || null;
+            state.endTime = meta.endTime || null;
+            state.doctorName = meta.doctorName || null;
+            state.chamberName = meta.chamberName || null;
             document.querySelectorAll('#session-grid .selection-card').forEach(el => el.classList.remove('selected'));
-            event.currentTarget.classList.add('selected');
+            const card = document.querySelector(`#session-grid .selection-card[data-id="${id}"]`);
+            if (card) card.classList.add('selected');
             setTimeout(nextStep, 200);
         }
         
-        function renderSessions() {
+        async function renderSessions() {
             const grid = document.getElementById('session-grid');
             const title = document.getElementById('session-title');
             grid.replaceChildren();
@@ -448,15 +594,46 @@
                     grid.appendChild(empty);
                     return;
                 }
+
+                // Group by next occurrence date so we can batch availability
+                const byDate = {};
+                filtered.forEach(s => {
+                    const ymd = toLocalYmd(nextDateForDow(s.day_of_week));
+                    if (!byDate[ymd]) byDate[ymd] = [];
+                    byDate[ymd].push(s);
+                });
+
+                let itemsById = {};
+                try {
+                    for (const [ymd, list] of Object.entries(byDate)) {
+                        const chunk = await fetchAvailability('session', list.map(s => s.id), ymd);
+                        itemsById = { ...itemsById, ...chunk };
+                    }
+                } catch (e) {
+                    itemsById = {};
+                }
                 
                 filtered.forEach(s => {
-                    const tStart = s.start_time.substring(0, 5);
-                    const tEnd = s.end_time.substring(0, 5);
+                    const tStart = formatTime(s.start_time);
+                    const tEnd = formatTime(s.end_time);
                     const day = dayLabels[s.day_of_week];
+                    const nextYmd = toLocalYmd(nextDateForDow(s.day_of_week));
+                    const info = itemsById[String(s.id)];
+                    const seats = seatsLabel(info);
+                    const disabled = info && (info.blocked || info.remaining <= 0 || info.missing);
 
                     const card = document.createElement('div');
-                    card.className = 'selection-card';
-                    card.addEventListener('click', () => selectBookable(String(s.id), s.day_of_week));
+                    card.className = 'selection-card' + (disabled ? ' is-disabled' : '');
+                    card.dataset.id = String(s.id);
+                    if (!disabled) {
+                        card.addEventListener('click', () => selectBookable(String(s.id), s.day_of_week, {
+                            sessionName: s.session_name,
+                            startTime: s.start_time,
+                            endTime: s.end_time,
+                            doctorName: s.doctor?.name,
+                            chamberName: s.chamber?.name,
+                        }));
+                    }
 
                     const heading = document.createElement('h4');
                     heading.textContent = s.session_name ?? '';
@@ -469,7 +646,12 @@
                     detail.style.cssText = 'font-size:0.8rem; margin-top:0.5rem;';
                     detail.textContent = `Doctor: ${s.doctor?.name ?? ''} | Chamber: ${s.chamber?.name ?? ''}`;
 
-                    card.append(heading, meta, detail);
+                    const seatsEl = document.createElement('div');
+                    seatsEl.className = 'seats ' + (seats.className || '');
+                    const nextLabel = nextDateForDow(s.day_of_week).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                    seatsEl.textContent = seats.text ? `${seats.text} · next ${nextLabel}` : `Next ${nextLabel}`;
+
+                    card.append(heading, meta, detail, seatsEl);
                     grid.appendChild(card);
                 });
             } else {
@@ -492,16 +674,44 @@
                     grid.appendChild(empty);
                     return;
                 }
+
+                const byDate = {};
+                filtered.forEach(s => {
+                    const ymd = toLocalYmd(nextDateForDow(s.day_of_week));
+                    if (!byDate[ymd]) byDate[ymd] = [];
+                    byDate[ymd].push(s);
+                });
+                let itemsById = {};
+                try {
+                    for (const [ymd, list] of Object.entries(byDate)) {
+                        const chunk = await fetchAvailability('lab', list.map(s => s.id), ymd);
+                        itemsById = { ...itemsById, ...chunk };
+                    }
+                } catch (e) {
+                    itemsById = {};
+                }
                 
                 filtered.forEach(s => {
-                    const tStart = s.start_time.substring(0, 5);
-                    const tEnd = s.end_time.substring(0, 5);
+                    const tStart = formatTime(s.start_time);
+                    const tEnd = formatTime(s.end_time);
                     const day = dayLabels[s.day_of_week];
                     const chamberName = s.chamber ? s.chamber.name : 'Main Lab';
+                    const info = itemsById[String(s.id)];
+                    const seats = seatsLabel(info);
+                    const disabled = info && (info.blocked || info.remaining <= 0 || info.missing);
 
                     const card = document.createElement('div');
-                    card.className = 'selection-card';
-                    card.addEventListener('click', () => selectBookable(String(s.id), s.day_of_week));
+                    card.className = 'selection-card' + (disabled ? ' is-disabled' : '');
+                    card.dataset.id = String(s.id);
+                    if (!disabled) {
+                        card.addEventListener('click', () => selectBookable(String(s.id), s.day_of_week, {
+                            sessionName: null,
+                            startTime: s.start_time,
+                            endTime: s.end_time,
+                            doctorName: null,
+                            chamberName,
+                        }));
+                    }
 
                     const heading = document.createElement('h4');
                     heading.textContent = `${day}s`;
@@ -509,7 +719,12 @@
                     const meta = document.createElement('p');
                     meta.textContent = `${tStart} - ${tEnd} • ${chamberName}`;
 
-                    card.append(heading, meta);
+                    const seatsEl = document.createElement('div');
+                    seatsEl.className = 'seats ' + (seats.className || '');
+                    const nextLabel = nextDateForDow(s.day_of_week).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+                    seatsEl.textContent = seats.text ? `${seats.text} · next ${nextLabel}` : `Next ${nextLabel}`;
+
+                    card.append(heading, meta, seatsEl);
                     grid.appendChild(card);
                 });
             }
@@ -527,10 +742,24 @@
             e.preventDefault();
             const msgEl = document.getElementById('message');
             const submitBtn = document.getElementById('submitBtn');
+            const phoneError = document.getElementById('phone-error');
+            const phone = document.getElementById('patient_phone').value.trim();
+
             msgEl.className = 'alert';
             msgEl.style.display = 'none';
             msgEl.innerText = '';
+            phoneError.style.display = 'none';
+
+            if (!validateDate()) return;
+
+            if (!isValidBdPhone(phone)) {
+                phoneError.innerText = config.phoneInvalid;
+                phoneError.style.display = 'block';
+                return;
+            }
+
             submitBtn.disabled = true;
+            submitBtn.textContent = config.bookingLabel;
             
             const formData = new FormData();
             formData.append('_token', document.querySelector('input[name="_token"]').value);
@@ -538,7 +767,7 @@
             formData.append('bookable_id', state.bookableId);
             formData.append('booking_date', document.getElementById('booking_date').value);
             formData.append('patient_name', document.getElementById('patient_name').value);
-            formData.append('patient_phone', document.getElementById('patient_phone').value);
+            formData.append('patient_phone', phone);
             
             if (state.type === 'lab') {
                 document.querySelectorAll('input[name="lab_tests[]"]:checked').forEach(cb => {
@@ -574,12 +803,20 @@
                     msgEl.className = 'alert alert-error';
                     msgEl.style.display = 'block';
                     submitBtn.disabled = false;
+                    submitBtn.textContent = config.confirmLabel;
+
+                    // Rahim lost the last seat — refresh seats and mark Full
+                    if (data.code === 'capacity' || data.code === 'blocked' || data.code === 'unavailable') {
+                        invalidateAvailability();
+                        await refreshIdentityAvailability();
+                    }
                 }
             } catch (err) {
                 msgEl.innerText = 'An error occurred submitting the booking.';
                 msgEl.className = 'alert alert-error';
                 msgEl.style.display = 'block';
                 submitBtn.disabled = false;
+                submitBtn.textContent = config.confirmLabel;
             }
         });
 

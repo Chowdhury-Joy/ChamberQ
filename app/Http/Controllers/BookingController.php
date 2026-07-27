@@ -80,7 +80,7 @@ class BookingController extends Controller
                 $bookable,
                 $validated['booking_date'],
                 $validated['patient_name'],
-                $validated['patient_phone'],
+                $this->normalizeBdPhone($validated['patient_phone']),
                 $validated['lab_tests'] ?? []
             );
         } catch (BookingUnavailableException $e) {
@@ -90,6 +90,7 @@ class BookingController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => $e->getMessage(),
+                'code' => $e->errorCode,
             ], 422);
         }
 
@@ -100,6 +101,52 @@ class BookingController extends Controller
                 'serial_number' => $booking->serial_number,
                 'ticket_url' => route('bookings.show', $booking),
             ],
+        ]);
+    }
+
+    /**
+     * Seats left / blocked for Fatima’s chosen date before she hits Confirm.
+     */
+    public function availability(Request $request, BookingService $bookingService)
+    {
+        $maxDate = now()->addDays(60)->toDateString();
+
+        $validated = $request->validate([
+            'bookable_type' => 'required|in:session,lab',
+            'bookable_ids' => 'required|array|min:1|max:50',
+            'bookable_ids.*' => 'integer',
+            'booking_date' => "required|date|after_or_equal:today|before_or_equal:{$maxDate}",
+        ]);
+
+        $modelClass = $validated['bookable_type'] === 'session'
+            ? ScheduleSession::class
+            : LabCollectionSlot::class;
+
+        $bookables = $modelClass::whereIn('id', $validated['bookable_ids'])->get()->keyBy('id');
+
+        $items = [];
+        foreach ($validated['bookable_ids'] as $id) {
+            $bookable = $bookables->get($id);
+            if (! $bookable) {
+                $items[(string) $id] = [
+                    'available' => false,
+                    'blocked' => false,
+                    'day_mismatch' => false,
+                    'cap' => 0,
+                    'booked' => 0,
+                    'remaining' => 0,
+                    'missing' => true,
+                ];
+                continue;
+            }
+
+            $snapshot = $bookingService->availabilityFor($bookable, $validated['booking_date']);
+            $items[(string) $id] = array_merge($snapshot, ['missing' => false]);
+        }
+
+        return response()->json([
+            'date' => $validated['booking_date'],
+            'items' => $items,
         ]);
     }
 
@@ -146,17 +193,27 @@ class BookingController extends Controller
     }
 
     /**
-     * Canonicalise a BD mobile so portal lookup matches how the number was typed at booking.
-     *
-     * @return list<string>
+     * Store as 01XXXXXXXXX so portal lookup with/without +88 still matches.
      */
-    private function phoneLookupVariants(string $phone): array
+    private function normalizeBdPhone(string $phone): string
     {
         $digits = preg_replace('/\D/', '', $phone) ?? '';
 
         if (str_starts_with($digits, '88')) {
             $digits = substr($digits, 2);
         }
+
+        return $digits;
+    }
+
+    /**
+     * Canonicalise a BD mobile so portal lookup matches how the number was typed at booking.
+     *
+     * @return list<string>
+     */
+    private function phoneLookupVariants(string $phone): array
+    {
+        $digits = $this->normalizeBdPhone($phone);
 
         return array_values(array_unique([
             $digits,

@@ -105,7 +105,7 @@ class LabBookingTest extends TestCase
         $this->service->createBookingForBookable($this->slot, $this->mondayDate, 'P2', '01712345679', $ids);
 
         $this->expectException(BookingUnavailableException::class);
-        $this->expectExceptionMessage('fully booked');
+        $this->expectExceptionMessage('just filled up');
 
         $this->service->createBookingForBookable($this->slot, $this->mondayDate, 'P3', '01712345670', $ids);
     }
