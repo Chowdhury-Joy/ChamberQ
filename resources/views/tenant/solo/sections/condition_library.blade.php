@@ -3,7 +3,7 @@
     $conditions = $data['conditions'] ?? [];
 @endphp
 
-<section id="services" class="w-full bg-white py-10 sm:py-14 lg:py-16">
+<section id="services" class="solo-section w-full bg-white">
     <div class="mx-auto max-w-[1280px] px-3 sm:px-10">
         <h2 class="font-display text-3xl tracking-tight text-slate-900 sm:text-4xl lg:text-[2.75rem]">
             {{ $heading }}

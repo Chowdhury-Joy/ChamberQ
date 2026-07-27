@@ -95,6 +95,22 @@
         }
         .solo-fade-up { animation: soloFadeUp 0.65s ease-out both; }
         .solo-fade-up-delay { animation: soloFadeUp 0.75s ease-out 0.12s both; }
+        .solo-section {
+            padding-top: 40px;
+            padding-bottom: 40px;
+        }
+        @media (min-width: 640px) {
+            .solo-section {
+                padding-top: 56px;
+                padding-bottom: 56px;
+            }
+        }
+        @media (min-width: 1024px) {
+            .solo-section {
+                padding-top: 96px;
+                padding-bottom: 96px;
+            }
+        }
     </style>
     <script>
         if ('serviceWorker' in navigator) {

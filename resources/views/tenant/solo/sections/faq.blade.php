@@ -3,7 +3,7 @@
     $faqs = $data['faqs'] ?? [];
 @endphp
 
-<section class="w-full bg-white py-10 sm:py-14 lg:py-16">
+<section class="solo-section w-full bg-white">
     <div class="mx-auto grid max-w-[1280px] gap-8 px-3 sm:px-10 lg:grid-cols-[minmax(0,0.4fr)_minmax(0,0.6fr)] lg:gap-12">
         <h2 class="font-display text-3xl leading-[1.1] tracking-tight text-slate-900 sm:text-4xl lg:text-[2.75rem]">
             {{ $heading }}

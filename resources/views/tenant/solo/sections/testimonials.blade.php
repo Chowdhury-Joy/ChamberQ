@@ -3,8 +3,8 @@
     $items = $data['items'] ?? [];
 @endphp
 
-<section class="w-full bg-black text-white">
-    <div class="mx-auto max-w-[1280px] px-3 py-14 sm:px-10 sm:py-16 lg:py-20">
+<section class="solo-section w-full bg-black text-white">
+    <div class="mx-auto max-w-[1280px] px-3 sm:px-10">
         <div class="hidden gap-6 lg:grid lg:grid-cols-3">
             <div class="p-2">
                 <h2 class="font-display text-[2.35rem] leading-[1.1] tracking-tight">

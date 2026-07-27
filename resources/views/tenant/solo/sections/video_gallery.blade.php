@@ -6,7 +6,7 @@
 @endphp
 
 <section
-    class="w-full bg-white py-10 sm:py-14 lg:py-16"
+    class="solo-section w-full bg-white"
     x-data="{
         canPrev: false,
         canNext: true,

@@ -8,9 +8,9 @@
     $ctaLink = \App\Support\SafeUrl::href($data['cta_link'] ?? '/book', '/book');
 @endphp
 
-<section class="w-full bg-white" aria-label="{{ __('Introduction') }}">
-    <div class="mx-auto grid max-w-[1280px] gap-8 px-3 py-8 sm:px-10 sm:py-10 lg:grid-cols-2 lg:gap-10 lg:py-8">
-        <div class="solo-fade-up flex flex-col justify-between gap-8 lg:min-h-[584px] lg:py-2">
+<section class="solo-section w-full bg-white" aria-label="{{ __('Introduction') }}">
+    <div class="mx-auto grid max-w-[1280px] gap-8 px-3 sm:px-10 lg:grid-cols-2 lg:gap-10">
+        <div class="solo-fade-up flex flex-col justify-between gap-8 lg:min-h-[584px]">
             <div>
                 <h1 class="font-display text-[2.35rem] leading-[1.05] tracking-tight text-slate-900 sm:text-5xl lg:text-[5.5rem] lg:leading-[0.98]">
                     {{ $headline }}
