@@ -116,7 +116,7 @@
                 @endif
                 <div class="detail-row">
                     <span class="text-muted">{{ __('Payment') }}</span>
-                    <strong>{{ $booking->payment_status === 'paid' ? __('Paid') : __('Pay at the clinic') }}</strong>
+                    <strong>{{ __('Pay at the clinic') }}</strong>
                 </div>
             </div>
 

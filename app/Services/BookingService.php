@@ -111,7 +111,6 @@ class BookingService
                 'patient_phone' => $patientPhone,
                 'serial_number' => $nextSerial,
                 'status' => 'waiting',
-                'payment_status' => 'unpaid',
             ]);
 
             if ($labTestIds !== []) {

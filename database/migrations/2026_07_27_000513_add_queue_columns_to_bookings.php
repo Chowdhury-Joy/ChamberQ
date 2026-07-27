@@ -14,7 +14,6 @@ return new class extends Migration
             $table->timestamp('completed_at')->nullable();
             $table->unsignedInteger('skip_count')->default(0);
             $table->unsignedInteger('retry_queue_position')->nullable();
-            $table->boolean('refund_eligible')->default(false);
         });
     }
 
@@ -27,7 +26,6 @@ return new class extends Migration
                 'completed_at',
                 'skip_count',
                 'retry_queue_position',
-                'refund_eligible',
             ]);
         });
     }

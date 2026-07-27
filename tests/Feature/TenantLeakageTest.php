@@ -19,7 +19,7 @@ class TenantLeakageTest extends TestCase
             'ScheduleSession' => [\App\Models\ScheduleSession::class, ['session_name' => 'Morning', 'start_time' => '09:00', 'end_time' => '13:00', 'slot_cap' => 10, 'day_of_week' => 1, 'chamber_id' => 1, 'doctor_id' => 1]],
             'LabTest' => [\App\Models\LabTest::class, ['name' => 'Blood Test', 'price' => 100]],
             'LabCollectionSlot' => [\App\Models\LabCollectionSlot::class, ['day_of_week' => 1, 'start_time' => '08:00', 'end_time' => '10:00', 'slot_cap' => 30]],
-            'Booking' => [\App\Models\Booking::class, ['booking_date' => '2026-07-25', 'patient_name' => 'John', 'patient_phone' => '01712345678', 'serial_number' => 1, 'status' => 'waiting', 'payment_status' => 'unpaid', 'bookable_type' => \App\Models\Doctor::class, 'bookable_id' => 1]],
+            'Booking' => [\App\Models\Booking::class, ['booking_date' => '2026-07-25', 'patient_name' => 'John', 'patient_phone' => '01712345678', 'serial_number' => 1, 'status' => 'waiting', 'bookable_type' => \App\Models\Doctor::class, 'bookable_id' => 1]],
             'SlotBlock' => [\App\Models\SlotBlock::class, ['date' => '2026-07-25']],
             'WebPage' => [\App\Models\WebPage::class, ['title' => 'Home', 'slug' => 'home']],
             'User' => [\App\Models\User::class, ['name' => 'Admin', 'email' => 'admin_test@test.com', 'password' => 'password']],

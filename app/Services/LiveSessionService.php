@@ -218,7 +218,6 @@ class LiveSessionService
                     'status' => 'cancelled',
                     'cancellation_reason' => $reason,
                     'cancelled_at' => now(),
-                    'refund_eligible' => true,
                 ]);
         });
     }

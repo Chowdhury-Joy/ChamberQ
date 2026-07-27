@@ -13,12 +13,5 @@ foreach ($centralDomains as $domain) {
         Route::get('/', function () {
             return view('welcome');
         });
-
-        // Server-to-server only. Verification happens per gateway inside the
-        // controller and fails closed; the throttle is a blunt backstop against
-        // someone hammering the endpoint with forged payloads.
-        Route::post('/webhooks/payment/{gateway}', [\App\Http\Controllers\WebhookController::class, 'payment'])
-            ->middleware('throttle:60,1')
-            ->name('webhooks.payment');
     });
 }

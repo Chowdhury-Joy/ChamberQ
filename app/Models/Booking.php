@@ -18,8 +18,6 @@ class Booking extends Model
         'patient_phone',
         'serial_number',
         'status',
-        'payment_status',
-        'payment_reference',
         'cancelled_at',
         'cancellation_reason',
         'patient_notified',
@@ -28,7 +26,6 @@ class Booking extends Model
         'completed_at',
         'skip_count',
         'retry_queue_position',
-        'refund_eligible',
     ];
 
     protected $casts = [
@@ -39,7 +36,6 @@ class Booking extends Model
         'called_at' => 'datetime',
         'in_chamber_at' => 'datetime',
         'completed_at' => 'datetime',
-        'refund_eligible' => 'boolean',
     ];
 
     /**
@@ -84,11 +80,6 @@ class Booking extends Model
             ->using(BookingLabTest::class)
             ->withPivot('price_at_booking')
             ->withTimestamps();
-    }
-
-    public function paymentTransactions()
-    {
-        return $this->hasMany(PaymentTransaction::class);
     }
 
     /** Sum of the line items as quoted at booking time, not today's prices. */

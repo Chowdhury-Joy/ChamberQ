@@ -18,8 +18,6 @@ return new class extends Migration
             $table->string('patient_phone');
             $table->integer('serial_number');
             $table->string('status')->default('waiting'); // waiting, in_chamber, completed, cancelled
-            $table->string('payment_status')->default('unpaid');
-            $table->string('payment_reference')->nullable();
             $table->timestamps();
 
             $table->foreign('tenant_id')->references('id')->on('tenants')->cascadeOnDelete();

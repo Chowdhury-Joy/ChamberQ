@@ -6,12 +6,10 @@ use App\Models\Booking;
 use App\Models\Chamber;
 use App\Models\Doctor;
 use App\Models\Domain;
-use App\Models\PaymentTransaction;
 use App\Models\ScheduleSession;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Models\WebPage;
-use App\Services\BookingService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -96,66 +94,6 @@ class SecurityTest extends TestCase
 
         $doctor->tenant_id = 'beta';
         $doctor->save();
-    }
-
-    public function test_webhook_rejects_an_unsigned_payload(): void
-    {
-        $booking = $this->bookingForAlpha();
-
-        // No signature, no configured secret: must fail closed.
-        $this->postJson('http://localhost/webhooks/payment/sslcommerz', [
-            'tran_id' => $booking->id,
-            'status' => 'VALID',
-        ])->assertForbidden();
-
-        $this->assertSame('unpaid', $booking->fresh()->payment_status);
-    }
-
-    public function test_webhook_rejects_an_incorrect_signature(): void
-    {
-        config(['services.sslcommerz.store_password' => 'correct-horse']);
-        $booking = $this->bookingForAlpha();
-
-        $this->postJson('http://localhost/webhooks/payment/sslcommerz', [
-            'tran_id' => $booking->id,
-            'status' => 'VALID',
-            'verify_key' => 'tran_id,status',
-            'verify_sign' => str_repeat('0', 32),
-        ])->assertForbidden();
-
-        $this->assertSame('unpaid', $booking->fresh()->payment_status);
-    }
-
-    public function test_webhook_accepts_a_correct_signature_and_is_idempotent(): void
-    {
-        config(['services.sslcommerz.store_password' => 'correct-horse']);
-        $booking = $this->bookingForAlpha();
-
-        $payload = [
-            'tran_id' => $booking->id,
-            'bank_tran_id' => 'BANK-123',
-            'status' => 'VALID',
-            'amount' => '500.00',
-        ];
-        $payload['verify_key'] = 'tran_id,bank_tran_id,status,amount';
-        $payload['verify_sign'] = $this->sslcommerzSignature($payload, 'correct-horse');
-
-        $this->postJson('http://localhost/webhooks/payment/sslcommerz', $payload)
-            ->assertOk()
-            ->assertJson(['success' => true]);
-
-        $this->assertSame('paid', $booking->fresh()->payment_status);
-        $this->assertNotNull(
-            PaymentTransaction::withoutGlobalScopes()->first()->verified_at,
-            'verified_at must be stamped by the webhook handler.'
-        );
-
-        // Gateways retry as normal behaviour — a replay must not double-write.
-        $this->postJson('http://localhost/webhooks/payment/sslcommerz', $payload)
-            ->assertOk()
-            ->assertJson(['duplicate' => true]);
-
-        $this->assertSame(1, PaymentTransaction::withoutGlobalScopes()->count());
     }
 
     public function test_read_only_tenant_cannot_create_bookings_but_can_still_be_viewed(): void
@@ -284,38 +222,5 @@ class SecurityTest extends TestCase
             'day_of_week' => 1, 'session_name' => 'Morning',
             'start_time' => '09:00', 'end_time' => '12:00', 'slot_cap' => 5,
         ]);
-    }
-
-    private function bookingForAlpha(): Booking
-    {
-        tenancy()->initialize($this->alpha);
-        $session = $this->sessionForAlpha();
-
-        $booking = app(BookingService::class)->createBookingForBookable(
-            $session,
-            Carbon::now()->next(1)->format('Y-m-d'),
-            'Payer',
-            '01712345678'
-        );
-
-        tenancy()->end();
-
-        return $booking;
-    }
-
-    /** @param array<string, string> $payload */
-    private function sslcommerzSignature(array $payload, string $storePassword): string
-    {
-        $parts = [];
-
-        foreach (explode(',', $payload['verify_key']) as $key) {
-            $parts[$key] = $key . '=' . $payload[$key];
-        }
-
-        ksort($parts);
-        $parts['store_passwd'] = 'store_passwd=' . md5($storePassword);
-        ksort($parts);
-
-        return md5(implode('&', $parts));
     }
 }
