@@ -11,7 +11,7 @@ if (blank($centralDomains)) {
 foreach ($centralDomains as $domain) {
     Route::domain($domain)->group(function () {
         Route::get('/', function () {
-            return view('welcome');
+            return view('marketing.home');
         });
     });
 }
