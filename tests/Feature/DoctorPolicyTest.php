@@ -29,7 +29,7 @@ class DoctorPolicyTest extends TestCase
             'name' => 'Solo Admin',
             'email' => 'admin@solo-doc.test',
             'password' => bcrypt('password'),
-            'role' => 'tenant_admin',
+            'role' => 'admin',
             'tenant_id' => 'solo-doc',
         ]);
 
@@ -39,7 +39,7 @@ class DoctorPolicyTest extends TestCase
             'name' => 'Clinic Admin',
             'email' => 'admin@clinic-doc.test',
             'password' => bcrypt('password'),
-            'role' => 'tenant_admin',
+            'role' => 'admin',
             'tenant_id' => 'clinic-doc',
         ]);
     }

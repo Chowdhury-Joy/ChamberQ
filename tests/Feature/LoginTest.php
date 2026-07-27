@@ -37,7 +37,7 @@ class LoginTest extends TestCase
             'name' => 'Solo Admin',
             'email' => 'admin@solo.com',
             'password' => Hash::make('password'),
-            'role' => 'tenant_admin',
+            'role' => 'admin',
             'tenant_id' => 'solo',
         ]);
 
@@ -47,7 +47,7 @@ class LoginTest extends TestCase
             'name' => 'Demo Admin',
             'email' => 'admin@demo.com',
             'password' => Hash::make('password'),
-            'role' => 'tenant_admin',
+            'role' => 'admin',
             'tenant_id' => 'demo',
         ]);
     }

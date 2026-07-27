@@ -16,6 +16,27 @@ class User extends Authenticatable implements FilamentUser
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, BelongsToTenant;
 
+    public const ROLE_SUPER_ADMIN = 'super_admin';
+
+    public const ROLE_ADMIN = 'admin';
+
+    public const ROLE_DOCTOR = 'doctor';
+
+    public const ROLE_STAFF = 'staff';
+
+    public const ROLE_PATIENT = 'patient';
+
+    /**
+     * Tenant panel roles that can sign in.
+     *
+     * @var list<string>
+     */
+    public const TENANT_PANEL_ROLES = [
+        self::ROLE_ADMIN,
+        self::ROLE_DOCTOR,
+        self::ROLE_STAFF,
+    ];
+
     /**
      * The attributes that are mass assignable.
      *
@@ -52,30 +73,62 @@ class User extends Authenticatable implements FilamentUser
         ];
     }
 
-    public function isTenantAdmin(): bool
+    public function isAdmin(): bool
     {
-        return $this->role === 'tenant_admin';
+        return $this->role === self::ROLE_ADMIN;
     }
 
-    public function isWebDeveloper(): bool
+    public function isDoctor(): bool
     {
-        return in_array($this->role, ['tenant_admin', 'web_developer']);
+        return $this->role === self::ROLE_DOCTOR;
     }
 
-    public function isContentEditor(): bool
+    public function isStaff(): bool
     {
-        return $this->role === 'content_editor';
+        return $this->role === self::ROLE_STAFF;
+    }
+
+    /** Schedule, chambers, doctors, slot blocks, labs — not website. */
+    public function canManageOps(): bool
+    {
+        return in_array($this->role, [self::ROLE_ADMIN, self::ROLE_DOCTOR], true);
+    }
+
+    /** Edit page text/images; admin also owns page structure. */
+    public function canManageContent(): bool
+    {
+        return in_array($this->role, [self::ROLE_ADMIN, self::ROLE_STAFF], true);
+    }
+
+    /** Full page builder: add/remove/reorder blocks, slug, rich HTML. */
+    public function canManagePageStructure(): bool
+    {
+        return $this->isAdmin();
+    }
+
+    public function canManageQueue(): bool
+    {
+        return in_array($this->role, self::TENANT_PANEL_ROLES, true);
+    }
+
+    public function canManageUsers(): bool
+    {
+        return $this->isAdmin();
+    }
+
+    public function canManageBranding(): bool
+    {
+        return $this->isAdmin();
     }
 
     public function canAccessPanel(Panel $panel): bool
     {
         if ($panel->getId() === 'superAdmin') {
-            return $this->role === 'super_admin' && $this->tenant_id === null;
+            return $this->role === self::ROLE_SUPER_ADMIN && $this->tenant_id === null;
         }
 
         if ($panel->getId() === 'tenantAdmin') {
-            // Allow tenant_admin, web_developer, and content_editor to access panel
-            return in_array($this->role, ['tenant_admin', 'web_developer', 'content_editor'])
+            return in_array($this->role, self::TENANT_PANEL_ROLES, true)
                 && $this->tenant_id !== null
                 && tenancy()->initialized
                 && $this->tenant_id === tenant('id');

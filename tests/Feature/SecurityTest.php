@@ -49,7 +49,7 @@ class SecurityTest extends TestCase
             'name' => 'Alpha Admin',
             'email' => 'admin@alpha.test',
             'password' => Hash::make('secret'),
-            'role' => 'tenant_admin',
+            'role' => 'admin',
             'tenant_id' => 'alpha',
         ]);
 

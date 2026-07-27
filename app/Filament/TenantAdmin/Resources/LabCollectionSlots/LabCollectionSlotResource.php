@@ -22,6 +22,19 @@ class LabCollectionSlotResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
+    public static function canViewAny(): bool
+    {
+        $user = auth()->user();
+
+        return ($user?->canManageOps() ?? false)
+            && (tenant()?->hasFeature('lab_tests') ?? false);
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return static::canViewAny();
+    }
+
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([

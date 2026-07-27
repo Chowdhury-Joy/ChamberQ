@@ -47,7 +47,17 @@ class DatabaseSeeder extends Seeder
 
         User::withoutGlobalScope(\App\Scopes\TenantScope::class)->firstOrCreate(['email' => 'admin@solo.com'], [
             'name' => 'Solo Admin', 'password' => Hash::make('password'),
-            'role' => 'tenant_admin', 'tenant_id' => 'solo',
+            'role' => User::ROLE_ADMIN, 'tenant_id' => 'solo',
+        ]);
+
+        User::withoutGlobalScope(\App\Scopes\TenantScope::class)->firstOrCreate(['email' => 'doctor@solo.com'], [
+            'name' => 'Solo Doctor', 'password' => Hash::make('password'),
+            'role' => User::ROLE_DOCTOR, 'tenant_id' => 'solo',
+        ]);
+
+        User::withoutGlobalScope(\App\Scopes\TenantScope::class)->firstOrCreate(['email' => 'staff@solo.com'], [
+            'name' => 'Solo Staff', 'password' => Hash::make('password'),
+            'role' => User::ROLE_STAFF, 'tenant_id' => 'solo',
         ]);
 
         tenancy()->initialize($tenant);
@@ -110,7 +120,7 @@ class DatabaseSeeder extends Seeder
 
         User::withoutGlobalScope(\App\Scopes\TenantScope::class)->firstOrCreate(['email' => 'admin@demo.com'], [
             'name' => 'Demo Admin', 'password' => Hash::make('password'),
-            'role' => 'tenant_admin', 'tenant_id' => 'demo',
+            'role' => User::ROLE_ADMIN, 'tenant_id' => 'demo',
         ]);
 
         tenancy()->initialize($tenant);

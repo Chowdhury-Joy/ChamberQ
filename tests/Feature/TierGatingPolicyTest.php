@@ -31,7 +31,7 @@ class TierGatingPolicyTest extends TestCase
         Domain::create(['domain' => 'policy-solo.test', 'tenant_id' => 'policy-solo']);
         $this->soloAdmin = User::create([
             'name' => 'Solo Admin', 'email' => 'admin@policy-solo.test',
-            'password' => bcrypt('password'), 'role' => 'tenant_admin',
+            'password' => bcrypt('password'), 'role' => 'admin',
             'tenant_id' => 'policy-solo',
         ]);
 
@@ -39,7 +39,7 @@ class TierGatingPolicyTest extends TestCase
         Domain::create(['domain' => 'policy-clinic.test', 'tenant_id' => 'policy-clinic']);
         $this->clinicAdmin = User::create([
             'name' => 'Clinic Admin', 'email' => 'admin@policy-clinic.test',
-            'password' => bcrypt('password'), 'role' => 'tenant_admin',
+            'password' => bcrypt('password'), 'role' => 'admin',
             'tenant_id' => 'policy-clinic',
         ]);
     }
@@ -74,7 +74,7 @@ class TierGatingPolicyTest extends TestCase
         Domain::create(['domain' => 'upgraded-solo.test', 'tenant_id' => 'upgraded-solo']);
         $admin = User::create([
             'name' => 'Upgraded', 'email' => 'admin@upgraded-solo.test',
-            'password' => bcrypt('password'), 'role' => 'tenant_admin',
+            'password' => bcrypt('password'), 'role' => 'admin',
             'tenant_id' => 'upgraded-solo',
         ]);
 

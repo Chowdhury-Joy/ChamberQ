@@ -30,7 +30,7 @@ class BrandingTest extends TestCase
             'name' => 'Solo Admin',
             'email' => 'admin@brand-solo.test',
             'password' => bcrypt('password'),
-            'role' => 'tenant_admin',
+            'role' => 'admin',
             'tenant_id' => 'brand-solo',
         ]);
 
@@ -40,7 +40,7 @@ class BrandingTest extends TestCase
             'name' => 'Clinic Admin',
             'email' => 'admin@brand-clinic.test',
             'password' => bcrypt('password'),
-            'role' => 'tenant_admin',
+            'role' => 'admin',
             'tenant_id' => 'brand-clinic',
         ]);
     }
@@ -48,6 +48,7 @@ class BrandingTest extends TestCase
     public function test_sidebar_hides_doctors_menu_for_solo_tier(): void
     {
         tenancy()->initialize($this->soloTenant);
+        $this->actingAs($this->soloAdmin);
 
         $this->assertFalse(DoctorResource::shouldRegisterNavigation());
 
@@ -57,6 +58,7 @@ class BrandingTest extends TestCase
     public function test_sidebar_shows_doctors_menu_for_clinic_tier(): void
     {
         tenancy()->initialize($this->clinicTenant);
+        $this->actingAs($this->clinicAdmin);
 
         $this->assertTrue(DoctorResource::shouldRegisterNavigation());
 

@@ -21,22 +21,34 @@ class WebPageResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
+    public static function canViewAny(): bool
+    {
+        /** @var \App\Models\User|null $user */
+        $user = auth()->user();
+
+        return $user?->canManageContent() ?? false;
+    }
+
     public static function canCreate(): bool
     {
         /** @var \App\Models\User|null $user */
         $user = auth()->user();
-        return $user?->isWebDeveloper() ?? false;
+
+        return $user?->canManagePageStructure() ?? false;
     }
 
     public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
     {
         /** @var \App\Models\User|null $user */
         $user = auth()->user();
-        return $user?->isWebDeveloper() ?? false;
+
+        return $user?->canManagePageStructure() ?? false;
     }
 
     public static function form(Schema $schema): Schema
     {
+        $canStructure = fn (): bool => auth()->user()?->canManagePageStructure() ?? false;
+
         return $schema
             ->schema([
                 Forms\Components\TextInput::make('title')
@@ -46,15 +58,19 @@ class WebPageResource extends Resource
                     ->required()
                     ->maxLength(255)
                     ->default('/')
-                    ->disabled(fn () => ! (auth()->user()?->isWebDeveloper() ?? false)),
+                    ->disabled(fn () => ! $canStructure()),
                 Forms\Components\Toggle::make('is_published')
                     ->required()
-                    ->default(true),
+                    ->default(true)
+                    ->disabled(fn () => ! $canStructure()),
                 Forms\Components\Builder::make('content')
                     ->label('Page Sections')
                     ->collapsible()
-                    ->cloneable()
+                    ->cloneable($canStructure)
                     ->blockNumbers(true)
+                    ->addable($canStructure)
+                    ->deletable($canStructure)
+                    ->reorderable($canStructure)
                     ->addActionLabel('+ Add Section Block')
                     ->extraItemActions([
                         Action::make('toggleHide')
@@ -62,6 +78,7 @@ class WebPageResource extends Resource
                             ->tooltip(fn (array $state): string => (!empty($state['is_hidden']) || !empty($state['data']['is_hidden'])) ? 'Section is HIDDEN (Click to show)' : 'Section is VISIBLE (Click to hide)')
                             ->icon(fn (array $state): string => (!empty($state['is_hidden']) || !empty($state['data']['is_hidden'])) ? 'heroicon-m-eye-slash' : 'heroicon-m-eye')
                             ->color(fn (array $state): string => (!empty($state['is_hidden']) || !empty($state['data']['is_hidden'])) ? 'danger' : 'gray')
+                            ->visible($canStructure)
                             ->action(function (array $arguments, Forms\Components\Builder $component): void {
                                 $items = $component->getState();
                                 $itemKey = $arguments['item'] ?? null;
@@ -348,7 +365,7 @@ class WebPageResource extends Resource
                         // 16. Privacy & Policy Text Block (Clinic Only - Technical HTML)
                         Forms\Components\Builder\Block::make('rich_text')
                             ->label('Privacy & Policy Text Block (Clinic Only - Technical HTML)')
-                            ->visible(fn () => auth()->user()?->isWebDeveloper() ?? false)
+                            ->visible(fn () => auth()->user()?->canManagePageStructure() ?? false)
                             ->schema([
                                 Forms\Components\RichEditor::make('content')->required(),
                             ]),

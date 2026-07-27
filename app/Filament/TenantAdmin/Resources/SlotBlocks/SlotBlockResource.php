@@ -22,6 +22,11 @@ class SlotBlockResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->canManageOps() ?? false;
+    }
+
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([

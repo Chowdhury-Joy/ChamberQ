@@ -29,7 +29,7 @@ class BrandingSettings extends Page implements HasForms
         /** @var \App\Models\User|null $user */
         $user = auth()->user();
 
-        return $user?->isWebDeveloper() ?? false;
+        return $user?->canManageBranding() ?? false;
     }
 
     /** @var array<string, mixed>|null */

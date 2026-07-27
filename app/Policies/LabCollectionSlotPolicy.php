@@ -9,26 +9,26 @@ class LabCollectionSlotPolicy
 {
     public function viewAny(User $user): bool
     {
-        return tenant()?->hasFeature('lab_tests') ?? false;
+        return $user->canManageOps() && (tenant()?->hasFeature('lab_tests') ?? false);
     }
 
-    public function view(User $user, LabCollectionSlot $slot): bool
+    public function view(User $user, LabCollectionSlot $labCollectionSlot): bool
     {
-        return tenant()?->hasFeature('lab_tests') ?? false;
+        return $this->viewAny($user);
     }
 
     public function create(User $user): bool
     {
-        return tenant()?->hasFeature('lab_tests') ?? false;
+        return $this->viewAny($user);
     }
 
-    public function update(User $user, LabCollectionSlot $slot): bool
+    public function update(User $user, LabCollectionSlot $labCollectionSlot): bool
     {
-        return tenant()?->hasFeature('lab_tests') ?? false;
+        return $this->viewAny($user);
     }
 
-    public function delete(User $user, LabCollectionSlot $slot): bool
+    public function delete(User $user, LabCollectionSlot $labCollectionSlot): bool
     {
-        return tenant()?->hasFeature('lab_tests') ?? false;
+        return $this->viewAny($user);
     }
 }

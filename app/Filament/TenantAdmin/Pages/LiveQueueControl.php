@@ -33,6 +33,14 @@ class LiveQueueControl extends Page implements HasActions, HasTable
 
     protected string $view = 'filament.tenant-admin.pages.live-queue-control';
 
+    public static function canAccess(): bool
+    {
+        /** @var \App\Models\User|null $user */
+        $user = auth()->user();
+
+        return $user?->canManageQueue() ?? false;
+    }
+
     public $selectedSessionId = null;
 
     public function mount()
@@ -114,10 +122,17 @@ class LiveQueueControl extends Page implements HasActions, HasTable
 
     public function getSessionsProperty()
     {
+        $today = Carbon::today()->dayOfWeek;
+
         return ScheduleSession::with('chamber')
+            ->where('day_of_week', $today)
+            ->orderBy('start_time')
             ->get()
             ->mapWithKeys(function ($session) {
-                return [$session->id => $session->chamber->name . ' - ' . $session->start_time . ' to ' . $session->end_time];
+                $chamber = $session->chamber?->name ?? 'Chamber';
+                $label = $chamber.' — '.$session->session_name.' ('.$session->start_time.'–'.$session->end_time.')';
+
+                return [$session->id => $label];
             });
     }
 

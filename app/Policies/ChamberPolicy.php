@@ -2,17 +2,17 @@
 
 namespace App\Policies;
 
-use App\Models\Doctor;
+use App\Models\Chamber;
 use App\Models\User;
 
-class DoctorPolicy
+class ChamberPolicy
 {
     public function viewAny(User $user): bool
     {
         return $user->canManageOps();
     }
 
-    public function view(User $user, Doctor $doctor): bool
+    public function view(User $user, Chamber $chamber): bool
     {
         return $user->canManageOps();
     }
@@ -23,28 +23,25 @@ class DoctorPolicy
             return false;
         }
 
-        // Clinic tier can add unlimited doctors.
-        if (tenant()?->hasFeature('multiple_doctors')) {
+        if (tenant()?->hasFeature('multiple_chambers')) {
             return true;
         }
 
-        // Solo can only create the first doctor.
-        return Doctor::count() < 1;
+        return Chamber::count() < 1;
     }
 
-    public function update(User $user, Doctor $doctor): bool
+    public function update(User $user, Chamber $chamber): bool
     {
         return $user->canManageOps();
     }
 
-    public function delete(User $user, Doctor $doctor): bool
+    public function delete(User $user, Chamber $chamber): bool
     {
         if (! $user->canManageOps()) {
             return false;
         }
 
-        // Solo cannot delete their only doctor.
-        if (! tenant()?->hasFeature('multiple_doctors')) {
+        if (! tenant()?->hasFeature('multiple_chambers')) {
             return false;
         }
 

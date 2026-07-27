@@ -9,26 +9,26 @@ class LabTestPolicy
 {
     public function viewAny(User $user): bool
     {
-        return tenant()?->hasFeature('lab_tests') ?? false;
+        return $user->canManageOps() && (tenant()?->hasFeature('lab_tests') ?? false);
     }
 
     public function view(User $user, LabTest $labTest): bool
     {
-        return tenant()?->hasFeature('lab_tests') ?? false;
+        return $this->viewAny($user);
     }
 
     public function create(User $user): bool
     {
-        return tenant()?->hasFeature('lab_tests') ?? false;
+        return $this->viewAny($user);
     }
 
     public function update(User $user, LabTest $labTest): bool
     {
-        return tenant()?->hasFeature('lab_tests') ?? false;
+        return $this->viewAny($user);
     }
 
     public function delete(User $user, LabTest $labTest): bool
     {
-        return tenant()?->hasFeature('lab_tests') ?? false;
+        return $this->viewAny($user);
     }
 }

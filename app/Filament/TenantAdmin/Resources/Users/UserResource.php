@@ -27,8 +27,7 @@ class UserResource extends Resource
         /** @var User|null $user */
         $user = auth()->user();
 
-        // Content Editors cannot manage users or change roles
-        return $user?->isWebDeveloper() ?? false;
+        return $user?->canManageUsers() ?? false;
     }
 
     public static function form(Schema $schema): Schema
@@ -51,11 +50,11 @@ class UserResource extends Resource
                 Forms\Components\Select::make('role')
                     ->label('Access Role')
                     ->options([
-                        'tenant_admin' => 'Tenant Admin (Full Access)',
-                        'web_developer' => 'Web Developer (Site Builder & Technical)',
-                        'content_editor' => 'Content Editor (Safe Content Updates Only)',
+                        User::ROLE_ADMIN => 'Admin (Full Access)',
+                        User::ROLE_DOCTOR => 'Doctor (Operations Only)',
+                        User::ROLE_STAFF => 'Staff (Content + Queue)',
                     ])
-                    ->default('content_editor')
+                    ->default(User::ROLE_STAFF)
                     ->required(),
 
                 Forms\Components\TextInput::make('password')
@@ -84,15 +83,15 @@ class UserResource extends Resource
                 Tables\Columns\TextColumn::make('role')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
-                        'tenant_admin' => 'danger',
-                        'web_developer' => 'warning',
-                        'content_editor' => 'success',
+                        User::ROLE_ADMIN => 'danger',
+                        User::ROLE_DOCTOR => 'warning',
+                        User::ROLE_STAFF => 'success',
                         default => 'gray',
                     })
                     ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'tenant_admin' => 'Tenant Admin',
-                        'web_developer' => 'Web Developer',
-                        'content_editor' => 'Content Editor',
+                        User::ROLE_ADMIN => 'Admin',
+                        User::ROLE_DOCTOR => 'Doctor',
+                        User::ROLE_STAFF => 'Staff',
                         default => ucfirst($state),
                     }),
 

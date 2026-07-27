@@ -26,6 +26,14 @@ class DailyRoster extends Page implements HasTable, HasForms
 
     protected string $view = 'filament.tenant-admin.pages.daily-roster';
 
+    public static function canAccess(): bool
+    {
+        /** @var \App\Models\User|null $user */
+        $user = auth()->user();
+
+        return $user?->canManageQueue() ?? false;
+    }
+
     public function table(Table $table): Table
     {
         return $table

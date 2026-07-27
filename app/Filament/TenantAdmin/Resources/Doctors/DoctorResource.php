@@ -20,8 +20,19 @@ class DoctorResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
+    public static function canViewAny(): bool
+    {
+        return auth()->user()?->canManageOps() ?? false;
+    }
+
     public static function shouldRegisterNavigation(): bool
     {
+        if (! (auth()->user()?->canManageOps() ?? false)) {
+            return false;
+        }
+
+        // Solo: one doctor — keep the list off the sidebar; edit via direct record if needed.
+        // Clinic: show the multi-doctor manager.
         return tenant()?->hasFeature('multiple_doctors') ?? false;
     }
 
