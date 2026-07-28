@@ -16,8 +16,9 @@ jobs:
       - name: Setup PHP
         uses: shivammathur/setup-php@v2
         with:
-          php-version: '8.3'
-          extensions: mbstring, pdo_sqlite, sqlite3, bcmath, gd
+          # Lockfile resolves Symfony 8.1 which requires PHP >= 8.4.1
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, sqlite3, bcmath, gd, intl
           coverage: none
 
       - name: Install Composer dependencies
