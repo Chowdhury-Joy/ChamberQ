@@ -92,9 +92,17 @@
                             @endif
 
                             @if($status === 'active')
-                                {{-- Currently Serving Box --}}
+                                {{-- Current call / serving box --}}
                                 <div class="p-6 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
-                                    <div class="text-sm text-gray-500 dark:text-gray-400 mb-4">Currently serving</div>
+                                    <div class="text-sm text-gray-500 dark:text-gray-400 mb-4">
+                                        @if($liveSession->currentBooking?->status === 'in_chamber')
+                                            Currently serving
+                                        @elseif($liveSession->currentBooking?->status === 'called')
+                                            Currently calling
+                                        @else
+                                            No active call
+                                        @endif
+                                    </div>
                                     
                                     @if($liveSession->currentBooking)
                                         <div class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
