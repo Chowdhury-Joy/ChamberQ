@@ -2,7 +2,7 @@
 
 Multi-tenant SaaS for Bangladesh solo doctors and clinics: branded patient site, online serial booking, live waiting-room queue, and Filament admin.
 
-Patients pay at the chamber. WhatsApp is free `wa.me` sharing (no Business API). SMS confirmations are a planned prepaid wallet (50/month included in plan copy).
+Patients pay at the chamber. WhatsApp is free `wa.me` sharing (no Business API). SMS confirmations use a **prepaid credit wallet** (no included free SMS) — Super Admin tops up tenants; each successful confirm debits 1 credit.
 
 ## Local setup
 
@@ -46,6 +46,18 @@ php artisan test
 ```
 
 CI runs the same suite on push/PR (`.github/workflows/tests.yml`).
+
+## SMS confirmations
+
+Prepaid wallet only — no free monthly allowance.
+
+| Setting | Notes |
+|---------|--------|
+| `SMS_DRIVER=log` | Default; logs and succeeds (local/tests) |
+| `SMS_DRIVER=http` | POST JSON to `SMS_HTTP_URL` with `api_key`, `to`, `message`, `sender` |
+| `SMS_ENABLED=false` | Disables sends (no debit) |
+
+Super Admin → Tenant → **Top up SMS** or set **SMS Credits** on the form. Each successful booking confirmation debits **1** credit; empty wallet skips SMS but the booking still succeeds.
 
 ## Soft-launch deploy checklist
 

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Filament\TenantAdmin\Pages\BrandingSettings;
 use App\Filament\TenantAdmin\Pages\DailyRoster;
 use App\Filament\TenantAdmin\Pages\LiveQueueControl;
+use App\Filament\TenantAdmin\Pages\OperationalReports;
 use App\Filament\TenantAdmin\Resources\Chambers\ChamberResource;
 use App\Filament\TenantAdmin\Resources\Doctors\DoctorResource;
 use App\Filament\TenantAdmin\Resources\ScheduleSessions\ScheduleSessionResource;
@@ -107,6 +108,7 @@ class RolePermissionsTest extends TestCase
         $this->assertFalse(WebPageResource::canDelete($page));
         $this->assertTrue(DailyRoster::canAccess());
         $this->assertTrue(LiveQueueControl::canAccess());
+        $this->assertFalse(OperationalReports::canAccess());
         $this->assertFalse(UserResource::canViewAny());
         $this->assertFalse(BrandingSettings::canAccess());
         $this->assertFalse(DoctorResource::canViewAny());
@@ -135,6 +137,7 @@ class RolePermissionsTest extends TestCase
         $this->assertTrue(SlotBlockResource::canViewAny());
         $this->assertTrue(DailyRoster::canAccess());
         $this->assertTrue(LiveQueueControl::canAccess());
+        $this->assertTrue(OperationalReports::canAccess());
         $this->assertFalse(WebPageResource::canViewAny());
         $this->assertFalse(WebPageResource::canCreate());
         $this->assertFalse(WebPageResource::canDelete($page));
@@ -162,5 +165,6 @@ class RolePermissionsTest extends TestCase
         $this->assertTrue(BrandingSettings::canAccess());
         $this->assertTrue(DoctorResource::canViewAny());
         $this->assertTrue(DailyRoster::canAccess());
+        $this->assertTrue(OperationalReports::canAccess());
     }
 }

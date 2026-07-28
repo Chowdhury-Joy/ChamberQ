@@ -307,7 +307,8 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                     $session,
                     $today->toDateString(),
                     $name,
-                    '0170000000' . ($index + 1)
+                    '0170000000' . ($index + 1),
+                    sendSms: false,
                 );
                 $added++;
             } catch (\Throwable $e) {

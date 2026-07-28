@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\BookingUnavailableException;
 use App\Models\Booking;
 use App\Models\ScheduleSession;
 use App\Models\LabCollectionSlot;
@@ -10,7 +11,6 @@ use App\Models\SlotBlock;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Model;
-use App\Exceptions\BookingUnavailableException;
 
 class BookingService
 {
@@ -32,15 +32,17 @@ class BookingService
 
     /**
      * @param  array<int, int|string>  $labTestIds  Line items for a lab booking.
+     * @param  bool  $sendSms  False for sample/dev seed bookings that must not burn credits.
      */
     public function createBookingForBookable(
         Model $bookable,
         string $bookingDate,
         string $patientName,
         string $patientPhone,
-        array $labTestIds = []
+        array $labTestIds = [],
+        bool $sendSms = true,
     ): Booking {
-        return DB::transaction(function () use ($bookable, $bookingDate, $patientName, $patientPhone, $labTestIds) {
+        $booking = DB::transaction(function () use ($bookable, $bookingDate, $patientName, $patientPhone, $labTestIds) {
             $tenant = tenant();
             $capMode = $tenant->slot_cap_mode ?? 'per_session';
             if ($capMode === 'per_day') {
@@ -101,6 +103,13 @@ class BookingService
 
             return $booking;
         });
+
+        if ($sendSms) {
+            // After commit: never roll back a serial because SMS failed.
+            app(SmsService::class)->sendBookingConfirmation($booking);
+        }
+
+        return $booking;
     }
 
     /**

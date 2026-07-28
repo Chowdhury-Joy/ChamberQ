@@ -32,6 +32,7 @@ class Tenant extends BaseTenant
             'custom_code',
             'custom_code_approved_at',
             'billing_status',
+            'sms_balance',
             'plan_tier',
             'slot_cap_mode',
             'feature_flags',
@@ -76,6 +77,7 @@ class Tenant extends BaseTenant
         return [
             'feature_flags' => 'array',
             'custom_code_approved_at' => 'datetime',
+            'sms_balance' => 'integer',
         ];
     }
 

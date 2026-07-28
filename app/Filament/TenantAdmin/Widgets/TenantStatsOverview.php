@@ -33,6 +33,11 @@ class TenantStatsOverview extends BaseWidget
                 ->descriptionIcon('heroicon-m-chart-bar')
                 ->color('success'),
 
+            Stat::make('SMS Credits', (int) ($tenant?->sms_balance ?? 0))
+                ->description('Prepaid confirmation balance — ask us to top up')
+                ->descriptionIcon('heroicon-m-chat-bubble-left-ellipsis')
+                ->color(((int) ($tenant?->sms_balance ?? 0)) > 0 ? 'success' : 'warning'),
+
             Stat::make('Active Chambers', $chambersCount)
                 ->description('Configured consultation locations')
                 ->descriptionIcon('heroicon-m-building-office-2')

@@ -38,6 +38,10 @@ class TenantsTable
                         'suspended', 'read_only' => 'danger',
                         default => 'gray',
                     }),
+                TextColumn::make('sms_balance')
+                    ->label('SMS')
+                    ->numeric()
+                    ->sortable(),
                 TextColumn::make('domains_count')
                     ->counts('domains')
                     ->label('Domains'),

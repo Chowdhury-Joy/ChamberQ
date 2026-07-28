@@ -75,6 +75,13 @@ class TenantForm
                             ])
                             ->default('trial')
                             ->required(),
+                        TextInput::make('sms_balance')
+                            ->label(__('SMS Credits'))
+                            ->numeric()
+                            ->minValue(0)
+                            ->default(0)
+                            ->helperText(__('Prepaid confirmation credits. Top up with the header action on edit, or set here.'))
+                            ->required(),
                     ]),
 
                 Fieldset::make(__('Appearance & Locale'))

@@ -41,6 +41,24 @@ return [
         ],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | SMS confirmations (prepaid wallet only — no included free SMS)
+    |--------------------------------------------------------------------------
+    |
+    | Clinics top up credits; each confirmation debits 1 credit. Pack prices
+    | are sell-side copy for sales chats. Gateway COGS is typically ~৳0.35.
+    |
+    */
+    'sms' => [
+        'credit_price' => (float) env('MARKETING_SMS_CREDIT_PRICE', 0.50),
+        'packs' => [
+            ['credits' => 200, 'price' => 100],
+            ['credits' => 500, 'price' => 225],
+            ['credits' => 2000, 'price' => 800],
+        ],
+    ],
+
     'plans' => [
         'solo' => [
             'name' => 'Solo',
@@ -52,6 +70,7 @@ return [
                 'One doctor, one chamber',
                 'Branded patient site & online serial',
                 'Live queue & patient ticket',
+                'Prepaid SMS confirmations',
                 'We set it up with you',
             ],
         ],
@@ -65,6 +84,7 @@ return [
                 'Multiple doctors & chambers',
                 'Lab tests catalogue',
                 'Same patient experience, scaled',
+                'Prepaid SMS confirmations',
                 'We set it up with you',
             ],
         ],
