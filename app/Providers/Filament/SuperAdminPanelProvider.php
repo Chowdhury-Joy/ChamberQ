@@ -27,6 +27,7 @@ class SuperAdminPanelProvider extends PanelProvider
             ->id('superAdmin')
             ->path('admin')
             ->login()
+            ->passwordReset()
             ->domains(config('tenancy.central_domains') ?? [])
             ->colors([
                 'primary' => Color::Amber,

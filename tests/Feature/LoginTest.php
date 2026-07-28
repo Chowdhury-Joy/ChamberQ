@@ -132,4 +132,10 @@ class LoginTest extends TestCase
 
         $this->assertAuthenticatedAs($this->superAdmin);
     }
+
+    public function test_password_reset_request_pages_are_available(): void
+    {
+        $this->get('http://localhost/admin/password-reset/request')->assertOk();
+        $this->get('http://solo.localhost/admin/password-reset/request')->assertOk();
+    }
 }

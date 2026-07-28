@@ -117,4 +117,19 @@ class Tenant extends BaseTenant
     {
         return ! $this->isClinic();
     }
+
+    /**
+     * Whether the public booking API may create new serials.
+     *
+     * Trial/active keep taking bookings. Past-due, suspended, and legacy
+     * read_only close online booking while the site and admin stay usable.
+     */
+    public function acceptsBookings(): bool
+    {
+        return ! in_array($this->billing_status, [
+            'past_due',
+            'suspended',
+            'read_only',
+        ], true);
+    }
 }

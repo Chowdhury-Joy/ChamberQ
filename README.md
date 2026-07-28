@@ -1,59 +1,85 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Doctor Gemini
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Multi-tenant SaaS for Bangladesh solo doctors and clinics: branded patient site, online serial booking, live waiting-room queue, and Filament admin.
 
-## About Laravel
+Patients pay at the chamber. WhatsApp is free `wa.me` sharing (no Business API). SMS confirmations are a planned prepaid wallet (50/month included in plan copy).
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Local setup
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+touch database/database.sqlite   # if using sqlite
+php artisan migrate --seed
+php artisan serve
+```
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Optional: `composer run dev` for server + queue + Vite.
 
-## Learning Laravel
+### Domains (tenancy)
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+Set `CENTRAL_DOMAINS` in `.env` (comma-separated). Defaults:
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+```
+CENTRAL_DOMAINS=127.0.0.1,localhost
+```
 
-## Laravel Sponsors
+- **Central** (marketing + Super Admin): `http://localhost/` and `http://localhost/admin`
+- **Tenant example** (after seed): `http://solo.localhost/` and `http://solo.localhost/admin`
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+Map tenant hosts in `/etc/hosts` if needed, e.g. `127.0.0.1 solo.localhost`.
 
-### Premium Partners
+### Demo accounts (seeder)
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+| Role | Email | Password |
+|------|-------|----------|
+| Super Admin | (see seeder) | `password` |
+| Solo admin | `admin@solo.com` | `password` |
 
-## Contributing
+Change these before any shared or production environment.
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Tests
 
-## Code of Conduct
+```bash
+php artisan test
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+CI runs the same suite on push/PR (`.github/workflows/tests.yml`).
 
-## Security Vulnerabilities
+## Soft-launch deploy checklist
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+1. **Env**
+   - `APP_ENV=production`, `APP_DEBUG=false`, strong `APP_KEY`
+   - Real `APP_URL` (HTTPS)
+   - `CENTRAL_DOMAINS=yourdomain.com,www.yourdomain.com` (no tenant chamber hosts)
+   - MySQL (or Postgres) credentials — not sqlite
+   - Real mail (`MAIL_*`) so Filament password reset works
+   - Marketing WhatsApp / pricing vars as needed
+
+2. **App**
+   - `composer install --no-dev --optimize-autoloader`
+   - `php artisan migrate --force`
+   - `php artisan config:cache` and `route:cache` / `view:cache` as appropriate
+   - `php artisan storage:link` if logos/uploads are used
+
+3. **Web server**
+   - Point central + each tenant domain (or wildcard) at `public/`
+   - HTTPS certificates for central and tenant hosts
+   - Health check: `GET /up`
+
+4. **Ops**
+   - Create tenants in Super Admin; set `billing_status` carefully (`past_due` / `suspended` / `read_only` close online booking)
+   - Rotate seeded passwords
+   - Queue worker only if you add jobs later (`QUEUE_CONNECTION=database` is prepared)
+   - Backups for the shared database
+
+5. **Smoke**
+   - Central landing loads
+   - Tenant book → ticket → portal
+   - Live queue screen + admin login
+   - Password reset email arrives for a staff user
 
 ## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Proprietary application code unless otherwise noted. Laravel framework is MIT.

@@ -12,14 +12,15 @@ return [
     'domain_model' => Domain::class,
 
     /**
-     * The list of domains hosting your central app.
+     * The list of domains hosting your central app (marketing + super admin).
      *
-     * Only relevant if you're using the domain or subdomain identification middleware.
+     * Comma-separated CENTRAL_DOMAINS in .env. Keep localhost values for local
+     * and PHPUnit; production should list the real apex host(s) only.
      */
-    'central_domains' => [
-        '127.0.0.1',
-        'localhost',
-    ],
+    'central_domains' => array_values(array_filter(array_map(
+        static fn (string $domain): string => trim($domain),
+        explode(',', (string) env('CENTRAL_DOMAINS', '127.0.0.1,localhost'))
+    ))),
 
     /**
      * Tenancy bootstrappers are executed when tenancy is initialized.

@@ -35,7 +35,7 @@ class TenantsTable
                         'active' => 'success',
                         'trial' => 'info',
                         'past_due' => 'warning',
-                        'suspended' => 'danger',
+                        'suspended', 'read_only' => 'danger',
                         default => 'gray',
                     }),
                 TextColumn::make('domains_count')

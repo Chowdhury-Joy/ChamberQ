@@ -32,8 +32,7 @@ Route::middleware([
     });
     Route::get('/book', [\App\Http\Controllers\BookingController::class, 'create']);
 
-    // Booking creation is IP rate limited, and refused outright for tenants
-    // whose billing status is read_only.
+    // Booking creation is IP rate limited, and refused when billing is closed.
     Route::post('/api/bookings', [\App\Http\Controllers\BookingController::class, 'store'])
         ->middleware(['throttle:10,1', \App\Http\Middleware\EnsureTenantAcceptsBookings::class]);
 
@@ -54,10 +53,13 @@ Route::middleware([
         ->middleware('throttle:120,1')
         ->name('queue.status');
 
+    // Waiting-room HTML load; API is polled every ~2s so allow a busy board.
     Route::get('/screen/{session}/{date}', [\App\Http\Controllers\ScreenController::class, 'show'])
+        ->middleware('throttle:60,1')
         ->name('tenant.screen');
-        
+
     Route::get('/api/screen/{session}/{date}', [\App\Http\Controllers\ScreenController::class, 'api'])
+        ->middleware('throttle:120,1')
         ->name('api.tenant.screen');
 
     Route::get('/bookings/{booking}', [\App\Http\Controllers\BookingController::class, 'show'])

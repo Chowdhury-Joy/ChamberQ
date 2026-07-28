@@ -27,6 +27,7 @@ class TenantAdminPanelProvider extends PanelProvider
             ->id('tenantAdmin')
             ->path('admin')
             ->login()
+            ->passwordReset()
             ->colors([
                 'primary' => Color::Amber,
             ])

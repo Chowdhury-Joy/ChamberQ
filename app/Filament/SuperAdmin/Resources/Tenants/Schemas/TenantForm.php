@@ -65,13 +65,16 @@ class TenantForm
                             ->default('per_session'),
                         Select::make('billing_status')
                             ->label(__('Billing Status'))
+                            ->helperText(__('Past due, suspended, and read only close online booking. Site and admin stay open.'))
                             ->options([
                                 'trial' => 'Trial',
                                 'active' => 'Active',
-                                'past_due' => 'Past Due',
-                                'suspended' => 'Suspended',
+                                'past_due' => 'Past Due (no new bookings)',
+                                'suspended' => 'Suspended (no new bookings)',
+                                'read_only' => 'Read Only (no new bookings)',
                             ])
-                            ->default('trial'),
+                            ->default('trial')
+                            ->required(),
                     ]),
 
                 Fieldset::make(__('Appearance & Locale'))

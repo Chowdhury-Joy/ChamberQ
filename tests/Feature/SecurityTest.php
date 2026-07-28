@@ -125,6 +125,40 @@ class SecurityTest extends TestCase
         $this->assertSame(0, Booking::withoutGlobalScopes()->count());
     }
 
+    public function test_suspended_tenant_cannot_create_bookings(): void
+    {
+        $this->beta->update(['billing_status' => 'suspended']);
+
+        tenancy()->initialize($this->beta);
+        $chamber = Chamber::create(['name' => 'Suspended Chamber']);
+        $doctor = Doctor::create(['name' => 'Dr. Suspended']);
+        $session = ScheduleSession::create([
+            'chamber_id' => $chamber->id, 'doctor_id' => $doctor->id,
+            'day_of_week' => 1, 'session_name' => 'Morning',
+            'start_time' => '09:00', 'end_time' => '12:00', 'slot_cap' => 5,
+        ]);
+        tenancy()->end();
+
+        $this->get('http://beta.localhost/book')->assertOk();
+
+        $this->postJson('http://beta.localhost/api/bookings', [
+            'bookable_type' => 'session',
+            'bookable_id' => $session->id,
+            'booking_date' => Carbon::now()->next(1)->format('Y-m-d'),
+            'patient_name' => 'Blocked Patient',
+            'patient_phone' => '01712345678',
+        ])->assertStatus(422)->assertJsonPath('code', 'closed');
+
+        $this->assertSame(0, Booking::withoutGlobalScopes()->count());
+    }
+
+    public function test_past_due_tenant_cannot_create_bookings(): void
+    {
+        $this->assertFalse($this->beta->fresh()->fill(['billing_status' => 'past_due'])->acceptsBookings());
+        $this->assertTrue($this->beta->fresh()->fill(['billing_status' => 'active'])->acceptsBookings());
+        $this->assertTrue($this->beta->fresh()->fill(['billing_status' => 'trial'])->acceptsBookings());
+    }
+
     public function test_booking_rejects_a_non_bangladeshi_phone_number(): void
     {
         tenancy()->initialize($this->alpha);

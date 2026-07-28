@@ -7,17 +7,17 @@ use Closure;
 use Illuminate\Http\Request;
 
 /**
- * Blocks new bookings for tenants whose billing status is `read_only`.
+ * Blocks new bookings when the tenant's billing status refuses them.
  *
- * Per the spec this is deliberately narrow: a read-only tenant keeps its public
- * site viewable and its staff dashboard usable — only the act of creating a new
- * booking is refused. Apply it to booking-creating routes only, never globally.
+ * Deliberately narrow: past_due / suspended / read_only tenants keep their
+ * public site and staff dashboard — only creating a new booking is refused.
+ * Apply to booking-creating routes only, never globally.
  */
 class EnsureTenantAcceptsBookings
 {
     public function handle(Request $request, Closure $next)
     {
-        if (tenancy()->initialized && tenant('billing_status') === 'read_only') {
+        if (tenancy()->initialized && tenant() && ! tenant()->acceptsBookings()) {
             throw BookingUnavailableException::bookingClosed();
         }
 

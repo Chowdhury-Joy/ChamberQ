@@ -2,19 +2,20 @@
 
 namespace App\Models;
 
-// use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Database\Factories\UserFactory;
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Panel;
+use Illuminate\Auth\Passwords\CanResetPassword;
+use Illuminate\Contracts\Auth\CanResetPassword as CanResetPasswordContract;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
-use Filament\Models\Contracts\FilamentUser;
-use Filament\Panel;
 use App\Models\Concerns\BelongsToTenant;
 
-class User extends Authenticatable implements FilamentUser
+class User extends Authenticatable implements FilamentUser, CanResetPasswordContract
 {
     /** @use HasFactory<UserFactory> */
-    use HasFactory, Notifiable, BelongsToTenant;
+    use CanResetPassword, HasFactory, Notifiable, BelongsToTenant;
 
     public const ROLE_SUPER_ADMIN = 'super_admin';
 
