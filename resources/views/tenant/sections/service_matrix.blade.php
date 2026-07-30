@@ -36,7 +36,7 @@
                                     <p class="mt-1 text-sm text-slate-500">{{ $item['description'] }}</p>
                                 @endif
                             </div>
-                            <a href="/book" class="inline-flex shrink-0 items-center gap-1 text-sm font-semibold hover:opacity-80" style="color: var(--color-primary);">
+                            <a href="{{ tenant_web_url('/book') }}" class="inline-flex shrink-0 items-center gap-1 text-sm font-semibold hover:opacity-80" style="color: var(--color-primary);">
                                 <span>{{ __('Book Service') }}</span>
                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
                             </a>

@@ -6,7 +6,7 @@
     <meta name="theme-color" content="{{ tenant()->theme_color ?: \App\Models\Tenant::DEFAULT_THEME_COLOR }}">
     <meta name="robots" content="noindex">
     <title>{{ __('Your Appointment') }} | {{ tenant()->displayName() }}</title>
-    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="manifest" href="{{ tenant_web_url('/manifest.webmanifest') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     @php
@@ -54,9 +54,9 @@
 </head>
 <body>
     <div style="position:fixed;top:0.75rem;right:1rem;z-index:20;" class="locale-chip">
-        <a href="/lang/en" class="{{ $locale === 'en' ? 'is-active' : '' }}">EN</a>
+        <a href="{{ tenant_web_url('/lang/en') }}" class="{{ $locale === 'en' ? 'is-active' : '' }}">EN</a>
         <span aria-hidden="true">|</span>
-        <a href="/lang/bn" class="{{ $locale === 'bn' ? 'is-active' : '' }}">BN</a>
+        <a href="{{ tenant_web_url('/lang/bn') }}" class="{{ $locale === 'bn' ? 'is-active' : '' }}">BN</a>
     </div>
     @include('tenant.partials.ticket-body')
 </body>

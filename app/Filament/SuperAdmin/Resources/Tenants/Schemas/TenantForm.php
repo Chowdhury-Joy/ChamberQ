@@ -19,7 +19,8 @@ class TenantForm
                 Fieldset::make(__('Identity'))
                     ->schema([
                         TextInput::make('id')
-                            ->label('Tenant ID (slug, e.g. demo)')
+                            ->label('URL slug (platform path)')
+                            ->helperText(__('Patients reach this tenant at /{slug} on your main domain, e.g. /drkarim/book. Lowercase letters, numbers, and dashes only.'))
                             ->required()
                             ->maxLength(255)
                             ->alphaDash()
@@ -117,9 +118,11 @@ class TenantForm
                         TextInput::make('domain')
                             ->required()
                             ->unique(ignoreRecord: true)
-                            ->label('Domain (e.g. demo.localhost)'),
+                            ->label('Custom domain (optional)')
+                            ->helperText(__('e.g. drkarim.com — DNS must point to your server. Leave empty to use only /{slug} on the platform domain.')),
                     ])
-                    ->columnSpanFull(),
+                    ->columnSpanFull()
+                    ->helperText(__('Custom domains serve the tenant at the site root (/book). The platform path always works at /{slug} using the URL slug above.')),
             ]);
     }
 }

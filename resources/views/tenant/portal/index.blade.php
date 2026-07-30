@@ -18,7 +18,7 @@
 <body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col pt-20">
     <nav class="navbar fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200 py-3">
         <div class="max-w-[1320px] w-full mx-auto px-4 md:px-6 xl:px-8 flex items-center justify-between">
-            <a href="/" class="navbar-brand text-lg font-bold flex items-center gap-2" style="color: var(--color-primary);">
+            <a href="{{ tenant_web_url('/') }}" class="navbar-brand text-lg font-bold flex items-center gap-2" style="color: var(--color-primary);">
                 @if($tenant->logo_url)
                     <img src="{{ $tenant->logo_url }}" alt="{{ $tenant->displayName() }}" style="height: 36px;">
                 @else
@@ -27,12 +27,12 @@
             </a>
             <div class="navbar-nav flex items-center gap-4 text-sm font-medium text-slate-700">
                 <div class="locale-chip">
-                    <a href="/lang/en" class="{{ $locale === 'en' ? 'is-active' : '' }}">EN</a>
+                    <a href="{{ tenant_web_url('/lang/en') }}" class="{{ $locale === 'en' ? 'is-active' : '' }}">EN</a>
                     <span aria-hidden="true">|</span>
-                    <a href="/lang/bn" class="{{ $locale === 'bn' ? 'is-active' : '' }}">BN</a>
+                    <a href="{{ tenant_web_url('/lang/bn') }}" class="{{ $locale === 'bn' ? 'is-active' : '' }}">BN</a>
                 </div>
-                <a href="/" class="hover:opacity-80 transition-colors">{{ __('Home') }}</a>
-                <a href="/book" class="btn btn-primary ml-2">{{ __('Book Appointment') }}</a>
+                <a href="{{ tenant_web_url('/') }}" class="hover:opacity-80 transition-colors">{{ __('Home') }}</a>
+                <a href="{{ tenant_web_url('/book') }}" class="btn btn-primary ml-2">{{ __('Book Appointment') }}</a>
             </div>
         </div>
     </nav>
@@ -67,7 +67,7 @@
                 @if($bookings->isEmpty())
                     <div class="bg-white rounded-2xl p-8 text-center border border-slate-200/80">
                         <p class="text-slate-500 text-sm">No appointment records found for this phone number.</p>
-                        <a href="/book" class="inline-block mt-4 text-sm font-bold text-sky-600 underline">Book a new appointment</a>
+                        <a href="{{ tenant_web_url('/book') }}" class="inline-block mt-4 text-sm font-bold text-sky-600 underline">Book a new appointment</a>
                     </div>
                 @else
                     <div class="space-y-4">
@@ -86,7 +86,7 @@
                                     <p class="text-xs text-slate-500 mt-1">Phone: {{ $booking->patient_phone }}</p>
                                 </div>
                                 <div>
-                                    <a href="{{ route('bookings.show', $booking) }}" target="_blank" rel="noopener noreferrer" class="btn border border-sky-500 text-sky-600 hover:bg-sky-50 text-xs px-4 py-2">
+                                    <a href="{{ tenant_web_route('bookings.show', $booking) }}" target="_blank" rel="noopener noreferrer" class="btn border border-sky-500 text-sky-600 hover:bg-sky-50 text-xs px-4 py-2">
                                         View Digital Ticket
                                     </a>
                                 </div>

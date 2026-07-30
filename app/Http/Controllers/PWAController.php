@@ -14,30 +14,27 @@ class PWAController extends Controller
         $tenant = tenant();
         $name = $tenant?->displayName() ?? config('app.name');
         $theme = $tenant?->theme_color ?: self::DEFAULT_THEME;
+        $scope = tenant_web_url('/');
 
         return response()->json([
             'name' => $name,
             // Home-screen labels get truncated by the OS anyway; cut on a word
             // boundary so it reads as a name rather than "Shefa Diagno".
             'short_name' => Str::limit($name, 15, ''),
-            'start_url' => '/',
-            'scope' => '/',
+            'start_url' => $scope,
+            'scope' => $scope,
             'display' => 'standalone',
             'background_color' => '#ffffff',
             'theme_color' => $theme,
             'icons' => [
-                // Generated per tenant so no static asset needs to exist on disk.
-                // The previous manifest pointed at /icon-192.png and /icon-512.png,
-                // which were never created — an invalid icon entry means the
-                // browser silently refuses to offer "add to home screen".
                 [
-                    'src' => route('pwa.icon', ['size' => 192]),
+                    'src' => tenant_web_route('pwa.icon', ['size' => 192]),
                     'sizes' => '192x192',
                     'type' => 'image/svg+xml',
                     'purpose' => 'any',
                 ],
                 [
-                    'src' => route('pwa.icon', ['size' => 512]),
+                    'src' => tenant_web_route('pwa.icon', ['size' => 512]),
                     'sizes' => '512x512',
                     'type' => 'image/svg+xml',
                     'purpose' => 'any',
@@ -48,9 +45,6 @@ class PWAController extends Controller
 
     /**
      * A tenant-branded icon rendered as SVG.
-     *
-     * Avoids shipping placeholder PNGs and gives every tenant a correct icon at
-     * onboarding time with no asset pipeline step.
      */
     public function icon(int $size): Response
     {
@@ -75,16 +69,17 @@ class PWAController extends Controller
 
     public function serviceWorker(): Response
     {
-        // Bumping the cache name evicts previous versions on activate.
-        $sw = <<<'JS'
-const CACHE_NAME = 'clinic-shell-v2';
+        $scopePrefix = tenant_web_url('');
+        $scopePrefixJs = json_encode(rtrim($scopePrefix, '/') ?: '');
+
+        $sw = <<<JS
+const CACHE_NAME = 'clinic-shell-v3';
+const SCOPE_PREFIX = {$scopePrefixJs};
 const PRECACHE = ['/css/theme.css'];
 
 self.addEventListener('install', event => {
     event.waitUntil((async () => {
         const cache = await caches.open(CACHE_NAME);
-        // Cache individually: a single 404 in addAll() aborts the whole install
-        // and leaves the app with no service worker at all.
         await Promise.all(PRECACHE.map(url => cache.add(url).catch(() => {})));
         await self.skipWaiting();
     })());
@@ -98,6 +93,13 @@ self.addEventListener('activate', event => {
     })());
 });
 
+function scopedApiPath(pathname) {
+    if (!SCOPE_PREFIX) {
+        return pathname.startsWith('/api/');
+    }
+    return pathname.startsWith(SCOPE_PREFIX + '/api/');
+}
+
 self.addEventListener('fetch', event => {
     const request = event.request;
 
@@ -106,10 +108,7 @@ self.addEventListener('fetch', event => {
     const url = new URL(request.url);
     if (url.origin !== self.location.origin) return;
 
-    // Network-first for everything navigational and for the API. This app is a
-    // live queue: serving a cached ticket page would show a stale "now serving"
-    // number, which is worse than showing nothing.
-    if (request.mode === 'navigate' || url.pathname.startsWith('/api/')) {
+    if (request.mode === 'navigate' || scopedApiPath(url.pathname)) {
         event.respondWith(
             fetch(request)
                 .then(response => {
@@ -124,7 +123,6 @@ self.addEventListener('fetch', event => {
         return;
     }
 
-    // Cache-first is fine for immutable static assets only.
     event.respondWith(
         caches.match(request).then(cached => cached || fetch(request))
     );

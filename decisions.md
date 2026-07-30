@@ -76,6 +76,15 @@
  <reason>Owner will reopen payments when ready; until then, unsolicited payment ideas waste focus and risk reintroducing removed gateway complexity.</reason>
 </decision>
 
+## 2026-07-31 (path tenancy)
+
+<decision>
+ <category>Code</category>
+ <context>Platform URLs should be doctorgemini.com/drkarim (path slug), not drkarim.doctorgemini.com (subdomain). Doctors with their own domain still get root paths on that domain.</context>
+ <action>Hybrid tenancy on central `CENTRAL_DOMAINS`: stancl `InitializeTenancyByPath` at `/{tenant}/…` (tenant id = URL slug). Optional custom domains still use `InitializeTenancyByDomain` at root paths. Central path routes registered before domain-less catch-alls. Filament: `TenantAdminPathPanelProvider` at `/{tenant}/admin` on central; existing `TenantAdminPanelProvider` at `/admin` on custom domains. Helpers `tenant_web_url()` / `tenant_web_route()` (not stancl's `tenant_route()`). PWA manifest/scope and service worker respect path prefix.</action>
+ <reason>One SSL/DNS setup on the platform domain; slug matches Super Admin tenant id; custom domain remains a premium root-URL upgrade without a second app install.</reason>
+</decision>
+
 ## 2026-07-31 (solo multi-chamber)
 
 <decision>

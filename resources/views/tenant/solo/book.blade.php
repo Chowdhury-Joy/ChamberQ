@@ -15,7 +15,7 @@
     <meta name="color-scheme" content="light only">
     <meta name="theme-color" content="{{ $themeColor }}">
     <title>{{ __('Book Appointment') }} | {{ $brand }}</title>
-    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="manifest" href="{{ tenant_web_url('/manifest.webmanifest') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
@@ -285,7 +285,7 @@
 <body class="min-h-full flex flex-col bg-white text-slate-900 antialiased">
     <header class="sticky top-0 z-50 border-b border-slate-100 bg-white/95 backdrop-blur">
         <div class="mx-auto flex h-[68px] max-w-[1280px] items-center justify-between gap-4 px-3 sm:h-[95px] sm:px-10">
-            <a href="/" class="min-w-0 truncate font-display text-xl tracking-tight text-slate-900 sm:text-[1.65rem]">
+            <a href="{{ tenant_web_url('/') }}" class="min-w-0 truncate font-display text-xl tracking-tight text-slate-900 sm:text-[1.65rem]">
                 @if($tenant->logo_url)
                     <img src="{{ $tenant->logo_url }}" alt="{{ $brand }}" class="h-9 w-auto sm:h-11">
                 @else
@@ -295,21 +295,21 @@
 
             <nav class="hidden items-center gap-6 text-base font-medium text-slate-800 md:flex" aria-label="{{ __('Main') }}">
                 <div class="locale-chip" aria-label="{{ __('Language') }}">
-                    <a href="/lang/en" class="{{ $locale === 'en' ? 'is-active' : '' }}">EN</a>
+                    <a href="{{ tenant_web_url('/lang/en') }}" class="{{ $locale === 'en' ? 'is-active' : '' }}">EN</a>
                     <span aria-hidden="true">|</span>
-                    <a href="/lang/bn" class="{{ $locale === 'bn' ? 'is-active' : '' }}">BN</a>
+                    <a href="{{ tenant_web_url('/lang/bn') }}" class="{{ $locale === 'bn' ? 'is-active' : '' }}">BN</a>
                 </div>
-                <a href="/" class="transition hover:text-brand">{{ __('Home') }}</a>
-                <a href="/portal" class="solo-cta-outline">{{ __('Patient’s Portal') }}</a>
+                <a href="{{ tenant_web_url('/') }}" class="transition hover:text-brand">{{ __('Home') }}</a>
+                <a href="{{ tenant_web_url('/portal') }}" class="solo-cta-outline">{{ __('Patient’s Portal') }}</a>
             </nav>
 
             <div class="flex items-center gap-2 md:hidden">
                 <div class="locale-chip" aria-label="{{ __('Language') }}">
-                    <a href="/lang/en" class="{{ $locale === 'en' ? 'is-active' : '' }}">EN</a>
+                    <a href="{{ tenant_web_url('/lang/en') }}" class="{{ $locale === 'en' ? 'is-active' : '' }}">EN</a>
                     <span aria-hidden="true">|</span>
-                    <a href="/lang/bn" class="{{ $locale === 'bn' ? 'is-active' : '' }}">BN</a>
+                    <a href="{{ tenant_web_url('/lang/bn') }}" class="{{ $locale === 'bn' ? 'is-active' : '' }}">BN</a>
                 </div>
-                <a href="/portal" class="solo-cta-outline text-sm">{{ __('Patient’s Portal') }}</a>
+                <a href="{{ tenant_web_url('/portal') }}" class="solo-cta-outline text-sm">{{ __('Patient’s Portal') }}</a>
             </div>
         </div>
     </header>
@@ -322,7 +322,7 @@
 
     <script>
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').catch(() => {});
+            navigator.serviceWorker.register(@json(tenant_web_url('/sw.js'))).catch(() => {});
         }
     </script>
 </body>

@@ -1,5 +1,5 @@
 # Architecture Overview
-Last Updated: 2026-07-31T02:15:00+06:00
+Last Updated: 2026-07-31T04:15:00+06:00
 
 ## Overview
 Doctor Gemini is a multi-tenant SaaS for Bangladesh solo doctors and clinics. Each tenant gets a branded patient website, online serial booking, a live waiting-room queue (outdoor screen + staff control), a patient ticket/portal, and a Filament admin panel. Patients book a serial and pay at the chamber — there is no payment gateway. Online pre-payment is later-stage only: do not suggest or build it unless the owner explicitly asks. Sales CTAs on the central marketing site use WhatsApp (`wa.me`). SMS booking confirmations use a prepaid credit wallet topped up by Super Admin.
@@ -20,15 +20,16 @@ Optional: `composer run dev` (server + queue + Vite + logs).
 
 Key environment variables (names only): `APP_KEY`, `APP_URL`, `APP_TIMEZONE`, `CENTRAL_DOMAINS`, `DB_*`, `MAIL_*`, `MARKETING_WHATSAPP`, `MARKETING_PHONE`, `MARKETING_SOLO_*`, `MARKETING_CLINIC_*`, `MARKETING_SMS_CREDIT_PRICE`, `SMS_DRIVER`, `SMS_ENABLED`, `SMS_HTTP_URL`, `SMS_HTTP_API_KEY`, `SMS_HTTP_SENDER`.
 
-Local domains:
+Local URLs:
 - Central marketing + Super Admin: `http://localhost/` and `http://localhost/admin`
-- Seeded tenant example: `http://solo.localhost/` and `http://solo.localhost/admin` (map in `/etc/hosts` if needed)
+- Platform tenant (path tenancy): `http://localhost/solo/` (book at `/solo/book`, admin at `/solo/admin`)
+- Custom domain tenant (optional): `http://solo.localhost/` and `http://solo.localhost/admin` (dev; production = doctor's own domain at root paths)
 
 Tests: `php artisan test` (also CI via `.github/workflows/tests.yml`).
 
 ## Tech Stack
 - PHP ^8.2, Laravel ^12, Filament ^4
-- stancl/tenancy ^3.10 (domain-based multi-tenancy)
+- stancl/tenancy ^3.10 — hybrid tenancy: **path** on central domain (`/{tenant}/…`), **domain** for optional custom domains (root paths)
 - mews/purifier ^3.4 (HTML sanitization for page builder)
 - Livewire (via Filament)
 - Blade views for patient site, booking wizard, ticket, portal, waiting-room screen
@@ -41,9 +42,11 @@ Tests: `php artisan test` (also CI via `.github/workflows/tests.yml`).
 - `app/Models` — Tenant, Domain, User, Doctor, Chamber, ScheduleSession, Booking, LiveSession, LabTest, LabCollectionSlot, BookingLabTest, SlotBlock, WebPage, SmsMessage
 - `app/Services` — BookingService, LiveSessionService, OperationalReportService, SlotBlockService, SmsService (+ SMS drivers)
 - `app/Http/Controllers` — BookingController, WebPageController, ScreenController, QueueStatusController, PWAController
-- `app/Http/Middleware` — Localization, EnsureTenantAcceptsBookings, and tenancy middleware from stancl
+- `app/Support/TenancyUrl.php` + `app/helpers.php` — `tenant_web_url()` / `tenant_web_route()` for path-aware links (not stancl's `tenant_route()`)
+- `app/Http/Middleware` — Localization, EnsureTenantAcceptsBookings, SetPathTenantUrlDefaults, stancl tenancy middleware
 - `app/Filament/SuperAdmin` — central Super Admin resources/widgets (Tenants)
-- `app/Filament/TenantAdmin` — tenant panel pages (Live Queue, Daily Roster, Ops Reports, Branding) and resources (Doctors, Chambers, Schedules, Labs, WebPages, Users, SlotBlocks)
+- `app/Filament/TenantAdmin` — tenant panel (custom domains at `/admin`)
+- `app/Providers/Filament/TenantAdminPathPanelProvider.php` — tenant panel on central domain at `/{tenant}/admin`
 - `app/Policies` — authorization for chambers, doctors, labs, etc., gated by plan features and roles
 - `app/Providers/Filament` — SuperAdminPanelProvider, TenantAdminPanelProvider (both path `/admin`, domain-scoped)
 - `config/` — `tenancy.php`, `marketing.php`, `sms.php`, app/mail/etc.
@@ -75,7 +78,7 @@ Tests: `php artisan test` (also CI via `.github/workflows/tests.yml`).
 6. **Labs (clinic tier / flag):** Patient can add lab tests + collection slot during booking; ops manage LabTests + LabCollectionSlots in admin.
 
 ## Integrations
-- **stancl/tenancy** — domain identification; central vs tenant route split
+- **stancl/tenancy** — central path (`InitializeTenancyByPath`) + custom domain (`InitializeTenancyByDomain`); shared DB; `config/tenancy.php` `reserved_path_prefixes` protects `/admin`, assets, etc.
 - **Filament 4** — Super Admin + Tenant Admin panels
 - **WhatsApp** — outbound only via free `wa.me` links (no Business API)
 - **SMS gateway** — optional HTTP driver; default `log` for local/tests

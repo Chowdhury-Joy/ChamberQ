@@ -20,7 +20,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="{{ $themeColor }}">
     <title>{{ __('Book Appointment') }} | {{ $tenant->displayName() }}</title>
-    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="manifest" href="{{ tenant_web_url('/manifest.webmanifest') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="{{ $fontUrl }}">
@@ -88,7 +88,7 @@
 </head>
 <body>
     <nav class="navbar">
-        <a href="/" class="navbar-brand">
+        <a href="{{ tenant_web_url('/') }}" class="navbar-brand">
             @if($tenant->logo_url)
                 <img src="{{ $tenant->logo_url }}" alt="{{ $tenant->displayName() }}" style="height: 36px; vertical-align: middle;">
             @else
@@ -97,11 +97,11 @@
         </a>
         <div class="navbar-nav" style="display:flex;align-items:center;gap:1rem;">
             <div class="locale-chip" aria-label="{{ __('Language') }}">
-                <a href="/lang/en" class="{{ $locale === 'en' ? 'is-active' : '' }}">EN</a>
+                <a href="{{ tenant_web_url('/lang/en') }}" class="{{ $locale === 'en' ? 'is-active' : '' }}">EN</a>
                 <span aria-hidden="true">|</span>
-                <a href="/lang/bn" class="{{ $locale === 'bn' ? 'is-active' : '' }}">BN</a>
+                <a href="{{ tenant_web_url('/lang/bn') }}" class="{{ $locale === 'bn' ? 'is-active' : '' }}">BN</a>
             </div>
-            <a href="/">{{ __('Home') }}</a>
+            <a href="{{ tenant_web_url('/') }}">{{ __('Home') }}</a>
         </div>
     </nav>
 
@@ -113,7 +113,7 @@
 
     <script>
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('/sw.js').catch(() => {});
+            navigator.serviceWorker.register(@json(tenant_web_url('/sw.js'))).catch(() => {});
         }
     </script>
 </body>

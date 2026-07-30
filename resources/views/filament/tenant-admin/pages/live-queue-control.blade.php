@@ -171,7 +171,7 @@
                                 <x-filament::icon icon="heroicon-m-tv" class="w-5 h-5 text-primary-500" style="width: 1.25rem; height: 1.25rem;" />
                                 Outdoor TV Screen
                             </div>
-                            <x-filament::button href="{{ route('tenant.screen', ['session' => $this->selectedSessionId, 'date' => now()->format('Y-m-d')]) }}" tag="a" target="_blank" color="gray" icon="heroicon-m-arrow-top-right-on-square" size="sm">
+                            <x-filament::button href="{{ tenant_web_route('tenant.screen', ['session' => $this->selectedSessionId, 'date' => now()->format('Y-m-d')]) }}" tag="a" target="_blank" color="gray" icon="heroicon-m-arrow-top-right-on-square" size="sm">
                                 Open Screen
                             </x-filament::button>
                         </div>

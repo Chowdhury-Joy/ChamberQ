@@ -16,10 +16,10 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
-use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
-use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
+use App\Http\Middleware\SetPathTenantUrlDefaults;
+use Stancl\Tenancy\Middleware\InitializeTenancyByPath;
 
-class TenantAdminPanelProvider extends PanelProvider
+class TenantAdminPathPanelProvider extends PanelProvider
 {
     use ConfiguresTenantAdminPanel;
 
@@ -27,14 +27,13 @@ class TenantAdminPanelProvider extends PanelProvider
     {
         return $this->configureTenantAdminPanel(
             $panel
-                ->id('tenantAdmin')
-                ->path('admin')
+                ->id('tenantAdminPath')
+                ->path('{tenant}/admin')
+                ->domains(config('tenancy.central_domains', []))
                 ->pages([
                     Dashboard::class,
                 ])
                 ->middleware([
-                    InitializeTenancyByDomain::class,
-                    PreventAccessFromCentralDomains::class,
                     EncryptCookies::class,
                     AddQueuedCookiesToResponse::class,
                     StartSession::class,
@@ -44,10 +43,21 @@ class TenantAdminPanelProvider extends PanelProvider
                     SubstituteBindings::class,
                     DisableBladeIconComponents::class,
                     DispatchServingFilamentEvent::class,
+                    InitializeTenancyByPath::class,
+                    SetPathTenantUrlDefaults::class,
                 ])
                 ->authMiddleware([
                     Authenticate::class,
                 ])
         );
+    }
+
+    public function register(): void
+    {
+        if (blank(config('tenancy.central_domains'))) {
+            return;
+        }
+
+        parent::register();
     }
 }

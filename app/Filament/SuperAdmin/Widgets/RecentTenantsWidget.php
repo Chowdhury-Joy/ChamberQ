@@ -13,7 +13,7 @@ class RecentTenantsWidget extends BaseWidget
 
     protected int | string | array $columnSpan = 'full';
 
-    protected static ?string $heading = 'Recent Registered Tenants & Subdomains';
+    protected static ?string $heading = 'Recent Registered Tenants';
 
     public function table(Table $table): Table
     {
@@ -27,11 +27,19 @@ class RecentTenantsWidget extends BaseWidget
                     ->weight('bold')
                     ->searchable(),
 
+                Tables\Columns\TextColumn::make('id')
+                    ->label('Platform path')
+                    ->formatStateUsing(fn (string $state): string => '/'.$state)
+                    ->badge()
+                    ->color('info')
+                    ->icon('heroicon-m-link'),
+
                 Tables\Columns\TextColumn::make('domains.domain')
-                    ->label('Subdomain / URL')
+                    ->label('Custom domains')
                     ->badge()
                     ->color('sky')
-                    ->icon('heroicon-m-globe-alt'),
+                    ->icon('heroicon-m-globe-alt')
+                    ->placeholder('—'),
 
                 Tables\Columns\TextColumn::make('plan_tier')
                     ->label('Subscription Tier')

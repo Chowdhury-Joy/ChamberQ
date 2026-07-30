@@ -2,8 +2,18 @@
 
 declare(strict_types=1);
 
+use App\Http\Controllers\BookingController;
+use App\Http\Controllers\PWAController;
+use App\Http\Controllers\QueueStatusController;
+use App\Http\Controllers\ScreenController;
+use App\Http\Controllers\WebPageController;
+use App\Http\Middleware\EnsureTenantAcceptsBookings;
+use App\Http\Middleware\Localization;
+use App\Http\Middleware\SetPathTenantUrlDefaults;
+use App\Support\TenancyUrl;
 use Illuminate\Support\Facades\Route;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
+use Stancl\Tenancy\Middleware\InitializeTenancyByPath;
 use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 
 /*
@@ -11,64 +21,78 @@ use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 | Tenant Routes
 |--------------------------------------------------------------------------
 |
-| Here you can register the tenant routes for your application.
-| These routes are loaded by the TenantRouteServiceProvider.
+| Custom domains: root paths (/book) with domain-based tenancy.
+| Central domain: path tenancy (/{tenant}/book) for platform URLs.
 |
-| Feel free to customize them however you want. Good luck!
+| IMPORTANT: Register central path routes BEFORE the domain-less group so
+| /{slug} catch-alls never swallow /{tenant}/book on the central host.
 |
 */
+
+$registerTenantRoutes = function (string $routeNamePrefix = ''): void {
+    $routeName = static fn (string $name): string => $routeNamePrefix.$name;
+
+    Route::get('/lang/{locale}', function ($locale) {
+        if (in_array($locale, ['en', 'bn'])) {
+            session()->put('locale', $locale);
+        }
+
+        return back();
+    });
+
+    Route::get('/book', [BookingController::class, 'create']);
+
+    Route::post('/api/bookings', [BookingController::class, 'store'])
+        ->middleware(['throttle:10,1', EnsureTenantAcceptsBookings::class]);
+
+    Route::get('/api/bookings/availability', [BookingController::class, 'availability'])
+        ->middleware(['throttle:60,1']);
+
+    Route::get('/manifest.webmanifest', [PWAController::class, 'manifest']);
+    Route::get('/sw.js', [PWAController::class, 'serviceWorker']);
+    Route::get('/pwa-icon-{size}.svg', [PWAController::class, 'icon'])
+        ->whereIn('size', [192, 512])
+        ->name($routeName('pwa.icon'));
+
+    Route::get('/api/queue/{booking}', [QueueStatusController::class, 'show'])
+        ->middleware('throttle:120,1')
+        ->name($routeName('queue.status'));
+
+    Route::get('/screen/{session}/{date}', [ScreenController::class, 'show'])
+        ->middleware('throttle:60,1')
+        ->name($routeName('tenant.screen'));
+
+    Route::get('/api/screen/{session}/{date}', [ScreenController::class, 'api'])
+        ->middleware('throttle:120,1')
+        ->name($routeName('api.tenant.screen'));
+
+    Route::get('/bookings/{booking}', [BookingController::class, 'show'])
+        ->name($routeName('bookings.show'));
+
+    Route::get('/portal', [BookingController::class, 'portal'])
+        ->middleware('throttle:30,1')
+        ->name($routeName('patient.portal'));
+
+    Route::get('/{slug?}', [WebPageController::class, 'show'])
+        ->where('slug', '^(?!tenant|admin|api|lang|bookings|portal).*$');
+};
+
+foreach (config('tenancy.central_domains', []) as $centralDomain) {
+    Route::domain($centralDomain)
+        ->middleware(['web', Localization::class])
+        ->prefix('{tenant}')
+        ->where(['tenant' => TenancyUrl::tenantSlugPattern()])
+        ->middleware([InitializeTenancyByPath::class, SetPathTenantUrlDefaults::class])
+        ->group(function () use ($registerTenantRoutes): void {
+            $registerTenantRoutes(TenancyUrl::PATH_ROUTE_PREFIX);
+        });
+}
 
 Route::middleware([
     'web',
     InitializeTenancyByDomain::class,
     PreventAccessFromCentralDomains::class,
-    \App\Http\Middleware\Localization::class,
-])->group(function () {
-    Route::get('/lang/{locale}', function ($locale) {
-        if (in_array($locale, ['en', 'bn'])) {
-            session()->put('locale', $locale);
-        }
-        return back();
-    });
-    Route::get('/book', [\App\Http\Controllers\BookingController::class, 'create']);
-
-    // Booking creation is IP rate limited, and refused when billing is closed.
-    Route::post('/api/bookings', [\App\Http\Controllers\BookingController::class, 'store'])
-        ->middleware(['throttle:10,1', \App\Http\Middleware\EnsureTenantAcceptsBookings::class]);
-
-    Route::get('/api/bookings/availability', [\App\Http\Controllers\BookingController::class, 'availability'])
-        ->middleware(['throttle:60,1']);
-
-    // PWA Routes
-    Route::get('/manifest.webmanifest', [\App\Http\Controllers\PWAController::class, 'manifest']);
-    Route::get('/sw.js', [\App\Http\Controllers\PWAController::class, 'serviceWorker']);
-    Route::get('/pwa-icon-{size}.svg', [\App\Http\Controllers\PWAController::class, 'icon'])
-        ->whereIn('size', [192, 512])
-        ->name('pwa.icon');
-
-    // Keyed by the booking UUID: no sequential id is ever exposed, and a
-    // patient can only poll a queue they hold a place in. Polled by the ticket
-    // page, so the limit is generous but present.
-    Route::get('/api/queue/{booking}', [\App\Http\Controllers\QueueStatusController::class, 'show'])
-        ->middleware('throttle:120,1')
-        ->name('queue.status');
-
-    // Waiting-room HTML load; API is polled every ~2s so allow a busy board.
-    Route::get('/screen/{session}/{date}', [\App\Http\Controllers\ScreenController::class, 'show'])
-        ->middleware('throttle:60,1')
-        ->name('tenant.screen');
-
-    Route::get('/api/screen/{session}/{date}', [\App\Http\Controllers\ScreenController::class, 'api'])
-        ->middleware('throttle:120,1')
-        ->name('api.tenant.screen');
-
-    Route::get('/bookings/{booking}', [\App\Http\Controllers\BookingController::class, 'show'])
-        ->name('bookings.show');
-
-    Route::get('/portal', [\App\Http\Controllers\BookingController::class, 'portal'])
-        ->middleware('throttle:30,1')
-        ->name('patient.portal');
-
-    // Catch-all for WebPages
-    Route::get('/{slug?}', [\App\Http\Controllers\WebPageController::class, 'show'])->where('slug', '^(?!tenant|admin|api|lang|bookings|portal).*$');
+    Localization::class,
+])->group(function () use ($registerTenantRoutes): void {
+    $registerTenantRoutes('');
 });

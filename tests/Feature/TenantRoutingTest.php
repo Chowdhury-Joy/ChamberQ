@@ -8,11 +8,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
 /**
- * Guards the central/tenant route separation required by the spec.
- *
- * These assertions exist because the entire tenant route file was silently
- * unregistered at one point (the TenancyServiceProvider was missing from
- * bootstrap/providers.php) while the whole test suite stayed green.
+ * Guards central path tenancy (/solo/book) vs custom-domain tenancy (solo.localhost/book).
  */
 class TenantRoutingTest extends TestCase
 {
@@ -33,12 +29,23 @@ class TenantRoutingTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_tenant_routes_resolve_on_a_tenant_domain(): void
+    public function test_tenant_routes_resolve_on_a_custom_domain(): void
     {
         $this->get('http://acme.localhost/book')->assertOk();
     }
 
-    public function test_tenant_routes_do_not_resolve_on_the_central_domain(): void
+    public function test_tenant_routes_resolve_on_central_platform_path(): void
+    {
+        $this->get('http://localhost/acme/book')->assertOk();
+    }
+
+    public function test_tenant_home_resolves_on_central_platform_path(): void
+    {
+        $this->get('http://localhost/acme/')
+            ->assertDontSee('Laravel', escape: false);
+    }
+
+    public function test_tenant_routes_do_not_resolve_on_the_central_domain_without_slug(): void
     {
         $this->get('http://localhost/book')->assertNotFound();
     }
@@ -48,10 +55,18 @@ class TenantRoutingTest extends TestCase
         $this->get('http://localhost/')->assertOk();
     }
 
-    public function test_central_root_does_not_shadow_the_tenant_landing_page(): void
+    public function test_unknown_tenant_slug_on_central_domain_returns_not_found(): void
     {
-        // With no WebPage published the tenant root is a 404 placeholder — the
-        // important part is that it is NOT the central welcome page.
+        $this->get('http://localhost/not-a-tenant/book')->assertNotFound();
+    }
+
+    public function test_reserved_central_segment_admin_is_not_treated_as_tenant_slug(): void
+    {
+        $this->get('http://localhost/admin/login')->assertOk();
+    }
+
+    public function test_central_root_does_not_shadow_the_tenant_landing_page_on_custom_domain(): void
+    {
         $this->get('http://acme.localhost/')
             ->assertDontSee('Laravel', escape: false);
     }

@@ -90,8 +90,15 @@ class TenancyServiceProvider extends ServiceProvider
     {
         $this->bootEvents();
         $this->mapRoutes();
-
+        $this->configurePathTenancyFailures();
         $this->makeTenancyMiddlewareHighestPriority();
+    }
+
+    protected function configurePathTenancyFailures(): void
+    {
+        Middleware\InitializeTenancyByPath::$onFail = static function ($exception, $request, $next) {
+            abort(404);
+        };
     }
 
     protected function bootEvents()

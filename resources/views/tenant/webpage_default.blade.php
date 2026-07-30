@@ -16,7 +16,7 @@
     <main class="placeholder">
         <h1>{{ tenant()->displayName() }}</h1>
         <p class="text-muted">{{ __('This website is not published yet, but you can still book an appointment online.') }}</p>
-        <a href="/book" class="btn btn-primary">{{ __('Book Appointment') }}</a>
+        <a href="{{ tenant_web_url('/book') }}" class="btn btn-primary">{{ __('Book Appointment') }}</a>
     </main>
 </body>
 </html>

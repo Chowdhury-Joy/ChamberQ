@@ -20,7 +20,7 @@
     <meta name="color-scheme" content="light only">
     <meta name="theme-color" content="{{ $themeColor }}">
     <title>{{ $page->title }} | {{ $tenant->displayName() }}</title>
-    <link rel="manifest" href="/manifest.webmanifest">
+    <link rel="manifest" href="{{ tenant_web_url('/manifest.webmanifest') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link rel="stylesheet" href="{{ $fontUrl }}">
@@ -70,14 +70,14 @@
     </style>
     <script>
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
+            window.addEventListener('load', () => navigator.serviceWorker.register(@json(tenant_web_url('/sw.js'))));
         }
     </script>
 </head>
 <body class="min-h-full flex flex-col bg-slate-50 text-slate-900 antialiased" x-data="{ menuOpen: false }">
     <header class="fixed inset-x-0 top-0 z-50 border-b border-slate-200/80 bg-white">
         <div class="mx-auto flex h-16 max-w-[1320px] items-center justify-between gap-4 px-4 sm:h-[4.25rem] sm:px-6 lg:px-8">
-            <a href="/" class="min-w-0 truncate text-base font-bold tracking-tight text-slate-900 sm:text-lg">
+            <a href="{{ tenant_web_url('/') }}" class="min-w-0 truncate text-base font-bold tracking-tight text-slate-900 sm:text-lg">
                 @if($tenant->logo_url)
                     <img src="{{ $tenant->logo_url }}" alt="{{ $tenant->displayName() }}" class="h-9 w-auto">
                 @else
@@ -86,17 +86,17 @@
             </a>
 
             <nav class="hidden items-center gap-6 text-sm font-medium text-slate-700 md:flex lg:gap-8" aria-label="{{ __('Main') }}">
-                <a href="/" class="transition hover:text-brand">{{ __('Home') }}</a>
+                <a href="{{ tenant_web_url('/') }}" class="transition hover:text-brand">{{ __('Home') }}</a>
                 @foreach($customPages as $customPage)
                     <a href="{{ $customPage->slug }}" class="transition hover:text-brand">{{ $customPage->title }}</a>
                 @endforeach
-                <a href="/book" class="transition hover:text-brand">{{ __('Book Appointment') }}</a>
-                <a href="/portal" class="font-medium text-slate-500 transition hover:text-brand">{{ __('Patient Portal') }}</a>
+                <a href="{{ tenant_web_url('/book') }}" class="transition hover:text-brand">{{ __('Book Appointment') }}</a>
+                <a href="{{ tenant_web_url('/portal') }}" class="font-medium text-slate-500 transition hover:text-brand">{{ __('Patient Portal') }}</a>
                 @if($banglaHomepage)
                     <span class="flex items-center gap-1.5 border-l border-slate-200 pl-4 text-xs font-semibold tracking-wide">
-                        <a href="/lang/en" class="{{ $locale === 'en' ? 'text-brand' : 'text-slate-400 hover:text-slate-700' }}">EN</a>
+                        <a href="{{ tenant_web_url('/lang/en') }}" class="{{ $locale === 'en' ? 'text-brand' : 'text-slate-400 hover:text-slate-700' }}">EN</a>
                         <span class="text-slate-300">|</span>
-                        <a href="/lang/bn" class="{{ $locale === 'bn' ? 'text-brand' : 'text-slate-400 hover:text-slate-700' }}">BN</a>
+                        <a href="{{ tenant_web_url('/lang/bn') }}" class="{{ $locale === 'bn' ? 'text-brand' : 'text-slate-400 hover:text-slate-700' }}">BN</a>
                     </span>
                 @endif
             </nav>
@@ -115,16 +115,16 @@
 
         <div id="site-mobile-nav" class="border-t border-slate-100 bg-white md:hidden" x-show="menuOpen" x-cloak>
             <div class="mx-auto flex max-w-[1320px] flex-col gap-1 px-4 py-3 text-base font-medium">
-                <a href="/" class="rounded-lg px-3 py-3 hover:bg-slate-50" @click="menuOpen = false">{{ __('Home') }}</a>
+                <a href="{{ tenant_web_url('/') }}" class="rounded-lg px-3 py-3 hover:bg-slate-50" @click="menuOpen = false">{{ __('Home') }}</a>
                 @foreach($customPages as $customPage)
                     <a href="{{ $customPage->slug }}" class="rounded-lg px-3 py-3 hover:bg-slate-50" @click="menuOpen = false">{{ $customPage->title }}</a>
                 @endforeach
-                <a href="/book" class="rounded-lg px-3 py-3 hover:bg-slate-50" @click="menuOpen = false">{{ __('Book Appointment') }}</a>
-                <a href="/portal" class="rounded-lg px-3 py-3 text-slate-500 hover:bg-slate-50" @click="menuOpen = false">{{ __('Patient Portal') }}</a>
+                <a href="{{ tenant_web_url('/book') }}" class="rounded-lg px-3 py-3 hover:bg-slate-50" @click="menuOpen = false">{{ __('Book Appointment') }}</a>
+                <a href="{{ tenant_web_url('/portal') }}" class="rounded-lg px-3 py-3 text-slate-500 hover:bg-slate-50" @click="menuOpen = false">{{ __('Patient Portal') }}</a>
                 @if($banglaHomepage)
                     <div class="flex gap-3 px-3 py-3 text-xs font-semibold">
-                        <a href="/lang/en" class="{{ $locale === 'en' ? 'text-brand' : 'text-slate-400' }}">EN</a>
-                        <a href="/lang/bn" class="{{ $locale === 'bn' ? 'text-brand' : 'text-slate-400' }}">BN</a>
+                        <a href="{{ tenant_web_url('/lang/en') }}" class="{{ $locale === 'en' ? 'text-brand' : 'text-slate-400' }}">EN</a>
+                        <a href="{{ tenant_web_url('/lang/bn') }}" class="{{ $locale === 'bn' ? 'text-brand' : 'text-slate-400' }}">BN</a>
                     </div>
                 @endif
             </div>
@@ -155,12 +155,12 @@
             <div>
                 <h4 class="text-sm font-bold text-white">{{ __('Quick Links') }}</h4>
                 <ul class="mt-3 space-y-2 text-sm">
-                    <li><a href="/" class="hover:text-white">{{ __('Home') }}</a></li>
+                    <li><a href="{{ tenant_web_url('/') }}" class="hover:text-white">{{ __('Home') }}</a></li>
                     @foreach($customPages as $customPage)
                         <li><a href="{{ $customPage->slug }}" class="hover:text-white">{{ $customPage->title }}</a></li>
                     @endforeach
-                    <li><a href="/book" class="hover:text-white">{{ __('Book Appointment') }}</a></li>
-                    <li><a href="/portal" class="hover:text-white">{{ __('Patient Portal') }}</a></li>
+                    <li><a href="{{ tenant_web_url('/book') }}" class="hover:text-white">{{ __('Book Appointment') }}</a></li>
+                    <li><a href="{{ tenant_web_url('/portal') }}" class="hover:text-white">{{ __('Patient Portal') }}</a></li>
                 </ul>
             </div>
             <div>

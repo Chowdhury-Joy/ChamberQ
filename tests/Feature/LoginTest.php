@@ -138,4 +138,9 @@ class LoginTest extends TestCase
         $this->get('http://localhost/admin/password-reset/request')->assertOk();
         $this->get('http://solo.localhost/admin/password-reset/request')->assertOk();
     }
+
+    public function test_solo_admin_can_access_central_platform_path_login(): void
+    {
+        $this->get('http://localhost/solo/admin/login')->assertOk();
+    }
 }

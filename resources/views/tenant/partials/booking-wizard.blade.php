@@ -13,7 +13,7 @@
                         </p>
                     @endif
                     <p style="margin-top: 1.5rem;">
-                        <a href="/" class="btn btn-back" style="display: inline-block;">{{ __('Back to home') }}</a>
+                        <a href="{{ tenant_web_url('/') }}" class="btn btn-back" style="display: inline-block;">{{ __('Back to home') }}</a>
                     </p>
                 </div>
             @else
@@ -177,6 +177,7 @@
             payAtClinic: @json(__('Pay at the clinic')),
             confirmLabel: @json(__('Confirm Booking')),
             bookingLabel: @json(__('Booking…')),
+            basePath: @json(rtrim(tenant_web_url(''), '/')),
             phoneInvalid: @json(__('Please enter a valid Bangladeshi mobile number, for example 01712345678.')),
             localeTag: @json(app()->getLocale() === 'bn' ? 'bn-BD' : 'en-GB'),
         };
@@ -317,7 +318,7 @@
             params.set('booking_date', dateYmd);
             ids.forEach(id => params.append('bookable_ids[]', id));
 
-            const response = await fetch(`/api/bookings/availability?${params.toString()}`, {
+            const response = await fetch(`${config.basePath}/api/bookings/availability?${params.toString()}`, {
                 headers: { 'Accept': 'application/json' },
             });
             if (!response.ok) throw new Error('availability failed');
@@ -743,7 +744,7 @@
             }
             
             try {
-                const response = await fetch('/api/bookings', {
+                const response = await fetch(`${config.basePath}/api/bookings`, {
                     method: 'POST',
                     body: formData,
                     headers: { 'Accept': 'application/json' }

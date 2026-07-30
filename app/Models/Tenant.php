@@ -65,7 +65,7 @@ class Tenant extends BaseTenant
         $preset = $this->call_audio_preset ?? 'chime';
 
         if ($preset === 'custom' && filled($this->call_audio_path)) {
-            return '/storage/'.ltrim((string) $this->call_audio_path, '/');
+            return tenant_web_url('/storage/'.ltrim((string) $this->call_audio_path, '/'));
         }
 
         return match ($preset) {

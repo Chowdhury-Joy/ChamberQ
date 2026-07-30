@@ -23,6 +23,30 @@ return [
     ))),
 
     /**
+     * First path segments on central domains that are NOT tenant slugs.
+     * Platform tenants live at /{slug}/… (e.g. /drkarim/book). Custom domains
+     * still use root paths (/book) via domain-based tenancy.
+     */
+    'reserved_path_prefixes' => [
+        'admin',
+        'up',
+        'api',
+        'lang',
+        'book',
+        'bookings',
+        'portal',
+        'screen',
+        'manifest.webmanifest',
+        'sw.js',
+        'css',
+        'audio',
+        'storage',
+        'build',
+        'livewire',
+        'filament',
+    ],
+
+    /**
      * Tenancy bootstrappers are executed when tenancy is initialized.
      * Their responsibility is making Laravel features tenant-aware.
      *

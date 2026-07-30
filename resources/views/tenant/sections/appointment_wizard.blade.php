@@ -7,7 +7,7 @@
             {{ $data['subheadline'] ?? 'Select specialty, doctor, date and pick your preferred time slot.' }}
         </p>
 
-        <a href="/book" class="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-sky-400 text-slate-950 font-bold text-base hover:bg-sky-300 shadow-xl transition-all">
+        <a href="{{ tenant_web_url('/book') }}" class="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-sky-400 text-slate-950 font-bold text-base hover:bg-sky-300 shadow-xl transition-all">
             <span>Start Booking Wizard</span>
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
         </a>

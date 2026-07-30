@@ -3,8 +3,10 @@
 namespace App\Providers;
 
 use App\Contracts\SmsGateway;
+use App\Support\TenancyUrl;
 use App\Services\Sms\HttpSmsGateway;
 use App\Services\Sms\LogSmsGateway;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use InvalidArgumentException;
 
@@ -31,6 +33,6 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Route::pattern('tenant', TenancyUrl::tenantSlugPattern());
     }
 }

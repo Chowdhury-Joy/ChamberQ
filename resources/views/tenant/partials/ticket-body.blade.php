@@ -145,7 +145,7 @@
     </main>
 
     <script>
-        const statusUrl = @json(route('queue.status', $booking));
+        const statusUrl = @json(tenant_web_route('queue.status', $booking));
         const i18n = {
             youAreNext: @json(__('You are next.')),
             oneAhead: @json(__('1 person ahead of you')),
@@ -236,6 +236,6 @@
         });
 
         if ('serviceWorker' in navigator) {
-            window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js'));
+            window.addEventListener('load', () => navigator.serviceWorker.register(@json(tenant_web_url('/sw.js'))));
         }
     </script>

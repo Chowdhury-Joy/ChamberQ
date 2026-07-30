@@ -232,7 +232,7 @@
     <audio id="chimeAudio" src="{{ $callAudioUrl }}" preload="auto"></audio>
 
     <script>
-        const statusUrl = @json(route('api.tenant.screen', ['session' => $scheduleSession->id, 'date' => $sessionDate]));
+        const statusUrl = @json(tenant_web_route('api.tenant.screen', ['session' => $scheduleSession->id, 'date' => $sessionDate]));
         let lastCalledTime = null;
         let soundUnlocked = false;
         let soundMuted = false;

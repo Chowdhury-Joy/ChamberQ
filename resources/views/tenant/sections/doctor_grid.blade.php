@@ -29,7 +29,7 @@
                         @endif
                     </div>
 
-                    <a href="/book?doctor={{ $doctor->id }}" class="mt-6 inline-flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90" style="background-color: var(--color-primary);">
+                    <a href="{{ tenant_web_url('/book?doctor='.$doctor->id) }}" class="mt-6 inline-flex w-full items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold text-white transition hover:opacity-90" style="background-color: var(--color-primary);">
                         {{ __('Book Consultation') }}
                     </a>
                 </div>

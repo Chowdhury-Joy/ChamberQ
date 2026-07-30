@@ -103,7 +103,7 @@ class BookingController extends Controller
             'booking' => [
                 'id' => $booking->id,
                 'serial_number' => $booking->serial_number,
-                'ticket_url' => route('bookings.show', $booking),
+                'ticket_url' => tenant_web_route('bookings.show', $booking),
             ],
         ]);
     }
