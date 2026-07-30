@@ -15,7 +15,7 @@ class TieredFeatureTest extends TestCase
         $tenant = Tenant::create(['id' => 'solo-tenant', 'plan_tier' => 'solo']);
         
         $this->assertFalse($tenant->hasFeature('lab_tests'));
-        $this->assertFalse($tenant->hasFeature('multiple_chambers'));
+        $this->assertTrue($tenant->hasFeature('multiple_chambers'));
         $this->assertFalse($tenant->hasFeature('multiple_doctors'));
     }
 
@@ -40,8 +40,8 @@ class TieredFeatureTest extends TestCase
         
         // Overridden
         $this->assertTrue($tenant->hasFeature('lab_tests'));
-        // Still defaults
-        $this->assertFalse($tenant->hasFeature('multiple_chambers'));
+        // Still solo defaults
+        $this->assertTrue($tenant->hasFeature('multiple_chambers'));
     }
 
     public function test_string_false_feature_flag_is_treated_as_disabled(): void
@@ -90,5 +90,17 @@ class TieredFeatureTest extends TestCase
 
         $solo->update(['feature_flags' => ['bangla_homepage' => true]]);
         $this->assertTrue($solo->fresh()->hasFeature('bangla_homepage'));
+    }
+
+    public function test_solo_max_chambers_is_five_and_clinic_is_unlimited(): void
+    {
+        $solo = Tenant::create(['id' => 'max-solo', 'plan_tier' => 'solo']);
+        $clinic = Tenant::create(['id' => 'max-clinic', 'plan_tier' => 'clinic']);
+
+        $this->assertSame(5, $solo->maxChambers());
+        $this->assertNull($clinic->maxChambers());
+
+        $solo->update(['feature_flags' => ['multiple_chambers' => false]]);
+        $this->assertSame(1, $solo->fresh()->maxChambers());
     }
 }

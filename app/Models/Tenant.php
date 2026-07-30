@@ -11,6 +11,9 @@ class Tenant extends BaseTenant
 
     public const DEFAULT_THEME_COLOR = '#2563eb';
 
+    /** Max chambers on Solo when multiple_chambers is enabled. Clinic has no cap. */
+    public const SOLO_MAX_CHAMBERS = 5;
+
     public static function getCustomColumns(): array
     {
         // Every real column MUST be listed here. Anything omitted is folded into
@@ -94,7 +97,7 @@ class Tenant extends BaseTenant
         return match ($this->plan_tier) {
             'solo' => match ($feature) {
                 'lab_tests' => false,
-                'multiple_chambers' => false,
+                'multiple_chambers' => true,
                 'multiple_doctors' => false,
                 'bangla_homepage' => false,
                 default => false,
@@ -118,6 +121,19 @@ class Tenant extends BaseTenant
     public function isSoloDoctor(): bool
     {
         return ! $this->isClinic();
+    }
+
+    /**
+     * Chamber limit for this tenant. Null means unlimited (Clinic tier).
+     * When multiple_chambers is off via feature flag, cap is 1.
+     */
+    public function maxChambers(): ?int
+    {
+        if (! $this->hasFeature('multiple_chambers')) {
+            return 1;
+        }
+
+        return $this->isClinic() ? null : self::SOLO_MAX_CHAMBERS;
     }
 
     /**

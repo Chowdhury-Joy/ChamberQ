@@ -118,4 +118,80 @@ class TierGatingPolicyTest extends TestCase
         $response->assertStatus(422);
         $response->assertJsonFragment(['success' => false]);
     }
+
+    public function test_solo_tenant_can_create_up_to_five_chambers(): void
+    {
+        tenancy()->initialize($this->soloTenant);
+
+        for ($i = 1; $i <= Tenant::SOLO_MAX_CHAMBERS; $i++) {
+            $this->assertTrue(
+                Gate::forUser($this->soloAdmin)->allows('create', Chamber::class),
+                "Expected create allowed before chamber {$i}"
+            );
+            Chamber::create(['name' => "Chamber {$i}"]);
+        }
+
+        $this->assertFalse(Gate::forUser($this->soloAdmin)->allows('create', Chamber::class));
+
+        tenancy()->end();
+    }
+
+    public function test_solo_tenant_can_delete_extra_chamber_but_not_the_last_one(): void
+    {
+        tenancy()->initialize($this->soloTenant);
+
+        $first = Chamber::create(['name' => 'Main']);
+        $second = Chamber::create(['name' => 'Branch']);
+
+        $this->assertTrue(Gate::forUser($this->soloAdmin)->allows('delete', $second));
+        $this->assertTrue(Gate::forUser($this->soloAdmin)->allows('delete', $first));
+
+        $second->delete();
+
+        $this->assertFalse(Gate::forUser($this->soloAdmin)->allows('delete', $first));
+
+        tenancy()->end();
+    }
+
+    public function test_clinic_tenant_can_create_more_than_five_chambers(): void
+    {
+        tenancy()->initialize($this->clinicTenant);
+
+        for ($i = 1; $i <= 6; $i++) {
+            $this->assertTrue(Gate::forUser($this->clinicAdmin)->allows('create', Chamber::class));
+            Chamber::create(['name' => "Clinic Chamber {$i}"]);
+        }
+
+        tenancy()->end();
+    }
+
+    public function test_solo_with_multiple_chambers_disabled_is_capped_at_one(): void
+    {
+        $locked = Tenant::create([
+            'id' => 'locked-solo',
+            'plan_tier' => 'solo',
+            'feature_flags' => ['multiple_chambers' => false],
+        ]);
+        Domain::create(['domain' => 'locked-solo.test', 'tenant_id' => 'locked-solo']);
+        $admin = User::create([
+            'name' => 'Locked Solo',
+            'email' => 'admin@locked-solo.test',
+            'password' => bcrypt('password'),
+            'role' => 'admin',
+            'tenant_id' => 'locked-solo',
+        ]);
+
+        tenancy()->initialize($locked);
+
+        $this->assertFalse($locked->hasFeature('multiple_chambers'));
+        $this->assertSame(1, $locked->maxChambers());
+
+        $this->assertTrue(Gate::forUser($admin)->allows('create', Chamber::class));
+        $only = Chamber::create(['name' => 'Only']);
+
+        $this->assertFalse(Gate::forUser($admin)->allows('create', Chamber::class));
+        $this->assertFalse(Gate::forUser($admin)->allows('delete', $only));
+
+        tenancy()->end();
+    }
 }

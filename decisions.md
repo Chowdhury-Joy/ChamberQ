@@ -68,3 +68,19 @@
  <action>Create and maintain living `architecture.md` + `sitemap.md`, append-only `architecture_history.md`, and keep `decisions.md` / `bug_history.md` current with product reality in this repo (`/Users/chowdhuryjoy/SolDoc`, GitHub `Doctor-Gemini`, branch `Solo-Doc-V1`).</action>
  <reason>Prevents duplicate features, broken CRO paths, and silent overrides of plan-tier rules on future work (e.g. multi-chamber / lab expansions).</reason>
 </decision>
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Online pre-payment (bKash/Nagad/gateway deposits before the visit) keeps getting re-suggested during planning, even though v1 already chose pay-at-chamber only. That distracts from serial, queue, and chamber ops work.</context>
+ <action>Pre-payment / online patient payment is later-stage only. Do not suggest, plan, design, or build it unless the user explicitly asks about pre-payment or online payments. Until then, keep pay-at-chamber as the only payment model.</action>
+ <reason>Owner will reopen payments when ready; until then, unsolicited payment ideas waste focus and risk reintroducing removed gateway complexity.</reason>
+</decision>
+
+## 2026-07-31 (solo multi-chamber)
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Solo doctors in Bangladesh often sit at 2–5 different chambers or hospitals on different days. The original Solo tier locked them to one chamber, which blocked a common real workflow without upgrading to Clinic.</context>
+ <action>Solo plan now includes `multiple_chambers` by default, capped at 5 locations via `Tenant::SOLO_MAX_CHAMBERS` and `ChamberPolicy`. Clinic stays unlimited chambers. Solo remains one doctor (`multiple_doctors` off) and no labs (`lab_tests` off). Super Admin can still override `multiple_chambers = false` on a tenant to lock one location. Marketing Solo copy updated to “up to 5 locations.”</action>
+ <reason>Matches how independent specialists actually practice; keeps Clinic differentiated by multi-doctor + labs + unlimited scale, not by basic multi-location booking.</reason>
+</decision>

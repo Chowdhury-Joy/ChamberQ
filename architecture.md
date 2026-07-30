@@ -1,8 +1,8 @@
 # Architecture Overview
-Last Updated: 2026-07-31T00:20:00+06:00
+Last Updated: 2026-07-31T02:15:00+06:00
 
 ## Overview
-Doctor Gemini is a multi-tenant SaaS for Bangladesh solo doctors and clinics. Each tenant gets a branded patient website, online serial booking, a live waiting-room queue (outdoor screen + staff control), a patient ticket/portal, and a Filament admin panel. Patients book a serial and pay at the chamber — there is no payment gateway. Sales CTAs on the central marketing site use WhatsApp (`wa.me`). SMS booking confirmations use a prepaid credit wallet topped up by Super Admin.
+Doctor Gemini is a multi-tenant SaaS for Bangladesh solo doctors and clinics. Each tenant gets a branded patient website, online serial booking, a live waiting-room queue (outdoor screen + staff control), a patient ticket/portal, and a Filament admin panel. Patients book a serial and pay at the chamber — there is no payment gateway. Online pre-payment is later-stage only: do not suggest or build it unless the owner explicitly asks. Sales CTAs on the central marketing site use WhatsApp (`wa.me`). SMS booking confirmations use a prepaid credit wallet topped up by Super Admin.
 
 ## Getting Started
 Prerequisites: PHP 8.2+, Composer, Node/npm (for Vite assets), SQLite (local) or MySQL/Postgres (production).
@@ -57,7 +57,7 @@ Tests: `php artisan test` (also CI via `.github/workflows/tests.yml`).
 - Project memory: `decisions.md`, `bug_history.md`, `architecture.md`, `architecture_history.md`, `sitemap.md`
 
 ## Key Components
-- **Tenant + plan features** (`Tenant::hasFeature`) — `plan_tier` `solo` | `clinic` with defaults; per-tenant `feature_flags` JSON can override. Solo defaults: no `lab_tests`, no `multiple_chambers`, no `multiple_doctors`. Clinic defaults: all three on. `bangla_homepage` is a paid add-on flag.
+- **Tenant + plan features** (`Tenant::hasFeature`, `Tenant::maxChambers`) — `plan_tier` `solo` | `clinic` with defaults; per-tenant `feature_flags` JSON can override. Solo defaults: `multiple_chambers` on (cap 5 via `SOLO_MAX_CHAMBERS`), no `lab_tests`, no `multiple_doctors`. Clinic defaults: all three on, unlimited chambers. `bangla_homepage` is a paid add-on flag.
 - **BookingService** — creates serials, capacity/slot rules, lab test attachment when feature enabled, phone normalization (`01…`), billing gate via `acceptsBookings()`.
 - **LiveSessionService** — start/end session, call next, mark arrived (`in_chamber`), skip, complete; drives outdoor screen + Live Queue Control.
 - **OperationalReportService** — day/week/month booking aggregates for staff.
@@ -80,4 +80,4 @@ Tests: `php artisan test` (also CI via `.github/workflows/tests.yml`).
 - **WhatsApp** — outbound only via free `wa.me` links (no Business API)
 - **SMS gateway** — optional HTTP driver; default `log` for local/tests
 - **Mail** — Laravel mailers for Filament password reset (configure `MAIL_*` in production)
-- **No payment gateways** — intentionally removed for pay-at-chamber v1
+- **No payment gateways** — intentionally removed for pay-at-chamber v1; online pre-payment is later-stage only and must not be suggested unless the owner asks

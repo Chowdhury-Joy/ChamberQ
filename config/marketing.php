@@ -62,12 +62,12 @@ return [
     'plans' => [
         'solo' => [
             'name' => 'Solo',
-            'tagline' => 'For one doctor, one chamber',
+            'tagline' => 'For one doctor, up to 5 chambers',
             'setup' => (int) env('MARKETING_SOLO_SETUP', 5000),
             'monthly' => (int) env('MARKETING_SOLO_MONTHLY', 2000),
             'featured' => true,
             'features' => [
-                'One doctor, one chamber',
+                'One doctor, up to 5 locations',
                 'Branded patient site & online serial',
                 'Live queue & patient ticket',
                 'Prepaid SMS confirmations',

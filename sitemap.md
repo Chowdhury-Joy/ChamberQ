@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-07-31T00:20:00+06:00
+Last Updated: 2026-07-31T02:15:00+06:00
 
 ## Full Site Map
 
@@ -49,7 +49,7 @@ Same host as tenant site; path `/admin`.
 | Schedule Sessions | Recurring doctor sessions | admin, doctor |
 | Slot Blocks | Block dates/slots | admin, doctor |
 | Doctors | Manage doctors | clinic / `multiple_doctors` (solo: capped, sidebar often hidden) |
-| Chambers | Manage chambers | clinic / `multiple_chambers` (solo: capped, sidebar often hidden) |
+| Chambers | Manage chambers | Solo: up to 5 (`multiple_chambers`, cap via policy); Clinic: unlimited |
 | Lab Tests | Lab catalogue | `lab_tests` feature + ops |
 | Lab Collection Slots | Lab collection windows | `lab_tests` feature + ops |
 | Users | Tenant staff accounts | admin |

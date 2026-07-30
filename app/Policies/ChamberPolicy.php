@@ -23,11 +23,13 @@ class ChamberPolicy
             return false;
         }
 
-        if (tenant()?->hasFeature('multiple_chambers')) {
+        $max = tenant()?->maxChambers();
+
+        if ($max === null) {
             return true;
         }
 
-        return Chamber::count() < 1;
+        return Chamber::count() < $max;
     }
 
     public function update(User $user, Chamber $chamber): bool
@@ -41,10 +43,7 @@ class ChamberPolicy
             return false;
         }
 
-        if (! tenant()?->hasFeature('multiple_chambers')) {
-            return false;
-        }
-
-        return true;
+        // Always keep at least one chamber for bookings and schedules.
+        return Chamber::count() > 1;
     }
 }
