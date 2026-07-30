@@ -40,6 +40,7 @@ class SuperAdminPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/SuperAdmin/Widgets'), for: 'App\Filament\SuperAdmin\Widgets')
             ->widgets([
                 AccountWidget::class,
+                \App\Filament\SuperAdmin\Widgets\PlatformFinanceOverview::class,
                 \App\Filament\SuperAdmin\Widgets\SuperAdminStatsOverview::class,
                 \App\Filament\SuperAdmin\Widgets\RecentTenantsWidget::class,
             ])

@@ -4,6 +4,16 @@
     $solo = config('marketing.plans.solo');
     $clinic = config('marketing.plans.clinic');
 
+    $refCode = session('referral.code');
+    $discountCode = session('referral.discount_code');
+    $refSuffix = '';
+    if ($refCode) {
+        $refSuffix .= ' Ref: '.$refCode.'.';
+    }
+    if ($discountCode) {
+        $refSuffix .= ' Code: '.$discountCode.'.';
+    }
+
     $wa = function (string $message) use ($whatsapp): string {
         return 'https://wa.me/'.$whatsapp.'?text='.rawurlencode($message);
     };
@@ -12,9 +22,9 @@
         return '৳'.number_format($amount);
     };
 
-    $soloWa = $wa('Hi — I\'m a solo doctor interested in Doctor Gemini (Solo plan).');
-    $clinicWa = $wa('Hi — I\'m interested in Doctor Gemini for our clinic (Clinic plan).');
-    $generalWa = $wa('Hi — I\'m a solo doctor and want to know how Doctor Gemini can help my chamber.');
+    $soloWa = $wa('Hi — I\'m a solo doctor interested in Doctor Gemini (Solo plan).'.$refSuffix);
+    $clinicWa = $wa('Hi — I\'m interested in Doctor Gemini for our clinic (Clinic plan).'.$refSuffix);
+    $generalWa = $wa('Hi — I\'m a solo doctor and want to know how Doctor Gemini can help my chamber.'.$refSuffix);
 @endphp
 <!DOCTYPE html>
 <html lang="en">

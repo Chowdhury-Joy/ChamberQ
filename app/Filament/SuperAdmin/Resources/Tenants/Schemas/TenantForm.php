@@ -2,12 +2,18 @@
 
 namespace App\Filament\SuperAdmin\Resources\Tenants\Schemas;
 
+use App\Models\DiscountCode;
+use App\Services\DiscountCalculator;
+use App\Services\PlanPricingService;
+use Filament\Forms\Components\Placeholder;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 
 class TenantForm
@@ -83,6 +89,74 @@ class TenantForm
                             ->default(0)
                             ->helperText(__('Prepaid confirmation credits. Top up with the header action on edit, or set here.'))
                             ->required(),
+                    ]),
+
+                Fieldset::make(__('Referral & Discount'))
+                    ->schema([
+                        Select::make('marketer_id')
+                            ->label(__('Marketer'))
+                            ->relationship(
+                                'marketer',
+                                'display_name',
+                                fn ($query) => $query->where('is_active', true)
+                            )
+                            ->searchable()
+                            ->preload()
+                            ->nullable()
+                            ->live(),
+                        Select::make('discount_code_id')
+                            ->label(__('Discount code'))
+                            ->relationship('discountCode', 'code')
+                            ->searchable()
+                            ->preload()
+                            ->nullable()
+                            ->live(),
+                        Textarea::make('referral_note')
+                            ->label(__('Referral note'))
+                            ->helperText(__('e.g. Dr. Karim – Dhanmondi chamber'))
+                            ->rows(2)
+                            ->columnSpanFull(),
+                        Placeholder::make('pricing_preview')
+                            ->label(__('Amount preview'))
+                            ->content(function (Get $get): string {
+                                $tier = (string) ($get('plan_tier') ?: 'solo');
+                                $list = app(PlanPricingService::class)->listPricesForTier($tier);
+                                $code = $get('discount_code_id')
+                                    ? DiscountCode::find($get('discount_code_id'))
+                                    : null;
+                                $amounts = app(DiscountCalculator::class)->calculate(
+                                    $list['setup'],
+                                    $list['monthly'],
+                                    $code
+                                );
+
+                                return sprintf(
+                                    'List: setup ৳%s / monthly ৳%s → Due: setup ৳%s / monthly ৳%s',
+                                    number_format($amounts['list_setup']),
+                                    number_format($amounts['list_monthly']),
+                                    number_format($amounts['setup_due']),
+                                    number_format($amounts['monthly_due']),
+                                );
+                            })
+                            ->columnSpanFull(),
+                        TextInput::make('list_setup_amount')
+                            ->label(__('List setup (snapshot)'))
+                            ->numeric()
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->visible(fn (string $operation): bool => $operation === 'edit'),
+                        TextInput::make('setup_amount_due')
+                            ->label(__('Setup due (snapshot)'))
+                            ->numeric()
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->visible(fn (string $operation): bool => $operation === 'edit'),
+                        TextInput::make('monthly_amount_due')
+                            ->label(__('Monthly due (snapshot)'))
+                            ->numeric()
+                            ->disabled()
+                            ->dehydrated(false)
+                            ->visible(fn (string $operation): bool => $operation === 'edit'),
                     ]),
 
                 Fieldset::make(__('Appearance & Locale'))

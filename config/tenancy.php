@@ -29,6 +29,7 @@ return [
      */
     'reserved_path_prefixes' => [
         'admin',
+        'partner',
         'up',
         'api',
         'lang',

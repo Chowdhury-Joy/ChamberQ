@@ -93,3 +93,26 @@
  <action>Solo plan now includes `multiple_chambers` by default, capped at 5 locations via `Tenant::SOLO_MAX_CHAMBERS` and `ChamberPolicy`. Clinic stays unlimited chambers. Solo remains one doctor (`multiple_doctors` off) and no labs (`lab_tests` off). Super Admin can still override `multiple_chambers = false` on a tenant to lock one location. Marketing Solo copy updated to “up to 5 locations.”</action>
  <reason>Matches how independent specialists actually practice; keeps Clinic differentiated by multi-doctor + labs + unlimited scale, not by basic multi-location booking.</reason>
 </decision>
+
+## 2026-07-31 (marketer commissions)
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Sales partners (marketers) refer doctors via links and deserve transparent commissions on setup and recurring monthly fees, while billing stays manual (bKash/bank) with no payment gateway.</context>
+ <action>Marketer role + `/partner` Filament panel. Commission base = amount doctor actually paid after discount (e.g. 20% setup / 10% monthly forever). Ledger: auto-create monthly commission rows; Super Admin confirms doctor paid → status `owed`; Super Admin marks marketer payout `paid`. SMS credit packs are not commissionable in v1. One marketer per tenant; paused marketers stop new attachments but existing owed stays payable.</action>
+ <reason>Matches Bangladesh high-touch WhatsApp sales while giving partners a self-serve dashboard and giving Super Admin owed-vs-paid visibility without automating payouts.</reason>
+</decision>
+
+<decision>
+ <category>CRO</category>
+ <context>Referral links and discount codes must survive the WhatsApp handoff so Super Admin can attach the right partner when creating a tenant.</context>
+ <action>Central marketing captures `?ref=` and `?code=` into session via `CaptureReferralParams` middleware; WhatsApp prefilled messages append `Ref:` / `Code:` when present. Super Admin tenant create prefills marketer/discount from session with manual override.</action>
+ <reason>Partner gets credit even when the doctor skips self-signup and chats sales directly — the context rides in the WhatsApp message and session.</reason>
+</decision>
+
+<decision>
+ <category>Code</category>
+ <context>Commission math, monthly row generation, and doctor-payment confirmation must stay consistent and idempotent across Super Admin actions and cron.</context>
+ <action>`DiscountCalculator`, `PlanPricingService`, `CommissionService`, Artisan `commissions:generate-monthly` (scheduled 7th of month). Tables: `marketers`, `discount_codes`, `billing_payments`, `commissions`; tenant columns for marketer, discount snapshot, list/due amounts, `setup_paid_at`.</action>
+ <reason>Single service layer prevents duplicate monthly rows and ensures commission is always calculated on post-discount amounts actually paid.</reason>
+</decision>

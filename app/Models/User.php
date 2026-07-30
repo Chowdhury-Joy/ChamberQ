@@ -27,6 +27,8 @@ class User extends Authenticatable implements FilamentUser, CanResetPasswordCont
 
     public const ROLE_PATIENT = 'patient';
 
+    public const ROLE_MARKETER = 'marketer';
+
     /**
      * Tenant panel roles that can sign in.
      *
@@ -122,13 +124,29 @@ class User extends Authenticatable implements FilamentUser, CanResetPasswordCont
         return $this->isAdmin();
     }
 
+    public function isMarketer(): bool
+    {
+        return $this->role === self::ROLE_MARKETER;
+    }
+
+    public function marketerProfile(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Marketer::class);
+    }
+
     public function canAccessPanel(Panel $panel): bool
     {
         if ($panel->getId() === 'superAdmin') {
             return $this->role === self::ROLE_SUPER_ADMIN && $this->tenant_id === null;
         }
 
-        if ($panel->getId() === 'tenantAdmin') {
+        if ($panel->getId() === 'marketer') {
+            return $this->role === self::ROLE_MARKETER
+                && $this->tenant_id === null
+                && $this->marketerProfile()->exists();
+        }
+
+        if (in_array($panel->getId(), ['tenantAdmin', 'tenantAdminPath'], true)) {
             return in_array($this->role, self::TENANT_PANEL_ROLES, true)
                 && $this->tenant_id !== null
                 && tenancy()->initialized

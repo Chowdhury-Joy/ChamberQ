@@ -37,6 +37,15 @@ class Tenant extends BaseTenant
             'billing_status',
             'sms_balance',
             'plan_tier',
+            'marketer_id',
+            'discount_code_id',
+            'list_setup_amount',
+            'list_monthly_amount',
+            'setup_amount_due',
+            'monthly_amount_due',
+            'referral_note',
+            'referred_at',
+            'setup_paid_at',
             'slot_cap_mode',
             'feature_flags',
             'call_timeout_seconds',
@@ -81,7 +90,38 @@ class Tenant extends BaseTenant
             'feature_flags' => 'array',
             'custom_code_approved_at' => 'datetime',
             'sms_balance' => 'integer',
+            'list_setup_amount' => 'integer',
+            'list_monthly_amount' => 'integer',
+            'setup_amount_due' => 'integer',
+            'monthly_amount_due' => 'integer',
+            'referred_at' => 'datetime',
+            'setup_paid_at' => 'datetime',
         ];
+    }
+
+    public function marketer(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Marketer::class);
+    }
+
+    public function discountCode(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(DiscountCode::class);
+    }
+
+    public function billingPayments(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(BillingPayment::class);
+    }
+
+    public function commissions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(Commission::class);
+    }
+
+    public function hasSetupPaid(): bool
+    {
+        return $this->setup_paid_at !== null;
     }
 
     public function hasFeature(string $feature): bool

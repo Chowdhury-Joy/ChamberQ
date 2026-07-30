@@ -9,7 +9,7 @@ if (blank($centralDomains)) {
 }
 
 foreach ($centralDomains as $domain) {
-    Route::domain($domain)->group(function () {
+    Route::domain($domain)->middleware(\App\Http\Middleware\CaptureReferralParams::class)->group(function () {
         Route::get('/', function () {
             return view('marketing.home');
         });

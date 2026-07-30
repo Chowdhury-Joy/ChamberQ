@@ -1,16 +1,18 @@
 # Site Map
-Last Updated: 2026-07-31T04:15:00+06:00
+Last Updated: 2026-07-31T16:30:00+06:00
 
 ## Full Site Map
 
-### Central (marketing + Super Admin)
+### Central (marketing + Super Admin + Marketer partner)
 Hosts: values in `CENTRAL_DOMAINS` (e.g. `localhost`).
 
 | Route | Purpose | Access |
 |-------|---------|--------|
-| `/` | Sales landing for Doctor Gemini (Solo/Clinic plans, WhatsApp CTAs) | public |
+| `/` | Sales landing for Doctor Gemini (Solo/Clinic plans, WhatsApp CTAs); captures `?ref=` and `?code=` into session | public |
 | `/admin` | Super Admin Filament login | public login |
-| `/admin/*` | Super Admin: Tenants (create/edit slug, optional custom domains, plan_tier, feature_flags, SMS top-up, billing_status) | super_admin only |
+| `/admin/*` | Super Admin: Tenants, Marketers, Discount Codes, Commissions; finance dashboard widgets; confirm doctor payments on tenant edit | super_admin only |
+| `/partner` | Marketer partner panel login | public login |
+| `/partner/*` | Marketer: referral link, owed/paid stats, referred doctors list, commission history | marketer only |
 | `/up` | Laravel health check | public |
 
 ### Platform tenant (central path tenancy)
@@ -55,9 +57,15 @@ Available under both platform path (`/{slug}/api/…`) and custom domain (`/api/
 ## Customer Journeys
 
 ### New visitor → interested lead (central sales)
-1. Land on `/` — understand Solo vs Clinic and pricing. Goal: trust + clarity.
-2. Tap WhatsApp CTA. Goal: start sales chat.
-3. Human sales/onboarding creates tenant in Super Admin with URL slug. Goal: go-live at `/{slug}`.
+1. Land on `/` (or partner link `/?ref=joy20`) — understand Solo vs Clinic and pricing. Goal: trust + clarity.
+2. Tap WhatsApp CTA (message includes Ref/Code if captured). Goal: start sales chat.
+3. Human sales/onboarding creates tenant in Super Admin with URL slug, attaches marketer/discount. Goal: go-live at `/{slug}`.
+
+### Marketer partner → refer a doctor
+1. Log in at `/partner` — copy referral link `/?ref={code}`.
+2. Share link with doctor prospect.
+3. Doctor chats WhatsApp; Super Admin creates tenant with marketer attached.
+4. When doctor pays setup/monthly, Super Admin confirms payment → marketer sees owed commission → Super Admin marks payout paid.
 
 ### Patient → book serial → ticket
 1. Open `/{slug}/` or custom domain home — see doctor brand + Book CTA.
@@ -77,9 +85,14 @@ Available under both platform path (`/{slug}/api/…`) and custom domain (`/api/
 
 ### New tenant → go live (Super Admin)
 - **Trigger:** Sales closes a doctor/clinic.
-- **Steps:** Create Tenant with URL **slug** (e.g. `drkarim`) → optional custom **domain** → set `plan_tier`, SMS, `billing_status` → hand off admin login.
+- **Steps:** Create Tenant with URL **slug** (e.g. `drkarim`) → optional custom **domain** → set `plan_tier`, attach **marketer** / **discount code**, snapshot pricing → set SMS, `billing_status` → hand off admin login.
 - **URLs:** Platform `/{slug}/…`; after custom domain DNS, also `drkarim.com/…` at root.
 - **Success:** `/{slug}/book` works; admin at `/{slug}/admin` (or `/admin` on custom domain).
+
+### Confirm doctor payment & pay marketer (Super Admin)
+- **Trigger:** bKash/bank payment received from doctor.
+- **Steps:** Tenant edit → **Confirm setup paid** or **Confirm monthly paid** (period YYYY-MM) → Commissions list shows **owed** → **Mark payout paid** with bKash trx note.
+- **Success:** Platform finance widget reflects collected cash, owed, paid, and net revenue.
 
 ### Open clinic day → run queue
 - **Trigger:** Session day starts.

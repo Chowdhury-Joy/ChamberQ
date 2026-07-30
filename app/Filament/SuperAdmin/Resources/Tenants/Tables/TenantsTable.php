@@ -28,6 +28,14 @@ class TenantsTable
                         'solo' => 'info',
                         default => 'gray',
                     }),
+                TextColumn::make('marketer.display_name')
+                    ->label(__('Marketer'))
+                    ->placeholder('—')
+                    ->toggleable(),
+                TextColumn::make('setup_amount_due')
+                    ->label(__('Setup due'))
+                    ->formatStateUsing(fn ($state) => $state ? '৳'.number_format((int) $state) : '—')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('billing_status')
                     ->label('Billing')
                     ->badge()
