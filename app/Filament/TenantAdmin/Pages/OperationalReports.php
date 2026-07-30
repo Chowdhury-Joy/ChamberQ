@@ -35,6 +35,9 @@ class OperationalReports extends Page implements HasTable
 
     public string $anchorDate = '';
 
+    /** @var array{total: int, completed: int, waiting: int, called: int, in_chamber: int, skipped: int, no_show: int, cancelled: int}|null */
+    protected ?array $totalsCache = null;
+
     public static function canAccess(): bool
     {
         /** @var \App\Models\User|null $user */
@@ -50,11 +53,13 @@ class OperationalReports extends Page implements HasTable
 
     public function updatedPeriod(): void
     {
+        $this->totalsCache = null;
         $this->resetTable();
     }
 
     public function updatedAnchorDate(): void
     {
+        $this->totalsCache = null;
         $this->resetTable();
     }
 
@@ -77,14 +82,67 @@ class OperationalReports extends Page implements HasTable
      */
     public function getTotals(): array
     {
+        if ($this->totalsCache !== null) {
+            return $this->totalsCache;
+        }
+
         $service = $this->getReportService();
         $anchor = $this->getAnchor();
 
-        return match ($this->period) {
+        return $this->totalsCache = match ($this->period) {
             'week' => $service->countsBetween(...$service->weekRange($anchor)),
             'month' => $service->countsBetween(...$service->monthRange($anchor)),
             default => $service->countsForDate($anchor),
         };
+    }
+
+    /**
+     * Patients still moving through the queue: booked in, not yet finished.
+     */
+    public function getQueueCount(): int
+    {
+        $totals = $this->getTotals();
+
+        return $totals['waiting'] + $totals['called'] + $totals['in_chamber'];
+    }
+
+    /**
+     * Bookings that did not turn into a completed visit.
+     */
+    public function getProblemCount(): int
+    {
+        $totals = $this->getTotals();
+
+        return $totals['skipped'] + $totals['no_show'] + $totals['cancelled'];
+    }
+
+    public function getCompletionRate(): ?int
+    {
+        $totals = $this->getTotals();
+
+        if ($totals['total'] === 0) {
+            return null;
+        }
+
+        return (int) round($totals['completed'] / $totals['total'] * 100);
+    }
+
+    /**
+     * Display metadata for each status chip, in reporting order.
+     *
+     * @return array<string, array{label: string, color: string, icon: string}>
+     */
+    public function getStatusMeta(): array
+    {
+        return [
+            'completed' => ['label' => __('Completed'), 'color' => 'success', 'icon' => 'heroicon-m-check-circle'],
+            'waiting' => ['label' => __('Waiting'), 'color' => 'gray', 'icon' => 'heroicon-m-clock'],
+            'called' => ['label' => __('Called'), 'color' => 'warning', 'icon' => 'heroicon-m-bell-alert'],
+            'in_chamber' => ['label' => __('In chamber'), 'color' => 'info', 'icon' => 'heroicon-m-user'],
+            'skipped' => ['label' => __('Skipped'), 'color' => 'warning', 'icon' => 'heroicon-m-forward'],
+            'no_show' => ['label' => __('No-show'), 'color' => 'danger', 'icon' => 'heroicon-m-user-minus'],
+            'cancelled' => ['label' => __('Cancelled'), 'color' => 'danger', 'icon' => 'heroicon-m-x-circle'],
+        ];
     }
 
     /**

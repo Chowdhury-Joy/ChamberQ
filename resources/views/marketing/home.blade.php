@@ -23,8 +23,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="color-scheme" content="light only">
     <meta name="theme-color" content="#ffffff">
-    <meta name="description" content="Doctor Gemini helps solo doctors in Bangladesh cut waiting time so patients leave happier and recommend your chamber.">
-    <title>{{ $product }} — Patients wait less. They tell others.</title>
+    <meta name="description" content="Doctor Gemini gives solo doctors a calmer chamber with online serials, live queues, and less waiting for every patient.">
+    <title>{{ $product }} — Give patients their time back</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/marketing.css') }}">
 </head>
 <body class="mk">

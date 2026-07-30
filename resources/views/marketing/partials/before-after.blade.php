@@ -1,28 +1,32 @@
 @php
     $ba = config('marketing.before_after');
 @endphp
-<section class="mk-section mk-band" id="before-after" aria-labelledby="compare-heading">
+<section class="mk-section mk-compare" id="before-after" aria-labelledby="compare-heading">
     <div class="mk-wrap">
-        <div class="mk-section-head mk-narrow">
-            <h2 id="compare-heading">Before us vs after us</h2>
-            <p>Same chamber. Very different day.</p>
+        <div class="mk-section-head mk-section-head-light">
+            <p class="mk-kicker">The everyday difference</p>
+            <h2 id="compare-heading">Same chamber.<br><em>A much better day.</em></h2>
         </div>
         <div class="mk-compare-grid">
-            <article class="mk-compare-card">
-                <h3>Before using us</h3>
-                <p class="mk-compare-stat">{{ $ba['before']['value'] }} {{ $ba['before']['label'] }}</p>
+            <article class="mk-compare-card mk-compare-before">
+                <div class="mk-compare-top">
+                    <span>Before using us</span>
+                    <strong>{{ $ba['before']['value'] }}</strong>
+                </div>
                 <ul>
                     @foreach($ba['before']['bullets'] as $bullet)
-                        <li>{{ $bullet }}</li>
+                        <li><span>×</span>{{ $bullet }}</li>
                     @endforeach
                 </ul>
             </article>
-            <article class="mk-compare-card is-after">
-                <h3>After using us</h3>
-                <p class="mk-compare-stat">{{ $ba['after']['value'] }} {{ $ba['after']['label'] }}</p>
+            <article class="mk-compare-card mk-compare-after">
+                <div class="mk-compare-top">
+                    <span>After using us</span>
+                    <strong>{{ $ba['after']['value'] }}</strong>
+                </div>
                 <ul>
                     @foreach($ba['after']['bullets'] as $bullet)
-                        <li>{{ $bullet }}</li>
+                        <li><span>✓</span>{{ $bullet }}</li>
                     @endforeach
                 </ul>
             </article>

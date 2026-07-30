@@ -1,8 +1,11 @@
 <section class="mk-section" id="how" aria-labelledby="how-heading">
     <div class="mk-wrap">
-        <div class="mk-section-head mk-narrow">
-            <h2 id="how-heading">How it works</h2>
-            <p>From the patient’s phone to your day list — start to end.</p>
+        <div class="mk-section-head mk-section-head-split">
+            <div>
+                <p class="mk-kicker">One simple flow</p>
+                <h2 id="how-heading">From “I need a doctor”<br>to <em>“I’m next.”</em></h2>
+            </div>
+            <p>Six small steps. No app download, no patient account, no confusing setup.</p>
         </div>
         <div class="mk-steps-grid">
             @foreach(config('marketing.steps') as $index => $step)
@@ -14,14 +17,11 @@
                         @if($exists)
                             <img src="{{ asset($step['image']) }}" alt="{{ $step['title'] }}" width="800" height="600">
                         @else
-                            <div class="mk-placeholder">
-                                <strong>{{ $step['title'] }}</strong>
-                                <span>{{ basename($step['image']) }}</span>
-                            </div>
+                            @include('marketing.partials.product-preview', ['preview' => $step['key']])
                         @endif
                     </div>
                     <div class="mk-step-body">
-                        <span class="mk-step-num">Step {{ $index + 1 }}</span>
+                        <span class="mk-step-num">{{ str_pad($index + 1, 2, '0', STR_PAD_LEFT) }}</span>
                         <h3>{{ $step['title'] }}</h3>
                         <p>{{ $step['caption'] }}</p>
                     </div>

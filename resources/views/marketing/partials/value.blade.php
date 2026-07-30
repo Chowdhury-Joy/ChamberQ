@@ -1,8 +1,11 @@
 <section class="mk-section mk-band" id="why" aria-labelledby="why-heading">
     <div class="mk-wrap">
-        <div class="mk-section-head mk-narrow">
-            <h2 id="why-heading">Why solo doctors switch</h2>
-            <p>Less scramble for you. Less waiting for them. Your name spreads.</p>
+        <div class="mk-section-head mk-section-head-split">
+            <div>
+                <p class="mk-kicker">What really changes</p>
+                <h2 id="why-heading">Good care feels better<br><em>when the wait does too.</em></h2>
+            </div>
+            <p>Less admin for you. More respect for their time. A visit worth telling others about.</p>
         </div>
         <ul class="mk-value-list">
             @foreach(config('marketing.value_points') as $point)
@@ -15,9 +18,14 @@
                         @if($exists)
                             <img src="{{ asset($point['image']) }}" alt="{{ $point['title'] }}" width="640" height="400">
                         @else
-                            <div class="mk-placeholder">
-                                <strong>{{ $point['title'] }}</strong>
-                                <span>{{ basename($point['image']) }}</span>
+                            <div class="mk-value-art" aria-hidden="true">
+                                @if($loop->iteration === 1)
+                                    <span class="mk-art-phone">☎</span><span class="mk-art-slash"></span><span class="mk-art-clock">25m</span>
+                                @elseif($loop->iteration === 2)
+                                    <span class="mk-art-person"></span><span class="mk-art-progress"><i></i></span><b>08</b>
+                                @else
+                                    <span class="mk-art-bubble">“That was easy.”</span><span class="mk-art-hearts">♥ ♥</span>
+                                @endif
                             </div>
                         @endif
                     </div>

@@ -12,8 +12,10 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Services\OperationalReportService;
 use Carbon\Carbon;
+use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class OperationalReportsTest extends TestCase
@@ -169,6 +171,70 @@ class OperationalReportsTest extends TestCase
         $this->assertNotNull($firstWeek);
         $this->assertSame(1, $firstWeek['completed']);
         $this->assertSame(1, $firstWeek['total']);
+    }
+
+    public function test_day_report_page_renders_headline_numbers(): void
+    {
+        $today = '2026-07-28';
+        $this->makeBooking($today, 'completed', 1);
+        $this->makeBooking($today, 'completed', 2);
+        $this->makeBooking($today, 'waiting', 3);
+        $this->makeBooking($today, 'called', 4);
+        $this->makeBooking($today, 'no_show', 5);
+
+        $this->actingAs($this->makeUser(User::ROLE_ADMIN));
+        Filament::setCurrentPanel(Filament::getPanel('tenantAdmin'));
+
+        $component = Livewire::test(OperationalReports::class)
+            ->set('anchorDate', $today)
+            ->assertOk()
+            ->assertSee('Total bookings')
+            ->assertSee('Still in queue')
+            ->assertSee('Needs attention')
+            ->assertSee('Status breakdown');
+
+        $page = $component->instance();
+
+        $this->assertSame(5, $page->getTotals()['total']);
+        $this->assertSame(2, $page->getQueueCount());
+        $this->assertSame(1, $page->getProblemCount());
+        $this->assertSame(40, $page->getCompletionRate());
+    }
+
+    public function test_week_and_month_periods_render_breakdown_tables(): void
+    {
+        $this->makeBooking('2026-07-26', 'completed', 1);
+        $this->makeBooking('2026-07-28', 'cancelled', 2);
+
+        $this->actingAs($this->makeUser(User::ROLE_ADMIN));
+        Filament::setCurrentPanel(Filament::getPanel('tenantAdmin'));
+
+        Livewire::test(OperationalReports::class)
+            ->set('anchorDate', '2026-07-28')
+            ->set('period', 'week')
+            ->assertOk()
+            ->assertSee('Daily breakdown')
+            ->assertSee('Week total')
+            ->set('period', 'month')
+            ->assertOk()
+            ->assertSee('Weekly breakdown')
+            ->assertSee('Month total');
+    }
+
+    public function test_completion_rate_is_null_when_no_bookings(): void
+    {
+        $this->actingAs($this->makeUser(User::ROLE_ADMIN));
+        Filament::setCurrentPanel(Filament::getPanel('tenantAdmin'));
+
+        $page = Livewire::test(OperationalReports::class)
+            ->set('anchorDate', '2026-07-28')
+            ->assertOk()
+            ->assertSee('No bookings recorded for this period yet.')
+            ->instance();
+
+        $this->assertNull($page->getCompletionRate());
+        $this->assertSame(0, $page->getQueueCount());
+        $this->assertSame(0, $page->getProblemCount());
     }
 
     public function test_admin_and_doctor_can_access_reports_but_staff_cannot(): void

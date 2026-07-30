@@ -8,7 +8,7 @@
     $ctaLink = \App\Support\SafeUrl::href($data['cta_link'] ?? '/book', '/book');
 @endphp
 
-<section class="solo-section w-full bg-white" aria-label="{{ __('Introduction') }}">
+<section class="solo-section-hero w-full bg-white" aria-label="{{ __('Introduction') }}">
     <div class="mx-auto grid max-w-[1280px] gap-8 px-3 sm:px-10 lg:grid-cols-2 lg:gap-10">
         <div class="solo-fade-up flex flex-col justify-between gap-8 lg:min-h-[584px]">
             <div>
@@ -38,7 +38,7 @@
             </div>
         </div>
 
-        <div class="solo-fade-up-delay overflow-hidden rounded-none bg-slate-100 lg:min-h-[584px]">
+        <div class="solo-fade-up-delay overflow-hidden rounded-2xl bg-slate-100 lg:min-h-[584px]">
             <img
                 src="{{ $image }}"
                 alt="{{ $headline }}"

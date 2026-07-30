@@ -111,6 +111,10 @@
                 padding-bottom: 96px;
             }
         }
+        .solo-section-hero {
+            padding-top: 32px;
+            padding-bottom: 32px;
+        }
     </style>
     <script>
         if ('serviceWorker' in navigator) {

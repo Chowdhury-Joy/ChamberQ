@@ -2,7 +2,7 @@
 
 Multi-tenant SaaS for Bangladesh solo doctors and clinics: branded patient site, online serial booking, live waiting-room queue, and Filament admin.
 
-Patients pay at the chamber. WhatsApp is free `wa.me` sharing (no Business API). SMS confirmations use a **prepaid credit wallet** (no included free SMS) — Super Admin tops up tenants; each successful confirm debits 1 credit.
+Patients pay at the chamber. Online pre-payment is later-stage only — do not suggest or build it unless explicitly requested. WhatsApp is free `wa.me` sharing (no Business API). SMS confirmations use a **prepaid credit wallet** (no included free SMS) — Super Admin tops up tenants; each successful confirm debits 1 credit.
 
 ## Local setup
 

@@ -1,167 +1,382 @@
 <x-filament-panels::page>
-    <div class="space-y-6">
-        <div class="fi-section rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
-            <div class="fi-section-content-ctn p-4 sm:p-6">
-                <div class="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end">
-                    <div class="sm:w-44">
-                        <label for="ops-report-period" class="fi-fo-field-wrp-label inline-flex items-center gap-x-1 text-sm font-medium text-gray-950 dark:text-white">
-                            {{ __('Period') }}
-                        </label>
-                        <select
-                            id="ops-report-period"
-                            wire:model.live="period"
-                            class="fi-input mt-2 block w-full rounded-lg border-none bg-white px-3 py-2 text-sm text-gray-950 shadow-sm ring-1 ring-gray-950/10 focus:ring-2 focus:ring-primary-600 dark:bg-white/5 dark:text-white dark:ring-white/20"
-                        >
-                            <option value="day">{{ __('Day') }}</option>
-                            <option value="week">{{ __('Week') }}</option>
-                            <option value="month">{{ __('Month') }}</option>
-                        </select>
-                    </div>
+    @php
+        $totals = $this->getTotals();
+        $statusMeta = $this->getStatusMeta();
+        $queueCount = $this->getQueueCount();
+        $problemCount = $this->getProblemCount();
+        $completionRate = $this->getCompletionRate();
+    @endphp
 
-                    <div class="sm:w-56">
-                        <label for="ops-report-date" class="fi-fo-field-wrp-label inline-flex items-center gap-x-1 text-sm font-medium text-gray-950 dark:text-white">
-                            @if ($period === 'week')
-                                {{ __('Any day in week') }}
-                            @elseif ($period === 'month')
-                                {{ __('Any day in month') }}
-                            @else
-                                {{ __('Date') }}
-                            @endif
-                        </label>
-                        <input
-                            id="ops-report-date"
-                            type="date"
-                            wire:model.live="anchorDate"
-                            class="fi-input mt-2 block w-full rounded-lg border-none bg-white px-3 py-2 text-sm text-gray-950 shadow-sm ring-1 ring-gray-950/10 focus:ring-2 focus:ring-primary-600 dark:bg-white/5 dark:text-white dark:ring-white/20"
-                        />
-                    </div>
+    {{--
+        This panel ships Filament's precompiled stylesheet, so arbitrary Tailwind
+        utilities are not available here. Layout is written against Filament's own
+        CSS variables so it tracks the panel theme and dark mode.
+    --}}
+    <style>
+        .ops-report { display: flex; flex-direction: column; gap: 1.5rem; }
 
-                    <p class="text-sm text-gray-500 dark:text-gray-400 sm:pb-2">
-                        {{ $this->getPeriodLabel() }}
-                        <span class="text-gray-400 dark:text-gray-500">· Asia/Dhaka</span>
-                    </p>
+        .ops-filters {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: flex-end;
+            gap: 1rem;
+        }
+        .ops-field { display: flex; flex-direction: column; gap: 0.375rem; min-width: 12rem; }
+        .ops-field-label { font-size: 0.8125rem; font-weight: 600; color: var(--gray-700); }
+        .dark .ops-field-label { color: var(--gray-300); }
+        .ops-control {
+            width: 100%;
+            padding: 0.5rem 0.75rem;
+            font-size: 0.875rem;
+            color: var(--gray-950);
+            background-color: var(--color-white);
+            border: 1px solid var(--gray-300);
+            border-radius: 0.5rem;
+            box-shadow: 0 1px 2px rgb(0 0 0 / 0.05);
+        }
+        .ops-control:focus {
+            outline: 2px solid var(--primary-500);
+            outline-offset: -1px;
+            border-color: var(--primary-500);
+        }
+        .dark .ops-control {
+            color: var(--color-white);
+            background-color: var(--gray-900);
+            border-color: var(--gray-700);
+        }
+        .ops-period {
+            margin-inline-start: auto;
+            padding-bottom: 0.5rem;
+            font-size: 0.875rem;
+            color: var(--gray-600);
+        }
+        .ops-period strong { font-weight: 600; color: var(--gray-950); }
+        .dark .ops-period { color: var(--gray-400); }
+        .dark .ops-period strong { color: var(--color-white); }
+
+        .ops-kpis {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+            gap: 1rem;
+        }
+        .ops-kpi {
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            gap: 0.625rem;
+            padding: 1.25rem;
+            background-color: var(--color-white);
+            border: 1px solid var(--gray-200);
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px rgb(0 0 0 / 0.06);
+        }
+        .ops-kpi::before {
+            content: '';
+            position: absolute;
+            inset-block: 0;
+            inset-inline-start: 0;
+            width: 3px;
+            background-color: var(--ops-accent);
+        }
+        .dark .ops-kpi { background-color: var(--gray-900); border-color: var(--gray-800); }
+
+        .ops-kpi-head { display: flex; align-items: center; gap: 0.5rem; }
+        .ops-kpi-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 1.75rem;
+            height: 1.75rem;
+            border-radius: 0.5rem;
+            color: var(--ops-accent);
+            background-color: var(--ops-accent-soft);
+        }
+        .ops-kpi-icon svg { width: 1rem; height: 1rem; }
+        .ops-kpi-label {
+            font-size: 0.8125rem;
+            font-weight: 600;
+            color: var(--gray-600);
+        }
+        .dark .ops-kpi-label { color: var(--gray-400); }
+        .ops-kpi-value {
+            font-size: 2rem;
+            font-weight: 700;
+            line-height: 1.1;
+            color: var(--gray-950);
+        }
+        .dark .ops-kpi-value { color: var(--color-white); }
+        .ops-kpi-hint { font-size: 0.8125rem; color: var(--gray-500); }
+        .dark .ops-kpi-hint { color: var(--gray-500); }
+
+        .ops-statuses {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+            gap: 0.75rem;
+        }
+        .ops-status {
+            display: flex;
+            flex-direction: column;
+            gap: 0.375rem;
+            padding: 0.75rem;
+            border-radius: 0.625rem;
+            background-color: var(--gray-50);
+            border: 1px solid var(--gray-200);
+        }
+        .dark .ops-status { background-color: var(--gray-900); border-color: var(--gray-800); }
+        .ops-status.ops-status-empty { opacity: 0.55; }
+        .ops-status-value {
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: var(--gray-950);
+        }
+        .dark .ops-status-value { color: var(--color-white); }
+
+        .ops-empty {
+            padding: 0.25rem 0;
+            font-size: 0.875rem;
+            color: var(--gray-500);
+        }
+
+        .ops-table-scroll { overflow-x: auto; }
+        .ops-table {
+            width: 100%;
+            min-width: 44rem;
+            border-collapse: collapse;
+            font-size: 0.875rem;
+        }
+        .ops-table th,
+        .ops-table td {
+            padding: 0.75rem 0.875rem;
+            text-align: end;
+            white-space: nowrap;
+            border-bottom: 1px solid var(--gray-200);
+        }
+        .dark .ops-table th,
+        .dark .ops-table td { border-color: var(--gray-800); }
+        .ops-table th:first-child,
+        .ops-table td:first-child { text-align: start; }
+        .ops-table thead th {
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.03em;
+            color: var(--gray-500);
+            background-color: var(--gray-50);
+        }
+        .dark .ops-table thead th { background-color: var(--gray-900); color: var(--gray-400); }
+        .ops-table tbody td { color: var(--gray-700); }
+        .dark .ops-table tbody td { color: var(--gray-300); }
+        .ops-table tbody tr:hover td { background-color: var(--gray-50); }
+        .dark .ops-table tbody tr:hover td { background-color: var(--gray-900); }
+        .ops-table .ops-cell-label,
+        .ops-table .ops-cell-total {
+            font-weight: 600;
+            color: var(--gray-950);
+        }
+        .dark .ops-table .ops-cell-label,
+        .dark .ops-table .ops-cell-total { color: var(--color-white); }
+        .ops-table .ops-cell-zero { color: var(--gray-400); }
+        .ops-table tfoot td {
+            font-weight: 700;
+            color: var(--gray-950);
+            background-color: var(--gray-50);
+            border-bottom: 0;
+        }
+        .dark .ops-table tfoot td { color: var(--color-white); background-color: var(--gray-900); }
+
+        @media (max-width: 640px) {
+            .ops-period { margin-inline-start: 0; padding-bottom: 0; }
+            .ops-field { min-width: 100%; }
+            .ops-kpi-value { font-size: 1.75rem; }
+        }
+    </style>
+
+    <div class="ops-report">
+        {{-- Filters --}}
+        <x-filament::section>
+            <div class="ops-filters">
+                <div class="ops-field">
+                    <label for="ops-report-period" class="ops-field-label">{{ __('Period') }}</label>
+                    <select id="ops-report-period" wire:model.live="period" class="ops-control">
+                        <option value="day">{{ __('Day') }}</option>
+                        <option value="week">{{ __('Week') }}</option>
+                        <option value="month">{{ __('Month') }}</option>
+                    </select>
                 </div>
-            </div>
-        </div>
 
-        @php($totals = $this->getTotals())
+                <div class="ops-field">
+                    <label for="ops-report-date" class="ops-field-label">
+                        @if ($period === 'week')
+                            {{ __('Any day in week') }}
+                        @elseif ($period === 'month')
+                            {{ __('Any day in month') }}
+                        @else
+                            {{ __('Date') }}
+                        @endif
+                    </label>
+                    <input id="ops-report-date" type="date" wire:model.live="anchorDate" class="ops-control" />
+                </div>
 
-        <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div class="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
-                <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Total bookings') }}</p>
-                <p class="mt-1 text-2xl font-semibold text-gray-950 dark:text-white">{{ $totals['total'] }}</p>
-            </div>
-            <div class="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
-                <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Completed') }}</p>
-                <p class="mt-1 text-2xl font-semibold text-gray-950 dark:text-white">{{ $totals['completed'] }}</p>
-            </div>
-            <div class="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
-                <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Waiting / Called / In chamber') }}</p>
-                <p class="mt-1 text-2xl font-semibold text-gray-950 dark:text-white">
-                    {{ $totals['waiting'] }} / {{ $totals['called'] }} / {{ $totals['in_chamber'] }}
+                <p class="ops-period">
+                    <strong>{{ $this->getPeriodLabel() }}</strong><br />
+                    {{ \App\Services\OperationalReportService::TIMEZONE }}
                 </p>
             </div>
-            <div class="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
-                <p class="text-sm text-gray-500 dark:text-gray-400">{{ __('Skipped / No-show / Cancelled') }}</p>
-                <p class="mt-1 text-2xl font-semibold text-gray-950 dark:text-white">
-                    {{ $totals['skipped'] }} / {{ $totals['no_show'] }} / {{ $totals['cancelled'] }}
-                </p>
+        </x-filament::section>
+
+        {{-- Headline numbers --}}
+        <div class="ops-kpis">
+            <div class="ops-kpi" style="--ops-accent: var(--primary-600); --ops-accent-soft: var(--primary-50);">
+                <div class="ops-kpi-head">
+                    <span class="ops-kpi-icon">
+                        <x-filament::icon icon="heroicon-m-calendar-days" />
+                    </span>
+                    <span class="ops-kpi-label">{{ __('Total bookings') }}</span>
+                </div>
+                <div class="ops-kpi-value">{{ number_format($totals['total']) }}</div>
+                <div class="ops-kpi-hint">{{ __('Everything booked in this period') }}</div>
+            </div>
+
+            <div class="ops-kpi" style="--ops-accent: var(--success-600); --ops-accent-soft: var(--success-50);">
+                <div class="ops-kpi-head">
+                    <span class="ops-kpi-icon">
+                        <x-filament::icon icon="heroicon-m-check-circle" />
+                    </span>
+                    <span class="ops-kpi-label">{{ __('Completed') }}</span>
+                </div>
+                <div class="ops-kpi-value">{{ number_format($totals['completed']) }}</div>
+                <div class="ops-kpi-hint">
+                    @if ($completionRate !== null)
+                        {{ __(':rate% of all bookings', ['rate' => $completionRate]) }}
+                    @else
+                        {{ __('Visits finished with the doctor') }}
+                    @endif
+                </div>
+            </div>
+
+            <div class="ops-kpi" style="--ops-accent: var(--info-600); --ops-accent-soft: var(--info-50);">
+                <div class="ops-kpi-head">
+                    <span class="ops-kpi-icon">
+                        <x-filament::icon icon="heroicon-m-users" />
+                    </span>
+                    <span class="ops-kpi-label">{{ __('Still in queue') }}</span>
+                </div>
+                <div class="ops-kpi-value">{{ number_format($queueCount) }}</div>
+                <div class="ops-kpi-hint">{{ __('Waiting, called or in chamber') }}</div>
+            </div>
+
+            <div class="ops-kpi" style="--ops-accent: var(--danger-600); --ops-accent-soft: var(--danger-50);">
+                <div class="ops-kpi-head">
+                    <span class="ops-kpi-icon">
+                        <x-filament::icon icon="heroicon-m-exclamation-triangle" />
+                    </span>
+                    <span class="ops-kpi-label">{{ __('Needs attention') }}</span>
+                </div>
+                <div class="ops-kpi-value">{{ number_format($problemCount) }}</div>
+                <div class="ops-kpi-hint">{{ __('Skipped, no-show or cancelled') }}</div>
             </div>
         </div>
 
-        <div class="grid gap-3 sm:grid-cols-4 lg:grid-cols-7">
-            @foreach (\App\Services\OperationalReportService::STATUSES as $status)
-                <div class="rounded-lg bg-gray-50 px-3 py-2 text-center ring-1 ring-gray-950/5 dark:bg-white/5 dark:ring-white/10">
-                    <p class="text-xs capitalize text-gray-500 dark:text-gray-400">{{ str_replace('_', ' ', $status) }}</p>
-                    <p class="mt-0.5 text-lg font-semibold text-gray-950 dark:text-white">{{ $totals[$status] }}</p>
+        {{-- Status breakdown --}}
+        <x-filament::section :heading="__('Status breakdown')" :description="__('Every booking in this period, grouped by where it ended up.')">
+            @if ($totals['total'] === 0)
+                <p class="ops-empty">{{ __('No bookings recorded for this period yet.') }}</p>
+            @else
+                <div class="ops-statuses">
+                    @foreach ($statusMeta as $status => $meta)
+                        <div @class(['ops-status', 'ops-status-empty' => $totals[$status] === 0])>
+                            <x-filament::badge :color="$meta['color']" :icon="$meta['icon']">
+                                {{ $meta['label'] }}
+                            </x-filament::badge>
+                            <span class="ops-status-value">{{ number_format($totals[$status]) }}</span>
+                        </div>
+                    @endforeach
                 </div>
-            @endforeach
-        </div>
+            @endif
+        </x-filament::section>
 
+        {{-- Detail --}}
         @if ($period === 'day')
             {{ $this->table }}
         @elseif ($period === 'week')
-            <div class="fi-section overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
-                <div class="overflow-x-auto">
-                    <table class="w-full min-w-[640px] divide-y divide-gray-200 text-sm dark:divide-white/10">
-                        <thead class="bg-gray-50 dark:bg-white/5">
+            <x-filament::section :heading="__('Daily breakdown')" :description="__('Sunday to Saturday, for the selected week.')">
+                <div class="ops-table-scroll">
+                    <table class="ops-table">
+                        <thead>
                             <tr>
-                                <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">{{ __('Day') }}</th>
-                                <th class="px-3 py-3 text-right font-medium text-gray-500 dark:text-gray-400">{{ __('Total') }}</th>
-                                @foreach (\App\Services\OperationalReportService::STATUSES as $status)
-                                    <th class="px-3 py-3 text-right font-medium capitalize text-gray-500 dark:text-gray-400">
-                                        {{ str_replace('_', ' ', $status) }}
-                                    </th>
+                                <th>{{ __('Day') }}</th>
+                                <th>{{ __('Total') }}</th>
+                                @foreach ($statusMeta as $meta)
+                                    <th>{{ $meta['label'] }}</th>
                                 @endforeach
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-200 dark:divide-white/10">
+                        <tbody>
                             @foreach ($this->getDailyRows() as $date => $row)
                                 <tr wire:key="week-{{ $date }}">
-                                    <td class="px-4 py-3 font-medium text-gray-950 dark:text-white">
+                                    <td class="ops-cell-label">
                                         {{ \Carbon\Carbon::parse($date)->translatedFormat('D, j M') }}
                                     </td>
-                                    <td class="px-3 py-3 text-right font-semibold text-gray-950 dark:text-white">{{ $row['total'] }}</td>
-                                    @foreach (\App\Services\OperationalReportService::STATUSES as $status)
-                                        <td class="px-3 py-3 text-right text-gray-700 dark:text-gray-300">{{ $row[$status] }}</td>
+                                    <td class="ops-cell-total">{{ number_format($row['total']) }}</td>
+                                    @foreach ($statusMeta as $status => $meta)
+                                        <td @class(['ops-cell-zero' => $row[$status] === 0])>{{ number_format($row[$status]) }}</td>
                                     @endforeach
                                 </tr>
                             @endforeach
                         </tbody>
-                        <tfoot class="bg-gray-50 dark:bg-white/5">
+                        <tfoot>
                             <tr>
-                                <td class="px-4 py-3 font-semibold text-gray-950 dark:text-white">{{ __('Week total') }}</td>
-                                <td class="px-3 py-3 text-right font-semibold text-gray-950 dark:text-white">{{ $totals['total'] }}</td>
-                                @foreach (\App\Services\OperationalReportService::STATUSES as $status)
-                                    <td class="px-3 py-3 text-right font-semibold text-gray-950 dark:text-white">{{ $totals[$status] }}</td>
+                                <td>{{ __('Week total') }}</td>
+                                <td>{{ number_format($totals['total']) }}</td>
+                                @foreach ($statusMeta as $status => $meta)
+                                    <td>{{ number_format($totals[$status]) }}</td>
                                 @endforeach
                             </tr>
                         </tfoot>
                     </table>
                 </div>
-            </div>
+            </x-filament::section>
         @else
-            <div class="fi-section overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
-                <div class="overflow-x-auto">
-                    <table class="w-full min-w-[640px] divide-y divide-gray-200 text-sm dark:divide-white/10">
-                        <thead class="bg-gray-50 dark:bg-white/5">
+            <x-filament::section :heading="__('Weekly breakdown')" :description="__('Each week that falls inside the selected month.')">
+                <div class="ops-table-scroll">
+                    <table class="ops-table">
+                        <thead>
                             <tr>
-                                <th class="px-4 py-3 text-left font-medium text-gray-500 dark:text-gray-400">{{ __('Week') }}</th>
-                                <th class="px-3 py-3 text-right font-medium text-gray-500 dark:text-gray-400">{{ __('Total') }}</th>
-                                @foreach (\App\Services\OperationalReportService::STATUSES as $status)
-                                    <th class="px-3 py-3 text-right font-medium capitalize text-gray-500 dark:text-gray-400">
-                                        {{ str_replace('_', ' ', $status) }}
-                                    </th>
+                                <th>{{ __('Week') }}</th>
+                                <th>{{ __('Total') }}</th>
+                                @foreach ($statusMeta as $meta)
+                                    <th>{{ $meta['label'] }}</th>
                                 @endforeach
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-gray-200 dark:divide-white/10">
+                        <tbody>
                             @foreach ($this->getWeeklyRows() as $row)
                                 <tr wire:key="month-{{ $row['week_start'] }}">
-                                    <td class="px-4 py-3 font-medium text-gray-950 dark:text-white">
+                                    <td class="ops-cell-label">
                                         {{ \Carbon\Carbon::parse($row['week_start'])->translatedFormat('j M') }}
                                         –
                                         {{ \Carbon\Carbon::parse($row['week_end'])->translatedFormat('j M') }}
                                     </td>
-                                    <td class="px-3 py-3 text-right font-semibold text-gray-950 dark:text-white">{{ $row['total'] }}</td>
-                                    @foreach (\App\Services\OperationalReportService::STATUSES as $status)
-                                        <td class="px-3 py-3 text-right text-gray-700 dark:text-gray-300">{{ $row[$status] }}</td>
+                                    <td class="ops-cell-total">{{ number_format($row['total']) }}</td>
+                                    @foreach ($statusMeta as $status => $meta)
+                                        <td @class(['ops-cell-zero' => $row[$status] === 0])>{{ number_format($row[$status]) }}</td>
                                     @endforeach
                                 </tr>
                             @endforeach
                         </tbody>
-                        <tfoot class="bg-gray-50 dark:bg-white/5">
+                        <tfoot>
                             <tr>
-                                <td class="px-4 py-3 font-semibold text-gray-950 dark:text-white">{{ __('Month total') }}</td>
-                                <td class="px-3 py-3 text-right font-semibold text-gray-950 dark:text-white">{{ $totals['total'] }}</td>
-                                @foreach (\App\Services\OperationalReportService::STATUSES as $status)
-                                    <td class="px-3 py-3 text-right font-semibold text-gray-950 dark:text-white">{{ $totals[$status] }}</td>
+                                <td>{{ __('Month total') }}</td>
+                                <td>{{ number_format($totals['total']) }}</td>
+                                @foreach ($statusMeta as $status => $meta)
+                                    <td>{{ number_format($totals[$status]) }}</td>
                                 @endforeach
                             </tr>
                         </tfoot>
                     </table>
                 </div>
-            </div>
+            </x-filament::section>
         @endif
     </div>
 </x-filament-panels::page>

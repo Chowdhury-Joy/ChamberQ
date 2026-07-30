@@ -6,8 +6,8 @@
     $highlights = $data['highlights'] ?? [];
 @endphp
 
-<section id="about" class="solo-section w-full bg-black text-white">
-    <div class="mx-auto grid min-h-[85vh] max-w-[1280px] gap-10 px-3 sm:px-10 lg:grid-cols-2 lg:gap-12">
+<section id="about" class="solo-section flex min-h-[85vh] w-full bg-black text-white">
+    <div class="mx-auto grid w-full max-w-[1280px] flex-1 gap-10 px-3 sm:px-10 lg:grid-cols-2 lg:gap-12">
         <div class="flex h-full flex-col justify-between gap-10">
             <div>
                 <h2 class="font-display text-4xl leading-[1.05] tracking-tight sm:text-5xl lg:text-[3.5rem]">
