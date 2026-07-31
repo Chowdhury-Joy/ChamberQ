@@ -50,7 +50,17 @@ class PWAController extends Controller
     {
         $tenant = tenant();
         $theme = $tenant?->theme_color ?: self::DEFAULT_THEME;
-        $initial = mb_strtoupper(mb_substr($tenant?->displayName() ?? 'C', 0, 1));
+        if (! preg_match('/^#[0-9a-fA-F]{6}$/', $theme)) {
+            $theme = self::DEFAULT_THEME;
+        }
+
+        $initial = htmlspecialchars(
+            mb_strtoupper(mb_substr($tenant?->displayName() ?? 'C', 0, 1)),
+            ENT_XML1 | ENT_QUOTES,
+            'UTF-8'
+        );
+
+        $size = max(16, min(512, $size));
 
         $svg = <<<SVG
         <svg xmlns="http://www.w3.org/2000/svg" width="{$size}" height="{$size}" viewBox="0 0 512 512" role="img">

@@ -20,7 +20,7 @@ class CommissionService
     /**
      * Snapshot plan prices and apply discount when a tenant is onboarded.
      */
-    public function applyPricingToTenant(Tenant $tenant, ?DiscountCode $code = null): Tenant
+    public function applyPricingToTenant(Tenant $tenant, ?DiscountCode $code = null, bool $countRedemption = false): Tenant
     {
         $list = $this->planPricing->listPricesForTier((string) $tenant->plan_tier);
         $amounts = $this->discountCalculator->calculate($list['setup'], $list['monthly'], $code);
@@ -33,7 +33,7 @@ class CommissionService
             'discount_code_id' => $code?->id,
         ]);
 
-        if ($code && $code->isValidNow()) {
+        if ($code && $code->isValidNow() && $countRedemption) {
             $code->increment('redemption_count');
         }
 
@@ -206,21 +206,28 @@ class CommissionService
             ? $marketer->setup_commission_rate
             : $marketer->monthly_commission_rate;
 
-        Commission::updateOrCreate(
-            [
-                'marketer_id' => $marketer->id,
-                'tenant_id' => $tenant->id,
-                'type' => $type,
-                'period' => $period,
-            ],
-            [
-                'billing_payment_id' => $billing->id,
-                'base_amount' => $amountPaid,
-                'rate' => $rate,
-                'commission_amount' => $this->commissionAmount($amountPaid, $rate),
-                'status' => Commission::STATUS_OWED,
-            ]
-        );
+        $lookup = [
+            'marketer_id' => $marketer->id,
+            'tenant_id' => $tenant->id,
+            'type' => $type,
+            'period' => $period,
+        ];
+
+        $existing = Commission::where($lookup)->first();
+
+        $attributes = [
+            'billing_payment_id' => $billing->id,
+            'base_amount' => $amountPaid,
+            'rate' => $rate,
+            'commission_amount' => $this->commissionAmount($amountPaid, $rate),
+        ];
+
+        // Re-confirming a payment must not downgrade an already-paid commission.
+        if (! $existing || $existing->status !== Commission::STATUS_PAID) {
+            $attributes['status'] = Commission::STATUS_OWED;
+        }
+
+        Commission::updateOrCreate($lookup, $attributes);
     }
 
     private function commissionAmount(int $base, float $rate): int
@@ -234,6 +241,7 @@ class CommissionService
     public function platformFinanceSummary(?string $period = null): array
     {
         $collectedQuery = BillingPayment::query()->whereNotNull('confirmed_at');
+        $owedQuery = Commission::query()->where('status', Commission::STATUS_OWED);
         $paidQuery = Commission::query()->where('status', Commission::STATUS_PAID);
 
         if ($period) {
@@ -245,12 +253,22 @@ class CommissionService
                             ->whereMonth('confirmed_at', substr($period, 5, 2));
                     });
             });
+            $owedQuery->where(function ($q) use ($period) {
+                $q->where('period', $period)
+                    ->orWhere(function ($q2) use ($period) {
+                        $q2->where('type', Commission::TYPE_SETUP)
+                            ->whereHas('billingPayment', function ($q3) use ($period) {
+                                $q3->whereYear('confirmed_at', substr($period, 0, 4))
+                                    ->whereMonth('confirmed_at', substr($period, 5, 2));
+                            });
+                    });
+            });
             $paidQuery->whereYear('paid_at', substr($period, 0, 4))
                 ->whereMonth('paid_at', substr($period, 5, 2));
         }
 
         $collected = (int) $collectedQuery->sum('amount_paid');
-        $owed = (int) Commission::where('status', Commission::STATUS_OWED)->sum('commission_amount');
+        $owed = (int) $owedQuery->sum('commission_amount');
         $paid = (int) $paidQuery->sum('commission_amount');
 
         return [

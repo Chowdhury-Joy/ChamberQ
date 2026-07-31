@@ -3,6 +3,7 @@
 namespace App\Filament\SuperAdmin\Resources\Tenants\Pages;
 
 use App\Filament\SuperAdmin\Resources\Tenants\TenantResource;
+use App\Models\DiscountCode;
 use App\Services\CommissionService;
 use App\Services\SmsService;
 use Filament\Actions\Action;
@@ -16,6 +17,38 @@ class EditTenant extends EditRecord
 {
     protected static string $resource = TenantResource::class;
 
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        if (! empty($data['marketer_id']) && empty($data['referred_at']) && ! $this->record->referred_at) {
+            $data['referred_at'] = now();
+        }
+
+        return $data;
+    }
+
+    protected function afterSave(): void
+    {
+        $tenant = $this->record;
+
+        if ($tenant->wasChanged(['plan_tier', 'discount_code_id'])) {
+            $code = $tenant->discount_code_id
+                ? DiscountCode::find($tenant->discount_code_id)
+                : null;
+
+            $commissions = app(CommissionService::class);
+            $commissions->applyPricingToTenant(
+                $tenant,
+                $code,
+                countRedemption: $tenant->wasChanged('discount_code_id'),
+            );
+            $tenant->save();
+        }
+
+        if ($tenant->wasChanged('marketer_id') && $tenant->marketer_id) {
+            app(CommissionService::class)->createPendingSetupCommission($tenant);
+        }
+    }
+
     protected function getHeaderActions(): array
     {
         return [
@@ -23,7 +56,7 @@ class EditTenant extends EditRecord
                 ->label(__('Confirm setup paid'))
                 ->icon('heroicon-o-banknotes')
                 ->color('success')
-                ->visible(fn () => $this->record->marketer_id && ! $this->record->hasSetupPaid())
+                ->visible(fn () => ! $this->record->hasSetupPaid())
                 ->schema([
                     TextInput::make('amount_paid')
                         ->label(__('Amount paid'))
@@ -51,7 +84,7 @@ class EditTenant extends EditRecord
                 ->label(__('Confirm monthly paid'))
                 ->icon('heroicon-o-calendar-days')
                 ->color('success')
-                ->visible(fn () => $this->record->marketer_id && $this->record->hasSetupPaid())
+                ->visible(fn () => $this->record->hasSetupPaid())
                 ->schema([
                     TextInput::make('period')
                         ->label(__('Billing period'))

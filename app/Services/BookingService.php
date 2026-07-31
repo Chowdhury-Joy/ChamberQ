@@ -42,6 +42,8 @@ class BookingService
         array $labTestIds = [],
         bool $sendSms = true,
     ): Booking {
+        $patientPhone = $this->normalizeBdPhone($patientPhone);
+
         $booking = DB::transaction(function () use ($bookable, $bookingDate, $patientName, $patientPhone, $labTestIds) {
             $tenant = tenant();
             $capMode = $tenant->slot_cap_mode ?? 'per_session';
@@ -78,6 +80,17 @@ class BookingService
 
             if ($availability['remaining'] <= 0) {
                 throw BookingUnavailableException::capacityExceeded();
+            }
+
+            $duplicate = Booking::where('bookable_type', get_class($lockedBookable))
+                ->where('bookable_id', $lockedBookable->id)
+                ->whereDate('booking_date', $bookingDate)
+                ->where('patient_phone', $patientPhone)
+                ->where('status', '!=', 'cancelled')
+                ->exists();
+
+            if ($duplicate) {
+                throw BookingUnavailableException::duplicateBooking();
             }
 
             $maxSerial = Booking::where('bookable_type', get_class($lockedBookable))
@@ -229,5 +242,19 @@ class BookingService
         string $patientPhone
     ): Booking {
         return $this->createBookingForBookable($session, $bookingDate, $patientName, $patientPhone);
+    }
+
+    /**
+     * Store as 01XXXXXXXXX so portal lookup with/without +88 still matches.
+     */
+    public function normalizeBdPhone(string $phone): string
+    {
+        $digits = preg_replace('/\D/', '', $phone) ?? '';
+
+        if (str_starts_with($digits, '88')) {
+            $digits = substr($digits, 2);
+        }
+
+        return $digits;
     }
 }

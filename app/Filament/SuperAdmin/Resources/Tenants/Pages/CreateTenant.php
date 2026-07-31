@@ -48,7 +48,7 @@ class CreateTenant extends CreateRecord
             : null;
 
         $commissions = app(CommissionService::class);
-        $commissions->applyPricingToTenant($tenant, $code);
+        $commissions->applyPricingToTenant($tenant, $code, countRedemption: true);
         $tenant->save();
 
         if ($tenant->marketer_id) {

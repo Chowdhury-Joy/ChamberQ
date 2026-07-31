@@ -55,10 +55,13 @@ class TodayAppointmentsWidget extends BaseWidget
                     ->label('Status')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
-                        'confirmed' => 'success',
-                        'cancelled' => 'danger',
+                        'waiting' => 'warning',
+                        'called' => 'warning',
+                        'in_chamber' => 'success',
                         'completed' => 'info',
-                        default => 'warning',
+                        'cancelled' => 'danger',
+                        'no_show' => 'danger',
+                        default => 'gray',
                     }),
             ])
             ->emptyStateHeading('No Appointments Scheduled Today')

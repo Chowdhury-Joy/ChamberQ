@@ -5,9 +5,9 @@ namespace App\Filament\TenantAdmin\Widgets;
 use App\Filament\Concerns\UsesCardGridColumns;
 
 use App\Models\Booking;
-use App\Models\Chamber;
 use App\Models\Doctor;
 use App\Models\LabTest;
+use App\Models\ScheduleSession;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 use Illuminate\Support\Carbon;
@@ -23,7 +23,7 @@ class TenantStatsOverview extends BaseWidget
         $todayBookingsCount = Booking::whereDate('booking_date', $today)->count();
         $totalBookingsCount = Booking::count();
         $doctorsCount = Doctor::count();
-        $chambersCount = Chamber::count();
+        $chambersCount = ScheduleSession::query()->distinct()->count('chamber_id');
 
         $stats = [
             Stat::make("Today's Appointments", $todayBookingsCount)
@@ -42,7 +42,7 @@ class TenantStatsOverview extends BaseWidget
                 ->color(((int) ($tenant?->sms_balance ?? 0)) > 0 ? 'success' : 'warning'),
 
             Stat::make('Active Chambers', $chambersCount)
-                ->description('Configured consultation locations')
+                ->description('Chambers with scheduled sessions')
                 ->descriptionIcon('heroicon-m-building-office-2')
                 ->color('info'),
         ];

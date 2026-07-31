@@ -45,9 +45,11 @@ class LiveQueueControl extends Page implements HasActions, HasTable
 
     public function mount()
     {
-        // Try to auto-select an active session today
+        // Prefer the most recently started live session for today.
         $activeLiveSession = LiveSession::whereDate('session_date', Carbon::today())
             ->whereIn('status', ['active', 'paused', 'delayed'])
+            ->orderByDesc('started_at')
+            ->orderByDesc('id')
             ->first();
 
         if ($activeLiveSession) {

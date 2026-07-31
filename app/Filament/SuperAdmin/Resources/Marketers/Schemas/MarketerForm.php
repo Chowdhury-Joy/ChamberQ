@@ -45,7 +45,8 @@ class MarketerForm
                             ->label(__('Referral code'))
                             ->helperText(__('Used in ?ref= links, e.g. joy20'))
                             ->required()
-                            ->alphaDash()
+                            ->regex('/^[a-z0-9\-]+$/')
+                            ->dehydrateStateUsing(fn (?string $state): ?string => $state !== null ? strtolower($state) : null)
                             ->unique(ignoreRecord: true)
                             ->maxLength(50),
                         TextInput::make('phone')

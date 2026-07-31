@@ -63,10 +63,15 @@ class VacationModeTest extends TestCase
         parent::tearDown();
     }
 
+    private int $phoneSuffix = 0;
+
     private function book(string $name = 'Patient'): Booking
     {
+        $this->phoneSuffix++;
+        $phone = '017123456'.str_pad((string) ($this->phoneSuffix % 100), 2, '0', STR_PAD_LEFT);
+
         return app(BookingService::class)
-            ->createBookingForBookable($this->session, $this->monday, $name, '01712345678');
+            ->createBookingForBookable($this->session, $this->monday, $name, $phone);
     }
 
     public function test_blocking_a_chamber_cancels_affected_bookings(): void

@@ -13,6 +13,7 @@ use Filament\Actions\Action;
 use App\Models\Booking;
 use Carbon\Carbon;
 use App\Services\BookingService;
+use App\Services\LiveSessionService;
 use App\Models\LabCollectionSlot;
 use App\Models\ScheduleSession;
 use Filament\Forms\Components\Select;
@@ -62,13 +63,13 @@ class DailyRoster extends Page implements HasTable, HasForms
                     ->label('Call to Chamber')
                     ->color('primary')
                     ->visible(fn (Booking $record): bool => $record->status === 'waiting')
-                    ->action(fn (Booking $record) => $record->update(['status' => 'in_chamber'])),
+                    ->action(fn (Booking $record) => app(LiveSessionService::class)->bringBookingToChamber($record)),
 
                 Action::make('complete')
                     ->label('Mark Completed')
                     ->color('success')
-                    ->visible(fn (Booking $record): bool => in_array($record->status, ['waiting', 'in_chamber']))
-                    ->action(fn (Booking $record) => $record->update(['status' => 'completed'])),
+                    ->visible(fn (Booking $record): bool => in_array($record->status, ['waiting', 'in_chamber', 'called']))
+                    ->action(fn (Booking $record) => app(LiveSessionService::class)->completeBooking($record)),
             ])
             ->headerActions([
                 Action::make('manageQueue')

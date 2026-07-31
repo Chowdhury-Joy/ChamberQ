@@ -14,7 +14,10 @@ class CaptureReferralParams
     {
         if ($request->has('ref')) {
             $code = strtolower(trim((string) $request->query('ref')));
-            $marketer = Marketer::query()->where('code', $code)->where('is_active', true)->first();
+            $marketer = Marketer::query()
+                ->whereRaw('LOWER(code) = ?', [$code])
+                ->where('is_active', true)
+                ->first();
             if ($marketer) {
                 session(['referral.marketer_id' => $marketer->id, 'referral.code' => $code]);
             }

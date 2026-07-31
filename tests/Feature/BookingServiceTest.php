@@ -70,12 +70,12 @@ class BookingServiceTest extends TestCase
     public function test_booking_respects_capacity()
     {
         $this->bookingService->createBookingForSession($this->session, $this->mondayDate, 'Patient 1', '01711111111');
-        $this->bookingService->createBookingForSession($this->session, $this->mondayDate, 'Patient 2', '01711111111');
+        $this->bookingService->createBookingForSession($this->session, $this->mondayDate, 'Patient 2', '01711111112');
         
         $this->expectException(BookingUnavailableException::class);
         $this->expectExceptionMessage('just filled up');
         
-        $this->bookingService->createBookingForSession($this->session, $this->mondayDate, 'Patient 3', '01711111111');
+        $this->bookingService->createBookingForSession($this->session, $this->mondayDate, 'Patient 3', '01711111113');
     }
 
     public function test_max_plus_one_serial_allocation()
@@ -86,7 +86,7 @@ class BookingServiceTest extends TestCase
         // Cancel first booking to free up capacity, but serial should still increment
         $booking1->update(['status' => 'cancelled']);
 
-        $booking2 = $this->bookingService->createBookingForSession($this->session, $this->mondayDate, 'Patient 2', '017');
+        $booking2 = $this->bookingService->createBookingForSession($this->session, $this->mondayDate, 'Patient 2', '01722222222');
         $this->assertEquals(2, $booking2->serial_number);
     }
 
@@ -145,6 +145,43 @@ class BookingServiceTest extends TestCase
         $this->expectException(BookingUnavailableException::class);
         $this->expectExceptionMessage('The clinic is closed');
         
-        $this->bookingService->createBookingForSession($this->session, $this->mondayDate, 'Patient 1', '017');
+        $this->bookingService->createBookingForSession($this->session, $this->mondayDate, 'Patient 1', '01799999999');
+        
+        $this->expectException(BookingUnavailableException::class);
+        $this->expectExceptionMessage('The clinic is closed');
+        
+        $this->bookingService->createBookingForSession($this->session, $this->mondayDate, 'Patient 2', '01788888888');
+    }
+
+    public function test_phone_is_normalized_to_local_digits(): void
+    {
+        $booking = $this->bookingService->createBookingForSession(
+            $this->session,
+            $this->mondayDate,
+            'John Doe',
+            '+88 01711-111111'
+        );
+
+        $this->assertSame('01711111111', $booking->patient_phone);
+    }
+
+    public function test_duplicate_phone_same_session_same_day_is_rejected(): void
+    {
+        $this->bookingService->createBookingForSession(
+            $this->session,
+            $this->mondayDate,
+            'Patient 1',
+            '01711111111'
+        );
+
+        $this->expectException(BookingUnavailableException::class);
+        $this->expectExceptionMessage('already has a booking');
+
+        $this->bookingService->createBookingForSession(
+            $this->session,
+            $this->mondayDate,
+            'Patient 2',
+            '+8801711111111'
+        );
     }
 }

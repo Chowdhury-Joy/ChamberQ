@@ -182,6 +182,45 @@ class MarketerCommissionTest extends TestCase
         ]);
     }
 
+    public function test_reconfirm_setup_payment_does_not_unpay_commission(): void
+    {
+        $tenant = $this->createReferredTenant();
+        $superAdmin = User::create([
+            'name' => 'Super',
+            'email' => 'super-reconfirm@test.com',
+            'password' => Hash::make('password'),
+            'role' => User::ROLE_SUPER_ADMIN,
+            'tenant_id' => null,
+        ]);
+
+        $service = app(CommissionService::class);
+        $service->applyPricingToTenant($tenant);
+        $tenant->save();
+        $service->createPendingSetupCommission($tenant);
+        $service->confirmSetupPayment($tenant, $superAdmin, null, 4000);
+
+        $commission = Commission::where('tenant_id', $tenant->id)->first();
+        $service->markCommissionPaid($commission, 'paid-once');
+
+        $service->confirmSetupPayment($tenant, $superAdmin, 'reconfirm', 4000);
+
+        $commission->refresh();
+        $this->assertSame(Commission::STATUS_PAID, $commission->status);
+        $this->assertSame('paid-once', $commission->payout_note);
+    }
+
+    public function test_uppercase_referral_query_matches_legacy_code(): void
+    {
+        \Illuminate\Support\Facades\DB::table('marketers')
+            ->where('id', $this->marketer->id)
+            ->update(['code' => 'JOY20']);
+
+        $this->get('http://localhost/?ref=JOY20')
+            ->assertOk();
+
+        $this->assertSame($this->marketer->id, session('referral.marketer_id'));
+    }
+
     public function test_referral_query_param_captures_marketer_in_session(): void
     {
         $this->get('http://localhost/?ref=joy20')

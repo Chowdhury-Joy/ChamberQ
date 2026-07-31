@@ -29,6 +29,11 @@ class Marketer extends Model
         ];
     }
 
+    public function setCodeAttribute(?string $value): void
+    {
+        $this->attributes['code'] = $value !== null ? strtolower($value) : null;
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -51,9 +56,8 @@ class Marketer extends Model
 
     public function referralUrl(): string
     {
-        $host = config('tenancy.central_domains')[0] ?? 'localhost';
-        $scheme = app()->environment('local') ? 'http' : 'https';
+        $base = rtrim((string) config('app.url'), '/');
 
-        return $scheme.'://'.$host.'/?ref='.$this->code;
+        return $base.'/?ref='.urlencode($this->code);
     }
 }

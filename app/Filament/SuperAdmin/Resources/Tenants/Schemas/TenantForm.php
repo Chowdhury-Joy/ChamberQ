@@ -29,7 +29,10 @@ class TenantForm
                             ->helperText(__('Patients reach this tenant at /{slug} on your main domain, e.g. /drkarim/book. Lowercase letters, numbers, and dashes only.'))
                             ->required()
                             ->maxLength(255)
-                            ->alphaDash()
+                            ->regex('/^[a-z0-9\-]+$/')
+                            ->validationMessages([
+                                'regex' => __('Use lowercase letters, numbers, and dashes only (e.g. drkarim).'),
+                            ])
                             ->disabled(fn (?string $operation) => $operation === 'edit')
                             ->dehydrated(),
                         TextInput::make('name')

@@ -146,6 +146,73 @@ class LiveSessionService
         });
     }
 
+    /**
+     * Roster shortcut: move a specific waiting patient into the chamber and
+     * sync live-session pointers (Daily Roster must not bypass this).
+     */
+    public function bringBookingToChamber(Booking $booking): void
+    {
+        if ($booking->bookable_type !== ScheduleSession::class) {
+            $booking->update([
+                'status' => 'in_chamber',
+                'in_chamber_at' => now(),
+            ]);
+
+            return;
+        }
+
+        DB::transaction(function () use ($booking) {
+            $now = now();
+            $liveSession = LiveSession::firstOrCreate([
+                'tenant_id' => tenant('id'),
+                'schedule_session_id' => $booking->bookable_id,
+                'session_date' => $booking->booking_date,
+            ], [
+                'status' => 'active',
+                'started_at' => $now,
+            ]);
+
+            if (in_array($liveSession->status, ['scheduled', 'delayed'], true)) {
+                $liveSession->update([
+                    'status' => 'active',
+                    'started_at' => $liveSession->started_at ?? $now,
+                ]);
+            }
+
+            $liveSession->update([
+                'current_booking_id' => $booking->id,
+                'current_called_at' => $now,
+            ]);
+
+            $booking->update([
+                'status' => 'in_chamber',
+                'called_at' => $booking->called_at ?? $now,
+                'in_chamber_at' => $now,
+            ]);
+        });
+    }
+
+    /**
+     * Complete a booking from roster or live queue, keeping session state in sync.
+     */
+    public function completeBooking(Booking $booking): void
+    {
+        DB::transaction(function () use ($booking) {
+            $liveSession = $booking->liveSession();
+
+            if ($liveSession && $liveSession->current_booking_id === $booking->id) {
+                $this->completeCurrentPatient($liveSession);
+
+                return;
+            }
+
+            $booking->update([
+                'status' => 'completed',
+                'completed_at' => now(),
+            ]);
+        });
+    }
+
     public function skipPatient(LiveSession $liveSession)
     {
         return DB::transaction(function () use ($liveSession) {
@@ -235,7 +302,7 @@ class LiveSessionService
             ]);
 
             $liveSession->bookings()
-                ->whereNotIn('status', ['completed', 'cancelled'])
+                ->whereNotIn('status', ['completed', 'cancelled', 'no_show'])
                 ->update([
                     'status' => 'cancelled',
                     'cancellation_reason' => $reason,

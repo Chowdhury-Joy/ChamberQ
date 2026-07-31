@@ -75,6 +75,14 @@ class BookingUnavailableException extends Exception
         );
     }
 
+    public static function duplicateBooking(): self
+    {
+        return self::make(
+            __('This phone number already has a booking for this session today.'),
+            'duplicate'
+        );
+    }
+
     private static function make(string $message, string $code): self
     {
         $exception = new self($message);
