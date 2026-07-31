@@ -14,6 +14,22 @@ class Tenant extends BaseTenant
     /** Max chambers on Solo when multiple_chambers is enabled. Clinic has no cap. */
     public const SOLO_MAX_CHAMBERS = 5;
 
+    public const ETA_SCHEDULE_GUESS = 'schedule_guess';
+
+    public const ETA_LIVE_AVERAGE = 'live_average';
+
+    public const ETA_LIVE_STEADY = 'live_steady';
+
+    /** @return array<string, string> */
+    public static function etaModelOptions(): array
+    {
+        return [
+            self::ETA_SCHEDULE_GUESS => 'Schedule guess (session length ÷ seats)',
+            self::ETA_LIVE_AVERAGE => 'Live average (today’s finished consults)',
+            self::ETA_LIVE_STEADY => 'Live steady (ignore longest + shortest)',
+        ];
+    }
+
     public static function getCustomColumns(): array
     {
         // Every real column MUST be listed here. Anything omitted is folded into
@@ -50,6 +66,7 @@ class Tenant extends BaseTenant
             'feature_flags',
             'call_timeout_seconds',
             'estimated_time_buffer_minutes',
+            'eta_model',
             'first_n_patients',
             'first_n_arrival_offset_minutes',
             'call_audio_preset',

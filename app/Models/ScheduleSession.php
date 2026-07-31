@@ -32,4 +32,13 @@ class ScheduleSession extends Model
     {
         return $this->belongsTo(Doctor::class);
     }
+
+    /** Label for outdoor screen: session name + time window. */
+    public function screenLabel(): string
+    {
+        $start = \Carbon\Carbon::parse($this->start_time)->format('g:i A');
+        $end = \Carbon\Carbon::parse($this->end_time)->format('g:i A');
+
+        return trim($this->session_name).' · '.$start.' – '.$end;
+    }
 }

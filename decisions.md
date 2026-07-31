@@ -94,6 +94,15 @@
  <reason>Matches how independent specialists actually practice; keeps Clinic differentiated by multi-doctor + labs + unlimited scale, not by basic multi-location booking.</reason>
 </decision>
 
+## 2026-07-31 (adaptive waiting-time ETA)
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Ticket “come around” times are a static schedule guess and can lie when the doctor runs fast or slow. A multi-layer auto-switch (schedule → live, plus average styles) is more flexible than Solo chambers need at first.</context>
+ <action>v1: tenant/staff picks **one** ETA model and sticks with it for that chamber/day. Candidate models: (1) Schedule guess — session length ÷ seats, plus delay minutes; (2) Live simple average — average of today’s finished consult times; (3) Live steady pace — drop longest + shortest, then average. Patient ticket/screen always shows one time. No auto-switching between models in v1. Delay minutes stay a separate staff input. Auto-switch / combined layers can come later if needed.</action>
+ <reason>One choice is easier to explain to doctors (“pick how waiting times are calculated”) and avoids surprising patients when the clock mode changes mid-session.</reason>
+</decision>
+
 ## 2026-07-31 (marketer commissions)
 
 <decision>

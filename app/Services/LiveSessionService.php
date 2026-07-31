@@ -2,9 +2,10 @@
 
 namespace App\Services;
 
+use App\Models\Booking;
 use App\Models\LiveSession;
 use App\Models\ScheduleSession;
-use App\Models\Booking;
+use App\Models\Tenant;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -271,13 +272,56 @@ class LiveSessionService
     public function estimatedTimeForBooking(Booking $booking)
     {
         $liveSession = $booking->liveSession();
-        if (!$liveSession) return null;
+        if (! $liveSession) {
+            return null;
+        }
 
-        $session = $liveSession->scheduleSession;
         $tenant = tenant();
-        
-        $avgMins = $liveSession->avgConsultationMinutes();
-        
+        $model = $tenant?->eta_model ?? Tenant::ETA_SCHEDULE_GUESS;
+
+        $actualEstimate = match ($model) {
+            Tenant::ETA_LIVE_AVERAGE => $this->livePaceEstimate($booking, $liveSession, trimExtremes: false),
+            Tenant::ETA_LIVE_STEADY => $this->livePaceEstimate($booking, $liveSession, trimExtremes: true),
+            default => $this->scheduleGuessEstimate($booking, $liveSession),
+        };
+
+        if ($actualEstimate === null) {
+            $actualEstimate = $this->scheduleGuessEstimate($booking, $liveSession);
+        }
+
+        if ($actualEstimate === null) {
+            return null;
+        }
+
+        $firstN = $tenant?->first_n_patients ?? 2;
+        $offsetMins = $tenant?->first_n_arrival_offset_minutes ?? 15;
+        $bufferMins = $tenant?->estimated_time_buffer_minutes ?? 30;
+
+        if ($model === Tenant::ETA_SCHEDULE_GUESS) {
+            $actualEstimateOfFirstPatient = $this->scheduleSessionStart($liveSession, $booking);
+
+            if ($booking->serial_number <= $firstN) {
+                $shownTime = $actualEstimateOfFirstPatient->copy()->subMinutes($offsetMins);
+            } else {
+                $shownTime = $actualEstimate->copy()->subMinutes($bufferMins);
+            }
+        } else {
+            if ($booking->serial_number <= $firstN) {
+                $shownTime = $actualEstimate->copy()->subMinutes($offsetMins);
+            } else {
+                $shownTime = $actualEstimate->copy()->subMinutes($bufferMins);
+            }
+        }
+
+        return [
+            'actual_estimate' => $actualEstimate,
+            'shown_time' => $shownTime,
+        ];
+    }
+
+    private function scheduleSessionStart(LiveSession $liveSession, Booking $booking): Carbon
+    {
+        $session = $liveSession->scheduleSession;
         $totalPause = $liveSession->total_pause_minutes;
         if ($liveSession->status === 'paused') {
             $totalPause += $liveSession->estimated_pause_minutes;
@@ -286,25 +330,71 @@ class LiveSessionService
         $start = Carbon::parse($session->start_time)->setDateFrom($booking->booking_date);
         $start->addMinutes($liveSession->delay_minutes);
         $start->addMinutes($totalPause);
-        
-        $actualEstimateOfFirstPatient = $start->copy();
-        
-        $actualEstimate = $start->copy()->addMinutes(($booking->serial_number - 1) * $avgMins);
 
-        $firstN = $tenant?->first_n_patients ?? 2;
-        $offsetMins = $tenant?->first_n_arrival_offset_minutes ?? 15;
-        $bufferMins = $tenant?->estimated_time_buffer_minutes ?? 30;
+        return $start;
+    }
 
-        if ($booking->serial_number <= $firstN) {
-            // Universal rule: shown_time = actual_estimate_of_first_patient - offset
-            $shownTime = $actualEstimateOfFirstPatient->copy()->subMinutes($offsetMins);
-        } else {
-            $shownTime = $actualEstimate->copy()->subMinutes($bufferMins);
+    private function scheduleGuessEstimate(Booking $booking, LiveSession $liveSession): ?Carbon
+    {
+        $session = $liveSession->scheduleSession;
+        if (! $session) {
+            return null;
         }
 
-        return [
-            'actual_estimate' => $actualEstimate,
-            'shown_time' => $shownTime,
-        ];
+        $start = $this->scheduleSessionStart($liveSession, $booking);
+        $avgMins = $liveSession->avgConsultationMinutes();
+
+        return $start->copy()->addMinutes(($booking->serial_number - 1) * $avgMins);
+    }
+
+    private function livePaceEstimate(Booking $booking, LiveSession $liveSession, bool $trimExtremes): ?Carbon
+    {
+        $durations = $this->completedConsultDurations($liveSession);
+        if ($durations === []) {
+            return null;
+        }
+
+        $avgMins = $trimExtremes && count($durations) >= 3
+            ? $this->trimmedAverageMinutes($durations)
+            : (int) round(array_sum($durations) / count($durations));
+
+        $ahead = $this->aheadInQueue($booking, $liveSession);
+
+        return now()->addMinutes($ahead * max(1, $avgMins));
+    }
+
+    /** @return list<int> */
+    private function completedConsultDurations(LiveSession $liveSession): array
+    {
+        return $liveSession->bookings()
+            ->where('status', 'completed')
+            ->whereNotNull('in_chamber_at')
+            ->whereNotNull('completed_at')
+            ->get()
+            ->map(fn (Booking $booking) => max(1, (int) $booking->in_chamber_at->diffInMinutes($booking->completed_at)))
+            ->values()
+            ->all();
+    }
+
+    /** @param list<int> $durations */
+    private function trimmedAverageMinutes(array $durations): int
+    {
+        sort($durations);
+        array_shift($durations);
+        array_pop($durations);
+
+        if ($durations === []) {
+            return 1;
+        }
+
+        return (int) round(array_sum($durations) / count($durations));
+    }
+
+    private function aheadInQueue(Booking $booking, LiveSession $liveSession): int
+    {
+        return $liveSession->bookings()
+            ->whereIn('status', ['waiting', 'called', 'in_chamber'])
+            ->where('serial_number', '<', $booking->serial_number)
+            ->count();
     }
 }

@@ -53,6 +53,7 @@ class BrandingSettings extends Page implements HasForms
                 'default_locale' => $tenant->default_locale ?? 'en',
                 'call_timeout_seconds' => $tenant->call_timeout_seconds ?? 10,
                 'estimated_time_buffer_minutes' => $tenant->estimated_time_buffer_minutes ?? 30,
+                'eta_model' => $tenant->eta_model ?? \App\Models\Tenant::ETA_SCHEDULE_GUESS,
                 'first_n_patients' => $tenant->first_n_patients ?? 2,
                 'first_n_arrival_offset_minutes' => $tenant->first_n_arrival_offset_minutes ?? 15,
                 'call_audio_preset' => $tenant->call_audio_preset ?? 'chime',
@@ -144,6 +145,12 @@ class BrandingSettings extends Page implements HasForms
                             ->numeric()
                             ->default(30)
                             ->required(),
+                        Select::make('eta_model')
+                            ->label(__('Waiting time model'))
+                            ->helperText(__('How patient ticket “come around” times are calculated for this chamber.'))
+                            ->options(\App\Models\Tenant::etaModelOptions())
+                            ->default(\App\Models\Tenant::ETA_SCHEDULE_GUESS)
+                            ->required(),
                         TextInput::make('first_n_patients')
                             ->label('First N Patients (Early Arrival)')
                             ->numeric()
@@ -210,6 +217,7 @@ class BrandingSettings extends Page implements HasForms
                 'default_locale' => $data['default_locale'],
                 'call_timeout_seconds' => $data['call_timeout_seconds'],
                 'estimated_time_buffer_minutes' => $data['estimated_time_buffer_minutes'],
+                'eta_model' => $data['eta_model'],
                 'first_n_patients' => $data['first_n_patients'],
                 'first_n_arrival_offset_minutes' => $data['first_n_arrival_offset_minutes'],
                 'call_audio_preset' => $preset,

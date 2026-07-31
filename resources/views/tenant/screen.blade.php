@@ -60,6 +60,13 @@
             color: #94a3b8;
         }
 
+        .session-label {
+            font-size: 1.25rem;
+            color: #64748b;
+            margin-top: 0.35rem;
+            font-weight: 500;
+        }
+
         .main-content {
             flex: 1;
             display: flex;
@@ -204,6 +211,7 @@
         <div>
             <div class="chamber-name">{{ $scheduleSession->chamber->name }}</div>
             <div class="doctor-name">{{ $scheduleSession->doctor->name }}</div>
+            <div class="session-label">{{ $scheduleSession->screenLabel() }}</div>
         </div>
         <div style="text-align: right;">
             <div style="font-size: 1.5rem; color: #94a3b8;">{{ \Carbon\Carbon::parse($sessionDate)->translatedFormat('j F Y') }}</div>

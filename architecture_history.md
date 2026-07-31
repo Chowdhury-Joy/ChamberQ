@@ -24,3 +24,6 @@
 
 ## 2026-07-31
 - Monthly commission cron moved from 1st to 7th of each month (`commissions:generate-monthly`).
+
+## 2026-07-31
+- Outdoor screen session label + tenant `eta_model` waiting-time picker (schedule guess / live average / live steady); see decisions.md adaptive waiting-time ETA.
