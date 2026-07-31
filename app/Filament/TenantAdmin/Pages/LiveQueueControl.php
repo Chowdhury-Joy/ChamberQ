@@ -254,15 +254,6 @@ class LiveQueueControl extends Page implements HasActions, HasTable
         Notification::make()->title('Patient Skipped')->warning()->send();
     }
 
-    public function endSession()
-    {
-        if (!$this->activeLiveSession) return;
-        
-        app(LiveSessionService::class)->endSession($this->activeLiveSession);
-        
-        Notification::make()->title('Session Ended')->success()->send();
-    }
-    
     public function reinstatePatient($bookingId)
     {
         $booking = Booking::findOrFail($bookingId);

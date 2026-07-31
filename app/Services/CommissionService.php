@@ -215,19 +215,20 @@ class CommissionService
 
         $existing = Commission::where($lookup)->first();
 
-        $attributes = [
+        // Already paid: leave the ledger row alone (status AND amounts).
+        // Re-confirming setup at a different figure must not rewrite a payout
+        // that was already recorded (e.g. ৳1000 paid → still shows ৳1000).
+        if ($existing && $existing->status === Commission::STATUS_PAID) {
+            return;
+        }
+
+        Commission::updateOrCreate($lookup, [
             'billing_payment_id' => $billing->id,
             'base_amount' => $amountPaid,
             'rate' => $rate,
             'commission_amount' => $this->commissionAmount($amountPaid, $rate),
-        ];
-
-        // Re-confirming a payment must not downgrade an already-paid commission.
-        if (! $existing || $existing->status !== Commission::STATUS_PAID) {
-            $attributes['status'] = Commission::STATUS_OWED;
-        }
-
-        Commission::updateOrCreate($lookup, $attributes);
+            'status' => Commission::STATUS_OWED,
+        ]);
     }
 
     private function commissionAmount(int $base, float $rate): int

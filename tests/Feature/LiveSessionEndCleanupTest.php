@@ -127,4 +127,70 @@ class LiveSessionEndCleanupTest extends TestCase
 
         $this->assertEquals('/storage/call-audio/audio-tenant/custom.wav', $tenant->fresh()->callAudioUrl());
     }
+
+    public function test_live_session_bookings_eager_load_matches_session_date(): void
+    {
+        $tenant = Tenant::create(['id' => 'eager-session', 'plan_tier' => 'solo']);
+        tenancy()->initialize($tenant);
+
+        $chamber = Chamber::create(['name' => 'Main']);
+        $doctor = Doctor::create(['name' => 'Dr. Solo']);
+        $schedule = ScheduleSession::create([
+            'chamber_id' => $chamber->id,
+            'doctor_id' => $doctor->id,
+            'day_of_week' => Carbon::today()->dayOfWeek,
+            'session_name' => 'Morning',
+            'start_time' => '09:00',
+            'end_time' => '12:00',
+            'slot_cap' => 10,
+        ]);
+
+        $today = Carbon::today()->toDateString();
+        $lastWeek = Carbon::today()->subWeek()->toDateString();
+
+        $todayBooking = Booking::create([
+            'bookable_type' => ScheduleSession::class,
+            'bookable_id' => $schedule->id,
+            'booking_date' => $today,
+            'patient_name' => 'Today Patient',
+            'patient_phone' => '01711111111',
+            'serial_number' => 1,
+            'status' => 'waiting',
+        ]);
+
+        $lastWeekBooking = Booking::create([
+            'bookable_type' => ScheduleSession::class,
+            'bookable_id' => $schedule->id,
+            'booking_date' => $lastWeek,
+            'patient_name' => 'Last Week Patient',
+            'patient_phone' => '01722222222',
+            'serial_number' => 1,
+            'status' => 'waiting',
+        ]);
+
+        LiveSession::create([
+            'schedule_session_id' => $schedule->id,
+            'session_date' => $today,
+            'status' => 'active',
+            'started_at' => now(),
+        ]);
+
+        LiveSession::create([
+            'schedule_session_id' => $schedule->id,
+            'session_date' => $lastWeek,
+            'status' => 'completed',
+            'started_at' => now()->subWeek(),
+            'completed_at' => now()->subWeek(),
+        ]);
+
+        $sessions = LiveSession::with('bookings')->orderBy('session_date')->get();
+
+        $this->assertCount(2, $sessions);
+        $this->assertTrue($sessions[0]->bookings->contains('id', $lastWeekBooking->id));
+        $this->assertFalse($sessions[0]->bookings->contains('id', $todayBooking->id));
+        $this->assertTrue($sessions[1]->bookings->contains('id', $todayBooking->id));
+        $this->assertFalse($sessions[1]->bookings->contains('id', $lastWeekBooking->id));
+
+        tenancy()->end();
+    }
 }

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
+use App\Models\Relations\HasManyByScheduleAndDate;
 use Illuminate\Database\Eloquent\Model;
 
 class LiveSession extends Model
@@ -45,9 +46,14 @@ class LiveSession extends Model
 
     public function bookings()
     {
-        return $this->hasMany(Booking::class, 'bookable_id', 'schedule_session_id')
-            ->where('bookable_type', ScheduleSession::class)
-            ->whereDate('booking_date', $this->session_date);
+        $instance = $this->newRelatedInstance(Booking::class);
+
+        return new HasManyByScheduleAndDate(
+            $instance->newQuery()->where('bookable_type', ScheduleSession::class),
+            $this,
+            $instance->getTable().'.bookable_id',
+            'schedule_session_id'
+        );
     }
 
     public function skippedBookings()

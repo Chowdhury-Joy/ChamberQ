@@ -24,14 +24,6 @@ class SetPathTenantUrlDefaults
             URL::defaults(['tenant' => $tenant]);
         } elseif (tenancy()->initialized) {
             URL::defaults(['tenant' => tenant('id')]);
-            $tenant = tenant('id');
-        } elseif ($request->hasSession() && $request->session()->has('filament_path_tenant')) {
-            URL::defaults(['tenant' => $request->session()->get('filament_path_tenant')]);
-            return $next($request);
-        }
-
-        if ($request->hasSession() && is_string($tenant) && $tenant !== '') {
-            $request->session()->put('filament_path_tenant', $tenant);
         }
 
         return $next($request);

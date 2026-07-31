@@ -197,9 +197,10 @@ class MarketerCommissionTest extends TestCase
         $service->applyPricingToTenant($tenant);
         $tenant->save();
         $service->createPendingSetupCommission($tenant);
-        $service->confirmSetupPayment($tenant, $superAdmin, null, 4000);
+        $service->confirmSetupPayment($tenant, $superAdmin, null, 5000);
 
         $commission = Commission::where('tenant_id', $tenant->id)->first();
+        $this->assertSame(1000, $commission->commission_amount);
         $service->markCommissionPaid($commission, 'paid-once');
 
         $service->confirmSetupPayment($tenant, $superAdmin, 'reconfirm', 4000);
@@ -207,6 +208,8 @@ class MarketerCommissionTest extends TestCase
         $commission->refresh();
         $this->assertSame(Commission::STATUS_PAID, $commission->status);
         $this->assertSame('paid-once', $commission->payout_note);
+        $this->assertSame(5000, $commission->base_amount);
+        $this->assertSame(1000, $commission->commission_amount);
     }
 
     public function test_uppercase_referral_query_matches_legacy_code(): void

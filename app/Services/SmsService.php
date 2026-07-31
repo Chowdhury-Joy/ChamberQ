@@ -144,11 +144,11 @@ class SmsService
             return $scheme.'://'.$host.'/bookings/'.$booking->id;
         }
 
-        // Platform path tenancy: /{tenant}/bookings/{uuid} on a central host.
-        return route('path.bookings.show', [
-            'tenant' => $booking->tenant_id,
-            'booking' => $booking->id,
-        ]);
+        // Platform path tenancy: build from APP_URL so SMS links use the
+        // canonical host (not CENTRAL_DOMAINS[0], which may be 127.0.0.1).
+        $base = rtrim((string) config('app.url'), '/');
+
+        return $base.'/'.$booking->tenant_id.'/bookings/'.$booking->id;
     }
 
     private function record(

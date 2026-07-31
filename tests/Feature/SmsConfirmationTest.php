@@ -152,4 +152,44 @@ class SmsConfirmationTest extends TestCase
         $this->assertSame(2, $this->tenant->fresh()->sms_balance);
         $this->assertSame(0, SmsMessage::withoutGlobalScopes()->count());
     }
+
+    public function test_path_tenant_ticket_url_uses_app_url_host(): void
+    {
+        config([
+            'app.url' => 'http://localhost',
+            'tenancy.central_domains' => ['127.0.0.1', 'localhost'],
+        ]);
+
+        $tenant = Tenant::create(['id' => 'path-sms', 'plan_tier' => 'solo']);
+        // No Domain row — path-only tenant.
+        tenancy()->initialize($tenant);
+
+        $chamber = Chamber::create(['name' => 'Main']);
+        $doctor = Doctor::create(['name' => 'Dr Path']);
+        $session = ScheduleSession::create([
+            'chamber_id' => $chamber->id,
+            'doctor_id' => $doctor->id,
+            'day_of_week' => Carbon::today()->dayOfWeek,
+            'session_name' => 'Morning',
+            'start_time' => '09:00',
+            'end_time' => '12:00',
+            'slot_cap' => 5,
+        ]);
+
+        $booking = Booking::create([
+            'bookable_type' => ScheduleSession::class,
+            'bookable_id' => $session->id,
+            'booking_date' => Carbon::today()->toDateString(),
+            'patient_name' => 'Path Patient',
+            'patient_phone' => '01712345678',
+            'serial_number' => 1,
+            'status' => 'waiting',
+        ]);
+
+        $url = app(SmsService::class)->ticketUrl($booking);
+        tenancy()->end();
+
+        $this->assertSame('http://localhost/path-sms/bookings/'.$booking->id, $url);
+        $this->assertStringNotContainsString('127.0.0.1', $url);
+    }
 }

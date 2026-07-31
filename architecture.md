@@ -1,5 +1,5 @@
 # Architecture Overview
-Last Updated: 2026-07-31T19:05:00+06:00
+Last Updated: 2026-07-31T15:40:00+06:00
 
 ## Overview
 Doctor Gemini is a multi-tenant SaaS for Bangladesh solo doctors and clinics. Each tenant gets a branded patient website, online serial booking, a live waiting-room queue (outdoor screen + staff control), a patient ticket/portal, and a Filament admin panel. Patients book a serial and pay at the chamber — there is no payment gateway. Online pre-payment is later-stage only: do not suggest or build it unless the owner explicitly asks. Sales CTAs on the central marketing site use WhatsApp (`wa.me`). SMS booking confirmations use a prepaid credit wallet topped up by Super Admin. Marketer partners earn commissions on setup and monthly subscription fees (manual bKash billing); Super Admin confirms doctor payments and marketer payouts.
@@ -43,6 +43,7 @@ Scheduled tasks: `commissions:generate-monthly` runs on the 7th of each month (p
 
 ## Folder Structure
 - `app/Models` — Tenant, Domain, User, Doctor, Chamber, ScheduleSession, Booking, LiveSession, LabTest, LabCollectionSlot, BookingLabTest, SlotBlock, WebPage, SmsMessage, Marketer, DiscountCode, BillingPayment, Commission
+- `app/Models/Relations` — custom Eloquent relations (e.g. `HasManyByScheduleAndDate` for LiveSession→Booking)
 - `app/Services` — BookingService, LiveSessionService, OperationalReportService, SlotBlockService, SmsService, PlanPricingService, DiscountCalculator, CommissionService (+ SMS drivers)
 - `app/Console/Commands/GenerateMonthlyCommissions.php` — `commissions:generate-monthly`
 - `app/Http/Controllers` — BookingController, WebPageController, ScreenController, QueueStatusController, PWAController
@@ -70,10 +71,10 @@ Scheduled tasks: `commissions:generate-monthly` runs on the 7th of each month (p
 - **Tenant + plan features** (`Tenant::hasFeature`, `Tenant::maxChambers`) — `plan_tier` `solo` | `clinic` with defaults; per-tenant `feature_flags` JSON can override. Solo defaults: `multiple_chambers` on (cap 5 via `SOLO_MAX_CHAMBERS`), no `lab_tests`, no `multiple_doctors`. Clinic defaults: all three on, unlimited chambers. `bangla_homepage` is a paid add-on flag.
 - **Marketer commissions** — `Marketer` profile linked to central `User` (`role=marketer`). Referral via `?ref={code}`; discount codes via `?code=`. `CommissionService` snapshots list/due prices, creates pending setup/monthly commissions, confirms doctor payments → `owed`, marks marketer payouts → `paid`. Not commissionable: SMS packs.
 - **BookingService** — creates serials, capacity/slot rules, lab test attachment when feature enabled, phone normalization (`01…`), billing gate via `acceptsBookings()`.
-- **LiveSessionService** — start/end session, call next, mark arrived (`in_chamber`), skip, complete; drives outdoor screen + Live Queue Control. Patient ticket ETA via `estimatedTimeForBooking()` using tenant `eta_model`: `schedule_guess` (default), `live_average`, or `live_steady` (falls back to schedule guess until completed consults exist for live modes).
+- **LiveSessionService** — start/end session, call next, mark arrived (`in_chamber`), skip, complete; drives outdoor screen + Live Queue Control. Patient ticket ETA via `estimatedTimeForBooking()` using tenant `eta_model`: `schedule_guess` (default), `live_average`, or `live_steady` (falls back to schedule guess until completed consults exist for live modes). `LiveSession::bookings()` uses `HasManyByScheduleAndDate` so eager load matches `session_date` + `booking_date`.
 - **Outdoor screen** (`resources/views/tenant/screen.blade.php`) — shows chamber, doctor, and `ScheduleSession::screenLabel()` (session name + time window) so per-session serials are not confused on one TV.
 - **OperationalReportService** — day/week/month booking aggregates for staff.
-- **SmsService** — confirm booking SMS; debit 1 credit on success; skip send if wallet empty (booking still succeeds).
+- **SmsService** — confirm booking SMS; debit 1 credit on success; skip send if wallet empty (booking still succeeds). Path-tenant ticket links built from `config('app.url')`; custom-domain tenants use their Domain host.
 - **Web page builder** — Filament WebPages resource; solo template sections under `resources/views/tenant/solo/`; SafeUrl allowlist for links.
 - **Roles** — Super Admin (central `/admin`); Marketer (central `/partner`); tenant `admin` / `doctor` / `staff` with capability helpers (`canManageOps`, `canManageContent`, `canManageQueue`, etc.).
 - **Marketing site** — central `config/marketing.php` plans/pricing/WhatsApp CTAs; Blade home at `resources/views/marketing/home.blade.php`; session capture for referral/discount params.

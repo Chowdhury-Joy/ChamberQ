@@ -141,3 +141,12 @@
  <action>Batch fix: preserve paid commissions on re-confirm; lowercase marketer codes + case-insensitive legacy lookup; allow direct-sale payment confirmation without marketer; re-price tenants on plan/discount edit; route Daily Roster actions through `LiveSessionService`; normalize phones and block duplicate same-day/session bookings in `BookingService`; align `markAbsent` with `endSession` on `no_show`; period-filter finance owed; validate tenant slugs as `[a-z0-9-]`; escape PWA SVG output.</action>
  <reason>Each fix closes a real ops failure mode (wrong payout, broken ref link, split queue state, portal mismatch) without changing the pay-at-chamber product model.</reason>
 </decision>
+
+## 2026-07-31 (audit residuals)
+
+<decision>
+ <category>Code</category>
+ <context>Five residuals after the main audit pass: duplicate end-session method, broken LiveSession bookings eager load, paid-commission amount rewrite, SMS path URLs on wrong host, and a misleading session fallback in path URL middleware.</context>
+ <action>Remove dead `LiveQueueControl::endSession()`; introduce `HasManyByScheduleAndDate` for date-safe eager load; no-op `markCommissionOwed` entirely when already paid; build path SMS ticket URLs from `config('app.url')`; drop `filament_path_tenant` session read/write from `SetPathTenantUrlDefaults`.</action>
+ <reason>Closes ledger drift, wrong patient SMS hosts, and latent cross-tenant URL bleed without changing product UX.</reason>
+</decision>
