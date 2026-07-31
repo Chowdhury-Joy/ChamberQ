@@ -14,7 +14,7 @@
         @php $items = $data['items'] ?? []; @endphp
 
         @if(count($items) < 8)
-            <div class="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:gap-6 lg:grid-cols-3 lg:gap-8">
+            <x-card-grid :count="count($items)" class="gap-5 sm:gap-6 lg:gap-8">
                 @foreach($items as $item)
                     <div class="rounded-2xl border border-slate-200/80 bg-slate-50 p-5 shadow-sm transition hover:shadow-md sm:p-6 lg:p-7">
                         <div class="mb-4 flex h-10 w-10 items-center justify-center rounded-lg" style="background-color: color-mix(in srgb, var(--color-primary) 14%, white); color: var(--color-primary);">
@@ -24,7 +24,7 @@
                         <p class="mt-2 text-sm leading-relaxed text-slate-600 sm:text-[0.95rem]">{{ $item['description'] ?? '' }}</p>
                     </div>
                 @endforeach
-            </div>
+            </x-card-grid>
         @else
             <div class="rounded-2xl border border-slate-200/80 bg-white p-6 shadow-sm sm:p-8">
                 <ul class="divide-y divide-slate-100">

@@ -7,7 +7,7 @@
             <p class="mk-kicker">The everyday difference</p>
             <h2 id="compare-heading">Same chamber.<br><em>A much better day.</em></h2>
         </div>
-        <div class="mk-compare-grid">
+        <x-card-grid :count="2" class="mk-compare-grid">
             <article class="mk-compare-card mk-compare-before">
                 <div class="mk-compare-top">
                     <span>Before using us</span>
@@ -30,6 +30,6 @@
                     @endforeach
                 </ul>
             </article>
-        </div>
+        </x-card-grid>
     </div>
 </section>

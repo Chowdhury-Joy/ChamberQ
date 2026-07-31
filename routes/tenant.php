@@ -74,15 +74,21 @@ $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
         ->name($routeName('patient.portal'));
 
     Route::get('/{slug?}', [WebPageController::class, 'show'])
-        ->where('slug', '^(?!tenant|admin|api|lang|bookings|portal).*$');
+        // Exact-segment negative lookahead — (?!foo|bar$) only anchors the last alt.
+        ->where('slug', '^(?!(?:tenant|admin|api|lang|bookings|portal)$).*$');
 };
 
 foreach (config('tenancy.central_domains', []) as $centralDomain) {
+    // One middleware() call only — RouteRegistrar overwrites, it does not merge.
     Route::domain($centralDomain)
-        ->middleware(['web', Localization::class])
         ->prefix('{tenant}')
         ->where(['tenant' => TenancyUrl::tenantSlugPattern()])
-        ->middleware([InitializeTenancyByPath::class, SetPathTenantUrlDefaults::class])
+        ->middleware([
+            'web',
+            Localization::class,
+            InitializeTenancyByPath::class,
+            SetPathTenantUrlDefaults::class,
+        ])
         ->group(function () use ($registerTenantRoutes): void {
             $registerTenantRoutes(TenancyUrl::PATH_ROUTE_PREFIX);
         });

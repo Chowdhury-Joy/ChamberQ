@@ -9,7 +9,7 @@
             {{ $heading }}
         </h2>
 
-        <div class="mt-8 grid grid-cols-1 items-start gap-6 md:grid-cols-2 lg:mt-12 lg:grid-cols-3 lg:gap-6">
+        <x-card-grid :count="count($conditions)" class="mt-8 lg:mt-12">
             @foreach($conditions as $condition)
                 @php
                     $features = $condition['features'] ?? [];
@@ -58,6 +58,6 @@
                     @endif
                 </article>
             @endforeach
-        </div>
+        </x-card-grid>
     </div>
 </section>

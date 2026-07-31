@@ -7,7 +7,7 @@
             </div>
             <p>Less admin for you. More respect for their time. A visit worth telling others about.</p>
         </div>
-        <ul class="mk-value-list">
+        <x-card-grid :count="count(config('marketing.value_points'))" tag="ul" class="mk-value-list">
             @foreach(config('marketing.value_points') as $point)
                 @php
                     $exists = file_exists(public_path($point['image']));
@@ -35,6 +35,6 @@
                     </div>
                 </li>
             @endforeach
-        </ul>
+        </x-card-grid>
     </div>
 </section>

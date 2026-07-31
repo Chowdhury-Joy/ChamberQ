@@ -125,3 +125,10 @@
  <action>`DiscountCalculator`, `PlanPricingService`, `CommissionService`, Artisan `commissions:generate-monthly` (scheduled 7th of month). Tables: `marketers`, `discount_codes`, `billing_payments`, `commissions`; tenant columns for marketer, discount snapshot, list/due amounts, `setup_paid_at`.</action>
  <reason>Single service layer prevents duplicate monthly rows and ensures commission is always calculated on post-discount amounts actually paid.</reason>
 </decision>
+
+<decision>
+ <category>UI/UX</category>
+ <context>Card sections (KPI stats, pricing, services, doctor grids, etc.) used inconsistent column counts — some 4-up, some auto-fit, some 3-up only — which made layouts feel uneven across marketing, patient sites, and admin panels.</context>
+ <action>Standardize all card collections on shared `CardGrid` / `.card-grid` + `data-card-count`: mobile 1 col, tablet 2 cols, desktop **2 cols when count is 2 or 4**, otherwise **3 cols**. Filament stat widgets use `UsesCardGridColumns` trait; Blade sections use `<x-card-grid>`.</action>
+ <reason>2×2 for even fours (pricing, KPI quartets) reads balanced; 3×3 for 3/5/6 items avoids a orphaned last row. One rule everywhere reduces design drift.</reason>
+</decision>

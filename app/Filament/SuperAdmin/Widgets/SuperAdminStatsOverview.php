@@ -2,15 +2,19 @@
 
 namespace App\Filament\SuperAdmin\Widgets;
 
+use App\Filament\Concerns\UsesCardGridColumns;
+
 use App\Models\Booking;
 use App\Models\Doctor;
 use App\Models\Tenant;
 use App\Models\WebPage;
+use App\Scopes\TenantScope;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
 use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class SuperAdminStatsOverview extends BaseWidget
 {
+    use UsesCardGridColumns;
     protected static ?int $sort = 2;
 
     protected function getStats(): array
@@ -18,9 +22,13 @@ class SuperAdminStatsOverview extends BaseWidget
         $totalTenants = Tenant::count();
         $clinicTenants = Tenant::where('plan_tier', 'clinic')->count();
         $soloTenants = Tenant::where('plan_tier', 'solo')->count();
-        $totalBookings = Booking::count();
-        $totalDoctors = Doctor::count();
-        $publishedPages = WebPage::where('is_published', true)->count();
+        // Super Admin runs on central domains without initialized tenancy — aggregate
+        // across all tenants by bypassing the tenant scope (never leak in tenant panels).
+        $totalBookings = Booking::withoutGlobalScope(TenantScope::class)->count();
+        $totalDoctors = Doctor::withoutGlobalScope(TenantScope::class)->count();
+        $publishedPages = WebPage::withoutGlobalScope(TenantScope::class)
+            ->where('is_published', true)
+            ->count();
 
         return [
             Stat::make('Total Platform Tenants', $totalTenants)

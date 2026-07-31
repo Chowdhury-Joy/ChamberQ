@@ -2,6 +2,8 @@
 
 namespace App\Filament\SuperAdmin\Widgets;
 
+use App\Filament\Concerns\UsesCardGridColumns;
+
 use App\Models\Marketer;
 use App\Models\Tenant;
 use App\Services\CommissionService;
@@ -10,6 +12,7 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 
 class PlatformFinanceOverview extends BaseWidget
 {
+    use UsesCardGridColumns;
     protected static ?int $sort = 1;
 
     protected function getStats(): array

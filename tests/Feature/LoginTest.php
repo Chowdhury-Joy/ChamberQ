@@ -133,6 +133,17 @@ class LoginTest extends TestCase
         $this->assertAuthenticatedAs($this->superAdmin);
     }
 
+    public function test_super_admin_dashboard_loads_without_tenant_scope_error(): void
+    {
+        $this->actingAs($this->superAdmin);
+
+        $this->get('http://localhost/admin')->assertOk();
+
+        \Livewire\Livewire::test(\App\Filament\SuperAdmin\Widgets\SuperAdminStatsOverview::class)
+            ->assertOk()
+            ->assertSee('Total Platform Bookings');
+    }
+
     public function test_password_reset_request_pages_are_available(): void
     {
         $this->get('http://localhost/admin/password-reset/request')->assertOk();
@@ -142,5 +153,13 @@ class LoginTest extends TestCase
     public function test_solo_admin_can_access_central_platform_path_login(): void
     {
         $this->get('http://localhost/solo/admin/login')->assertOk();
+    }
+
+    public function test_unauthenticated_solo_admin_redirects_to_path_login(): void
+    {
+        $response = $this->get('http://localhost/solo/admin');
+
+        $response->assertRedirect();
+        $this->assertStringContainsString('/solo/admin/login', (string) $response->headers->get('Location'));
     }
 }

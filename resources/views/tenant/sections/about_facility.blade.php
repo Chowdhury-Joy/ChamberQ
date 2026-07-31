@@ -14,7 +14,7 @@
         @endif
 
         @if(!empty($data['gallery']))
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <x-card-grid :count="count($data['gallery'])" class="gap-6">
                 @foreach($data['gallery'] as $item)
                     <div class="bg-white rounded-2xl overflow-hidden border border-slate-200/80 shadow-sm">
                         <img src="{{ $item['image_url'] }}" alt="{{ $item['title'] }}" class="w-full h-48 object-cover">
@@ -23,7 +23,7 @@
                         </div>
                     </div>
                 @endforeach
-            </div>
+            </x-card-grid>
         @endif
     </div>
 </section>

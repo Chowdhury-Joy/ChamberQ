@@ -8,7 +8,7 @@
             <p>We set everything up with you. No technical team, long contract, or payment gateway needed.</p>
         </div>
 
-        <div class="mk-pricing-grid">
+        <x-card-grid :count="2">
             <article class="mk-plan mk-plan-featured">
                 <div class="mk-plan-head">
                     <span class="mk-plan-badge">Most popular</span>
@@ -48,6 +48,6 @@
                     Choose Clinic <span>→</span>
                 </a>
             </article>
-        </div>
+        </x-card-grid>
     </div>
 </section>

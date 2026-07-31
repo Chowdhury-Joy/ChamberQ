@@ -41,11 +41,11 @@ class TenantAdminPathPanelProvider extends PanelProvider
                     ShareErrorsFromSession::class,
                     VerifyCsrfToken::class,
                     SubstituteBindings::class,
-                    DisableBladeIconComponents::class,
-                    DispatchServingFilamentEvent::class,
                     InitializeTenancyByPath::class,
                     SetPathTenantUrlDefaults::class,
-                ])
+                    DisableBladeIconComponents::class,
+                    DispatchServingFilamentEvent::class,
+                ], isPersistent: true)
                 ->authMiddleware([
                     Authenticate::class,
                 ])

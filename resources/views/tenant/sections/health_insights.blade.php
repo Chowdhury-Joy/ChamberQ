@@ -6,7 +6,7 @@
             </h2>
         @endif
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <x-card-grid :count="count($data['articles'] ?? [])" class="gap-6">
             @foreach($data['articles'] ?? [] as $article)
                 <div class="bg-slate-50 rounded-2xl overflow-hidden border border-slate-200/80 shadow-sm flex flex-col justify-between">
                     <div>
@@ -31,6 +31,6 @@
                     @endif
                 </div>
             @endforeach
-        </div>
+        </x-card-grid>
     </div>
 </section>

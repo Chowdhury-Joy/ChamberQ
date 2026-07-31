@@ -8,7 +8,7 @@
 
         @php $videos = array_slice($data['videos'] ?? [], 0, 10); @endphp
 
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <x-card-grid :count="count($videos)" class="gap-6">
             @foreach($videos as $video)
                 @php
                     $url = \App\Support\SafeUrl::href($video['video_url'] ?? '', '');
@@ -43,6 +43,6 @@
                     </div>
                 </div>
             @endforeach
-        </div>
+        </x-card-grid>
     </div>
 </section>

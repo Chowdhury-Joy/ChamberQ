@@ -135,15 +135,20 @@ class SmsService
 
     public function ticketUrl(Booking $booking): string
     {
+        // Prefer the doctor's custom domain when one exists.
         $host = Domain::where('tenant_id', $booking->tenant_id)->value('domain');
 
-        if (! $host) {
-            return url('/bookings/'.$booking->id);
+        if ($host) {
+            $scheme = parse_url((string) config('app.url'), PHP_URL_SCHEME) ?: 'https';
+
+            return $scheme.'://'.$host.'/bookings/'.$booking->id;
         }
 
-        $scheme = parse_url((string) config('app.url'), PHP_URL_SCHEME) ?: 'https';
-
-        return $scheme.'://'.$host.'/bookings/'.$booking->id;
+        // Platform path tenancy: /{tenant}/bookings/{uuid} on a central host.
+        return route('path.bookings.show', [
+            'tenant' => $booking->tenant_id,
+            'booking' => $booking->id,
+        ]);
     }
 
     private function record(

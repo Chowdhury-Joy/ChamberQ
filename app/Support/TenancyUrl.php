@@ -31,7 +31,9 @@ class TenancyUrl
             static::reservedPathPrefixes()
         ));
 
-        return '(?!'.$reserved.'$)[a-z0-9\-]+';
+        // Group reserved alts before `$` so only exact segments are rejected
+        // (e.g. `admin` blocked, `bookna` / `screening` allowed).
+        return '(?!(?:'.$reserved.')$)[a-z0-9\-]+';
     }
 
     public static function usesPathPrefix(): bool

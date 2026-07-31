@@ -6,7 +6,7 @@
             </h2>
         @endif
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <x-card-grid :count="count($data['conditions'] ?? [])" class="gap-4">
             @foreach($data['conditions'] ?? [] as $condition)
                 <div class="bg-white rounded-xl p-5 border border-slate-200/80 shadow-sm hover:border-sky-300 transition-colors">
                     <h3 class="text-base font-bold text-slate-900 mb-1">🏥 {{ $condition['name'] }}</h3>
@@ -15,6 +15,6 @@
                     @endif
                 </div>
             @endforeach
-        </div>
+        </x-card-grid>
     </div>
 </section>

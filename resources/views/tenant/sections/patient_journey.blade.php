@@ -7,7 +7,7 @@
         @endif
 
         @php $steps = $data['steps'] ?? []; @endphp
-        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-{{ min(count($steps), 5) }} gap-6 sm:gap-8">
+        <x-card-grid :count="count($steps)" class="gap-6 sm:gap-8">
             @foreach($steps as $step)
                 <div class="relative bg-slate-50 rounded-2xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow">
                     <div class="w-12 h-12 rounded-xl bg-sky-500 text-white font-bold text-lg flex items-center justify-center mb-4 shadow-md shadow-sky-500/20">
@@ -17,6 +17,6 @@
                     <p class="text-sm text-slate-600 leading-relaxed">{{ $step['description'] ?? '' }}</p>
                 </div>
             @endforeach
-        </div>
+        </x-card-grid>
     </div>
 </section>

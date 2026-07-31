@@ -12,6 +12,7 @@
         utilities are not available here. Layout is written against Filament's own
         CSS variables so it tracks the panel theme and dark mode.
     --}}
+    <link rel="stylesheet" href="{{ asset('css/card-grid.css') }}">
     <style>
         .ops-report { display: flex; flex-direction: column; gap: 1.5rem; }
 
@@ -54,11 +55,7 @@
         .dark .ops-period { color: var(--gray-400); }
         .dark .ops-period strong { color: var(--color-white); }
 
-        .ops-kpis {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
-            gap: 1rem;
-        }
+        .ops-kpis { /* layout: .card-grid */ }
         .ops-kpi {
             position: relative;
             overflow: hidden;
@@ -226,7 +223,7 @@
         </x-filament::section>
 
         {{-- Headline numbers --}}
-        <div class="ops-kpis">
+        <div class="ops-kpis card-grid" data-card-count="4">
             <div class="ops-kpi" style="--ops-accent: var(--primary-600); --ops-accent-soft: var(--primary-50);">
                 <div class="ops-kpi-head">
                     <span class="ops-kpi-icon">

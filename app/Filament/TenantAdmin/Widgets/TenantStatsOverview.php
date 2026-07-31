@@ -2,6 +2,8 @@
 
 namespace App\Filament\TenantAdmin\Widgets;
 
+use App\Filament\Concerns\UsesCardGridColumns;
+
 use App\Models\Booking;
 use App\Models\Chamber;
 use App\Models\Doctor;
@@ -12,6 +14,7 @@ use Illuminate\Support\Carbon;
 
 class TenantStatsOverview extends BaseWidget
 {
+    use UsesCardGridColumns;
     protected function getStats(): array
     {
         $tenant = tenant();

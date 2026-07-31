@@ -7,7 +7,7 @@
             </div>
             <p>Six small steps. No app download, no patient account, no confusing setup.</p>
         </div>
-        <div class="mk-steps-grid">
+        <x-card-grid :count="count(config('marketing.steps'))">
             @foreach(config('marketing.steps') as $index => $step)
                 @php
                     $exists = file_exists(public_path($step['image']));
@@ -27,6 +27,6 @@
                     </div>
                 </article>
             @endforeach
-        </div>
+        </x-card-grid>
     </div>
 </section>

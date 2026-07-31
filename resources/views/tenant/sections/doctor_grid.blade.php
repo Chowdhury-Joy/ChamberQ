@@ -9,11 +9,13 @@
             @endif
         </div>
 
-        <div @class([
-            'grid gap-5 sm:gap-6 lg:gap-8',
-            'mx-auto max-w-md grid-cols-1' => $doctors->count() === 1,
-            'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' => $doctors->count() !== 1,
-        ])>
+        <x-card-grid
+            :count="$doctors->count()"
+            @class([
+                'gap-5 sm:gap-6 lg:gap-8',
+                'mx-auto max-w-md' => $doctors->count() === 1,
+            ])
+        >
             @forelse($doctors as $doctor)
                 <div class="flex flex-col justify-between rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm sm:p-6 lg:p-7">
                     <div>
@@ -36,6 +38,6 @@
             @empty
                 <p class="col-span-full text-center text-slate-500">{{ __('No doctors listed yet.') }}</p>
             @endforelse
-        </div>
+        </x-card-grid>
     </div>
 </section>
