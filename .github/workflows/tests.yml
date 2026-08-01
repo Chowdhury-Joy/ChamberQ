@@ -31,3 +31,41 @@ jobs:
 
       - name: Run tests
         run: php artisan test
+
+  architecture-sync:
+    name: Architecture doc sync
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Require architecture.md when files are added, deleted, or renamed
+        run: |
+          BASE="origin/${{ github.base_ref }}"
+          git fetch --no-tags --depth=0 origin "${{ github.base_ref }}"
+
+          STRUCTURAL=$(git diff --name-status "$BASE...HEAD" -- \
+            app routes config database resources/views public \
+            | grep -E '^[ADR]' || true)
+
+          if [ -z "$STRUCTURAL" ]; then
+            echo "No files added, deleted, or renamed — architecture.md update not required."
+            exit 0
+          fi
+
+          echo "Structural changes detected:"
+          echo "$STRUCTURAL"
+
+          if git diff --name-only "$BASE...HEAD" | grep -qx 'architecture.md'; then
+            echo "architecture.md was updated. OK."
+            exit 0
+          fi
+
+          echo ""
+          echo "::error::Files were added, deleted, or renamed but architecture.md was not updated."
+          echo "See AGENTS.md section 4.1 (Trigger A). Update architecture.md and append one dated"
+          echo "line to architecture_history.md. There is no exemption for bug fixes or styling."
+          exit 1

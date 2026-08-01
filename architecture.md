@@ -1,5 +1,5 @@
 # Architecture Overview
-Last Updated: 2026-07-31T15:40:00+06:00
+Last Updated: 2026-08-01T02:52:00+06:00
 
 ## Overview
 Doctor Gemini is a multi-tenant SaaS for Bangladesh solo doctors and clinics. Each tenant gets a branded patient website, online serial booking, a live waiting-room queue (outdoor screen + staff control), a patient ticket/portal, and a Filament admin panel. Patients book a serial and pay at the chamber — there is no payment gateway. Online pre-payment is later-stage only: do not suggest or build it unless the owner explicitly asks. Sales CTAs on the central marketing site use WhatsApp (`wa.me`). SMS booking confirmations use a prepaid credit wallet topped up by Super Admin. Marketer partners earn commissions on setup and monthly subscription fees (manual bKash billing); Super Admin confirms doctor payments and marketer payouts.
@@ -48,6 +48,8 @@ Scheduled tasks: `commissions:generate-monthly` runs on the 7th of each month (p
 - `app/Console/Commands/GenerateMonthlyCommissions.php` — `commissions:generate-monthly`
 - `app/Http/Controllers` — BookingController, WebPageController, ScreenController, QueueStatusController, PWAController
 - `app/Support/TenancyUrl.php` + `app/helpers.php` — `tenant_web_url()` / `tenant_web_route()` for path-aware links (not stancl's `tenant_route()`)
+- `app/Support/CardGrid.php` — shared card-grid column rule (2 cols for 2/4 cards, otherwise 3)
+- `app/Filament/Concerns/UsesCardGridColumns.php` — trait applying the card-grid rule to Filament stat widgets
 - `app/Http/Middleware` — Localization, EnsureTenantAcceptsBookings, SetPathTenantUrlDefaults, CaptureReferralParams, stancl tenancy middleware
 - `app/Filament/SuperAdmin` — central Super Admin resources/widgets (Tenants, Marketers, DiscountCodes, Commissions, finance widgets)
 - `app/Filament/Marketer` — partner panel at `/partner` (referral link, stats, referred tenants, commission history)
@@ -59,31 +61,33 @@ Scheduled tasks: `commissions:generate-monthly` runs on the 7th of each month (p
 - `config/` — `tenancy.php`, `marketing.php`, `sms.php`, app/mail/etc.
 - `database/migrations`, `database/seeders` — schema + demo solo tenant
 - `resources/views` — `marketing/`, `tenant/solo/`, shared booking/screen blades, Filament custom pages/widgets
+- `resources/views/components` — shared Blade components (`<x-card-grid>`)
 - `routes/web.php` — central domain routes (marketing home + referral capture middleware)
 - `routes/tenant.php` — tenant public + API routes
 - `routes/console.php` — scheduled `commissions:generate-monthly`
 - `lang/` — EN/BN strings
-- `public/` — entrypoint, audio chimes, built assets
+- `public/` — entrypoint, audio chimes, built assets, `css/card-grid.css` (imported by `resources/css/app.css`; also `<link>`ed by marketing home and the Operational Reports panel page, which has no Vite theme)
 - `tests/Feature` — booking, queue, ops reports, access control, marketer commissions, waiting-time ETA
 - Project memory: `decisions.md`, `bug_history.md`, `architecture.md`, `architecture_history.md`, `sitemap.md`
 
 ## Key Components
 - **Tenant + plan features** (`Tenant::hasFeature`, `Tenant::maxChambers`) — `plan_tier` `solo` | `clinic` with defaults; per-tenant `feature_flags` JSON can override. Solo defaults: `multiple_chambers` on (cap 5 via `SOLO_MAX_CHAMBERS`), no `lab_tests`, no `multiple_doctors`. Clinic defaults: all three on, unlimited chambers. `bangla_homepage` is a paid add-on flag.
 - **Marketer commissions** — `Marketer` profile linked to central `User` (`role=marketer`). Referral via `?ref={code}`; discount codes via `?code=`. `CommissionService` snapshots list/due prices, creates pending setup/monthly commissions, confirms doctor payments → `owed`, marks marketer payouts → `paid`. Not commissionable: SMS packs.
-- **BookingService** — creates serials, capacity/slot rules, lab test attachment when feature enabled, phone normalization (`01…`), billing gate via `acceptsBookings()`.
-- **LiveSessionService** — start/end session, call next, mark arrived (`in_chamber`), skip, complete; drives outdoor screen + Live Queue Control. Patient ticket ETA via `estimatedTimeForBooking()` using tenant `eta_model`: `schedule_guess` (default), `live_average`, or `live_steady` (falls back to schedule guess until completed consults exist for live modes). `LiveSession::bookings()` uses `HasManyByScheduleAndDate` so eager load matches `session_date` + `booking_date`.
+- **BookingService** — single write path for every booking (online wizard, Daily Roster walk-in, Live Queue walk-in). Creates serials under a row lock, enforces capacity/slot rules, attaches lab tests when the feature is enabled, normalises phones to `01…` (so `+88…` and `01…` are one patient), and rejects a second live booking for the same phone on the same bookable + date (`duplicateBooking`). Billing gate via `acceptsBookings()`.
+- **LiveSessionService** — start/end session, call next, mark arrived (`in_chamber`), skip, complete; drives outdoor screen + Live Queue Control. Patient ticket ETA via `estimatedTimeForBooking()` using tenant `eta_model`: `schedule_guess` (default), `live_average`, or `live_steady` (falls back to schedule guess until completed consults exist for live modes). Conservative display knobs on the tenant: `estimated_time_buffer_minutes`, `first_n_patients`, `first_n_arrival_offset_minutes` (Branding Settings) pad the shown “come around” time so early-session patients are not told to arrive at the raw schedule slot. `LiveSession::bookings()` uses `HasManyByScheduleAndDate` so eager load matches `session_date` + `booking_date`. Daily Roster writes through `bringBookingToChamber()` / `completeBooking()` rather than updating `Booking` directly, so roster actions keep `called_at` / `in_chamber_at` / `completed_at` and the live session's `current_booking_id` in sync with the outdoor screen and patient ticket.
 - **Outdoor screen** (`resources/views/tenant/screen.blade.php`) — shows chamber, doctor, and `ScheduleSession::screenLabel()` (session name + time window) so per-session serials are not confused on one TV.
 - **OperationalReportService** — day/week/month booking aggregates for staff.
-- **SmsService** — confirm booking SMS; debit 1 credit on success; skip send if wallet empty (booking still succeeds). Path-tenant ticket links built from `config('app.url')`; custom-domain tenants use their Domain host.
+- **SmsService** — confirm booking SMS after the booking transaction commits (booking never rolls back on SMS failure). Debits 1 prepaid credit **before** calling the gateway; refunds the credit if the gateway throws; skips send when the wallet is empty (`SmsMessage` row records every outcome). Path-tenant ticket links built from `config('app.url')`; custom-domain tenants use their Domain host. Custom call-audio uploads stored under `public` disk at `call-audio/{tenant_id}/`.
 - **Web page builder** — Filament WebPages resource; solo template sections under `resources/views/tenant/solo/`; SafeUrl allowlist for links.
 - **Roles** — Super Admin (central `/admin`); Marketer (central `/partner`); tenant `admin` / `doctor` / `staff` with capability helpers (`canManageOps`, `canManageContent`, `canManageQueue`, etc.).
 - **Marketing site** — central `config/marketing.php` plans/pricing/WhatsApp CTAs; Blade home at `resources/views/marketing/home.blade.php`; session capture for referral/discount params.
+- **Card grid standard** — one column rule for every card collection (marketing, tenant sections, admin stat widgets): mobile 1, tablet 2, desktop 2 when the count is 2 or 4 and otherwise 3. Blade uses `<x-card-grid :count="…">`; Filament stat widgets use the `UsesCardGridColumns` trait; both resolve through `App\Support\CardGrid`.
 
 ## Data Flow
 1. **Sales:** Visitor hits central `/` (optional `?ref=` / `?code=`) → WhatsApp CTA includes referral context → Super Admin creates tenant, attaches marketer/discount, snapshots pricing → pending setup commission.
 2. **Billing:** Super Admin confirms doctor setup/monthly payment (manual bKash) → commission moves to `owed` → monthly cron creates pending rows → Super Admin marks marketer payout paid.
-3. **Patient book:** Tenant site → `/book` wizard → `GET /api/bookings/availability` → `POST /api/bookings` → BookingService creates booking → optional SMS debit → redirect to `/bookings/{uuid}` ticket.
-4. **Clinic day:** Staff open Live Queue Control → start session for today’s ScheduleSession → call patients → Patient arrived (`in_chamber`) → complete. Outdoor TV polls `/api/screen/{session}/{date}`. Ticket page polls `/api/queue/{booking}`.
+3. **Patient book:** Tenant site → `/book` wizard → `GET /api/bookings/availability` → `POST /api/bookings` → `BookingService` creates booking inside a DB transaction with `lockForUpdate()` on the bookable (and doctor row when `slot_cap_mode` is `per_doctor_chamber`) → after commit, `SmsService` debits wallet and sends confirmation → redirect to `/bookings/{uuid}` ticket.
+4. **Clinic day:** Staff open Live Queue Control → start session for today’s ScheduleSession → call patients → Patient arrived (`in_chamber`) → complete. Daily Roster is a second entry point into the same state machine (Call to Chamber / Mark Completed) and routes through `LiveSessionService`, so both screens always agree. Outdoor TV polls `/api/screen/{session}/{date}`. Ticket page polls `/api/queue/{booking}`.
 5. **Lookup:** Patient opens `/portal`, enters phone → exact-match booking list (throttled).
 6. **Content:** Admin structures WebPages; staff edits text/images; public `/{slug?}` renders tenant site.
 7. **Labs (clinic tier / flag):** Patient can add lab tests + collection slot during booking; ops manage LabTests + LabCollectionSlots in admin.
