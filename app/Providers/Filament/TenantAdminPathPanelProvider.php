@@ -51,6 +51,8 @@ class TenantAdminPathPanelProvider extends PanelProvider
                     // InitializeTenancyForTenantHosts on the global `web` group.
                     InitializeTenancyByPath::class,
                     SetPathTenantUrlDefaults::class,
+                    // TEMPORARY diagnostic, no-ops unless AUTH_DEBUG=true.
+                    \App\Http\Middleware\SessionProbe::class,
                     DisableBladeIconComponents::class,
                     DispatchServingFilamentEvent::class,
                 ], isPersistent: true)

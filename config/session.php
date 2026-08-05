@@ -32,7 +32,16 @@ return [
     |
     */
 
-    'lifetime' => (int) env('SESSION_LIFETIME', 120),
+    /*
+     * Sessions do not expire on idle. 525,600 minutes is one year — the
+     * practical maximum, since browsers cap cookie lifetime around 400 days.
+     * This governs three things at once: the session cookie's Max-Age, how long
+     * the file session store treats a session as valid, and the threshold
+     * garbage collection uses to delete session files. Leaving the default here
+     * (rather than only in .env) means a missing SESSION_LIFETIME cannot quietly
+     * reintroduce a two-hour timeout.
+     */
+    'lifetime' => (int) env('SESSION_LIFETIME', 525600),
 
     'expire_on_close' => env('SESSION_EXPIRE_ON_CLOSE', false),
 

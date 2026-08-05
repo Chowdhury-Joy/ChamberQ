@@ -299,3 +299,28 @@
  <action>Register a global `panels::body.end` render hook in `AppServiceProvider` that, **for guests only**, intercepts Livewire's 419 and reloads the page instead of showing the browser confirm dialog. Signed-in pages keep Livewire's default prompt. Raise local `SESSION_LIFETIME` from 120 to 1440 minutes.</action>
  <reason>A guest login screen has no state worth preserving, so a silent reload is strictly better than a dialog that confuses the operator. Signed-in pages are excluded deliberately: auto-reloading would discard a half-finished page-builder edit or walk-in form without asking. The lifetime bump removes the most common trigger during a development day; it is a local convenience, not a security posture change for production.</reason>
 </decision>
+
+## 2026-08-05T21:01:25+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>The owner was being signed out repeatedly while working and asked for session expiry to be removed entirely. Note this supersedes the "local convenience, not a production posture change" framing of the 20:19 entry above: the change is now committed config that applies to every environment, at the owner's explicit instruction after the timeout concern was raised.</context>
+ <action>`SESSION_LIFETIME` = 525,600 minutes (one year) in `.env`, `.env.example`, **and** as the `config/session.php` default so a missing env var cannot reintroduce the two-hour timeout. `SESSION_EXPIRE_ON_CLOSE=false`. `AUTH_PASSWORD_TIMEOUT` = 31,536,000 seconds so the password-confirmation window never prompts either.</action>
+ <reason>Owner's explicit call. One year rather than a larger number because browsers cap cookie lifetime near 400 days, so anything beyond that is silently truncated and would be a lie in the config. The security trade-off is real and was flagged: an unattended chamber machine stays signed in indefinitely, which matters more once several staff share a device — revisit before multi-staff production rollout. Recorded here rather than left implicit so the next agent does not "fix" it back to 120.</reason>
+</decision>
+
+<decision>
+ <category>Code</category>
+ <context>Measurement during this task disproved idle expiry as the cause of the owner's ~5-minute sign-outs: a guest session held the same CSRF token across probes to t=300s, session files were growing rather than being reaped, password hashes were stable with `needsRehash` false, and no `logout()` call exists anywhere in `app/`.</context>
+ <action>Removing expiry is therefore treated as a comfort change, not the fix. `App\Providers\AuthDebugProvider` (gated behind `AUTH_DEBUG`) stays installed to capture the real cause — it logs each logout with its stack frames, `has_session_cookie`, session id and URL.</action>
+ <reason>This symptom has already been mis-diagnosed repeatedly in `bug_history.md`; committing to a cause without the authenticated-session evidence is what produced the earlier fix/revert ping-pong.</reason>
+</decision>
+
+## 2026-08-05T21:41:16+0600
+
+<decision>
+ <category>Code</category>
+ <context>The no-expiry session settings are exactly the kind of value a later "harden the app" or "that looks like a bad default" pass reverts without asking — especially the non-standard `525600` default sitting in `config/session.php` where a framework default of `120` is expected.</context>
+ <action>Lock them the same way the patient homepage is locked: `.cursor/rules/session-expiry-lock.mdc` plus a **Session expiry lock** section in `CLAUDE.md`, naming the locked keys and requiring the phrase **change session expiry** or **restore session timeout** to alter them. The rule states the accepted trade-off so it is not re-litigated, and explicitly says the separate "session replaced within seconds of login" defect must not be answered by touching these values.</action>
+ <reason>Locks in this repo are how a settled owner decision survives contact with future agents. The homepage lock exists because drive-by edits kept undoing an approved design; this value has the same exposure, with the added trap that reverting it looks like a security improvement rather than a regression.</reason>
+</decision>

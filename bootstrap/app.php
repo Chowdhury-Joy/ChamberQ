@@ -12,6 +12,8 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->prependToGroup('web', \App\Http\Middleware\InitializeTenancyForTenantHosts::class);
+        // TEMPORARY diagnostic, no-ops unless AUTH_DEBUG=true. Remove with AuthDebugProvider.
+        $middleware->appendToGroup('web', \App\Http\Middleware\SessionProbe::class);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
