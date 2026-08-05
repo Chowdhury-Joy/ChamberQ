@@ -30,8 +30,17 @@ class TenantForm
                             ->required()
                             ->maxLength(255)
                             ->regex('/^[a-z0-9\-]+$/')
+                            // The slug is the tenants table primary key, so a
+                            // collision is a 500 rather than a field error.
+                            ->unique(ignoreRecord: true)
+                            // A slug matching a reserved path prefix routes to
+                            // the platform (e.g. /admin), leaving that tenant's
+                            // site permanently unreachable.
+                            ->notIn(fn (): array => config('tenancy.reserved_path_prefixes', []))
                             ->validationMessages([
                                 'regex' => __('Use lowercase letters, numbers, and dashes only (e.g. drkarim).'),
+                                'unique' => __('That slug is already taken by another tenant.'),
+                                'not_in' => __('That slug is reserved by the platform. Pick another, e.g. the doctor’s name.'),
                             ])
                             ->disabled(fn (?string $operation) => $operation === 'edit')
                             ->dehydrated(),

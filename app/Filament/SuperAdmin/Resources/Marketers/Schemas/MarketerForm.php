@@ -2,11 +2,13 @@
 
 namespace App\Filament\SuperAdmin\Resources\Marketers\Schemas;
 
+use App\Models\User;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Schema;
+use Illuminate\Validation\Rules\Unique;
 
 class MarketerForm
 {
@@ -26,7 +28,20 @@ class MarketerForm
                             ->email()
                             ->required()
                             ->maxLength(255)
-                            ->dehydrated(false),
+                            ->dehydrated(false)
+                            // Central accounts have `tenant_id = null`, and SQL
+                            // treats NULLs as distinct — so the (tenant_id, email)
+                            // index does not stop two partners sharing an address.
+                            // Login matches on email alone, so the second one
+                            // could never sign in. Enforce it here.
+                            ->unique(
+                                table: User::class,
+                                column: 'email',
+                                modifyRuleUsing: fn (Unique $rule): Unique => $rule->whereNull('tenant_id'),
+                            )
+                            ->validationMessages([
+                                'unique' => __('Another partner or admin account already uses this email.'),
+                            ]),
                         TextInput::make('user_password')
                             ->label(__('Password'))
                             ->password()

@@ -50,4 +50,14 @@ class DoctorPolicy
 
         return true;
     }
+
+    /**
+     * Bulk delete is authorized once for the whole selection, which would let a
+     * solo tenant wipe the doctor every schedule and booking points at. Deny it;
+     * doctors are removed one at a time through `delete()`.
+     */
+    public function deleteAny(User $user): bool
+    {
+        return false;
+    }
 }

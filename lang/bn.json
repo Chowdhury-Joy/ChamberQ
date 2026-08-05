@@ -137,5 +137,15 @@
     "Validation error. Please check your inputs.": "যাচাইকরণ ত্রুটি। ইনপুটগুলো দেখুন।",
     "An error occurred submitting the booking.": "বুকিং জমা দিতে সমস্যা হয়েছে।",
     "Language": "ভাষা",
-    "Per session: each schedule has its own daily cap. Per doctor & chamber: all that doctor’s sessions at one chamber share one daily cap.": "প্রতি সেশন: প্রতিটি সময়সূচির আলাদা দৈনিক সীমা। প্রতি ডাক্তার ও চেম্বার: এক চেম্বারে সেই ডাক্তারের সব সেশন এক দৈনিক সীমা ভাগ করে।"
+    "Per session: each schedule has its own daily cap. Per doctor & chamber: all that doctor’s sessions at one chamber share one daily cap.": "প্রতি সেশন: প্রতিটি সময়সূচির আলাদা দৈনিক সীমা। প্রতি ডাক্তার ও চেম্বার: এক চেম্বারে সেই ডাক্তারের সব সেশন এক দৈনিক সীমা ভাগ করে।",
+    "Step :current of :total": "ধাপ :current / :total",
+    "Choose booking type": "বুকিংয়ের ধরন বাছুন",
+    "Pick location": "স্থান বাছুন",
+    "Pick doctor": "ডাক্তার বাছুন",
+    "Pick schedule": "সময়সূচি বাছুন",
+    "Pick collection time": "নমুনা সংগ্রহের সময় বাছুন",
+    "Select tests": "টেস্ট নির্বাচন করুন",
+    "Your details": "আপনার তথ্য",
+    "Use the same number you will show at reception.": "রিসেপশনে যে নম্বরটি দেখাবেন সেটিই ব্যবহার করুন।",
+    "Your serial": "আপনার সিরিয়াল"
 }

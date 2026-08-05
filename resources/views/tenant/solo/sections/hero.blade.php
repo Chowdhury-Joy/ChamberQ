@@ -1,6 +1,7 @@
 @php
     $image = $data['image_url'] ?? 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=1200&q=80';
     $headline = $data['headline'] ?? __('Expert care for your health');
+    $headlineAlt = preg_replace('/\s+/u', ' ', trim(str_replace(["\r\n", "\n", "\r"], ' ', $headline)));
     $credentials = $data['credentials'] ?? null;
     $roleLocation = $data['role_location'] ?? null;
     $subheadline = $data['subheadline'] ?? null;
@@ -12,9 +13,8 @@
     <div class="mx-auto grid max-w-[1280px] gap-8 px-3 sm:px-10 lg:grid-cols-2 lg:gap-10">
         <div class="solo-fade-up flex flex-col justify-between gap-8 lg:min-h-[584px]">
             <div>
-                <h1 class="font-display text-[2.35rem] leading-[1.05] tracking-tight text-slate-900 sm:text-5xl lg:text-[5.5rem] lg:leading-[0.98]">
-                    {{ $headline }}
-                </h1>
+                {{-- Mobile: honor line breaks in headline (two-liner). sm+: collapse to one line. --}}
+                <h1 class="font-display whitespace-pre-line text-[2.85rem] leading-[1.05] tracking-tight text-slate-900 sm:whitespace-normal sm:text-5xl lg:text-[5.5rem] lg:leading-[0.98]">{{ trim($headline) }}</h1>
 
                 <div class="mt-6 flex flex-col gap-3 text-base text-slate-800 sm:mt-10 sm:flex-row sm:flex-wrap sm:gap-x-10 sm:gap-y-2 sm:text-lg lg:mt-14">
                     @if(filled($credentials))
@@ -41,7 +41,7 @@
         <div class="solo-fade-up-delay overflow-hidden rounded-2xl bg-slate-100 lg:min-h-[584px]">
             <img
                 src="{{ $image }}"
-                alt="{{ $headline }}"
+                alt="{{ $headlineAlt }}"
                 class="h-full min-h-[320px] w-full object-cover object-top sm:min-h-[420px] lg:min-h-[584px]"
             >
         </div>

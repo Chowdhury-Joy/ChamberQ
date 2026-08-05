@@ -31,4 +31,13 @@ class LabTestPolicy
     {
         return $this->viewAny($user);
     }
+
+    /**
+     * Filament checks bulk deletes against `deleteAny()`, not `delete()`. Without
+     * this method the role and `lab_tests` gates above are skipped entirely.
+     */
+    public function deleteAny(User $user): bool
+    {
+        return $this->viewAny($user);
+    }
 }

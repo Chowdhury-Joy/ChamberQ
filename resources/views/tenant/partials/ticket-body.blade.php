@@ -24,6 +24,20 @@
     $copyPayload = $mapsUrl ? ($ticketUrl . "\n" . $mapsUrl) : $ticketUrl;
 @endphp
 
+    {{-- Keeps the serial (and the number being called) on screen once the big
+         one scrolls past — patients scroll to the map and prep notes while waiting.
+         aria-hidden because the live region inside .live-queue already announces it. --}}
+    <div class="serial-strip no-print" id="serialStrip" aria-hidden="true">
+        <div class="serial-strip-inner">
+            <span class="serial-strip-label">{{ __('Your serial') }}</span>
+            <span class="serial-strip-serial">{{ $booking->serial_number }}</span>
+            <span class="serial-strip-now">
+                <span class="serial-strip-label">{{ __('Now serving') }}</span>
+                <span id="stripNowServing">—</span>
+            </span>
+        </div>
+    </div>
+
     <main class="ticket">
         <div class="ticket-card">
             @if($tenant->logo_url)
@@ -172,7 +186,11 @@
                 const data = await res.json();
                 
                 document.getElementById('nowServing').textContent = data.now_serving ?? '—';
-                
+                const stripNow = document.getElementById('stripNowServing');
+                if (stripNow) stripNow.textContent = data.now_serving ?? '—';
+                const strip = document.getElementById('serialStrip');
+                if (strip) strip.classList.toggle('is-called', Boolean(data.is_called));
+
                 const ahead = document.getElementById('aheadOfYou');
                 const n = Number(data.ahead_of_you) || 0;
                 if (n <= 0) {
@@ -233,6 +251,32 @@
 
         refreshQueue();
         setInterval(refreshQueue, 5000);
+
+        // Reveal the sticky strip once the big serial has scrolled under the header.
+        // The strip is fixed, so reading its own rect.top each time gives whatever
+        // header offset the shell set (0 on clinic, 68/95px on solo) without
+        // duplicating those breakpoints in JS.
+        (function setupSerialStrip() {
+            const strip = document.getElementById('serialStrip');
+            const serial = document.querySelector('.serial');
+            if (!strip || !serial) return;
+
+            let ticking = false;
+            const sync = () => {
+                ticking = false;
+                const offset = strip.getBoundingClientRect().top;
+                strip.classList.toggle('is-visible', serial.getBoundingClientRect().bottom < offset);
+            };
+            const schedule = () => {
+                if (ticking) return;
+                ticking = true;
+                requestAnimationFrame(sync);
+            };
+
+            sync();
+            window.addEventListener('scroll', schedule, { passive: true });
+            window.addEventListener('resize', schedule, { passive: true });
+        })();
 
         document.getElementById('copyLink').addEventListener('click', async () => {
             const input = document.getElementById('ticketLink');

@@ -222,3 +222,80 @@
  <action>Freeze the solo patient homepage: no UI/layout/typography/section or Book Appointment button changes unless the owner explicitly says “update patient homepage” or “change patient homepage”. Book CTAs stay on `tenant_safe_href(..., '/book')`. Enforced via `.cursor/rules/patient-homepage-lock.mdc` + SolDoc `CLAUDE.md` project rule.</action>
  <reason>Stops drive-by homepage edits; unlock phrase is explicit so agents cannot treat general “improve UI” requests as permission to restyle home.</reason>
 </decision>
+
+## 2026-08-05T06:45:37+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Owner wanted the hero doctor name larger on phones only; tablet/desktop sizes already felt right.</context>
+ <action>Bump solo hero H1 mobile size from 2.35rem to 2.85rem; leave `sm:text-5xl` and `lg:text-[5.5rem]` unchanged. Explicit homepage update scoped to mobile.</action>
+ <reason>Improves name presence on small screens without reopening the locked desktop homepage look.</reason>
+</decision>
+
+## 2026-08-05T06:52:15+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Hero doctor name felt cramped as one long line on phones after the mobile size bump.</context>
+ <action>Store optional line break in hero headline (demo: “Dr. Mahfuzur\nRahman”); render with `whitespace-pre-line` on mobile and `sm:whitespace-normal` so tablet/desktop stay one line. Hero headline field in Web Pages is a 2-row textarea.</action>
+ <reason>Two-line name reads clearer on narrow screens without changing the desktop hero layout.</reason>
+</decision>
+
+## 2026-08-05T12:32:19+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Need to verify solo homepage mobile improvements without editing the locked live patient homepage Blade templates.</context>
+ <action>Ship a standalone HTML/CSS mock at `public/previews/solo-homepage-v2.html` (hamburger menu, 44px taps, wider gutters, calmer type, shorter snap videos, conditions “Show more”) for owner review before any live Blade change.</action>
+ <reason>Preview-first respects the patient homepage lock and lets UX be approved before production templates change.</reason>
+</decision>
+
+## 2026-08-05T13:18:42+0600
+
+<decision>
+ <category>CRO</category>
+ <context>Bangladeshi patients book almost entirely on phones. The wizard showed only progress dots (no sense of how long the flow is), and on long steps the Continue button fell below the fold, which is where hesitation turns into drop-off.</context>
+ <action>Booking wizard mobile pass, applied in the shared partial so both solo and clinic shells get it: (1) a plain-language `Step n of N — <title>` label under the dots; (2) `.btn-group` becomes `position: sticky; bottom: 0` under 640px with `env(safe-area-inset-bottom)` padding, Back at natural width and the primary button taking the rest; (3) 48px minimum height on `.btn` and `.selection-card`, plus a visible `.selected` state on type cards and checked lab tests; (4) phone field gets `inputmode="numeric"`, `autocomplete="tel"`, `017XXXXXXXX` placeholder, a "same number you will show at reception" hint, and live stripping of spaces/dashes with the caret preserved.</action>
+ <reason>These are the four cheapest friction removals on the highest-value journey; sticky (not fixed) keeps the bar inline on short steps so it never covers content, and stripping separators stops a correct BD number from being rejected for formatting.</reason>
+</decision>
+
+<decision>
+ <category>Business_Logic</category>
+ <context>The Chambers admin form asked staff for latitude and longitude, while the page builder's location section already asked for a Google Maps link. Chamber staff have a share link from the Maps app; they do not look up coordinates.</context>
+ <action>Replaced `chambers.latitude` / `chambers.longitude` with a single `map_url` column holding a pasted Google Maps link. Migration backfills existing coordinate pairs into `https://www.google.com/maps?q=lat,lng` before dropping the columns (reversible). `Chamber::isGoogleMapsUrl()` allowlists Google hosts only (`maps.app.goo.gl`, `goo.gl`, `maps.google.com`, `google.<tld>` with a `/maps` path) and backs both the Filament validation rule and `googleMapsUrl()`. Empty link falls back to a Maps search on the chamber address.</action>
+ <reason>Matches how staff actually get a location and makes the two admin surfaces consistent. The host allowlist is required because the link is re-published to patients in the ticket and the WhatsApp share text, so an arbitrary pasted URL would be a redirect vector.</reason>
+</decision>
+
+## 2026-08-05T19:39:43+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The ticket page is the screen patients reopen most on a phone, and they scroll down it constantly — to the map, the "before you come" notes, the share buttons. Once they scroll, the serial and the number being called are both off screen, so they have to scroll back up to answer the only question they actually have: "is it my turn yet?"</context>
+ <action>Added a fixed serial strip (`#serialStrip` in `tenant.partials.ticket-body`) that fades in once the big serial scrolls past, showing "Your serial N" on the left and "Now serving M" on the right, and turning green while the booking is `called`. Each shell positions it at its own header offset — `top: 0` on `tenant.ticket` (no navbar, only a floating locale chip, which is raised to z-40 with matching right padding on the strip) and `top: 68px` / `95px ≥640px` on `tenant.solo.ticket`. The shared script reads the strip's own `getBoundingClientRect().top` rather than repeating those breakpoints, and toggles visibility from a rAF-throttled passive scroll listener. Strip is `no-print` and `aria-hidden` so it does not duplicate the existing `aria-live` queue region.</action>
+ <reason>Answers the waiting patient's only question without a scroll, at the cost of one fixed element. Reading the offset off the element keeps the two shells' different header heights in CSS where they belong. A scroll listener rather than IntersectionObserver because the strip's trigger point depends on that live offset, and the rAF throttle keeps it cheap on a page that is already polling every 5s.</reason>
+</decision>
+
+## 2026-08-05T19:59:41+0600 (admin panel audit remediation)
+
+<decision>
+ <category>Business_Logic</category>
+ <context>A full read of `app/Filament/**` found five places where the admin UI quietly disagreed with the service or policy behind it: a duplicate slot-block cancellation pass that also cancelled completed visits and rendered patient names as HTML, a `wasChanged()` read taken after a second save that dropped marketer setup commissions, and bulk deletes that skipped `ChamberPolicy` / `DoctorPolicy` because Filament checks `deleteAny()`.</context>
+ <action>Delete the duplicate cancellation from `CreateSlotBlock::afterCreate()` — it now only reports the count the `SlotBlock::created` hook produced, and points staff at the escaped "Notify patients" modal. Capture all `wasChanged()` answers before the re-pricing save in `EditTenant::afterSave()`. Add `deleteAny()` to all four tenant policies: `false` for Chamber and Doctor (count-based rules cannot survive a bulk selection) with `DeleteBulkAction` removed from those two tables, and the same gate as `viewAny()` for LabTest and LabCollectionSlot.</action>
+ <reason>One write path per behaviour is the rule that already governs bookings (`BookingService`) and queue state (`LiveSessionService`); slot blocking had drifted from it. Denying bulk delete rather than adding per-record authorization is deliberate: a bulk action is authorized once against a count taken before any row is removed, so "keep at least one chamber" can never hold there — deleting one at a time from Edit already enforces it correctly.</reason>
+</decision>
+
+<decision>
+ <category>Code</category>
+ <context>Duplicate marketer login emails were accepted (central accounts have `tenant_id = null`, and SQL treats NULLs as distinct in the `(tenant_id, email)` index), while duplicate tenant staff emails and duplicate tenant slugs surfaced as 500s. A slug matching a reserved path prefix produced a tenant whose site could never be reached.</context>
+ <action>Scope each form's `unique()` rule to match its index: tenant staff email `where('tenant_id', tenant('id'))`, marketer login email `whereNull('tenant_id')`, tenant slug `unique(ignoreRecord: true)` plus `notIn(config('tenancy.reserved_path_prefixes'))`.</action>
+ <reason>The validation rule has to mirror the index or it is either useless (missing a real collision) or wrong (rejecting an address another tenant legitimately uses). Central accounts need their own rule because the database cannot express that constraint.</reason>
+</decision>
+
+## 2026-08-05T20:19:38+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The "This page has expired" alert had been reported five times and treated as a tenancy-middleware bug four of those times. Measurement showed the stack is now correct (a real Livewire commit from a fresh login page returns 200); what is left is the ordinary stale-CSRF-token case, which no middleware change can fix — three panels share one session cookie on one host, and Filament rotates the token via `session()->regenerate()` on every login.</context>
+ <action>Register a global `panels::body.end` render hook in `AppServiceProvider` that, **for guests only**, intercepts Livewire's 419 and reloads the page instead of showing the browser confirm dialog. Signed-in pages keep Livewire's default prompt. Raise local `SESSION_LIFETIME` from 120 to 1440 minutes.</action>
+ <reason>A guest login screen has no state worth preserving, so a silent reload is strictly better than a dialog that confuses the operator. Signed-in pages are excluded deliberately: auto-reloading would discard a half-finished page-builder edit or walk-in form without asking. The lifetime bump removes the most common trigger during a development day; it is a local convenience, not a security posture change for production.</reason>
+</decision>

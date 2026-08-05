@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-05T06:17:02+0600
+Last Updated: 2026-08-05T19:59:41+0600
 
 ## Full Site Map
 
@@ -85,7 +85,7 @@ Available under both platform path (`/{slug}/api/…`) and custom domain (`/api/
 
 ### New tenant → go live (Super Admin)
 - **Trigger:** Sales closes a doctor/clinic.
-- **Steps:** Create Tenant with URL **slug** (e.g. `drkarim`) → optional custom **domain** → set `plan_tier`, attach **marketer** / **discount code**, snapshot pricing → set SMS, `billing_status` → hand off admin login.
+- **Steps:** Create Tenant with URL **slug** (e.g. `drkarim`; rejected if already taken or if it matches a reserved path prefix such as `admin` / `book`) → optional custom **domain** → set `plan_tier`, attach **marketer** / **discount code**, snapshot pricing → set SMS, `billing_status` → hand off admin login.
 - **URLs:** Platform `/{slug}/…`; after custom domain DNS, also `drkarim.com/…` at root.
 - **Success:** `/{slug}/book` works; admin at `/{slug}/admin` (or `/admin` on custom domain).
 
@@ -102,6 +102,12 @@ Available under both platform path (`/{slug}/api/…`) and custom domain (`/api/
 ### Content update (staff)
 - **Trigger:** Doctor wants copy/photo change.
 - **Steps:** Staff edits Web Page blocks in tenant admin.
+
+### Block a date — vacation / holiday / doctor away (admin/doctor)
+- **Trigger:** The clinic, a chamber, or one doctor will not sit on a given date.
+- **Steps:** Slot Blocks → New → pick date, optionally chamber and/or doctor → the form shows how many bookings this will cancel and requires the confirmation checkbox → Save. Saving cancels those bookings (waiting/called/in-chamber only — completed visits are left alone) and reports the count. Then **Notify patients** on that block row → tap each patient to open WhatsApp with a prepared message.
+- **Data/systems touched:** `slot_blocks`, `bookings` (`status`, `cancelled_at`, `cancellation_reason`, `slot_block_id`) via `SlotBlockService`.
+- **Success:** No patient still holds a serial for a closed date, and every cancelled patient appears in the notify list.
 
 ### Ops review (admin/doctor)
 - **Trigger:** End of day/week.

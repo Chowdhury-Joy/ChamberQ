@@ -3,6 +3,7 @@
 namespace App\Providers\Filament;
 
 use App\Providers\Filament\Concerns\ConfiguresTenantAdminPanel;
+use App\Support\FilamentPanelUrl;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -30,6 +31,9 @@ class TenantAdminPathPanelProvider extends PanelProvider
                 ->id('tenantAdminPath')
                 ->path('{tenant}/admin')
                 ->domains(config('tenancy.central_domains', []))
+                // The topbar/sidebar logo falls back to `Panel::getUrl()`, which
+                // for this panel is the unsubstituted pattern `{tenant}/admin`.
+                ->homeUrl(fn (): string => FilamentPanelUrl::home())
                 ->pages([
                     Dashboard::class,
                 ])
@@ -41,6 +45,10 @@ class TenantAdminPathPanelProvider extends PanelProvider
                     ShareErrorsFromSession::class,
                     VerifyCsrfToken::class,
                     SubstituteBindings::class,
+                    // Path routes need stancl path init so `{tenant}` binds and
+                    // SetPathTenantUrlDefaults can feed Filament login redirects.
+                    // Livewire `/livewire/update` (no `{tenant}`) is covered by
+                    // InitializeTenancyForTenantHosts on the global `web` group.
                     InitializeTenancyByPath::class,
                     SetPathTenantUrlDefaults::class,
                     DisableBladeIconComponents::class,

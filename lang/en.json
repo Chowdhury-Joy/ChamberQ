@@ -137,5 +137,15 @@
     "Validation error. Please check your inputs.": "Validation error. Please check your inputs.",
     "An error occurred submitting the booking.": "An error occurred submitting the booking.",
     "Language": "Language",
-    "Per session: each schedule has its own daily cap. Per doctor & chamber: all that doctor’s sessions at one chamber share one daily cap.": "Per session: each schedule has its own daily cap. Per doctor & chamber: all that doctor's sessions at one chamber share one daily cap."
+    "Per session: each schedule has its own daily cap. Per doctor & chamber: all that doctor’s sessions at one chamber share one daily cap.": "Per session: each schedule has its own daily cap. Per doctor & chamber: all that doctor's sessions at one chamber share one daily cap.",
+    "Step :current of :total": "Step :current of :total",
+    "Choose booking type": "Choose booking type",
+    "Pick location": "Pick location",
+    "Pick doctor": "Pick doctor",
+    "Pick schedule": "Pick schedule",
+    "Pick collection time": "Pick collection time",
+    "Select tests": "Select tests",
+    "Your details": "Your details",
+    "Use the same number you will show at reception.": "Use the same number you will show at reception.",
+    "Your serial": "Your serial"
 }

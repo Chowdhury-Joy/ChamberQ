@@ -33,6 +33,52 @@
         }
         body { font-family: var(--font-family-base); }
         .ticket { max-width: 520px; margin: 2rem auto; padding: 0 1rem; }
+
+        /* Sticky serial strip. This shell has no navbar — only the floating locale
+           chip — so the strip sits at the very top and the chip is raised above it. */
+        .serial-strip {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            z-index: 30;
+            background: var(--bg-surface);
+            border-bottom: 1px solid rgba(128, 128, 128, .25);
+            box-shadow: 0 4px 12px -8px rgba(15, 23, 42, 0.45);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.18s ease, visibility 0.18s ease;
+        }
+        .serial-strip.is-visible { opacity: 1; visibility: visible; }
+        .serial-strip.is-called { background: #dcfce7; border-bottom-color: #86efac; }
+        .serial-strip-inner {
+            max-width: 520px;
+            margin: 0 auto;
+            display: flex;
+            align-items: baseline;
+            gap: 0.5rem;
+            padding: 0.6rem 1rem;
+            padding-right: 4.5rem; /* clears the fixed EN|BN chip on narrow screens */
+        }
+        @media (min-width: 640px) {
+            .serial-strip-inner { padding-right: 1rem; }
+        }
+        .serial-strip-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .serial-strip-serial { font-size: 1.4rem; font-weight: 700; color: var(--color-primary); line-height: 1; }
+        .serial-strip.is-called .serial-strip-serial { color: #166534; }
+        .serial-strip-now {
+            margin-left: auto;
+            display: inline-flex;
+            align-items: baseline;
+            gap: 0.4rem;
+            font-weight: 700;
+        }
         .ticket-card { background: var(--bg-surface); padding: 2rem; border-radius: var(--radius-lg); box-shadow: var(--shadow-md); text-align: center; }
         .ticket-brand { font-weight: 700; font-size: 1.15rem; color: var(--color-primary); margin: 0 0 1rem; }
         .serial { font-size: 3.5rem; font-weight: 700; color: var(--color-primary); line-height: 1; margin: .5rem 0 1.5rem; }
@@ -82,7 +128,7 @@
     </style>
 </head>
 <body>
-    <div style="position:fixed;top:0.75rem;right:1rem;z-index:20;" class="locale-chip">
+    <div style="position:fixed;top:0.75rem;right:1rem;z-index:40;" class="locale-chip">
         <a href="{{ tenant_web_url('/lang/en') }}" class="{{ $locale === 'en' ? 'is-active' : '' }}">EN</a>
         <span aria-hidden="true">|</span>
         <a href="{{ tenant_web_url('/lang/bn') }}" class="{{ $locale === 'bn' ? 'is-active' : '' }}">BN</a>

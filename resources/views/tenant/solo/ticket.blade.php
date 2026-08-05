@@ -80,6 +80,61 @@
         @media (min-width: 640px) {
             .ticket { padding: 2rem 2.5rem 4rem; }
         }
+
+        /* Sticky serial strip — sits directly under the shell header (68px, 95px ≥640px)
+           and below it in stacking order, so the header always wins. */
+        .serial-strip {
+            position: fixed;
+            top: 68px;
+            left: 0;
+            right: 0;
+            z-index: 40;
+            background: #ffffff;
+            border-bottom: 1px solid #E0E0E0;
+            box-shadow: 0 4px 12px -8px rgba(15, 23, 42, 0.45);
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.18s ease, visibility 0.18s ease;
+        }
+        .serial-strip.is-visible { opacity: 1; visibility: visible; }
+        .serial-strip.is-called {
+            background: #dcfce7;
+            border-bottom-color: #86efac;
+        }
+        .serial-strip-inner {
+            max-width: 720px;
+            margin: 0 auto;
+            display: flex;
+            align-items: baseline;
+            gap: 0.5rem;
+            padding: 0.6rem 1.25rem;
+        }
+        @media (min-width: 640px) {
+            .serial-strip { top: 95px; }
+            .serial-strip-inner { padding-left: 2.5rem; padding-right: 2.5rem; }
+        }
+        .serial-strip-label {
+            font-size: 0.7rem;
+            font-weight: 600;
+            color: #64748b;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+        .serial-strip-serial {
+            font-family: var(--font-family-display);
+            font-size: 1.4rem;
+            color: var(--color-primary);
+            line-height: 1;
+        }
+        .serial-strip.is-called .serial-strip-serial { color: #166534; }
+        .serial-strip-now {
+            margin-left: auto;
+            display: inline-flex;
+            align-items: baseline;
+            gap: 0.4rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
         .ticket-card {
             background: #ffffff;
             padding: 1.75rem 1.25rem;

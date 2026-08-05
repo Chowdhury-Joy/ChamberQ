@@ -20,6 +20,7 @@
             <div class="booking-header">
                 <h2>{{ __('Book Your Appointment') }}</h2>
                 <div class="progress-bar" id="progressBar"></div>
+                <p class="step-label" id="stepLabel" aria-live="polite"></p>
             </div>
             
             <div id="message" class="alert" role="alert" aria-live="polite"></div>
@@ -32,13 +33,13 @@
                     <h3>{{ __('What would you like to book?') }}</h3>
                     <div class="selection-grid">
                         @if($canBookConsultation)
-                        <div class="selection-card" onclick="selectType('session')">
+                        <div class="selection-card" onclick="selectType('session', this)">
                             <h4>{{ __('Doctor Consultation') }}</h4>
                             <p>{{ __('Book a visit with one of our specialists.') }}</p>
                         </div>
                         @endif
                         @if($hasLabTests && $canBookLab)
-                        <div class="selection-card" onclick="selectType('lab')">
+                        <div class="selection-card" onclick="selectType('lab', this)">
                             <h4>{{ __('Lab Tests') }}</h4>
                             <p>{{ __('Book pathology and imaging tests.') }}</p>
                         </div>
@@ -51,7 +52,7 @@
                     <h3>{{ __('Select a Location') }}</h3>
                     <div class="selection-grid" id="chamber-grid">
                         @foreach($chambers as $chamber)
-                        <div class="selection-card" onclick="selectChamber('{{ $chamber->id }}')">
+                        <div class="selection-card" onclick="selectChamber('{{ $chamber->id }}', this)">
                             <h4>{{ $chamber->name }}</h4>
                             <p>{{ $chamber->address }}</p>
                         </div>
@@ -67,7 +68,7 @@
                     <h3>{{ __('Select a Doctor') }}</h3>
                     <div class="selection-grid" id="doctor-grid">
                         @foreach($doctors as $doctor)
-                        <div class="selection-card" onclick="selectDoctor('{{ $doctor->id }}')">
+                        <div class="selection-card" onclick="selectDoctor('{{ $doctor->id }}', this)">
                             <h4>{{ $doctor->name }}</h4>
                             <p>{{ $doctor->specialty }}</p>
                         </div>
@@ -96,7 +97,7 @@
                     <div class="selection-grid list-view">
                         @foreach($labTests as $test)
                         <label class="selection-card" style="display:block; padding-left:3rem; position:relative;">
-                            <input type="checkbox" name="lab_tests[]" value="{{ $test->id }}" data-price="{{ $test->price }}" onchange="updateTotal()" style="position:absolute; left:1rem; top:1.5rem; transform:scale(1.5);">
+                            <input type="checkbox" name="lab_tests[]" value="{{ $test->id }}" data-price="{{ $test->price }}" onchange="updateTotal()" style="position:absolute; left:1rem; top:1.5rem; width:1.35rem; height:1.35rem; accent-color: var(--color-primary);">
                             <span class="price">৳{{ number_format($test->price, 2) }}</span>
                             <h4>{{ $test->test_name }}</h4>
                             <p>{{ $test->description }}</p>
@@ -132,12 +133,15 @@
 
                     <div class="form-group">
                         <label class="form-label" for="patient_name">{{ __('Patient Name') }}</label>
-                        <input type="text" name="patient_name" id="patient_name" class="form-control" required>
+                        <input type="text" name="patient_name" id="patient_name" class="form-control" autocomplete="name" required>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label" for="patient_phone">{{ __('Phone Number') }}</label>
-                        <input type="tel" name="patient_phone" id="patient_phone" class="form-control" placeholder="017..." required>
+                        <input type="tel" name="patient_phone" id="patient_phone" class="form-control"
+                               inputmode="numeric" autocomplete="tel" maxlength="14"
+                               placeholder="017XXXXXXXX" required>
+                        <small class="text-muted" style="display:block;margin-top:0.5rem">{{ __('Use the same number you will show at reception.') }}</small>
                         <span class="field-error" id="phone-error" role="alert" aria-live="polite" style="display:none"></span>
                     </div>
 
@@ -203,6 +207,14 @@
             selectLabTest: @json(__('Please select at least one lab test.')),
             validationError: @json(__('Validation error. Please check your inputs.')),
             submitError: @json(__('An error occurred submitting the booking.')),
+            stepCounter: @json(__('Step :current of :total')),
+            stepType: @json(__('Choose booking type')),
+            stepChamber: @json(__('Pick location')),
+            stepDoctor: @json(__('Pick doctor')),
+            stepSession: @json(__('Pick schedule')),
+            stepLabWindow: @json(__('Pick collection time')),
+            stepLabTests: @json(__('Select tests')),
+            stepIdentity: @json(__('Your details')),
         };
         
         const sessionsData = @json($sessions);
@@ -211,6 +223,9 @@
 
         let state = {
             type: null,
+            // Set only by ?doctor= / ?test= deep links, which pick the type for the
+            // patient and therefore skip the type step entirely.
+            typeLocked: false,
             chamberId: null,
             doctorId: null,
             bookableId: null,
@@ -229,7 +244,10 @@
             flow = [];
             
             if (config.hasLabTests && config.canBookConsultation && config.canBookLab) {
-                if (!state.type) {
+                // Keep the type step in the flow after a choice is made. Dropping it
+                // shifted every later step down one index, so the step right after it
+                // (Pick location) was skipped, and Back could never return here.
+                if (!state.typeLocked) {
                     flow.push('step-type');
                 }
             } else if (config.canBookLab && !config.canBookConsultation) {
@@ -331,6 +349,18 @@
             availabilityCache = {};
         }
 
+        function stepTitle(stepId) {
+            switch (stepId) {
+                case 'step-type': return i18n.stepType;
+                case 'step-chamber': return i18n.stepChamber;
+                case 'step-doctor': return i18n.stepDoctor;
+                case 'step-session': return state.type === 'lab' ? i18n.stepLabWindow : i18n.stepSession;
+                case 'step-lab-tests': return i18n.stepLabTests;
+                case 'step-identity': return i18n.stepIdentity;
+                default: return '';
+            }
+        }
+
         function renderProgress() {
             const bar = document.getElementById('progressBar');
             bar.innerHTML = '';
@@ -341,6 +371,17 @@
                 if (idx === currentStepIndex) dot.classList.add('active');
                 bar.appendChild(dot);
             });
+
+            // Plain-language position ("Step 2 of 5 — Pick location") reassures
+            // patients that the flow is short; dots alone do not.
+            const label = document.getElementById('stepLabel');
+            if (label) {
+                const counter = i18n.stepCounter
+                    .replace(':current', currentStepIndex + 1)
+                    .replace(':total', flow.length);
+                const title = stepTitle(flow[currentStepIndex]);
+                label.textContent = title ? `${counter} — ${title}` : counter;
+            }
         }
 
         function showStep() {
@@ -378,8 +419,21 @@
                 refreshIdentityAvailability();
                 updateReviewSummary();
             };
-            document.getElementById('patient_phone').oninput = () => {
+            // Patients often type "017 1234 5678" or "017-1234-5678". Strip the
+            // separators as they go so the BD pattern check does not reject a
+            // number that is otherwise correct, keeping the caret in place.
+            const phoneInput = document.getElementById('patient_phone');
+            phoneInput.oninput = () => {
                 phoneError.style.display = 'none';
+                const before = phoneInput.value;
+                const cleaned = before.replace(/[^\d+]/g, '');
+                if (cleaned === before) return;
+                const caret = phoneInput.selectionStart ?? before.length;
+                const head = before.slice(0, caret);
+                const removed = head.length - head.replace(/[^\d+]/g, '').length;
+                phoneInput.value = cleaned;
+                const pos = Math.max(0, caret - removed);
+                phoneInput.setSelectionRange(pos, pos);
             };
             dateError.style.display = 'none';
             phoneError.style.display = 'none';
@@ -480,23 +534,30 @@
             }
         }
         
-        function selectType(type) {
-            state.type = type;
-            rebuildFlow();
-            nextStep();
+        // `el` is passed from the markup (`this`) rather than read off the global
+        // `event`, so the selected state is reliable outside Chrome.
+        function markSelected(gridSelector, el) {
+            document.querySelectorAll(`${gridSelector} .selection-card`).forEach(card => card.classList.remove('selected'));
+            if (el) el.classList.add('selected');
         }
-        
-        function selectChamber(id) {
-            state.chamberId = id;
-            document.querySelectorAll('#chamber-grid .selection-card').forEach(el => el.classList.remove('selected'));
-            event.currentTarget.classList.add('selected');
+
+        function selectType(type, el) {
+            state.type = type;
+            markSelected('#step-type', el);
+            rebuildFlow();
             setTimeout(nextStep, 200);
         }
-        
-        function selectDoctor(id) {
+
+
+        function selectChamber(id, el) {
+            state.chamberId = id;
+            markSelected('#chamber-grid', el);
+            setTimeout(nextStep, 200);
+        }
+
+        function selectDoctor(id, el) {
             state.doctorId = id;
-            document.querySelectorAll('#doctor-grid .selection-card').forEach(el => el.classList.remove('selected'));
-            event.currentTarget.classList.add('selected');
+            markSelected('#doctor-grid', el);
             setTimeout(nextStep, 200);
         }
         
@@ -684,6 +745,10 @@
         
         function updateTotal() {
             let total = 0;
+            document.querySelectorAll('input[name="lab_tests[]"]').forEach(cb => {
+                const card = cb.closest('.selection-card');
+                if (card) card.classList.toggle('selected', cb.checked);
+            });
             document.querySelectorAll('input[name="lab_tests[]"]:checked').forEach(cb => {
                 total += parseFloat(cb.dataset.price);
             });
@@ -796,6 +861,7 @@
         const testParam = params.get('test');
         if (doctorParam && config.doctorIds.includes(String(doctorParam))) {
             state.type = 'session';
+            state.typeLocked = true;
             state.doctorId = String(doctorParam);
             const doctorSessions = sessionsData.filter(s => String(s.doctor_id) === String(doctorParam));
             const chamberIds = [...new Set(doctorSessions.map(s => String(s.chamber_id)))];
@@ -805,6 +871,7 @@
         }
         if (testParam) {
             state.type = 'lab';
+            state.typeLocked = true;
             state.preselectedTestId = String(testParam);
         }
 

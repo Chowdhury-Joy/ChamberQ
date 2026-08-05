@@ -2,14 +2,18 @@
 
 namespace App\Filament\TenantAdmin\Resources\Doctors\Tables;
 
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
 class DoctorsTable
 {
+    /**
+     * No bulk delete here: `DoctorPolicy` stops a solo tenant removing the only
+     * doctor every schedule and booking points at, and a bulk action is
+     * authorized once for the whole selection, so that rule cannot hold. Doctors
+     * are deleted one at a time from Edit, where `DoctorPolicy::delete()` applies.
+     */
     public static function configure(Table $table): Table
     {
         return $table
@@ -30,11 +34,6 @@ class DoctorsTable
             ])
             ->recordActions([
                 EditAction::make(),
-            ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
-                ]),
             ]);
     }
 }

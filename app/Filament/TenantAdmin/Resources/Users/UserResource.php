@@ -13,6 +13,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Validation\Rules\Unique;
 
 class UserResource extends Resource
 {
@@ -45,7 +46,15 @@ class UserResource extends Resource
                     ->autocomplete('email')
                     ->email()
                     ->required()
-                    ->maxLength(255),
+                    ->maxLength(255)
+                    // The DB index is (tenant_id, email), so the rule has to be
+                    // scoped the same way — otherwise a duplicate inside this
+                    // tenant is a 500 instead of a field error, and an address
+                    // already used by an unrelated tenant is wrongly rejected.
+                    ->unique(
+                        ignoreRecord: true,
+                        modifyRuleUsing: fn (Unique $rule): Unique => $rule->where('tenant_id', tenant('id')),
+                    ),
 
                 Forms\Components\Select::make('role')
                     ->label('Access Role')

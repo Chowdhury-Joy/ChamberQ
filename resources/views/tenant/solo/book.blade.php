@@ -159,6 +159,7 @@
             border: 1px solid #E0E0E0;
             border-radius: 1rem;
             padding: 1.15rem 1.25rem;
+            min-height: 48px;
             cursor: pointer;
             transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
             background: #FAFAFA;
@@ -207,6 +208,7 @@
             align-items: center;
             justify-content: center;
             gap: 0.5rem;
+            min-height: 48px;
             font-weight: 600;
             font-size: 0.95rem;
             font-family: inherit;
@@ -233,10 +235,30 @@
         }
         .btn-back:hover { background: #F2F2F2; }
 
-        .progress-bar { display: flex; justify-content: center; gap: 0.5rem; margin-bottom: 2rem; }
+        /* Phones: keep Back/Continue reachable without scrolling to the end of
+           a long step. Sticky (not fixed) so the bar settles inline on short
+           steps and never covers content. */
+        @media (max-width: 639.98px) {
+            .btn-group {
+                position: sticky;
+                bottom: 0;
+                z-index: 20;
+                margin: 1.75rem -1.25rem 0;
+                padding: 0.85rem 1.25rem calc(0.85rem + env(safe-area-inset-bottom));
+                background: #ffffff;
+                box-shadow: 0 -8px 18px -14px rgba(15, 23, 42, 0.5);
+                flex-wrap: nowrap;
+            }
+            .btn-group .btn { padding-left: 1.25rem; padding-right: 1.25rem; }
+            .btn-group .btn-back { flex: 0 0 auto; }
+            .btn-group .btn-primary { flex: 1 1 auto; }
+        }
+
+        .progress-bar { display: flex; justify-content: center; gap: 0.5rem; margin-bottom: 0.65rem; }
         .progress-dot { width: 8px; height: 8px; border-radius: 50%; background: #E0E0E0; transition: all 0.3s; }
         .progress-dot.active { background: var(--color-primary); transform: scale(1.3); }
         .progress-dot.completed { background: #94a3b8; }
+        .step-label { margin: 0; font-size: 0.9rem; font-weight: 600; color: #64748b; }
 
         .lab-total {
             font-size: 1.25rem;

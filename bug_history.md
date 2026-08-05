@@ -250,3 +250,94 @@
  <root_cause>Homepage restore rolled back section blades wholesale, including the Aug 1 card inner structure that had moved the Including label above the grey list.</root_cause>
  <prevention_rule>When reverting homepage visuals, keep Figma Conditions card structure: “Including:” label above the grey feature container — never nest that label inside the grey box.</prevention_rule>
 </bug>
+
+## 2026-08-05
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>On clinic tenants offering both consultations and labs with more than one chamber, choosing "Doctor Consultation" jumped straight to "Select a Doctor" — the location step was never shown, so the patient never chose which chamber and `state.chamberId` stayed null (schedules from every chamber were then listed together). Back could also never return to the booking-type step.</symptom>
+ <root_cause>`rebuildFlow()` pushed `step-type` only while `state.type` was null, so selecting a type removed it from the flow array and shifted every later step down one index. `selectType()` then called `nextStep()` on top of that shift, advancing twice.</root_cause>
+ <prevention_rule>Never rebuild the wizard flow array in a way that changes the index of the step the patient is currently on — steps may only be added or removed ahead of `currentStepIndex`, and any conditional step must stay in the flow once it has been displayed.</prevention_rule>
+</bug>
+
+## 2026-08-05T15:30:52+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>Tenant admin panel shows a repeating “This page has expired. Would you like to refresh the page?” popup.</symptom>
+ <root_cause>`TenantAdminPathPanelProvider` (for `/{tenant}/admin`) did not include `InitializeTenancyForTenantHosts`, so Livewire `/livewire/update` polls lost the correct tenant/CSRF/session context.</root_cause>
+ <prevention_rule>Any Filament tenant admin panel that uses path tenancy must include `InitializeTenancyForTenantHosts` in its persistent middleware stack before session + CSRF for Livewire polling.</prevention_rule>
+</bug>
+
+## 2026-08-05T15:35:02+0600
+
+<bug>
+ <category>Code</category>
+ <symptom>Tenant admin Livewire polling fails with HTTP `419` on `POST /livewire/update`, leading to “This page has expired” prompts.</symptom>
+ <root_cause>`TenantAdminPathPanelProvider` applied competing tenancy initialization middlewares during persistent Livewire requests, keeping CSRF/session context from matching.</root_cause>
+ <prevention_rule>For persistent Filament tenant panels, use a single tenancy initialization middleware for `/{tenant}/admin` (don’t stack both `InitializeTenancyForTenantHosts` and `InitializeTenancyByPath`); ensure it runs before session + CSRF.</prevention_rule>
+</bug>
+
+## 2026-08-05T19:00:03+0600
+
+<bug>
+ <category>Code</category>
+ <symptom>`/{tenant}/admin` crashed with `UrlGenerationException: Missing required parameter: tenant` for `filament.tenantAdminPath.*.auth.login`.</symptom>
+ <root_cause>An earlier 419 fix removed `InitializeTenancyByPath` from `TenantAdminPathPanelProvider` and relied only on `InitializeTenancyForTenantHosts`. Path panel login URL generation needs route `{tenant}` + `SetPathTenantUrlDefaults` after stancl path init; Livewire polls already get tenancy from `InitializeTenancyForTenantHosts` on the global `web` group.</root_cause>
+ <prevention_rule>Never remove `InitializeTenancyByPath` from the path Filament panel stack — keep it with `SetPathTenantUrlDefaults` for admin routes; leave Livewire `/livewire/update` tenancy to the `web`-group `InitializeTenancyForTenantHosts` middleware.</prevention_rule>
+</bug>
+
+## 2026-08-05T19:59:41+0600 (admin panel audit)
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>Blocking a date in tenant admin flipped already-**completed** visits to `cancelled`, so finished consultations disappeared from reports and the patient's ticket said the visit was cancelled.</symptom>
+ <root_cause>`CreateSlotBlock::afterCreate()` ran a second cancellation pass on top of `SlotBlock::booted()` → `SlotBlockService::cancelAffected()`. The service excludes `cancelled` and `completed`; the page's copy excluded only `cancelled`, so it swept up the completed rows the service had deliberately left alone. It also wrote `status` directly without `slot_block_id`, so those bookings never appeared in the "Notify patients" list.</root_cause>
+ <prevention_rule>Slot-block cancellation lives in `SlotBlockService` only, invoked from the `SlotBlock::created` hook. A Filament page may report what the service did (via `cancelledBookings()`) but must never run its own cancellation query.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Code</category>
+ <symptom>A patient could inject script into the tenant admin panel: the "Bookings Cancelled" notification after blocking a date rendered patient names as raw HTML.</symptom>
+ <root_cause>`CreateSlotBlock::afterCreate()` built `<li><a …>Notify {$booking->patient_name}</a></li>` and passed it through `new HtmlString(...)`. `patient_name` comes from the public booking form and is validated only as `string|max:255`. Same class of bug as the 2026-07-27 `innerHTML` wizard XSS.</root_cause>
+ <prevention_rule>Never interpolate booking-supplied fields into `HtmlString` / notification bodies. Patient-facing data in admin UI goes through a Blade view with `{{ }}` escaping — as `filament.tenant-admin.slot-block-notify` already does.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>Attaching a marketer and changing the plan tier in the same tenant edit created no pending setup commission — the partner was never credited for that doctor.</symptom>
+ <root_cause>`EditTenant::afterSave()` re-priced the tenant and called `$tenant->save()` a second time. Eloquent re-syncs `$model->changes` on every save that writes rows, so the later `$tenant->wasChanged('marketer_id')` reported the *pricing* save's changes and returned false.</root_cause>
+ <prevention_rule>Read every `wasChanged()` answer into a local variable at the top of `afterSave()`, before any code path saves the model again.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>Tenant admin could bulk-delete every chamber and the only doctor, despite `ChamberPolicy` keeping at least one chamber and `DoctorPolicy` blocking a solo tenant's only doctor. Deleting them orphaned every schedule and booking.</symptom>
+ <root_cause>Filament authorizes bulk actions with `deleteAny()`, not `delete()`. Neither policy defined `deleteAny()`, and Filament's "policy exists but method missing" path returns **allow** — so the toolbar's `DeleteBulkAction` skipped the per-record rules entirely. `TierGatingPolicyTest` kept passing because it only exercised the policy.</root_cause>
+ <prevention_rule>Every policy backing a Filament resource with a `DeleteBulkAction` must define `deleteAny()`. When the rule is count-based (keep the last one) it cannot hold across a bulk selection — deny `deleteAny()` and drop the bulk action from that table.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Code</category>
+ <symptom>Two marketer/super-admin accounts could be created with the same email; the second could never sign in and password reset always hit the first. Duplicate tenant staff emails and duplicate tenant slugs crashed with a 500 instead of showing a field error.</symptom>
+ <root_cause>The users unique index is `(tenant_id, email)`, and SQL treats `NULL` tenant ids as distinct, so central accounts were never constrained. No form carried a matching `unique()` rule: tenant staff email had none, marketer login email had none, and `tenants.id` (the primary key) had none.</root_cause>
+ <prevention_rule>Every admin form field backed by a unique index needs a `unique()` rule scoped the same way as the index — `where('tenant_id', tenant('id'))` for tenant users, `whereNull('tenant_id')` for central accounts. Tenant slug also needs `notIn(config('tenancy.reserved_path_prefixes'))`, or the tenant's site is unreachable.</prevention_rule>
+</bug>
+
+## 2026-08-05T20:19:38+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>“This page has expired. Would you like to refresh the page?” on `/{tenant}/admin/login` — the fifth report of this alert, after four middleware fixes (2026-08-01T21:09, 2026-08-01T21:15, 2026-08-05T15:30, 2026-08-05T15:35 + the 19:00 revert) had each been treated as the cause.</symptom>
+ <root_cause>**Not the middleware stack this time** — measured on a running server, a fresh login page commits to `/livewire/update` with status 200, and the CSRF token stays stable across `/solo/admin/login` and `/admin/login`. The remaining cause is an ordinary stale token: all three panels sit on one host and share a single session cookie, `Filament\Auth\Pages\Login::authenticate()` calls `session()->regenerate()` (rotating the CSRF token) on every login, and `SESSION_LIFETIME` was 120 minutes. So any admin tab left open while you sign in elsewhere — or idle past the lifetime — submits a dead token and Livewire answers 419.</root_cause>
+ <prevention_rule>Before changing tenancy or session middleware in response to a 419, **prove the stack is broken first**: load the page and POST a real Livewire commit with a valid token. If that returns 200, the middleware is fine and the 419 is a stale token — changing middleware will only trade one panel's breakage for another's, as the 15:35 → 19:00 fix/revert pair did.</prevention_rule>
+</bug>
+
+## 2026-08-05T20:27:33+0600
+
+<bug>
+ <category>Code</category>
+ <symptom>Signing in at `/{tenant}/admin/login` landed on `http://127.0.0.1:8040/%7Btenant%7D/admin` — the literal route pattern — and 404'd.</symptom>
+ <root_cause>`Filament\Auth\Http\Responses\LoginResponse` redirects to `Panel::getUrl()`. That method returns `route($panel->generateRouteName('home'))` only when such a route exists — and Filament never registers a `home` route (confirmed: no `*.home` route in `route:list`), so it always falls through to `url($panel->getPath())`. For the central panels the path is literally `admin` / `partner`, so the fallback is accidentally correct; for the path panel the path is the *pattern* `{tenant}/admin`, which `url()` emits verbatim. Only reachable when the session held no `url.intended` — i.e. when login started at the login URL directly rather than by being bounced off `/{tenant}/admin` — which is why it looked intermittent.</root_cause>
+ <prevention_rule>Never let panel URLs come from `Panel::getUrl()` / `getPath()` for the path panel — its path is a route pattern, not a URL. Resolve the panel's dashboard route by name through `App\Support\FilamentPanelUrl::home()`, which uses Filament's own `generateRouteName()` so the domain segment multi-domain panels add stays correct.</prevention_rule>
+</bug>

@@ -67,8 +67,7 @@ class DatabaseSeeder extends Seeder
         $chamber = Chamber::firstOrCreate(['name' => 'Dhanmondi Chamber'], [
             'address' => 'House 42, Road 9/A, Dhanmondi, Dhaka 1209',
             'contact' => '01712345678',
-            'latitude' => '23.7461',
-            'longitude' => '90.3742',
+            'map_url' => 'https://www.google.com/maps?q=23.7461%2C90.3742',
         ]);
 
         $doctor = Doctor::firstOrCreate(['name' => 'Dr. Mahfuzur Rahman']);
@@ -88,7 +87,7 @@ class DatabaseSeeder extends Seeder
             'is_published' => true,
             'content' => [
                 ['type' => 'hero', 'data' => [
-                    'headline' => 'Dr. Mahfuzur Rahman',
+                    'headline' => "Dr. Mahfuzur\nRahman",
                     'credentials' => 'MBBS, FCPS (Medicine)',
                     'role_location' => 'Consultant Physician, Dhanmondi',
                     'cta_text' => 'Book Appointment',
@@ -271,14 +270,12 @@ class DatabaseSeeder extends Seeder
         $main = Chamber::firstOrCreate(['name' => 'Mirpur Main Branch'], [
             'address' => 'Plot 7, Block C, Mirpur 10, Dhaka 1216',
             'contact' => '029876543',
-            'latitude' => '23.8069',
-            'longitude' => '90.3687',
+            'map_url' => 'https://www.google.com/maps?q=23.8069%2C90.3687',
         ]);
         $branch = Chamber::firstOrCreate(['name' => 'Uttara Branch'], [
             'address' => 'House 15, Sector 7, Uttara, Dhaka 1230',
             'contact' => '029876544',
-            'latitude' => '23.8759',
-            'longitude' => '90.3795',
+            'map_url' => 'https://www.google.com/maps?q=23.8759%2C90.3795',
         ]);
 
         $cardiologist = Doctor::firstOrCreate(['name' => 'Dr. Nasreen Akhter']);

@@ -30,7 +30,15 @@ class EditTenant extends EditRecord
     {
         $tenant = $this->record;
 
-        if ($tenant->wasChanged(['plan_tier', 'discount_code_id'])) {
+        // Read every `wasChanged()` answer up front. Re-pricing saves the tenant
+        // again, and that second save re-syncs `$model->changes` — so asking
+        // afterwards whether the marketer changed returns false, and the partner
+        // silently loses their setup commission.
+        $pricingChanged = $tenant->wasChanged(['plan_tier', 'discount_code_id']);
+        $discountChanged = $tenant->wasChanged('discount_code_id');
+        $marketerChanged = $tenant->wasChanged('marketer_id');
+
+        if ($pricingChanged) {
             $code = $tenant->discount_code_id
                 ? DiscountCode::find($tenant->discount_code_id)
                 : null;
@@ -39,12 +47,12 @@ class EditTenant extends EditRecord
             $commissions->applyPricingToTenant(
                 $tenant,
                 $code,
-                countRedemption: $tenant->wasChanged('discount_code_id'),
+                countRedemption: $discountChanged,
             );
             $tenant->save();
         }
 
-        if ($tenant->wasChanged('marketer_id') && $tenant->marketer_id) {
+        if ($marketerChanged && $tenant->marketer_id) {
             app(CommissionService::class)->createPendingSetupCommission($tenant);
         }
     }

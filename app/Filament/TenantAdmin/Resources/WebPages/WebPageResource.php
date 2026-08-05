@@ -108,7 +108,12 @@ class WebPageResource extends Resource
                             ->label('Hero Banner (50/50 Content & Image)')
                             ->columns(2)
                             ->schema([
-                                Forms\Components\TextInput::make('headline')->required()->default('Care that respects your time')->columnSpan(2),
+                                Forms\Components\Textarea::make('headline')
+                                    ->required()
+                                    ->rows(2)
+                                    ->helperText('On phones, line breaks show as a two-line name. On larger screens it stays one line.')
+                                    ->default('Care that respects your time')
+                                    ->columnSpan(2),
                                 Forms\Components\Textarea::make('subheadline')->default('Book a serial online and follow the live queue from your phone — pay at the chamber.')->columnSpan(2),
                                 Forms\Components\TextInput::make('credentials')->label('Credentials (solo hero)')->placeholder('MBBS, FCPS (Medicine)'),
                                 Forms\Components\TextInput::make('role_location')->label('Role & Location (solo hero)')->placeholder('Consultant Physician, Dhanmondi'),

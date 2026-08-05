@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Solo Homepage V2 Preview — Dr. Mahfuz’s Care</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --brand: #30A9E5;
+      --brand-soft: color-mix(in srgb, #30A9E5 8%, white);
+      --ink: #0f172a;
+      --muted: #475569;
+      --line: #e2e8f0;
+      --max: 1280px;
+      --pad: 1.25rem; /* 20px — was 12px */
+      --header-h: 68px;
+      --font: "DM Sans", system-ui, sans-serif;
+      --display: "Instrument Serif", Georgia, serif;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      color: var(--ink);
+      background: #fff;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; display: block; }
+    button { font: inherit; cursor: pointer; border: 0; background: none; }
+
+    /* —— Type (calmer on mobile) —— */
+    .h1 {
+      font-family: var(--display);
+      font-weight: 400;
+      font-size: 2.25rem; /* ~36px mobile — was ~45px+ */
+      line-height: 1.12;
+      letter-spacing: -0.02em;
+      margin: 0;
+    }
+    .h2 {
+      font-family: var(--display);
+      font-weight: 400;
+      font-size: 1.85rem; /* ~30px mobile */
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      margin: 0;
+      scroll-margin-top: calc(var(--header-h) + 12px);
+    }
+    .h3 {
+      font-family: var(--display);
+      font-weight: 400;
+      font-size: 1.5rem;
+      line-height: 1.2;
+      margin: 0;
+    }
+    .body { font-size: 1rem; line-height: 1.5; color: var(--muted); }
+    .label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+      color: #64748b;
+    }
+
+    @media (min-width: 640px) {
+      :root { --pad: 2.5rem; }
+      .h1 { font-size: 3rem; }
+      .h2 { font-size: 2.5rem; }
+    }
+    @media (min-width: 1024px) {
+      .h1 { font-size: 4.5rem; line-height: 1.05; }
+      .h2 { font-size: 3.25rem; line-height: 1.1; }
+      .h3 { font-size: 2rem; }
+    }
+
+    .wrap {
+      width: 100%;
+      max-width: var(--max);
+      margin: 0 auto;
+      padding-left: var(--pad);
+      padding-right: var(--pad);
+    }
+
+    .section { padding: 2.5rem 0; }
+    @media (min-width: 640px) { .section { padding: 3.5rem 0; } }
+    @media (min-width: 1024px) { .section { padding: 5rem 0; } }
+
+    /* —— CTAs (44px+ taps) —— */
+    .cta {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      min-height: 48px;
+      padding: 0.85rem 1.75rem;
+      border-radius: 9999px;
+      background: var(--brand);
+      color: #fff;
+      font-weight: 600;
+      font-size: 0.95rem;
+    }
+    .cta:hover { opacity: 0.92; }
+    .cta-full { width: 100%; }
+    @media (min-width: 640px) { .cta-full { width: auto; } }
+
+    .cta-outline {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 44px;
+      padding: 0.55rem 1.25rem;
+      border-radius: 9999px;
+      border: 1.5px solid color-mix(in srgb, var(--brand) 55%, white);
+      color: var(--brand);
+      background: var(--brand-soft);
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    /* —— Header —— */
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      height: var(--header-h);
+      background: #fff;
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .header-inner {
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+    }
+    .brand {
+      font-family: var(--display);
+      font-size: 1.25rem;
+      line-height: 1.15;
+      letter-spacing: -0.02em;
+      min-width: 0;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    @media (min-width: 640px) { .brand { font-size: 1.5rem; } }
+
+    .nav-desktop {
+      display: none;
+      align-items: center;
+      gap: 1.75rem;
+      font-weight: 500;
+      font-size: 1rem;
+    }
+    .nav-desktop a:hover { color: var(--brand); }
+    .lang {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      margin-left: 0.25rem;
+      padding-left: 1rem;
+      border-left: 1px solid var(--line);
+      font-size: 0.8rem;
+      font-weight: 600;
+    }
+    .lang .is-active { color: var(--brand); }
+    .lang .is-mute { color: #94a3b8; }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-shrink: 0;
+    }
+
+    .menu-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: #fff;
+      color: var(--ink);
+    }
+    @media (min-width: 768px) {
+      .nav-desktop { display: flex; }
+      .menu-btn { display: none; }
+      .header-actions .cta-outline.mobile-only { display: none; }
+    }
+
+    .drawer {
+      display: none;
+      border-top: 1px solid #f1f5f9;
+      background: #fff;
+      /* Full viewport below sticky header */
+      min-height: calc(100vh - var(--header-h));
+      min-height: calc(100dvh - var(--header-h));
+    }
+    .drawer.is-open { display: block; }
+    @media (min-width: 768px) { .drawer { display: none !important; } }
+    .drawer a {
+      display: block;
+      padding: 0.9rem 0.75rem;
+      font-weight: 500;
+      border-radius: 10px;
+      min-height: 44px;
+    }
+    .drawer a:hover { background: #f8fafc; }
+    .drawer-inner {
+      max-width: var(--max);
+      margin: 0 auto;
+      padding: 0.75rem var(--pad) 1.5rem;
+      min-height: calc(100vh - var(--header-h));
+      min-height: calc(100dvh - var(--header-h));
+      display: flex;
+      flex-direction: column;
+    }
+    .drawer-lang {
+      display: flex;
+      gap: 1rem;
+      padding: 0.75rem;
+      font-size: 0.85rem;
+      font-weight: 600;
+    }
+
+    /* —— Hero —— */
+    .hero-grid {
+      display: grid;
+      gap: 1.75rem;
+    }
+    @media (min-width: 1024px) {
+      .hero-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 2.5rem;
+        align-items: stretch;
+      }
+    }
+    .hero-copy {
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+    @media (min-width: 1024px) {
+      .hero-copy {
+        justify-content: space-between;
+        min-height: 520px;
+        padding: 0.5rem 0;
+      }
+    }
+    .creds {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      font-weight: 500;
+      color: #1e293b;
+      font-size: 1rem;
+    }
+    .hero-photo {
+      border-radius: 1rem;
+      overflow: hidden;
+      background: #f1f5f9;
+      min-height: 280px;
+    }
+    .hero-photo img {
+      width: 100%;
+      height: 100%;
+      min-height: 280px;
+      object-fit: cover;
+      object-position: top;
+    }
+    @media (min-width: 1024px) {
+      .hero-photo, .hero-photo img { min-height: 520px; }
+    }
+
+    /* —— Conditions —— */
+    .grid-cards {
+      display: grid;
+      gap: 1.25rem;
+      margin-top: 1.75rem;
+    }
+    @media (min-width: 1024px) {
+      .grid-cards { grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+    }
+    .card {
+      border: 1px solid #e0e0e0;
+      border-radius: 1.25rem;
+      background: #fafafa;
+      padding: 0.5rem;
+    }
+    .card-body { padding: 0.75rem 0.5rem 0.5rem; }
+    .feat-box {
+      margin-top: 1rem;
+      border: 1px solid #e6e6e6;
+      border-radius: 1rem;
+      background: #f2f2f2;
+      padding: 0.4rem;
+    }
+    .feat-box .label { padding: 0.35rem 0.5rem 0.5rem; }
+    .feat {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem;
+      border-radius: 0.75rem;
+      background: #fff;
+      box-shadow: 0 1px 2px rgba(27,27,27,0.03);
+      font-size: 0.95rem;
+      font-weight: 500;
+      margin-bottom: 0.35rem;
+    }
+    .feat:last-child { margin-bottom: 0; }
+    .feat svg { flex-shrink: 0; color: #059669; width: 1rem; height: 1rem; }
+    .feat.is-extra { display: none; }
+    .card.is-expanded .feat.is-extra { display: flex; }
+    .show-more {
+      display: block;
+      width: 100%;
+      margin-top: 0.35rem;
+      min-height: 44px;
+      padding: 0.65rem;
+      border-radius: 0.75rem;
+      font-weight: 600;
+      font-size: 0.9rem;
+      color: var(--brand);
+      background: #fff;
+      border: 1px dashed color-mix(in srgb, var(--brand) 35%, white);
+    }
+
+    /* —— About —— */
+    .about {
+      background: #000;
+      color: #fff;
+    }
+    .about-grid {
+      display: grid;
+      gap: 2rem;
+    }
+    @media (min-width: 1024px) {
+      .about-grid { grid-template-columns: 1fr 1fr; gap: 3rem; }
+    }
+    .about .body { color: rgba(255,255,255,0.8); }
+    .about-cards { display: flex; flex-direction: column; gap: 1rem; }
+    .about-card {
+      background: #1a1a1a;
+      border-radius: 1rem;
+      padding: 1.5rem;
+    }
+    .about-card p { color: rgba(255,255,255,0.75); margin: 1rem 0 0; }
+
+    /* —— Videos (shorter + snap) —— */
+    .videos-head {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      margin-bottom: 1.25rem;
+    }
+    @media (min-width: 640px) {
+      .videos-head {
+        flex-direction: row;
+        align-items: flex-end;
+        justify-content: space-between;
+      }
+    }
+    .track {
+      display: flex;
+      gap: 1rem;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: none;
+      padding-bottom: 0.25rem;
+    }
+    .track::-webkit-scrollbar { display: none; }
+    .vcard {
+      flex: 0 0 78%;
+      scroll-snap-align: start;
+      border-radius: 1rem;
+      overflow: hidden;
+      background: #0f172a;
+      color: #fff;
+    }
+    @media (min-width: 640px) { .vcard { flex-basis: 42%; } }
+    @media (min-width: 1024px) { .vcard { flex-basis: calc((100% - 3rem) / 3.2); } }
+    .vthumb {
+      aspect-ratio: 4 / 5; /* was 9/11 — shorter on phones */
+      background: #334155 center/cover no-repeat;
+      position: relative;
+    }
+    .play {
+      position: absolute;
+      inset: 0;
+      display: grid;
+      place-items: center;
+    }
+    .play span {
+      width: 3rem;
+      height: 3rem;
+      border-radius: 9999px;
+      background: #fff;
+      display: grid;
+      place-items: center;
+      color: #0f172a;
+    }
+    .vmeta { padding: 0.85rem 1rem; font-weight: 500; font-size: 0.95rem; }
+
+    /* —— Testimonials —— */
+    .dark {
+      background: #000;
+      color: #fff;
+    }
+    .quotes {
+      display: grid;
+      gap: 1rem;
+      margin-top: 1.75rem;
+    }
+    @media (min-width: 1024px) {
+      .quotes { grid-template-columns: repeat(3, 1fr); gap: 1.25rem; }
+    }
+    .quote {
+      background: #1a1a1a;
+      border-radius: 1rem;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 1.5rem;
+      /* no forced min-height on mobile */
+    }
+    @media (min-width: 640px) { .quote { min-height: 16rem; } }
+    .quote p { margin: 0; color: rgba(255,255,255,0.9); }
+    .quote .name { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase; }
+    .quote .sub { font-size: 0.85rem; color: rgba(255,255,255,0.45); margin-top: 0.25rem; }
+
+    /* —— FAQ —— */
+    .faq-grid {
+      display: grid;
+      gap: 1.5rem;
+    }
+    @media (min-width: 1024px) {
+      .faq-grid { grid-template-columns: 0.4fr 0.6fr; gap: 2.5rem; }
+    }
+    details {
+      border: 1px solid #e2e8f0;
+      border-radius: 1rem;
+      background: #f8fafc;
+      margin-bottom: 0.65rem;
+      padding: 0;
+    }
+    summary {
+      list-style: none;
+      display: flex;
+      justify-content: space-between;
+      gap: 1rem;
+      padding: 1rem 1.1rem;
+      font-weight: 600;
+      cursor: pointer;
+      min-height: 48px;
+      align-items: center;
+    }
+    summary::-webkit-details-marker { display: none; }
+    details[open] { background: #f1f5f9; }
+    .faq-a {
+      margin: 0;
+      padding: 0 1.1rem 1rem;
+      border-top: 1px solid #e2e8f0;
+      padding-top: 0.75rem;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+
+    /* —— Footer —— */
+    .footer {
+      border-top: 1px solid #f1f5f9;
+      padding: 2.5rem 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+    }
+    .footer strong {
+      font-family: var(--display);
+      font-size: 1.35rem;
+      color: var(--ink);
+      font-weight: 400;
+      display: block;
+      margin-bottom: 0.5rem;
+    }
+
+    .badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: #b45309;
+      background: #fffbeb;
+      border: 1px solid #fde68a;
+      padding: 0.35rem 0.65rem;
+      border-radius: 9999px;
+      margin: 0.75rem var(--pad) 0;
+    }
+  </style>
+</head>
+<body>
+  <p class="badge">Preview only — Solo Homepage V2 (not live yet)</p>
+
+  <header class="header">
+    <div class="wrap header-inner">
+      <a class="brand" href="#">Dr. Mahfuz’s Care</a>
+
+      <nav class="nav-desktop" aria-label="Main">
+        <a href="#">Home</a>
+        <a href="#services">Services</a>
+        <a href="#about">About</a>
+        <a class="cta-outline" href="#book">Patient Portal</a>
+        <span class="lang">
+          <a class="is-active" href="#">EN</a>
+          <span class="is-mute">|</span>
+          <a class="is-mute" href="#">BN</a>
+        </span>
+      </nav>
+
+      <div class="header-actions">
+        <a class="cta-outline mobile-only" href="#book">Patient Portal</a>
+        <button type="button" class="menu-btn" id="menuBtn" aria-label="Menu" aria-expanded="false" aria-controls="drawer">
+          <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M4 7h12M4 10h12M4 13h12"/></svg>
+        </button>
+      </div>
+    </div>
+
+    <div class="drawer" id="drawer">
+      <div class="drawer-inner">
+        <a href="#" data-close>Home</a>
+        <a href="#services" data-close>Services</a>
+        <a href="#about" data-close>About</a>
+        <a href="#book" data-close>Book Appointment</a>
+        <a href="#book" data-close>Patient Portal</a>
+        <div class="drawer-lang">
+          <a class="is-active" href="#" style="color:var(--brand)">EN</a>
+          <a href="#" style="color:#94a3b8">BN</a>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- HERO -->
+    <section class="section" id="book" aria-label="Introduction">
+      <div class="wrap hero-grid">
+        <div class="hero-copy">
+          <div>
+            <h1 class="h1">Dr. Mahfuzur<br>Rahman</h1>
+            <div class="creds" style="margin-top:1.25rem">
+              <p style="margin:0">MBBS, FCPS (Medicine)</p>
+              <p style="margin:0">Consultant Physician, Dhanmondi</p>
+            </div>
+          </div>
+          <div>
+            <a class="cta cta-full" href="#">
+              Book Appointment
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 17L17 7M17 7H7M17 7v10"/></svg>
+            </a>
+          </div>
+        </div>
+        <div class="hero-photo">
+          <img src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=1200&q=80" alt="Dr. Mahfuzur Rahman">
+        </div>
+      </div>
+    </section>
+
+    <!-- CONDITIONS -->
+    <section class="section" id="services">
+      <div class="wrap">
+        <h2 class="h2">Conditions I Treat</h2>
+        <div class="grid-cards">
+
+          <article class="card" data-card>
+            <div class="card-body">
+              <h3 class="h3">General Medicine</h3>
+              <p class="body" style="margin:0.5rem 0 0">Everyday illness, check-ups, and unexplained symptoms.</p>
+            </div>
+            <div class="feat-box">
+              <p class="label" style="margin:0">Including</p>
+              <div class="feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" d="M6 3v7a6 6 0 0012 0V3M6 3a2 2 0 01-2 2M18 3a2 2 0 002 2M18 13v2a4 4 0 11-8 0v-1"/></svg>Fever &amp; infections</div>
+              <div class="feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" d="M6 3v7a6 6 0 0012 0V3M6 3a2 2 0 01-2 2M18 3a2 2 0 002 2M18 13v2a4 4 0 11-8 0v-1"/></svg>Fatigue &amp; unexplained symptoms</div>
+              <div class="feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" d="M6 3v7a6 6 0 0012 0V3M6 3a2 2 0 01-2 2M18 3a2 2 0 002 2M18 13v2a4 4 0 11-8 0v-1"/></svg>Routine health check-ups</div>
+              <div class="feat is-extra"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" d="M6 3v7a6 6 0 0012 0V3M6 3a2 2 0 01-2 2M18 3a2 2 0 002 2M18 13v2a4 4 0 11-8 0v-1"/></svg>Medication review &amp; counselling</div>
+              <button type="button" class="show-more" data-toggle>+ Show more</button>
+            </div>
+          </article>
+
+          <article class="card" data-card>
+            <div class="card-body">
+              <h3 class="h3">Chronic Disease Care</h3>
+              <p class="body" style="margin:0.5rem 0 0">Long-term conditions managed with clear follow-up plans.</p>
+            </div>
+            <div class="feat-box">
+              <p class="label" style="margin:0">Including</p>
+              <div class="feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" d="M6 3v7a6 6 0 0012 0V3M6 3a2 2 0 01-2 2M18 3a2 2 0 002 2M18 13v2a4 4 0 11-8 0v-1"/></svg>Diabetes follow-up</div>
+              <div class="feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" d="M6 3v7a6 6 0 0012 0V3M6 3a2 2 0 01-2 2M18 3a2 2 0 002 2M18 13v2a4 4 0 11-8 0v-1"/></svg>High blood pressure control</div>
+              <div class="feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" d="M6 3v7a6 6 0 0012 0V3M6 3a2 2 0 01-2 2M18 3a2 2 0 002 2M18 13v2a4 4 0 11-8 0v-1"/></svg>Thyroid disorders</div>
+              <div class="feat is-extra"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" d="M6 3v7a6 6 0 0012 0V3M6 3a2 2 0 01-2 2M18 3a2 2 0 002 2M18 13v2a4 4 0 11-8 0v-1"/></svg>Cholesterol &amp; metabolic risk</div>
+              <button type="button" class="show-more" data-toggle>+ Show more</button>
+            </div>
+          </article>
+
+          <article class="card" data-card>
+            <div class="card-body">
+              <h3 class="h3">Heart &amp; Lung Care</h3>
+              <p class="body" style="margin:0.5rem 0 0">Chest symptoms, asthma, and breathing concerns.</p>
+            </div>
+            <div class="feat-box">
+              <p class="label" style="margin:0">Including</p>
+              <div class="feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" d="M6 3v7a6 6 0 0012 0V3M6 3a2 2 0 01-2 2M18 3a2 2 0 002 2M18 13v2a4 4 0 11-8 0v-1"/></svg>Chest pain evaluation</div>
+              <div class="feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" d="M6 3v7a6 6 0 0012 0V3M6 3a2 2 0 01-2 2M18 3a2 2 0 002 2M18 13v2a4 4 0 11-8 0v-1"/></svg>Asthma &amp; COPD follow-up</div>
+              <div class="feat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path stroke-linecap="round" d="M6 3v7a6 6 0 0012 0V3M6 3a2 2 0 01-2 2M18 3a2 2 0 002 2M18 13v2a4 4 0 11-8 0v-1"/></svg>Palpitations &amp; rhythm concerns</div>
+            </div>
+          </article>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ABOUT -->
+    <section class="section about" id="about">
+      <div class="wrap about-grid">
+        <div>
+          <h2 class="h2">Meet Dr. Mahfuzur Rahman</h2>
+          <p class="body" style="margin:1.25rem 0 0; max-width:28rem">Dedicated to delivering compassionate, personalized care that puts your health and well-being first.</p>
+          <div style="margin-top:2rem">
+            <a class="cta" href="#">Book Appointment
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7 17L17 7M17 7H7M17 7v10"/></svg>
+            </a>
+          </div>
+        </div>
+        <div class="about-cards">
+          <article class="about-card">
+            <h3 class="h3">Study</h3>
+            <p>FCPS (Medicine) with clinical training at Dhaka Medical College and postgraduate medicine at BSMMU (PG Hospital).</p>
+          </article>
+          <article class="about-card">
+            <h3 class="h3">Awards &amp; Honors</h3>
+            <p>Recognized for patient teaching, diabetes clinic leadership, and consistent chamber practice in Dhanmondi.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- VIDEOS -->
+    <section class="section">
+      <div class="wrap">
+        <div class="videos-head">
+          <h2 class="h2">Latest Educational Videos</h2>
+          <a class="cta-outline" href="#">Follow for More</a>
+        </div>
+        <div class="track">
+          <article class="vcard">
+            <div class="vthumb" style="background-image:url('https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=800&q=70')">
+              <div class="play"><span>▶</span></div>
+            </div>
+            <div class="vmeta">Diabetes mellitus explained</div>
+          </article>
+          <article class="vcard">
+            <div class="vthumb" style="background-image:url('https://images.unsplash.com/photo-1559757148-5c350d0d3c56?auto=format&fit=crop&w=800&q=70')">
+              <div class="play"><span>▶</span></div>
+            </div>
+            <div class="vmeta">Hypertension: causes and treatment</div>
+          </article>
+          <article class="vcard">
+            <div class="vthumb" style="background-image:url('https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?auto=format&fit=crop&w=800&q=70')">
+              <div class="play"><span>▶</span></div>
+            </div>
+            <div class="vmeta">Cholesterol numbers — Mayo Clinic</div>
+          </article>
+          <article class="vcard">
+            <div class="vthumb" style="background-image:url('https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&w=800&q=70')">
+              <div class="play"><span>▶</span></div>
+            </div>
+            <div class="vmeta">Asthma medicines explained</div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- TESTIMONIALS -->
+    <section class="section dark">
+      <div class="wrap">
+        <h2 class="h2" style="max-width:20ch">What My Patients Say About My Treatments</h2>
+        <div class="quotes">
+          <article class="quote">
+            <p>Serial booking from my phone means I no longer waste a morning in the waiting room.</p>
+            <div>
+              <div class="name">Rashida Begum</div>
+              <div class="sub">Verified Patient</div>
+            </div>
+          </article>
+          <article class="quote">
+            <p>Follow-ups are clear, and I can check my queue status before I leave home.</p>
+            <div>
+              <div class="name">Karim Hossain</div>
+              <div class="sub">Verified Patient</div>
+            </div>
+          </article>
+          <article class="quote">
+            <p>He took time to review my medicines and explain what to change — calmly.</p>
+            <div>
+              <div class="name">Nasreen Akhtar</div>
+              <div class="sub">Verified Patient</div>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="section">
+      <div class="wrap faq-grid">
+        <h2 class="h2">Everything You Need To Know</h2>
+        <div>
+          <details open>
+            <summary>Do I need to pay online to book?</summary>
+            <p class="faq-a">No. Book a serial online, then pay at the chamber — same as today.</p>
+          </details>
+          <details>
+            <summary>What if I forget my ticket link?</summary>
+            <p class="faq-a">Open Patient’s Portal, enter your mobile number, and find your booking again.</p>
+          </details>
+          <details>
+            <summary>Are walk-ins still welcome?</summary>
+            <p class="faq-a">Yes. Online serials fill seats first; remaining seats can take walk-ins.</p>
+          </details>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <div class="wrap">
+      <strong>Dr. Mahfuz’s Care</strong>
+      <p style="margin:0; max-width:28rem">Consultant physician chamber — online serial, live queue, pay at the desk.</p>
+      <p style="margin:1.25rem 0 0; font-size:0.8rem; color:#94a3b8">© 2026 Preview mock · Not connected to booking</p>
+    </div>
+  </footer>
+
+  <script>
+    // Mobile menu
+    const btn = document.getElementById('menuBtn');
+    const drawer = document.getElementById('drawer');
+    btn.addEventListener('click', () => {
+      const open = drawer.classList.toggle('is-open');
+      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
+    drawer.querySelectorAll('[data-close]').forEach((a) => {
+      a.addEventListener('click', () => {
+        drawer.classList.remove('is-open');
+        btn.setAttribute('aria-expanded', 'false');
+      });
+    });
+
+    // Conditions: show more
+    document.querySelectorAll('[data-toggle]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const card = btn.closest('[data-card]');
+        const open = card.classList.toggle('is-expanded');
+        btn.textContent = open ? '− Show less' : '+ Show more';
+      });
+    });
+  </script>
+</body>
+</html>

@@ -26,3 +26,6 @@ Thumbs.db
 
 # Machine-wide agent protocol, symlinked from ~/AGENTS.md (not machine-portable)
 /AGENTS.md
+
+# Local agent/tooling config
+.claude/

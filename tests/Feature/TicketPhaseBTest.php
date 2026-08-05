@@ -38,8 +38,7 @@ class TicketPhaseBTest extends TestCase
         $chamber = Chamber::create([
             'name' => 'Dhanmondi',
             'address' => 'House 42, Road 9/A, Dhanmondi, Dhaka 1209',
-            'latitude' => '23.7461',
-            'longitude' => '90.3742',
+            'map_url' => 'https://www.google.com/maps?q=23.7461%2C90.3742',
         ]);
         $doctor = Doctor::create(['name' => 'Dr. Rahman']);
         $this->session = ScheduleSession::create([
@@ -134,7 +133,7 @@ class TicketPhaseBTest extends TestCase
             ->assertDontSee('people ahead of you:', false);
     }
 
-    public function test_chamber_builds_google_maps_url_from_coordinates(): void
+    public function test_chamber_uses_the_pasted_google_maps_link(): void
     {
         tenancy()->initialize($this->tenant);
         $chamber = Chamber::first();
@@ -142,6 +141,33 @@ class TicketPhaseBTest extends TestCase
             'https://www.google.com/maps?q=23.7461%2C90.3742',
             $chamber->googleMapsUrl()
         );
+
+        $chamber->update(['map_url' => 'https://maps.app.goo.gl/aBcDeF123']);
+        $this->assertSame('https://maps.app.goo.gl/aBcDeF123', $chamber->fresh()->googleMapsUrl());
+        tenancy()->end();
+    }
+
+    public function test_chamber_falls_back_to_address_search_without_a_map_link(): void
+    {
+        tenancy()->initialize($this->tenant);
+        $chamber = Chamber::first();
+        $chamber->update(['map_url' => null]);
+
+        $this->assertSame(
+            'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($chamber->address),
+            $chamber->fresh()->googleMapsUrl()
+        );
+        tenancy()->end();
+    }
+
+    public function test_chamber_rejects_a_non_google_map_link(): void
+    {
+        tenancy()->initialize($this->tenant);
+        $chamber = Chamber::first();
+        $chamber->update(['map_url' => 'https://evil.example/maps?q=1,2', 'address' => null]);
+
+        $this->assertFalse(Chamber::isGoogleMapsUrl('https://evil.example/maps?q=1,2'));
+        $this->assertNull($chamber->fresh()->googleMapsUrl());
         tenancy()->end();
     }
 }

@@ -46,4 +46,15 @@ class ChamberPolicy
         // Always keep at least one chamber for bookings and schedules.
         return Chamber::count() > 1;
     }
+
+    /**
+     * Bulk delete is checked once for the whole selection, so the
+     * "keep at least one chamber" rule above cannot be enforced — every record
+     * passes a count check taken before any row is removed. Deny it outright;
+     * chambers are deleted one at a time, where `delete()` applies.
+     */
+    public function deleteAny(User $user): bool
+    {
+        return false;
+    }
 }
