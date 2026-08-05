@@ -34,7 +34,7 @@
 >
     <div class="mx-auto max-w-[1280px] px-3 sm:px-10">
         <div class="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-            <h2 class="solo-h2 text-slate-900">
+            <h2 class="font-display text-3xl tracking-tight text-slate-900 sm:text-4xl lg:text-[2.75rem]">
                 {{ $heading }}
             </h2>
             <div class="flex items-center gap-3">
@@ -111,7 +111,7 @@
                             </span>
                         </div>
                         @if(!empty($video['title']))
-                            <p class="solo-body absolute inset-x-0 bottom-0 p-4 font-semibold text-white line-clamp-2">
+                            <p class="absolute inset-x-0 bottom-0 p-4 text-sm font-semibold text-white line-clamp-2">
                                 {{ $video['title'] }}
                             </p>
                         @endif

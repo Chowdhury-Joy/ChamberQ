@@ -125,6 +125,8 @@ class TicketPhaseBTest extends TestCase
             ->assertSee('Show this number at reception', false)
             ->assertSee('Share on WhatsApp', false)
             ->assertSee('Copy link', false)
+            ->assertSee('Print', false)
+            ->assertSee('Save as PDF', false)
             ->assertSee('Open in Google Maps', false)
             ->assertSee('https://www.google.com/maps?q=', false)
             ->assertSee('wa.me/?text=', false)

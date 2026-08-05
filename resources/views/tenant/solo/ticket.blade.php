@@ -200,6 +200,35 @@
             border-color: var(--color-primary);
             box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
         }
+        .print-only { display: none; }
+        @media print {
+            @page { margin: 1.25cm; }
+            body { background: #fff !important; color: #000 !important; }
+            header, .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            .ticket { max-width: none; margin: 0; padding: 0; }
+            .ticket-card {
+                box-shadow: none !important;
+                border: 1px solid #ccc;
+                border-radius: 0;
+                padding: 1.5rem;
+            }
+            .serial, .ticket-brand, .now-serving { color: #000 !important; }
+            .print-footer {
+                margin-top: 1.5rem;
+                padding-top: 1rem;
+                border-top: 1px solid #ccc;
+                text-align: center;
+                font-size: 0.85rem;
+                color: #333;
+            }
+            .print-footer .print-url {
+                word-break: break-all;
+                font-size: 0.75rem;
+                margin-top: 0.35rem;
+            }
+            a { color: #000 !important; text-decoration: none; }
+        }
     </style>
 </head>
 <body class="min-h-full flex flex-col bg-white text-slate-900 antialiased">

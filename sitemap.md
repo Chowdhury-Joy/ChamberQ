@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-07-31T16:30:00+06:00
+Last Updated: 2026-08-05T06:17:02+0600
 
 ## Full Site Map
 
@@ -70,7 +70,7 @@ Available under both platform path (`/{slug}/api/…`) and custom domain (`/api/
 ### Patient → book serial → ticket
 1. Open `/{slug}/` or custom domain home — see doctor brand + Book CTA.
 2. Book flow — pick session/date, enter name/phone.
-3. Submit → ticket at `…/bookings/{uuid}`. Goal: proof of serial; share via WhatsApp/copy.
+3. Submit → ticket at `…/bookings/{uuid}`. Goal: proof of serial; share via WhatsApp/copy, or Print / Save as PDF for a paper or file copy.
 4. Optional: PWA install scoped to tenant path or custom domain.
 
 ### Patient → check status later

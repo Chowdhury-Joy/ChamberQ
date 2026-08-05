@@ -1,0 +1,41 @@
+---
+description: Patient homepage + Book Appointment CTA are locked — no UI edits without explicit unlock phrase
+alwaysApply: true
+---
+
+# Patient homepage lock (Solo Doc)
+
+The solo **patient homepage** look and the **Book Appointment** CTAs are frozen as of 2026-08-05.
+
+## Unlock phrase (required)
+
+Do **not** change homepage UI, layout, typography, section markup, or Book Appointment button styling/placement/URL wiring unless the user explicitly says one of:
+
+- `update patient homepage`
+- `change patient homepage`
+
+Synonyms like “tweak the home page”, “fix the hero”, “polish Conditions cards”, or drive-by refactors do **not** unlock.
+
+## Locked files (do not edit without unlock)
+
+- `resources/views/tenant/solo/webpage.blade.php`
+- `resources/views/tenant/solo/sections/**` (hero, about_doctor, condition_library, faq, testimonials, video_gallery, …)
+
+## Book Appointment CTA (also locked)
+
+Homepage Book buttons must keep `tenant_safe_href(..., '/book')` so path tenants hit `/{tenant}/book` (not bare `/book`).
+
+Do not change:
+
+- Hero / About Doctor CTA markup or classes (`solo-cta`, etc.)
+- `tenant_safe_href` → `SafeUrl::href` (or hard-coded `/book`) on those CTAs
+
+## Still allowed without unlock
+
+- Booking wizard, ticket, portal, outdoor screen, admin/Filament (unless the change only exists to restyle the homepage)
+- Non-visual bug fixes **outside** the locked files
+- Copy/CMS content edited by the doctor in Filament Web Pages (runtime data), not Blade chrome
+
+## If asked to “improve UI” generally
+
+Improve other surfaces (book / ticket / portal / admin). Leave the patient homepage alone and mention it is locked until they say **update/change patient homepage**.

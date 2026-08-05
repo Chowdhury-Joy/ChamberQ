@@ -50,6 +50,35 @@
         .prep li { margin: .35rem 0; }
         .prep-note { margin-top: .75rem; font-size: .9rem; font-weight: 600; }
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+        .print-only { display: none; }
+        @media print {
+            @page { margin: 1.25cm; }
+            body { background: #fff !important; color: #000 !important; }
+            .locale-chip, .no-print { display: none !important; }
+            .print-only { display: block !important; }
+            .ticket { max-width: none; margin: 0; padding: 0; }
+            .ticket-card {
+                box-shadow: none !important;
+                border: 1px solid #ccc;
+                border-radius: 0;
+                padding: 1.5rem;
+            }
+            .serial { color: #000 !important; }
+            .print-footer {
+                margin-top: 1.5rem;
+                padding-top: 1rem;
+                border-top: 1px solid #ccc;
+                text-align: center;
+                font-size: 0.85rem;
+                color: #333;
+            }
+            .print-footer .print-url {
+                word-break: break-all;
+                font-size: 0.75rem;
+                margin-top: 0.35rem;
+            }
+            a { color: #000 !important; text-decoration: none; }
+        }
     </style>
 </head>
 <body>

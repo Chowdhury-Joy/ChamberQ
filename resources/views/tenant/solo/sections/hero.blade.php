@@ -10,17 +10,17 @@
 
 <section class="solo-section-hero w-full bg-white" aria-label="{{ __('Introduction') }}">
     <div class="mx-auto grid max-w-[1280px] gap-8 px-3 sm:px-10 lg:grid-cols-2 lg:gap-10">
-        <div class="solo-fade-up flex flex-col justify-start gap-8 lg:py-2">
-            <div class="flex flex-col gap-6 sm:gap-8">
-                <h1 class="solo-h1 text-slate-900">
+        <div class="solo-fade-up flex flex-col justify-between gap-8 lg:min-h-[584px]">
+            <div>
+                <h1 class="font-display text-[2.35rem] leading-[1.05] tracking-tight text-slate-900 sm:text-5xl lg:text-[5.5rem] lg:leading-[0.98]">
                     {{ $headline }}
                 </h1>
 
-                <div class="solo-body-lg flex flex-col gap-2 text-slate-800 sm:gap-3">
+                <div class="mt-6 flex flex-col gap-3 text-base text-slate-800 sm:mt-10 sm:flex-row sm:flex-wrap sm:gap-x-10 sm:gap-y-2 sm:text-lg lg:mt-14">
                     @if(filled($credentials))
                         <p class="font-medium">{{ $credentials }}</p>
                     @elseif(filled($subheadline))
-                        <p class="max-w-xl text-slate-600">{{ $subheadline }}</p>
+                        <p class="max-w-xl leading-relaxed text-slate-600">{{ $subheadline }}</p>
                     @endif
                     @if(filled($roleLocation))
                         <p class="font-medium">{{ $roleLocation }}</p>

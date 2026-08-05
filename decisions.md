@@ -195,3 +195,30 @@
  <action>Regenerate clips with Karen @ faster rate; play that WAV inside Live Queue Control on Call/Start; remove SpeechSynthesis fallback from the outdoor screen entirely.</action>
  <reason>Admin and TV must share one clear recording; falling back to browser speech reintroduces the ghost voice.</reason>
 </decision>
+
+## 2026-08-05T06:17:02+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>After booking, patients often need a paper or file copy of the serial for reception or family — especially older visitors who don’t keep the phone page open.</context>
+ <action>On the ticket confirmation page, add Print and Save as PDF buttons that open the browser print dialog. Print stylesheet hides nav, share actions, and live “now serving” so the paper/PDF shows serial, date, session, doctor, location, and the ticket link. No server-side PDF generator in v1.</action>
+ <reason>Every phone already knows how to print or “Save as PDF”; avoids a new PDF package and works the same on path and custom-domain tenants.</reason>
+</decision>
+
+## 2026-08-05T06:21:27+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>After the waiting-room voice work, a homepage “layout fix” (shared `.solo-*` type ramp, looser line-heights, restacked hero/testimonials/FAQ/header) changed how the patient site looked; the owner wanted the previous Figma-matched homepage back.</context>
+ <action>Restore `tenant/solo/webpage.blade.php` and solo section blades to the version before that layout pass. Keep `tenant_safe_href()` on Book CTAs and the `card-grid.css` link so path-tenant booking and Conditions grid still work.</action>
+ <reason>Owner preferred the earlier visual; functional booking/grid fixes must not be rolled back with the look-and-feel revert.</reason>
+</decision>
+
+## 2026-08-05T06:28:21+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Patient homepage look and Book Appointment CTAs were repeatedly tweaked during other work (voice, layout “fixes”), which risked undoing a settled Figma-matched homepage the owner approved.</context>
+ <action>Freeze the solo patient homepage: no UI/layout/typography/section or Book Appointment button changes unless the owner explicitly says “update patient homepage” or “change patient homepage”. Book CTAs stay on `tenant_safe_href(..., '/book')`. Enforced via `.cursor/rules/patient-homepage-lock.mdc` + SolDoc `CLAUDE.md` project rule.</action>
+ <reason>Stops drive-by homepage edits; unlock phrase is explicit so agents cannot treat general “improve UI” requests as permission to restyle home.</reason>
+</decision>

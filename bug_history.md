@@ -241,3 +241,12 @@
  <root_cause>First “recorded” clips were generated with macOS Samantha, which is the same family of voice as browser TTS; admin Live Queue also played nothing of its own, so any leftover TTS fallback still dominated the experience.</root_cause>
  <prevention_rule>Announce clips must use a clear PA voice (Karen), never Samantha; Live Queue Control must play the same WAV on Call; never fall back to SpeechSynthesis.</prevention_rule>
 </bug>
+
+## 2026-08-05T06:24:53+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>After restoring the previous solo homepage, Conditions I Treat cards showed “Including:” inside the grey feature box instead of above it (Figma).</symptom>
+ <root_cause>Homepage restore rolled back section blades wholesale, including the Aug 1 card inner structure that had moved the Including label above the grey list.</root_cause>
+ <prevention_rule>When reverting homepage visuals, keep Figma Conditions card structure: “Including:” label above the grey feature container — never nest that label inside the grey box.</prevention_rule>
+</bug>

@@ -43,9 +43,11 @@
                 <p style="font-size: 1.25rem; font-weight: 700; color: var(--color-primary); margin: 0;" id="shownTime">—</p>
             </div>
 
-            <p class="text-muted">{{ __('Now serving') }}</p>
-            <p class="now-serving" id="nowServing" aria-live="polite">—</p>
-            <p class="text-muted" id="aheadOfYou" aria-live="polite"></p>
+            <div class="live-queue no-print">
+                <p class="text-muted">{{ __('Now serving') }}</p>
+                <p class="now-serving" id="nowServing" aria-live="polite">—</p>
+                <p class="text-muted" id="aheadOfYou" aria-live="polite"></p>
+            </div>
 
             <div style="margin-top:1.5rem">
                 <div class="detail-row">
@@ -121,26 +123,36 @@
                 </section>
             @endif
 
-            <div class="handoff">
+            <div class="handoff no-print">
                 <strong>{{ __('Keep this page') }}</strong>
-                <span> — {{ __('Save the link or send it on WhatsApp so you can check the live queue from your phone.') }}</span>
+                <span> — {{ __('Save the link, print a copy, or send it on WhatsApp so you can check the live queue from your phone.') }}</span>
             </div>
 
-            <div class="share-actions">
+            <div class="share-actions no-print">
                 <button type="button" class="btn btn-primary" id="copyLink">{{ __('Copy link') }}</button>
                 <a class="btn btn-back" id="whatsAppShare" href="{{ $whatsAppShareUrl }}" target="_blank" rel="noopener noreferrer">{{ __('Share on WhatsApp') }}</a>
+                <button type="button" class="btn btn-back" id="printTicket">{{ __('Print') }}</button>
+                <button type="button" class="btn btn-back" id="saveTicketPdf">{{ __('Save as PDF') }}</button>
                 @if ($mapsUrl)
                     <a class="btn btn-back" href="{{ $mapsUrl }}" target="_blank" rel="noopener noreferrer">{{ __('Open in Google Maps') }}</a>
                 @endif
             </div>
-            <div class="link-box">
+            <div class="link-box no-print">
                 <label class="sr-only" for="ticketLink">{{ __('Link to this ticket') }}</label>
                 <input id="ticketLink" class="form-control" type="text" readonly value="{{ $copyPayload }}">
             </div>
-            <p class="text-muted" style="margin-top:0.35rem;font-size:0.85rem;">
+            <p class="text-muted no-print" style="margin-top:0.35rem;font-size:0.85rem;">
                 {{ $mapsUrl ? __('Copy includes your ticket link and the chamber map.') : __('Save this link to check your place in the queue.') }}
             </p>
-            <p class="text-muted" id="copyFeedback" style="margin-top:0.5rem;min-height:1.25rem;" aria-live="polite"></p>
+            <p class="text-muted no-print" style="margin-top:0.25rem;font-size:0.85rem;">
+                {{ __('To download a PDF, tap Save as PDF and choose “Save as PDF” in the print window.') }}
+            </p>
+            <p class="text-muted no-print" id="copyFeedback" style="margin-top:0.5rem;min-height:1.25rem;" aria-live="polite"></p>
+
+            <div class="print-footer print-only" aria-hidden="true">
+                <p>{{ __('Show this number at reception') }}</p>
+                <p class="print-url">{{ $ticketUrl }}</p>
+            </div>
         </div>
     </main>
 
@@ -234,6 +246,12 @@
             feedback.textContent = i18n.copied;
             setTimeout(() => { feedback.textContent = ''; }, 2500);
         });
+
+        function openTicketPrint() {
+            window.print();
+        }
+        document.getElementById('printTicket').addEventListener('click', openTicketPrint);
+        document.getElementById('saveTicketPdf').addEventListener('click', openTicketPrint);
 
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => navigator.serviceWorker.register(@json(tenant_web_url('/sw.js'))));
