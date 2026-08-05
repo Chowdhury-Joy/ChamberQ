@@ -58,6 +58,8 @@ class BrandingSettings extends Page implements HasForms
                 'first_n_arrival_offset_minutes' => $tenant->first_n_arrival_offset_minutes ?? 15,
                 'call_audio_preset' => $tenant->call_audio_preset ?? 'chime',
                 'call_audio_path' => $tenant->call_audio_path,
+                'call_announce_mode' => $tenant->call_announce_mode ?? \App\Models\Tenant::ANNOUNCE_CHIME_AND_VOICE,
+                'call_announce_locale' => $tenant->call_announce_locale ?? 'en',
             ]);
         }
     }
@@ -161,9 +163,32 @@ class BrandingSettings extends Page implements HasForms
                             ->numeric()
                             ->default(15)
                             ->required(),
+                        Select::make('call_announce_mode')
+                            ->label(__('When a patient is called'))
+                            ->helperText(__('Waiting-room TV and Live Queue Control. Voice plays clear recorded clips (“Number twelve”), not browser speech.'))
+                            ->options(\App\Models\Tenant::callAnnounceModeOptions())
+                            ->default(\App\Models\Tenant::ANNOUNCE_CHIME_AND_VOICE)
+                            ->live()
+                            ->required(),
+                        Select::make('call_announce_locale')
+                            ->label(__('Voice language'))
+                            ->helperText(__('English uses clear pre-recorded clips (“Number twelve”) — not the spooky browser voice. Same clips play for Bangla for now.'))
+                            ->options([
+                                'en' => 'English — recorded “Number twelve”',
+                                'bn' => 'বাংলা — uses English recording for now (clearer)',
+                            ])
+                            ->default('en')
+                            ->visible(fn (Get $get): bool => in_array($get('call_announce_mode'), [
+                                \App\Models\Tenant::ANNOUNCE_VOICE,
+                                \App\Models\Tenant::ANNOUNCE_CHIME_AND_VOICE,
+                            ], true))
+                            ->required(fn (Get $get): bool => in_array($get('call_announce_mode'), [
+                                \App\Models\Tenant::ANNOUNCE_VOICE,
+                                \App\Models\Tenant::ANNOUNCE_CHIME_AND_VOICE,
+                            ], true)),
                         Select::make('call_audio_preset')
-                            ->label(__('Call Audio'))
-                            ->helperText(__('Played on the waiting-room screen when a patient is called.'))
+                            ->label(__('Call chime'))
+                            ->helperText(__('Short tone played when a patient is called (if chime is enabled above).'))
                             ->options([
                                 'chime' => 'Default chime',
                                 'soft-bell' => 'Soft bell',
@@ -172,7 +197,14 @@ class BrandingSettings extends Page implements HasForms
                             ])
                             ->default('chime')
                             ->live()
-                            ->required(),
+                            ->visible(fn (Get $get): bool => in_array($get('call_announce_mode'), [
+                                \App\Models\Tenant::ANNOUNCE_CHIME,
+                                \App\Models\Tenant::ANNOUNCE_CHIME_AND_VOICE,
+                            ], true))
+                            ->required(fn (Get $get): bool => in_array($get('call_announce_mode'), [
+                                \App\Models\Tenant::ANNOUNCE_CHIME,
+                                \App\Models\Tenant::ANNOUNCE_CHIME_AND_VOICE,
+                            ], true)),
                         FileUpload::make('call_audio_path')
                             ->label(__('Custom Call Audio'))
                             ->helperText(__('Upload a short WAV or MP3 (under ~2 MB).'))
@@ -187,8 +219,14 @@ class BrandingSettings extends Page implements HasForms
                             ->disk('public')
                             ->directory(fn () => 'call-audio/'.(tenant('id') ?? 'shared'))
                             ->visibility('public')
-                            ->visible(fn (Get $get): bool => $get('call_audio_preset') === 'custom')
-                            ->required(fn (Get $get): bool => $get('call_audio_preset') === 'custom'),
+                            ->visible(fn (Get $get): bool => in_array($get('call_announce_mode'), [
+                                \App\Models\Tenant::ANNOUNCE_CHIME,
+                                \App\Models\Tenant::ANNOUNCE_CHIME_AND_VOICE,
+                            ], true) && $get('call_audio_preset') === 'custom')
+                            ->required(fn (Get $get): bool => in_array($get('call_announce_mode'), [
+                                \App\Models\Tenant::ANNOUNCE_CHIME,
+                                \App\Models\Tenant::ANNOUNCE_CHIME_AND_VOICE,
+                            ], true) && $get('call_audio_preset') === 'custom'),
                     ]),
             ]);
     }
@@ -199,8 +237,18 @@ class BrandingSettings extends Page implements HasForms
         $tenant = tenant();
 
         if ($tenant) {
-            $preset = $data['call_audio_preset'] ?? 'chime';
-            $customPath = $data['call_audio_path'] ?? null;
+            $announceMode = $data['call_announce_mode'] ?? \App\Models\Tenant::ANNOUNCE_CHIME_AND_VOICE;
+            $usesChime = in_array($announceMode, [
+                \App\Models\Tenant::ANNOUNCE_CHIME,
+                \App\Models\Tenant::ANNOUNCE_CHIME_AND_VOICE,
+            ], true);
+            $usesVoice = in_array($announceMode, [
+                \App\Models\Tenant::ANNOUNCE_VOICE,
+                \App\Models\Tenant::ANNOUNCE_CHIME_AND_VOICE,
+            ], true);
+
+            $preset = $data['call_audio_preset'] ?? $tenant->call_audio_preset ?? 'chime';
+            $customPath = $data['call_audio_path'] ?? $tenant->call_audio_path;
             if (is_array($customPath)) {
                 $customPath = $customPath[0] ?? null;
             }
@@ -220,8 +268,12 @@ class BrandingSettings extends Page implements HasForms
                 'eta_model' => $data['eta_model'],
                 'first_n_patients' => $data['first_n_patients'],
                 'first_n_arrival_offset_minutes' => $data['first_n_arrival_offset_minutes'],
-                'call_audio_preset' => $preset,
-                'call_audio_path' => $preset === 'custom' ? $customPath : null,
+                'call_announce_mode' => $announceMode,
+                'call_announce_locale' => $usesVoice ? ($data['call_announce_locale'] ?? 'en') : ($tenant->call_announce_locale ?? 'en'),
+                'call_audio_preset' => $usesChime ? $preset : ($tenant->call_audio_preset ?? 'chime'),
+                'call_audio_path' => $usesChime
+                    ? ($preset === 'custom' ? $customPath : null)
+                    : $tenant->call_audio_path,
             ]);
 
             Notification::make()

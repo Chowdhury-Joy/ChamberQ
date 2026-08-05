@@ -9,6 +9,27 @@ if (! function_exists('tenant_web_url')) {
     }
 }
 
+if (! function_exists('tenant_safe_href')) {
+    /**
+     * Sanitize a tenant-authored href, then prefix same-origin paths for path tenancy
+     * (e.g. /book → /solo/book on the central host; unchanged on custom domains).
+     */
+    function tenant_safe_href(?string $url, string $fallback = '#'): string
+    {
+        $safe = \App\Support\SafeUrl::href($url, $fallback);
+
+        if ($safe === '' || $safe === '#' || str_starts_with($safe, '#')) {
+            return $safe;
+        }
+
+        if (str_starts_with($safe, '/') && ! str_starts_with($safe, '//')) {
+            return tenant_web_url($safe);
+        }
+
+        return $safe;
+    }
+}
+
 if (! function_exists('tenant_web_route')) {
     /**
      * Tenant-aware named routes (path prefix on central domain, root on custom domains).

@@ -195,4 +195,36 @@
     {{-- Filament Action Modals --}}
     <x-filament-actions::modals />
 
+    @php
+        $announceUsesVoice = tenant()?->usesCallVoice() ?? false;
+        $announceBaseUrl = rtrim(asset('audio/announce'), '/');
+    @endphp
+
+    @if($announceUsesVoice)
+        <audio id="admin-call-announce" preload="auto" class="hidden"></audio>
+        @script
+        <script>
+            const announceBase = @json($announceBaseUrl);
+            const announceEl = document.getElementById('admin-call-announce');
+
+            function playAdminCallAnnounce(serial) {
+                const n = parseInt(serial, 10);
+                if (!announceEl || !Number.isFinite(n) || n < 1 || n > 99) return;
+                announceEl.pause();
+                announceEl.src = announceBase + '/number-' + n + '.wav';
+                announceEl.play().catch(function (e) {
+                    console.log('Admin call announce blocked', e);
+                });
+            }
+
+            $wire.on('queue-called', (payload) => {
+                const serial = Array.isArray(payload)
+                    ? (payload[0]?.serial ?? payload.serial)
+                    : (payload?.serial ?? payload);
+                playAdminCallAnnounce(serial);
+            });
+        </script>
+        @endscript
+    @endif
+
 </x-filament-panels::page>

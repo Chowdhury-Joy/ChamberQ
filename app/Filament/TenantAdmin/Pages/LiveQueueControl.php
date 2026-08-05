@@ -225,6 +225,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
         app(LiveSessionService::class)->startSession($scheduleSession);
         
         Notification::make()->title('Session Started')->success()->send();
+        $this->dispatchCallAnnounce();
     }
 
     public function nextPatient()
@@ -234,6 +235,27 @@ class LiveQueueControl extends Page implements HasActions, HasTable
         app(LiveSessionService::class)->completeCurrentPatient($this->activeLiveSession);
         
         Notification::make()->title('Called Next Patient')->success()->send();
+        $this->dispatchCallAnnounce();
+    }
+
+    /**
+     * Play the same recorded “Number N” clip staff hear on the outdoor TV
+     * (so Live Queue Control is not silent / not browser TTS).
+     */
+    private function dispatchCallAnnounce(): void
+    {
+        $tenant = tenant();
+        if (! $tenant?->usesCallVoice()) {
+            return;
+        }
+
+        $this->activeLiveSession?->refresh();
+        $serial = $this->activeLiveSession?->currentBooking?->serial_number;
+        if (! $serial) {
+            return;
+        }
+
+        $this->dispatch('queue-called', serial: (int) $serial);
     }
 
     public function patientArrived()

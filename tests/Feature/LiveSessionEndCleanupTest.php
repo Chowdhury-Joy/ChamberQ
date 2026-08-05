@@ -128,6 +128,99 @@ class LiveSessionEndCleanupTest extends TestCase
         $this->assertEquals('/storage/call-audio/audio-tenant/custom.wav', $tenant->fresh()->callAudioUrl());
     }
 
+    public function test_tenant_call_announce_mode_helpers(): void
+    {
+        $tenant = Tenant::create([
+            'id' => 'announce-tenant',
+            'plan_tier' => 'solo',
+            'call_announce_mode' => Tenant::ANNOUNCE_CHIME,
+        ]);
+
+        $this->assertTrue($tenant->usesCallChime());
+        $this->assertFalse($tenant->usesCallVoice());
+
+        $tenant->update(['call_announce_mode' => Tenant::ANNOUNCE_VOICE]);
+        $tenant = $tenant->fresh();
+        $this->assertFalse($tenant->usesCallChime());
+        $this->assertTrue($tenant->usesCallVoice());
+
+        $tenant->update(['call_announce_mode' => Tenant::ANNOUNCE_CHIME_AND_VOICE]);
+        $tenant = $tenant->fresh();
+        $this->assertTrue($tenant->usesCallChime());
+        $this->assertTrue($tenant->usesCallVoice());
+    }
+
+    public function test_outdoor_screen_includes_voice_announce_script(): void
+    {
+        $tenant = Tenant::create([
+            'id' => 'voice-screen',
+            'plan_tier' => 'solo',
+            'name' => 'Voice Clinic',
+            'call_announce_mode' => Tenant::ANNOUNCE_CHIME_AND_VOICE,
+            'call_announce_locale' => 'en',
+        ]);
+        \App\Models\Domain::create(['domain' => 'voice-screen.localhost', 'tenant_id' => 'voice-screen']);
+
+        tenancy()->initialize($tenant);
+
+        $chamber = Chamber::create(['name' => 'Main']);
+        $doctor = Doctor::create(['name' => 'Dr. Voice']);
+        $schedule = ScheduleSession::create([
+            'chamber_id' => $chamber->id,
+            'doctor_id' => $doctor->id,
+            'day_of_week' => Carbon::today()->dayOfWeek,
+            'session_name' => 'Morning',
+            'start_time' => '09:00',
+            'end_time' => '12:00',
+            'slot_cap' => 10,
+        ]);
+        $today = Carbon::today()->toDateString();
+
+        tenancy()->end();
+
+        $this->get('http://voice-screen.localhost/screen/'.$schedule->id.'/'.$today)
+            ->assertOk()
+            ->assertSee('announceCall', escape: false)
+            ->assertSee('announceAudio', escape: false)
+            ->assertSee('chimeAudio', escape: false)
+            ->assertSee('playAnnounceClip', escape: false)
+            ->assertDontSee('speechSynthesis', escape: false);
+    }
+
+    public function test_outdoor_screen_voice_only_omits_chime_element(): void
+    {
+        $tenant = Tenant::create([
+            'id' => 'voice-only-screen',
+            'plan_tier' => 'solo',
+            'call_announce_mode' => Tenant::ANNOUNCE_VOICE,
+            'call_announce_locale' => 'bn',
+        ]);
+        \App\Models\Domain::create(['domain' => 'voice-only-screen.localhost', 'tenant_id' => 'voice-only-screen']);
+
+        tenancy()->initialize($tenant);
+
+        $chamber = Chamber::create(['name' => 'Main']);
+        $doctor = Doctor::create(['name' => 'Dr. Voice']);
+        $schedule = ScheduleSession::create([
+            'chamber_id' => $chamber->id,
+            'doctor_id' => $doctor->id,
+            'day_of_week' => Carbon::today()->dayOfWeek,
+            'session_name' => 'Evening',
+            'start_time' => '17:00',
+            'end_time' => '20:00',
+            'slot_cap' => 10,
+        ]);
+        $today = Carbon::today()->toDateString();
+
+        tenancy()->end();
+
+        $this->get('http://voice-only-screen.localhost/screen/'.$schedule->id.'/'.$today)
+            ->assertOk()
+            ->assertSee('playAnnounceClip', escape: false)
+            ->assertSee('announceAudio', escape: false)
+            ->assertDontSee('id="chimeAudio"', escape: false);
+    }
+
     public function test_live_session_bookings_eager_load_matches_session_date(): void
     {
         $tenant = Tenant::create(['id' => 'eager-session', 'plan_tier' => 'solo']);

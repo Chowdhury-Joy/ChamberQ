@@ -5,9 +5,9 @@
     $headline = $data['headline'] ?? __('Expert care for your health');
     $subheadline = $data['subheadline'] ?? __('Book a serial online and follow the live queue from your phone.');
     $ctaText = $data['cta_text'] ?? __('Book Appointment');
-    $ctaLink = \App\Support\SafeUrl::href($data['cta_link'] ?? '/book', '/book');
+    $ctaLink = tenant_safe_href($data['cta_link'] ?? '/book', '/book');
     $secondaryText = $data['secondary_cta_text'] ?? null;
-    $secondaryLink = \App\Support\SafeUrl::href($data['secondary_cta_link'] ?? '', '');
+    $secondaryLink = tenant_safe_href($data['secondary_cta_link'] ?? '', '');
     $emergency = $data['emergency_phone'] ?? null;
 @endphp
 

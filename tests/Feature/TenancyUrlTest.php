@@ -46,4 +46,28 @@ class TenancyUrlTest extends TestCase
 
         $this->assertSame('/book', tenant_web_url('/book'));
     }
+
+    public function test_tenant_safe_href_prefixes_relative_paths_on_central_domain(): void
+    {
+        Tenant::create(['id' => 'solo']);
+
+        tenancy()->initialize(Tenant::find('solo'));
+        request()->headers->set('HOST', 'localhost');
+
+        $this->assertSame('/solo/book', tenant_safe_href('/book', '/book'));
+        $this->assertSame('/solo/book?doctor=1', tenant_safe_href('/book?doctor=1', '/book'));
+        $this->assertSame('https://maps.example', tenant_safe_href('https://maps.example', '/book'));
+        $this->assertSame('#about', tenant_safe_href('#about', '/book'));
+        $this->assertSame('/solo/book', tenant_safe_href('javascript:alert(1)', '/book'));
+    }
+
+    public function test_tenant_safe_href_keeps_root_paths_on_custom_domain(): void
+    {
+        Tenant::create(['id' => 'solo']);
+        \App\Models\Domain::create(['domain' => 'solo.localhost', 'tenant_id' => 'solo']);
+
+        $this->get('http://solo.localhost/book');
+
+        $this->assertSame('/book', tenant_safe_href('/book', '/book'));
+    }
 }

@@ -162,4 +162,55 @@ class LoginTest extends TestCase
         $response->assertRedirect();
         $this->assertStringContainsString('/solo/admin/login', (string) $response->headers->get('Location'));
     }
+
+    public function test_solo_live_queue_livewire_refresh_does_not_419_on_tenant_domain(): void
+    {
+        $this->get('http://solo.localhost/admin/login');
+
+        \Livewire\Livewire::test(\Filament\Auth\Pages\Login::class)
+            ->fillForm([
+                'email' => 'admin@solo.com',
+                'password' => 'password',
+            ])
+            ->call('authenticate')
+            ->assertHasNoFormErrors();
+
+        \Livewire\Livewire::test(\App\Filament\TenantAdmin\Pages\LiveQueueControl::class)
+            ->call('$refresh')
+            ->assertOk();
+    }
+
+    public function test_solo_schedule_sessions_livewire_refresh_does_not_419_on_tenant_domain(): void
+    {
+        $this->get('http://solo.localhost/admin/login');
+
+        \Livewire\Livewire::test(\Filament\Auth\Pages\Login::class)
+            ->fillForm([
+                'email' => 'admin@solo.com',
+                'password' => 'password',
+            ])
+            ->call('authenticate')
+            ->assertHasNoFormErrors();
+
+        \Livewire\Livewire::test(\App\Filament\TenantAdmin\Resources\ScheduleSessions\Pages\ListScheduleSessions::class)
+            ->call('$refresh')
+            ->assertOk();
+    }
+
+    public function test_solo_schedule_sessions_livewire_refresh_does_not_419_on_path_admin(): void
+    {
+        $this->get('http://localhost/solo/admin/login');
+
+        \Livewire\Livewire::test(\Filament\Auth\Pages\Login::class)
+            ->fillForm([
+                'email' => 'admin@solo.com',
+                'password' => 'password',
+            ])
+            ->call('authenticate')
+            ->assertHasNoFormErrors();
+
+        \Livewire\Livewire::test(\App\Filament\TenantAdmin\Resources\ScheduleSessions\Pages\ListScheduleSessions::class)
+            ->call('$refresh')
+            ->assertOk();
+    }
 }

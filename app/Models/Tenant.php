@@ -20,6 +20,12 @@ class Tenant extends BaseTenant
 
     public const ETA_LIVE_STEADY = 'live_steady';
 
+    public const ANNOUNCE_CHIME = 'chime';
+
+    public const ANNOUNCE_VOICE = 'voice';
+
+    public const ANNOUNCE_CHIME_AND_VOICE = 'chime_and_voice';
+
     /** @return array<string, string> */
     public static function etaModelOptions(): array
     {
@@ -28,6 +34,30 @@ class Tenant extends BaseTenant
             self::ETA_LIVE_AVERAGE => 'Live average (today’s finished consults)',
             self::ETA_LIVE_STEADY => 'Live steady (ignore longest + shortest)',
         ];
+    }
+
+    /** @return array<string, string> */
+    public static function callAnnounceModeOptions(): array
+    {
+        return [
+            self::ANNOUNCE_CHIME => 'Chime only',
+            self::ANNOUNCE_VOICE => 'Voice only (“Calling number…”)',
+            self::ANNOUNCE_CHIME_AND_VOICE => 'Chime + voice',
+        ];
+    }
+
+    public function usesCallChime(): bool
+    {
+        $mode = $this->call_announce_mode ?? self::ANNOUNCE_CHIME_AND_VOICE;
+
+        return in_array($mode, [self::ANNOUNCE_CHIME, self::ANNOUNCE_CHIME_AND_VOICE], true);
+    }
+
+    public function usesCallVoice(): bool
+    {
+        $mode = $this->call_announce_mode ?? self::ANNOUNCE_CHIME_AND_VOICE;
+
+        return in_array($mode, [self::ANNOUNCE_VOICE, self::ANNOUNCE_CHIME_AND_VOICE], true);
     }
 
     public static function getCustomColumns(): array
@@ -71,6 +101,8 @@ class Tenant extends BaseTenant
             'first_n_arrival_offset_minutes',
             'call_audio_preset',
             'call_audio_path',
+            'call_announce_mode',
+            'call_announce_locale',
             'created_at',
             'updated_at',
         ];

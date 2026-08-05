@@ -60,10 +60,21 @@ class MarketingSiteUiTest extends TestCase
         $response->assertSee('Care that respects your time', false);
         $response->assertSee('Book Appointment', false);
         $response->assertSee('Patient’s Portal', false);
+        $response->assertSee('href="/book"', false);
         $response->assertDontSee('🏥', false);
         // Marketing EN/BN gated off without bangla_homepage
         $html = $response->getContent();
         $this->assertStringNotContainsString('/lang/bn', $html);
+    }
+
+    public function test_path_tenant_homepage_book_cta_uses_tenant_prefix(): void
+    {
+        $response = $this->get('http://localhost/ui-solo/');
+
+        $response->assertOk();
+        $html = $response->getContent();
+        $this->assertStringContainsString('href="/ui-solo/book"', $html);
+        $this->assertDoesNotMatchRegularExpression('/href="\/book"/', $html);
     }
 
     public function test_bangla_homepage_flag_shows_marketing_lang_switch(): void

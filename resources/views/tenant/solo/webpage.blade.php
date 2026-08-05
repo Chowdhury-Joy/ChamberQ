@@ -46,6 +46,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="{{ asset('css/card-grid.css') }}">
     <style>
         :root {
             --color-primary: {{ $themeColor }};
@@ -115,6 +116,110 @@
             padding-top: 32px;
             padding-bottom: 32px;
         }
+        /* Figma-inspired type scale — readable line-heights (never < 1 or ascenders clip) */
+        .solo-h1 {
+            font-family: var(--font-family-display);
+            font-weight: 400;
+            font-size: 2.35rem;
+            line-height: 1.12;
+            letter-spacing: -0.02em;
+        }
+        @media (min-width: 640px) {
+            .solo-h1 { font-size: 3rem; }
+        }
+        @media (min-width: 1024px) {
+            .solo-h1 { font-size: 4.5rem; line-height: 1.05; } /* ~72px — large but safe */
+        }
+        .solo-h2 {
+            font-family: var(--font-family-display);
+            font-size: 2.1rem;
+            font-weight: 400;
+            line-height: 1.15;
+            letter-spacing: -0.02em;
+        }
+        @media (min-width: 640px) {
+            .solo-h2 {
+                font-size: 2.75rem;
+                line-height: 1.12;
+            }
+        }
+        @media (min-width: 1024px) {
+            .solo-h2 {
+                font-size: 3.5rem; /* 56px — close to Figma H2 without clipping */
+                line-height: 1.1;
+                letter-spacing: -0.01em;
+            }
+        }
+        .solo-h3 {
+            font-family: var(--font-family-display);
+            font-weight: 400;
+            font-size: 1.5rem;
+            line-height: 1.2;
+            letter-spacing: -0.02em;
+        }
+        @media (min-width: 640px) {
+            .solo-h3 { font-size: 1.75rem; }
+        }
+        @media (min-width: 1024px) {
+            .solo-h3 { font-size: 2.25rem; } /* 36px — Figma Heading/H3 */
+        }
+        .solo-body-lg {
+            font-size: 1rem;
+            line-height: 1.45;
+            letter-spacing: -0.01em;
+        }
+        @media (min-width: 640px) {
+            .solo-body-lg { font-size: 1.125rem; } /* 18px — Paragraph/Medium */
+        }
+        .solo-body {
+            font-size: 0.875rem;
+            line-height: 1.55;
+            letter-spacing: -0.01em;
+        }
+        @media (min-width: 640px) {
+            .solo-body { font-size: 1rem; } /* 16px — Paragraph/Small */
+        }
+        .solo-body-sm {
+            font-size: 0.875rem;
+            line-height: 1.5;
+            letter-spacing: -0.01em;
+        }
+        .solo-tagline {
+            font-size: 1.125rem; /* 18px — UI tagline/large */
+            line-height: 1.33;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            font-weight: 400;
+        }
+        .solo-label {
+            font-size: 0.875rem;
+            line-height: 1.4;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        /* FAQ / interactive titles — same weight as label, never forced uppercase */
+        .solo-question {
+            font-size: 1rem;
+            line-height: 1.4;
+            letter-spacing: -0.01em;
+            font-weight: 600;
+            text-transform: none;
+        }
+        .solo-brand {
+            font-family: var(--font-family-display);
+            font-size: 1.25rem;
+            line-height: 1.15;
+            letter-spacing: -0.02em;
+        }
+        @media (min-width: 640px) {
+            .solo-brand { font-size: 1.65rem; }
+        }
+        .solo-nav {
+            font-size: 1rem;
+            font-weight: 500;
+            line-height: 1.5;
+        }
     </style>
     <script>
         if ('serviceWorker' in navigator) {
@@ -123,9 +228,9 @@
     </script>
 </head>
 <body class="min-h-full flex flex-col bg-white text-slate-900 antialiased">
-    <header class="sticky top-0 z-50 border-b border-slate-100 bg-white/95 backdrop-blur">
+    <header class="sticky top-0 z-50 border-b border-slate-100 bg-white">
         <div class="mx-auto flex h-[68px] max-w-[1280px] items-center justify-between gap-4 px-3 sm:h-[95px] sm:px-10">
-            <a href="{{ tenant_web_url('/') }}" class="min-w-0 truncate font-display text-xl tracking-tight text-slate-900 sm:text-[1.65rem]">
+            <a href="{{ tenant_web_url('/') }}" class="solo-brand min-w-0 truncate text-slate-900">
                 @if($tenant->logo_url)
                     <img src="{{ $tenant->logo_url }}" alt="{{ $brand }}" class="h-9 w-auto sm:h-11">
                 @else
@@ -133,7 +238,7 @@
                 @endif
             </a>
 
-            <nav class="hidden items-center gap-8 text-base font-medium text-slate-800 md:flex" aria-label="{{ __('Main') }}">
+            <nav class="solo-nav hidden items-center gap-8 text-slate-800 md:flex" aria-label="{{ __('Main') }}">
                 <a href="{{ tenant_web_url('/') }}" class="transition hover:text-brand">{{ __('Home') }}</a>
                 <a href="#services" class="transition hover:text-brand">{{ __('Services') }}</a>
                 <a href="#about" class="transition hover:text-brand">{{ __('About') }}</a>
@@ -142,7 +247,7 @@
                 @endforeach
                 <a href="{{ tenant_web_url('/portal') }}" class="solo-cta-outline">{{ __('Patient’s Portal') }}</a>
                 @if($banglaHomepage)
-                    <span class="flex items-center gap-1.5 border-l border-slate-200 pl-4 text-xs font-semibold tracking-wide">
+                    <span class="solo-body-sm flex items-center gap-1.5 border-l border-slate-200 pl-4 font-semibold tracking-wide">
                         <a href="{{ tenant_web_url('/lang/en') }}" class="{{ $locale === 'en' ? 'text-brand' : 'text-slate-400 hover:text-slate-700' }}">EN</a>
                         <span class="text-slate-300">|</span>
                         <a href="{{ tenant_web_url('/lang/bn') }}" class="{{ $locale === 'bn' ? 'text-brand' : 'text-slate-400 hover:text-slate-700' }}">BN</a>
@@ -175,12 +280,12 @@
     <footer class="mt-auto border-t border-slate-100 bg-white text-slate-600">
         <div class="mx-auto flex max-w-[1280px] flex-col gap-6 px-3 py-10 sm:px-10 sm:py-14 md:flex-row md:items-start md:justify-between">
             <div>
-                <p class="font-display text-xl text-slate-900">{{ $brand }}</p>
-                <p class="mt-2 max-w-md text-sm leading-relaxed">
+                <p class="solo-brand text-slate-900">{{ $brand }}</p>
+                <p class="solo-body-sm mt-2 max-w-md text-slate-600">
                     {{ $tenant->tagline ?: __('Consultant physician care with online serial booking.') }}
                 </p>
             </div>
-            <div class="text-sm">
+            <div class="solo-body-sm text-slate-600">
                 <p>{{ __('Phone') }}: {{ $tenant->contact_phone ?? __('Contact the chamber') }}</p>
                 <p class="mt-2">&copy; {{ date('Y') }}, {{ $brand }}</p>
             </div>

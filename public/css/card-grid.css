@@ -1,4 +1,5 @@
-/* Shared card grid: mobile 1 col, tablet 2 cols, desktop 2 cols (counts 2/4) or 3 cols (others). */
+/* Shared card grid: mobile 1 col, tablet 2 cols, desktop 2 cols (counts 2/4) or 3 cols (others).
+   Desktop breakpoint is 1024px (Tailwind lg) so Figma 3-up rows (e.g. Conditions I Treat) fit laptop widths. */
 .card-grid {
     display: grid;
     grid-template-columns: 1fr;
@@ -13,7 +14,7 @@
     }
 }
 
-@media (min-width: 1200px) {
+@media (min-width: 1024px) {
     .card-grid {
         grid-template-columns: repeat(3, 1fr);
     }

@@ -33,8 +33,6 @@ class TenantAdminPanelProvider extends PanelProvider
                     Dashboard::class,
                 ])
                 ->middleware([
-                    InitializeTenancyByDomain::class,
-                    PreventAccessFromCentralDomains::class,
                     EncryptCookies::class,
                     AddQueuedCookiesToResponse::class,
                     StartSession::class,
@@ -42,9 +40,11 @@ class TenantAdminPanelProvider extends PanelProvider
                     ShareErrorsFromSession::class,
                     VerifyCsrfToken::class,
                     SubstituteBindings::class,
+                    InitializeTenancyByDomain::class,
+                    PreventAccessFromCentralDomains::class,
                     DisableBladeIconComponents::class,
                     DispatchServingFilamentEvent::class,
-                ])
+                ], isPersistent: true)
                 ->authMiddleware([
                     Authenticate::class,
                 ])

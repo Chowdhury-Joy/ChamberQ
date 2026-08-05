@@ -150,3 +150,48 @@
  <action>Remove dead `LiveQueueControl::endSession()`; introduce `HasManyByScheduleAndDate` for date-safe eager load; no-op `markCommissionOwed` entirely when already paid; build path SMS ticket URLs from `config('app.url')`; drop `filament_path_tenant` session read/write from `SetPathTenantUrlDefaults`.</action>
  <reason>Closes ledger drift, wrong patient SMS hosts, and latent cross-tenant URL bleed without changing product UX.</reason>
 </decision>
+
+## 2026-08-01T22:55:29+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Figma “Conditions I Treat” (`Summit-Dental` node 26385:314) shows three equal treatment cards in one horizontal row; the live solo homepage had them stacked because `.card-grid` CSS was missing on CDN Tailwind tenant pages, and the 3-col breakpoint (1200px) was later than Tailwind `lg` / typical laptop widths.</context>
+ <action>Link `css/card-grid.css` on tenant webpages; keep feature pills as a vertical list inside each card; move “Including:” above the grey feature container; set card-grid desktop breakpoint to 1024px so counts other than 2/4 go 3-up on laptop.</action>
+ <reason>Matches the Figma row of treatment cards without changing the shared 2-vs-3 count rule; inner service pills stay a checklist, not a nested grid.</reason>
+</decision>
+
+## 2026-08-01T23:08:41+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Solo homepage section H2s looked uneven — Conditions/FAQ/Videos at ~44px, About at ~56px, Testimonials at ~38px — because each Blade file hard-coded its own Tailwind size instead of the Figma Heading/H2 token (64px).</context>
+ <action>Add shared `.solo-h2` in `tenant/solo/webpage.blade.php` (mobile 2.35rem → tablet 3rem → desktop 4rem / 64px, leading 0.85) and use it on every solo section title (conditions, about, videos, FAQ, testimonials).</action>
+ <reason>One type ramp keeps the page feeling designed as a system; matches Figma H2 and stops section-by-section drift.</reason>
+</decision>
+
+## 2026-08-05T05:38:06+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Waiting-room TVs only played a chime when staff called a serial; patients further from the screen often missed who was next, and chambers asked for a spoken “calling number…” like a bank token system.</context>
+ <action>Add tenant settings `call_announce_mode` (chime / voice / chime_and_voice, default chime_and_voice) and `call_announce_locale` (en / bn). Outdoor screen uses the browser’s SpeechSynthesis to say “Calling number N” or “কল নম্বর N” after (or instead of) the existing chime; Branding → Live Queue Settings controls the choice. No cloud TTS and no pre-recorded number packs in this pass.</action>
+ <reason>Browser voice is free, works offline after unlock, and matches chamber hardware (TV/tablet browser) without new SMS/audio hosting cost. Doctors who dislike TTS can switch back to chime-only.</reason>
+</decision>
+
+## 2026-08-05T05:44:58+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Applying Figma token sizes literally (H1 88px, H2 64px, line-height 0.85) clipped solo homepage titles and made layouts feel broken.</context>
+ <action>Keep shared `.solo-*` classes but enforce readable line-heights (≥ 1.05), slightly smaller desktop H1/H2, stack hero credentials, full-width testimonials heading + card-grid, `.solo-question` for FAQ (no uppercase), opaque sticky header (no backdrop-blur), and drop About’s forced 85vh stretch.</action>
+ <reason>Figma comps assume artboard crop; live multi-line chamber copy needs breathing room or letters get cut off and sections collide.</reason>
+</decision>
+
+## 2026-08-05T05:56:46+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Staff testing Call from Live Queue still heard the same ghostly voice; first WAV pack used Samantha (same hollow tone as browser speech).</context>
+ <action>Regenerate clips with Karen @ faster rate; play that WAV inside Live Queue Control on Call/Start; remove SpeechSynthesis fallback from the outdoor screen entirely.</action>
+ <reason>Admin and TV must share one clear recording; falling back to browser speech reintroduces the ghost voice.</reason>
+</decision>

@@ -160,3 +160,84 @@
  <root_cause>Middleware runs before `StartSession` in the path panel stack; session write/read of that key was misleading dead code.</root_cause>
  <prevention_rule>Path URL defaults come only from route `{tenant}` or initialized tenancy — never from a shared central-domain session key.</prevention_rule>
 </bug>
+
+## 2026-08-01T21:09:08+0600
+
+<bug>
+ <category>Code</category>
+ <symptom>On custom tenant domains (e.g. `solo.localhost:8040`), Filament Live Queue Control showed a browser alert every ~3 seconds: “This page has expired. Would you like to refresh the page?”</symptom>
+ <root_cause>Livewire polls POST to `/livewire/update` through the global `web` middleware only. Filament panel routes initialize tenancy before session, but Livewire update did not — CSRF/session context broke on tenant hosts while the queue table polled every 3s.</root_cause>
+ <prevention_rule>Prepend `InitializeTenancyForTenantHosts` to the `web` group (skip central domains) so every web request on a tenant domain initializes tenancy before `StartSession` and CSRF — including Livewire polls.</prevention_rule>
+</bug>
+
+## 2026-08-01T21:15:16+0600
+
+<bug>
+ <category>Code</category>
+ <symptom>Schedule Sessions (and other tenant admin pages) on `solo.localhost` still showed “This page has expired” every few seconds after the first web-middleware tenancy fix.</symptom>
+ <root_cause>Two gaps: (1) the domain Filament panel did not register session/tenancy middleware as Livewire-persistent (unlike the path panel), so `/livewire/update` lost tenant + CSRF context on polls; (2) local `SESSION_DRIVER=database` on SQLite caused session row lock contention when multiple Livewire components polled concurrently.</root_cause>
+ <prevention_rule>Domain tenant panels must use `->middleware([...], isPersistent: true)` for the full session + tenancy stack (mirror `TenantAdminPathPanelProvider`); use `SESSION_DRIVER=file` locally with SQLite; keep `InitializeTenancyForTenantHosts` for central-host path URLs via referer.</prevention_rule>
+</bug>
+
+## 2026-08-01T22:40:00+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>Services / Conditions section on the doctor homepage showed General Medicine and Chronic Disease Care stacked full-width instead of side-by-side on tablet/desktop.</symptom>
+ <root_cause>Card sections were switched to `<x-card-grid>` / `.card-grid`, but tenant pages (CDN Tailwind + `theme.css`) never `<link>`ed `public/css/card-grid.css` — only marketing home and Operational Reports did — so the grid class was inert HTML.</root_cause>
+ <prevention_rule>Any Blade layout that renders `<x-card-grid>` without Vite/`app.css` must also `<link>` `css/card-grid.css` (same as marketing home).</prevention_rule>
+</bug>
+
+## 2026-08-01T23:08:41+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>Solo homepage section titles (H2s) rendered at different sizes across Conditions, About, Videos, FAQ, and Testimonials.</symptom>
+ <root_cause>Each section Blade hard-coded its own Tailwind font-size utilities (`text-[2.35rem]`, `lg:text-[2.75rem]`, `lg:text-[3.5rem]`, etc.) instead of sharing the Figma Heading/H2 token (64px).</root_cause>
+ <prevention_rule>Solo section titles must use the shared `.solo-h2` class from `tenant/solo/webpage.blade.php` — never per-section `text-*` / `lg:text-[…rem]` size overrides on those h2s.</prevention_rule>
+</bug>
+
+## 2026-08-01T23:11:02+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>Solo homepage typography was inconsistent beyond H2s — hero H1, card H3s, “Including:” labels, FAQ questions, testimonial quotes, and body copy each used different Tailwind sizes.</symptom>
+ <root_cause>Each section Blade hard-coded its own `text-sm` / `text-lg` / `text-[1.125rem]` utilities instead of shared Figma tokens (H1 88px, H3 36px, body 16px, medium 18px, tagline 18px uppercase).</root_cause>
+ <prevention_rule>Solo homepage copy must use `.solo-h1` / `.solo-h2` / `.solo-h3` / `.solo-body-lg` / `.solo-body` / `.solo-tagline` / `.solo-label` from `webpage.blade.php` — no ad-hoc `text-*` font sizes in section blades.</prevention_rule>
+</bug>
+
+## 2026-08-04T20:07:03+0600
+
+<bug>
+ <category>CRO</category>
+ <symptom>On platform path URLs (e.g. `/solo/`), clicking “Book Appointment” opened `/book` and showed Not Found — booking CTA was dead.</symptom>
+ <root_cause>Hero/about/cta section blades used `SafeUrl::href('/book')` which keeps a root-relative path; path tenancy requires `/{tenant}/book`. Nav portal already used `tenant_web_url()`.</root_cause>
+ <prevention_rule>Tenant-authored same-origin CTAs must use `tenant_safe_href()` (SafeUrl + path prefix) — never raw `SafeUrl::href('/book')` or hard-coded `/book` in tenant section blades.</prevention_rule>
+</bug>
+
+## 2026-08-05T05:44:58+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>Solo doctor homepage looked broken: section titles clipped at the top (especially “Meet Dr…”), FAQ questions forced into ALL CAPS, hero credentials spread awkwardly, testimonials heading crushed into a skinny column, sticky header frost blur washed over videos.</symptom>
+ <root_cause>Figma token CSS used display line-heights as low as 0.85 and body letter-spacing as tight as -0.04em; FAQ reused `.solo-label` (uppercase); hero used `justify-between` + tall min-height; testimonials put a long H2 in a 1/3 grid cell; header used `backdrop-blur` over scrolling content.</root_cause>
+ <prevention_rule>Solo display headings must keep line-height ≥ 1.05; never put multi-line H2s in a narrow grid column; FAQ questions must not use uppercase label styles; sticky chrome should be opaque white without backdrop-blur over media.</prevention_rule>
+</bug>
+
+## 2026-08-05T05:52:17+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>Waiting-room call voice still sounded like a “ghost speaking English” even after TTS tweaks.</symptom>
+ <root_cause>Browser SpeechSynthesis quality is device-dependent and often hollow/whispery; ranking voices could not fix bad system TTS engines.</root_cause>
+ <prevention_rule>Outdoor-screen English callouts must use pre-recorded WAV clips (`public/audio/announce/number-N.wav`), not live browser TTS, except as a missing-file fallback.</prevention_rule>
+</bug>
+
+## 2026-08-05T05:56:46+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>Call voice still sounded ghostly when testing from Live Queue (admin) — same hollow English as before.</symptom>
+ <root_cause>First “recorded” clips were generated with macOS Samantha, which is the same family of voice as browser TTS; admin Live Queue also played nothing of its own, so any leftover TTS fallback still dominated the experience.</root_cause>
+ <prevention_rule>Announce clips must use a clear PA voice (Karen), never Samantha; Live Queue Control must play the same WAV on Call; never fall back to SpeechSynthesis.</prevention_rule>
+</bug>

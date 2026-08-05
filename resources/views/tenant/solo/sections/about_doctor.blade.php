@@ -2,19 +2,19 @@
     $heading = $data['heading'] ?? __('Meet Your Doctor');
     $subheadline = $data['subheadline'] ?? '';
     $ctaText = $data['cta_text'] ?? __('Book Appointment');
-    $ctaLink = \App\Support\SafeUrl::href($data['cta_link'] ?? '/book', '/book');
+    $ctaLink = tenant_safe_href($data['cta_link'] ?? '/book', '/book');
     $highlights = $data['highlights'] ?? [];
 @endphp
 
-<section id="about" class="solo-section flex min-h-[85vh] w-full bg-black text-white">
-    <div class="mx-auto grid w-full max-w-[1280px] flex-1 gap-10 px-3 sm:px-10 lg:grid-cols-2 lg:gap-12">
+<section id="about" class="solo-section w-full overflow-visible bg-black text-white">
+    <div class="mx-auto grid w-full max-w-[1280px] gap-10 px-3 sm:px-10 lg:grid-cols-2 lg:gap-12 lg:items-stretch">
         <div class="flex h-full flex-col justify-between gap-10">
             <div>
-                <h2 class="font-display text-4xl leading-[1.05] tracking-tight sm:text-5xl lg:text-[3.5rem]">
+                <h2 class="solo-h2">
                     {{ $heading }}
                 </h2>
                 @if(filled($subheadline))
-                    <p class="mt-5 max-w-md text-base leading-relaxed text-white/80 sm:text-lg">
+                    <p class="solo-body-lg mt-5 max-w-md text-white/80">
                         {{ $subheadline }}
                     </p>
                 @endif
@@ -29,12 +29,12 @@
             </div>
         </div>
 
-        <div class="flex flex-col gap-6 lg:h-full">
+        <div class="flex flex-col gap-6">
             @foreach($highlights as $item)
-                <article class="flex flex-col justify-between rounded-2xl bg-[#1a1a1a] p-6 sm:p-7 lg:flex-1">
-                    <h3 class="font-display text-2xl text-white sm:text-[1.75rem]">{{ $item['title'] ?? '' }}</h3>
+                <article class="flex flex-col justify-between rounded-2xl bg-[#1a1a1a] p-6 sm:p-7">
+                    <h3 class="solo-h3">{{ $item['title'] ?? '' }}</h3>
                     @if(!empty($item['description']))
-                        <p class="mt-10 text-sm leading-relaxed text-white/75 sm:mt-16 sm:text-base">
+                        <p class="solo-body mt-6 text-white/75 sm:mt-8">
                             {{ $item['description'] }}
                         </p>
                     @endif

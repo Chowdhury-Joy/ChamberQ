@@ -10,6 +10,9 @@
         $themeColor = $tenant->theme_color ?? '#0ea5e9';
         $fontFamily = $tenant->font_family ?? 'Inter';
         $callAudioUrl = $tenant->callAudioUrl();
+        $callAnnounceLocale = $tenant->call_announce_locale ?? 'en';
+        $usesCallChime = $tenant->usesCallChime();
+        $usesCallVoice = $tenant->usesCallVoice();
         
         $fontUrl = match($fontFamily) {
             'Outfit' => 'https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap',
@@ -199,7 +202,7 @@
     <div id="soundOverlay" class="sound-overlay" role="button" tabindex="0" aria-label="{{ __('Tap to enable sound') }}">
         <button type="button" class="sound-enable-btn" id="soundEnableBtn">
             {{ __('Tap to enable sound') }}
-            <small>{{ __('Required once so call chimes can play on this screen') }}</small>
+            <small>{{ __('Required once so call chimes and voice announcements can play on this screen') }}</small>
         </button>
     </div>
 
@@ -237,27 +240,54 @@
         {{ __('Next:') }} <span id="nextSerial"></span>
     </div>
 
+    @if($usesCallChime)
     <audio id="chimeAudio" src="{{ $callAudioUrl }}" preload="auto"></audio>
+    @endif
+    @if($usesCallVoice)
+    <audio id="announceAudio" preload="auto"></audio>
+    @endif
 
     <script>
         const statusUrl = @json(tenant_web_route('api.tenant.screen', ['session' => $scheduleSession->id, 'date' => $sessionDate]));
+        const callAnnounceLocale = @json($callAnnounceLocale);
+        const usesCallChime = @json($usesCallChime);
+        const usesCallVoice = @json($usesCallVoice);
         let lastCalledTime = null;
         let soundUnlocked = false;
         let soundMuted = false;
 
         const audio = document.getElementById('chimeAudio');
+        const announceAudio = document.getElementById('announceAudio');
         const overlay = document.getElementById('soundOverlay');
         const toggle = document.getElementById('soundToggle');
 
         async function unlockSound() {
-            try {
-                audio.muted = true;
-                await audio.play();
-                audio.pause();
-                audio.currentTime = 0;
-                audio.muted = false;
-            } catch (e) {
-                console.log('Audio unlock failed', e);
+            if (usesCallChime && audio) {
+                try {
+                    audio.muted = true;
+                    await audio.play();
+                    audio.pause();
+                    audio.currentTime = 0;
+                    audio.muted = false;
+                } catch (e) {
+                    console.log('Audio unlock failed', e);
+                }
+            }
+
+            // Unlock recorded “Number twelve” clips the same way as the chime.
+            if (usesCallVoice && announceAudio) {
+                try {
+                    announceAudio.src = @json(asset('audio/announce/number-1.wav'));
+                    announceAudio.muted = true;
+                    await announceAudio.play();
+                    announceAudio.pause();
+                    announceAudio.currentTime = 0;
+                    announceAudio.muted = false;
+                    announceAudio.removeAttribute('src');
+                    announceAudio.load();
+                } catch (e) {
+                    console.log('Announce unlock failed', e);
+                }
             }
 
             soundUnlocked = true;
@@ -272,9 +302,65 @@
         }
 
         function playChime() {
-            if (!soundUnlocked || soundMuted) return;
+            if (!soundUnlocked || soundMuted || !audio) return;
             audio.currentTime = 0;
             audio.play().catch(e => console.log('Audio play blocked by browser', e));
+        }
+
+        const announceBaseUrl = @json(rtrim(asset('audio/announce'), '/'));
+
+        function playAnnounceClip(serial) {
+            if (!soundUnlocked || soundMuted || !announceAudio) return Promise.resolve(false);
+
+            const n = parseInt(String(serial), 10);
+            if (!Number.isFinite(n) || n < 1 || n > 99) {
+                return Promise.resolve(false);
+            }
+
+            return new Promise(function (resolve) {
+                const url = announceBaseUrl + '/number-' + n + '.wav';
+                const onEnded = function () {
+                    cleanup();
+                    resolve(true);
+                };
+                const onError = function () {
+                    cleanup();
+                    resolve(false);
+                };
+                const cleanup = function () {
+                    announceAudio.removeEventListener('ended', onEnded);
+                    announceAudio.removeEventListener('error', onError);
+                };
+
+                announceAudio.pause();
+                announceAudio.src = url;
+                announceAudio.addEventListener('ended', onEnded);
+                announceAudio.addEventListener('error', onError);
+                announceAudio.play().catch(function (e) {
+                    console.log('Announce play blocked', e);
+                    cleanup();
+                    resolve(false);
+                });
+            });
+        }
+
+        async function speakCall(serial) {
+            if (!soundUnlocked || soundMuted) return;
+            // Pre-recorded only — never fall back to browser TTS (sounds ghostly).
+            await playAnnounceClip(serial);
+        }
+
+        function announceCall(serial) {
+            if (!soundUnlocked || soundMuted) return;
+
+            if (usesCallChime) {
+                playChime();
+            }
+
+            if (usesCallVoice) {
+                const delay = usesCallChime ? 900 : 0;
+                setTimeout(function () { speakCall(serial); }, delay);
+            }
         }
 
         overlay.addEventListener('click', unlockSound);
@@ -291,6 +377,12 @@
 
         toggle.addEventListener('click', function () {
             soundMuted = !soundMuted;
+            if (soundMuted) {
+                if (announceAudio) {
+                    announceAudio.pause();
+                    announceAudio.currentTime = 0;
+                }
+            }
             updateToggleLabel();
         });
 
@@ -369,14 +461,14 @@
                     nextUp.style.display = 'none';
                 }
 
-                // Handle 'Called' state and Chime
+                // Handle 'Called' state and announce (chime / voice)
                 if (data.is_called && data.now_serving) {
                     box.className = 'now-serving-box calling';
                     document.getElementById('mainLabel').textContent = 'আপনাকে ডাকা হচ্ছে';
                     
                     if (data.called_at !== lastCalledTime) {
                         lastCalledTime = data.called_at;
-                        playChime();
+                        announceCall(data.now_serving);
                     }
                 } else {
                     box.className = 'now-serving-box';
