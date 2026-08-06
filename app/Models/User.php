@@ -153,7 +153,9 @@ class User extends Authenticatable implements FilamentUser, CanResetPasswordCont
             return false;
         }
 
-        return match ($tenant->queueRunner()) {
+        // Effective, not configured: a practice whose configured party has no
+        // users would otherwise have nobody able to call patients.
+        return match ($tenant->effectiveQueueRunner()) {
             Tenant::QUEUE_RUNNER_STAFF => $this->isStaff(),
             Tenant::QUEUE_RUNNER_DOCTOR => $this->isDoctor(),
             default => $this->isStaff(),

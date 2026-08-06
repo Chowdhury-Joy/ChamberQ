@@ -9,6 +9,15 @@ class Tenant extends BaseTenant
 {
     use HasDomains;
 
+    /**
+     * Request-lifetime cache for `hasUserInQueueRole()`. Declared as a real PHP
+     * property so Eloquent's magic accessors (and VirtualColumn's `data` blob)
+     * never see it as an attribute.
+     *
+     * @var array<string, bool>
+     */
+    private array $queueRolePresence = [];
+
     public const DEFAULT_THEME_COLOR = '#2563eb';
 
     /** Default browser tab icon when a tenant has not uploaded a custom favicon. */
@@ -69,6 +78,47 @@ class Tenant extends BaseTenant
         return in_array($runner, [self::QUEUE_RUNNER_STAFF, self::QUEUE_RUNNER_DOCTOR], true)
             ? $runner
             : self::QUEUE_RUNNER_STAFF;
+    }
+
+    /**
+     * The party that can actually work the queue right now.
+     *
+     * `queueRunner()` is the configured choice; this is that choice checked
+     * against reality. A practice with no user in the configured role would
+     * otherwise have nobody able to call patients — the default is staff-run,
+     * so a solo doctor working without staff was locked out of their own
+     * chamber and could not fix it (only an admin can change the setting).
+     *
+     * Exclusivity still holds: this only ever hands controls over when the
+     * configured party has no one to hand them to, so two parties are never
+     * live at once.
+     */
+    public function effectiveQueueRunner(): string
+    {
+        $configured = $this->queueRunner();
+
+        if ($this->hasUserInQueueRole($configured)) {
+            return $configured;
+        }
+
+        $fallback = $configured === self::QUEUE_RUNNER_STAFF
+            ? self::QUEUE_RUNNER_DOCTOR
+            : self::QUEUE_RUNNER_STAFF;
+
+        return $this->hasUserInQueueRole($fallback) ? $fallback : $configured;
+    }
+
+    /** Memoised per request — this is consulted on every panel page load. */
+    private function hasUserInQueueRole(string $runner): bool
+    {
+        $role = $runner === self::QUEUE_RUNNER_DOCTOR
+            ? User::ROLE_DOCTOR
+            : User::ROLE_STAFF;
+
+        return $this->queueRolePresence[$role] ??= User::query()
+            ->where('tenant_id', $this->getTenantKey())
+            ->where('role', $role)
+            ->exists();
     }
 
     public function isStaffRunQueue(): bool

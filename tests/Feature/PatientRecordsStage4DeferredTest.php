@@ -39,7 +39,7 @@ class PatientRecordsStage4DeferredTest extends TestCase
     {
         parent::setUp();
 
-        Storage::fake('public');
+        Storage::fake('local');
 
         $this->tenant = Tenant::create(['id' => 'stage4-deferred', 'plan_tier' => 'solo']);
         Domain::create(['domain' => 'stage4-deferred.localhost', 'tenant_id' => $this->tenant->id]);
@@ -113,7 +113,7 @@ class PatientRecordsStage4DeferredTest extends TestCase
         tenancy()->initialize($this->tenant);
 
         $voicePath = 'visit-audio/stage4-deferred/test-voice.webm';
-        Storage::disk('public')->put($voicePath, 'fake-audio');
+        Storage::disk('local')->put($voicePath, 'fake-audio');
 
         $record = app(VisitRecordService::class)->saveForCompletedBooking($this->completedBooking, $this->doctor, [
             'voice_path' => $voicePath,
@@ -143,7 +143,7 @@ class PatientRecordsStage4DeferredTest extends TestCase
             ]);
 
         $response->assertOk()->assertJsonStructure(['path']);
-        Storage::disk('public')->assertExists($response->json('path'));
+        Storage::disk('local')->assertExists($response->json('path'));
 
         $this->actingAs($this->staff)
             ->post('http://stage4-deferred.localhost/api/visit-media/upload-voice', [
@@ -157,7 +157,7 @@ class PatientRecordsStage4DeferredTest extends TestCase
         tenancy()->initialize($this->tenant);
 
         $photoPath = 'visit-photos/stage4-deferred/prescription.jpg';
-        Storage::disk('public')->put($photoPath, 'fake-image');
+        Storage::disk('local')->put($photoPath, 'fake-image');
 
         $record = app(VisitRecordService::class)->saveForCompletedBooking($this->completedBooking, $this->doctor, [
             'prescription_photo' => $photoPath,
@@ -227,7 +227,7 @@ class PatientRecordsStage4DeferredTest extends TestCase
         tenancy()->initialize($this->tenant);
 
         $voicePath = 'visit-audio/stage4-deferred/secret.webm';
-        Storage::disk('public')->put($voicePath, 'secret-audio');
+        Storage::disk('local')->put($voicePath, 'secret-audio');
 
         VisitRecord::create([
             'tenant_id' => $this->tenant->id,
@@ -278,6 +278,6 @@ class PatientRecordsStage4DeferredTest extends TestCase
         $path = app(VisitMediaService::class)->storeVoiceUpload($file);
 
         $this->assertStringStartsWith('visit-audio/stage4-deferred/', $path);
-        Storage::disk('public')->assertExists($path);
+        Storage::disk('local')->assertExists($path);
     }
 }

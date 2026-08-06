@@ -341,3 +341,21 @@
  <root_cause>`Filament\Auth\Http\Responses\LoginResponse` redirects to `Panel::getUrl()`. That method returns `route($panel->generateRouteName('home'))` only when such a route exists — and Filament never registers a `home` route (confirmed: no `*.home` route in `route:list`), so it always falls through to `url($panel->getPath())`. For the central panels the path is literally `admin` / `partner`, so the fallback is accidentally correct; for the path panel the path is the *pattern* `{tenant}/admin`, which `url()` emits verbatim. Only reachable when the session held no `url.intended` — i.e. when login started at the login URL directly rather than by being bounced off `/{tenant}/admin` — which is why it looked intermittent.</root_cause>
  <prevention_rule>Never let panel URLs come from `Panel::getUrl()` / `getPath()` for the path panel — its path is a route pattern, not a URL. Resolve the panel's dashboard route by name through `App\Support\FilamentPanelUrl::home()`, which uses Filament's own `generateRouteName()` so the domain segment multi-domain panels add stays correct.</prevention_rule>
 </bug>
+
+## 2026-08-06T21:05:01+0600
+
+<bug>
+  <category>Business_Logic</category>
+  <symptom>A solo practice with a doctor login but no staff login had nobody able to call patients. `queue_runner` defaults to `staff`, and in staff-run mode only a staff user may operate the call/complete controls. The account owner is deliberately excluded from the queue, so the doctor could not run their own chamber and could not fix it either — only an admin can change the setting in Branding Settings. A practice created without an admin login was stuck entirely.</symptom>
+  <root_cause>The one-party-per-practice rule was enforced against the *configured* runner without checking that the configured party actually exists in that practice. The column default (`staff`) applies to every new tenant and nothing at tenant creation reconsiders it. The seeded demo tenant has admin + doctor + staff, so every existing test exercised a practice where staff were present and the dead end never appeared.</root_cause>
+  <prevention_rule>Any permission resolved from a per-tenant role setting must be checked against role presence, not just configuration — if the chosen party has no users, authority falls back to the other eligible party rather than to nobody. Tests for role-exclusivity rules must build the practice deliberately incomplete (the role under test missing), because the seeded demo tenant has one user of every role and will hide the failure.</prevention_rule>
+</bug>
+
+## 2026-08-06T23:37:36+0600
+
+<bug>
+  <category>Code</category>
+  <symptom>Consultation voice notes and prescription photos were written to the `public` disk, which is symlinked into the web root and served directly by the web server. `VisitMediaController` correctly required a doctor login, but the same bytes were reachable at `/storage/visit-audio/{tenant}/{uuid}` with no authentication at all, contradicting the confidentiality promise made to doctors in the signup agreement. Found during pre-production review; no production files existed yet.</symptom>
+  <root_cause>The `public` disk was chosen by analogy with existing uploads (logos, call-audio chimes) without distinguishing branding assets from patient clinical records. Random UUID filenames made the exposure non-enumerable, which masked it: the files were unguessable, so the missing access control never produced a visible failure. No test asserted that clinical media was unreachable over HTTP, only that the controller enforced roles.</root_cause>
+  <prevention_rule>Patient clinical data — notes, prescriptions, voice, photos — is never written to the `public` disk or anywhere under the web root; it goes to a private disk and is streamed through an authenticated controller, and the service must expose no URL accessor. Unguessable filenames are never treated as access control. Any new clinical media path must be covered by a test asserting it is not fetchable over HTTP, not merely that a role check exists somewhere.</prevention_rule>
+</bug>

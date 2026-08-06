@@ -125,6 +125,13 @@ class RolePermissionsTest extends TestCase
         tenancy()->initialize($this->tenant);
 
         $doctor = $this->makeUser(User::ROLE_DOCTOR, 'doctor2@test.loc');
+
+        // This practice is staff-run (the default), so the doctor must not get
+        // the call controls. That only holds while staff actually exist —
+        // without one, the queue falls back to the doctor so the chamber is not
+        // left with nobody able to call patients. See QueueRunnerFallbackTest.
+        $this->makeUser(User::ROLE_STAFF, 'staff-for-doctor2@test.loc');
+
         $page = WebPage::create([
             'title' => 'Test Page 2',
             'slug' => 'test-page-2',

@@ -45,7 +45,7 @@ class VisitMediaController extends Controller
             abort(403);
         }
 
-        $absolute = app(VisitMediaService::class)->absolutePublicPath($visitRecord->voice_path);
+        $absolute = app(VisitMediaService::class)->absolutePath($visitRecord->voice_path);
 
         if (! $absolute) {
             abort(404);
@@ -60,7 +60,7 @@ class VisitMediaController extends Controller
             abort(403);
         }
 
-        $absolute = app(VisitMediaService::class)->absolutePublicPath($visitRecord->photo_path);
+        $absolute = app(VisitMediaService::class)->absolutePath($visitRecord->photo_path);
 
         if (! $absolute) {
             abort(404);

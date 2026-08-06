@@ -202,3 +202,9 @@
 
 ## 2026-08-06T20:57:04+0600
 - Patient Records Stage 4 deferred: visit voice notes (`visit-audio/{tenant_id}/`), prescription photos (`visit-photos/{tenant_id}/`), manual voice transcript, doctor-auth media routes, Consult Screen catch-up banner + end-session warning; no STT or handwriting recognition; see `decisions.md` 2026-08-06T20:57:04+0600.
+
+## 2026-08-06T21:05:01+0600
+- Queue runner gains a presence fallback: `Tenant::effectiveQueueRunner()` hands call/complete controls to the other party when the configured party has no user in the practice, so the `staff` default no longer locks a staff-less solo doctor out of their own queue; `User::canOperateQueueControls()` now reads the effective runner. Exclusivity and the admin exclusion are unchanged. Covered by `tests/Feature/QueueRunnerFallbackTest.php`; see `bug_history.md` 2026-08-06T21:05:01+0600.
+
+## 2026-08-06T23:37:36+0600
+- Visit media (consultation voice notes, prescription photos) moved from the `public` disk to the `local` private disk with explicit private visibility, removing an unauthenticated web-served path to patient clinical records; `absolutePublicPath()` renamed `absolutePath()` and documented as stream-only. Caught pre-production, so no live files needed migrating. Covered by `tests/Feature/ClinicalMediaPrivacyTest.php`; see `bug_history.md` 2026-08-06T23:37:36+0600.

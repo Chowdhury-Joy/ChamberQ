@@ -660,6 +660,15 @@
  <reason>Recording is the primary capture for doctors who will not type; transcript and photo are layered on without replacing audio or risking misread drug names from OCR.</reason>
 </decision>
 
+## 2026-08-06T21:05:01+0600
+
+<decision>
+  <category>Business_Logic</category>
+  <context>The queue runner rule ("one party per practice — staff-run or doctor-run") was enforced against the configured setting alone. `queue_runner` defaults to `staff` for every new tenant, so a solo doctor with no staff login had nobody able to call patients, and could not correct it because only an admin may change the setting. The seeded demo tenant carries one user of every role, so no existing test exposed it.</context>
+  <action>Added `Tenant::effectiveQueueRunner()` — the configured runner checked against role presence in that practice. When the configured party has no user, controls fall back to the other eligible party. `User::canOperateQueueControls()` now resolves against the effective runner rather than the configured one. Role presence is memoised per request on the Tenant instance, since it is consulted on every panel page load.</action>
+  <reason>Exclusivity existed to stop two parties calling patients at once, not to leave a chamber with nobody able to work the queue. The fallback only fires when the configured party is empty, so exactly one party is ever live and the earlier decision holds. Setting the column at tenant creation was rejected: staffing changes after signup (the owner adds or removes a staff login later), so a creation-time snapshot would drift back into the same dead end. The account owner is still excluded from queue controls in all cases — the fallback moves authority between doctor and staff only.</reason>
+</decision>
+
 ## 2026-08-06T21:15:00+0600
 
 <decision>
@@ -667,4 +676,13 @@
  <context>Clireo clinic homepage preview had a hero “booking” form that did not submit to Doctor Gemini (`action="#"`, `onsubmit="return false;"`). Live clinic tenants already funnel patients through the shared `/book` wizard → `/bookings/{uuid}` ticket flow (`BookingController`, `tenant/sections/*` CTAs).</context>
  <action>Wire the clinic Clireo design reference (`public/previews/clireo-homepage.html`) to the real booking path: replace the fake hero form with a Clireo-styled **book CTA card** (helper copy + “Start booking” → `/book`); point all Book / booking-oriented Contact nav, doctor section, reviews, FAQ promo, final CTA, footer, and mobile drawer links to `/book` (relative). No embedded form may fake-submit — display-only Clireo chrome or redirect into the wizard. Live Blade migration should use `tenant_web_url('/book')` and `tenant_web_url('/book?doctor='.$id)` on every CTA when the homepage is rebuilt.</action>
  <reason>Patients must not fill a decorative form that never books; one wizard owns location, session, serial, and ticket logic. Preview documents the live pattern; full Clireo Blade shell remains a follow-up.</reason>
+</decision>
+
+## 2026-08-06T23:37:36+0600
+
+<decision>
+  <category>Code</category>
+  <context>Stage 4 shipped visit voice notes and prescription photos on the `public` disk. That disk is symlinked into the web root, so every file had a permanent unauthenticated URL despite the doctor-only controller in front of it.</context>
+  <action>Moved both to the `local` private disk (`storage/app/private`) with explicit `private` visibility. `absolutePublicPath()` became `absolutePath()`, documented as existing only to stream through `VisitMediaController`. Added `ClinicalMediaPrivacyTest`, which asserts the outcome — files are outside the web root and `/storage/{path}` returns 403 — rather than asserting a disk name.</action>
+  <reason>UUID filenames are obscurity, not access control: a public URL leaks through server access logs, shared-computer browser history and forwarded links, cannot be revoked when a doctor or patient leaves, and cannot be audited if a leak is ever alleged. The confidentiality duty sits with the doctor, not the platform, so the exposure lands on the customer. Fixed pre-launch because no production files existed yet — the same change after go-live would be a data migration plus a disclosure to doctors. Tests assert the property rather than the implementation so a future disk change cannot silently reintroduce web-serving.</reason>
 </decision>
