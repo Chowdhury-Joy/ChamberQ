@@ -165,7 +165,7 @@ class BookingServiceTest extends TestCase
         $this->assertSame('01711111111', $booking->patient_phone);
     }
 
-    public function test_duplicate_phone_same_session_same_day_is_rejected(): void
+    public function test_duplicate_phone_same_session_same_day_is_rejected_for_same_person(): void
     {
         $this->bookingService->createBookingForSession(
             $this->session,
@@ -180,8 +180,27 @@ class BookingServiceTest extends TestCase
         $this->bookingService->createBookingForSession(
             $this->session,
             $this->mondayDate,
-            'Patient 2',
+            'Patient 1',
             '+8801711111111'
         );
+    }
+
+    public function test_different_names_on_same_phone_can_book_same_session_same_day(): void
+    {
+        $this->bookingService->createBookingForSession(
+            $this->session,
+            $this->mondayDate,
+            'Child One',
+            '01711111111'
+        );
+
+        $second = $this->bookingService->createBookingForSession(
+            $this->session,
+            $this->mondayDate,
+            'Child Two',
+            '01711111111'
+        );
+
+        $this->assertSame(2, $second->serial_number);
     }
 }

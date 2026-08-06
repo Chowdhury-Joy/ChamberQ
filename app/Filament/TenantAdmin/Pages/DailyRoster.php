@@ -10,14 +10,21 @@ use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Actions\Action;
+use App\Filament\TenantAdmin\Support\CompleteBookingWithVisitNotes;
+use App\Filament\TenantAdmin\Support\VisitNotesFormSchema;
 use App\Models\Booking;
+use App\Models\Patient;
 use Carbon\Carbon;
 use App\Services\BookingService;
 use App\Services\LiveSessionService;
+use App\Services\PatientService;
+use App\Services\VisitRecordService;
 use App\Models\LabCollectionSlot;
 use App\Models\ScheduleSession;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 
 class DailyRoster extends Page implements HasTable, HasForms
 {
@@ -62,41 +69,108 @@ class DailyRoster extends Page implements HasTable, HasForms
                 Action::make('call')
                     ->label('Call to Chamber')
                     ->color('primary')
-                    ->visible(fn (Booking $record): bool => $record->status === 'waiting')
+                    ->visible(fn (Booking $record): bool => auth()->user()?->canOperateQueueControls()
+                        && $record->status === 'waiting')
                     ->action(fn (Booking $record) => app(LiveSessionService::class)->bringBookingToChamber($record)),
 
                 Action::make('complete')
                     ->label('Mark Completed')
                     ->color('success')
-                    ->visible(fn (Booking $record): bool => in_array($record->status, ['waiting', 'in_chamber', 'called']))
-                    ->action(fn (Booking $record) => app(LiveSessionService::class)->completeBooking($record)),
+                    ->visible(fn (Booking $record): bool => auth()->user()?->canOperateQueueControls()
+                        && in_array($record->status, ['waiting', 'in_chamber', 'called']))
+                    ->form(fn (): array => auth()->user()?->canRecordVisitNotes()
+                        ? VisitNotesFormSchema::components()
+                        : [])
+                    ->modalHeading(fn (): ?string => auth()->user()?->canRecordVisitNotes()
+                        ? __('Complete visit')
+                        : null)
+                    ->modalDescription(fn (): ?string => auth()->user()?->canRecordVisitNotes()
+                        ? __('Add optional notes, or leave everything blank and tap Complete.')
+                        : null)
+                    ->modalSubmitActionLabel(__('Complete'))
+                    ->action(function (
+                        Booking $record,
+                        array $data,
+                        LiveSessionService $liveSessionService,
+                        VisitRecordService $visitRecordService,
+                    ): void {
+                        CompleteBookingWithVisitNotes::finish(
+                            $record,
+                            $data,
+                            $liveSessionService,
+                            $visitRecordService,
+                        );
+                    }),
             ])
             ->headerActions([
                 Action::make('manageQueue')
                     ->label('Manage Live Queue')
                     ->icon('heroicon-o-queue-list')
                     ->url(LiveQueueControl::getUrl())
-                    ->color('primary'),
+                    ->color('primary')
+                    ->visible(fn (): bool => auth()->user()?->canAccessLiveQueueControl() ?? false),
 
                 Action::make('newWalkIn')
                     ->label(__('New Walk-In'))
                     ->icon('heroicon-o-user-plus')
                     ->schema([
-                        TextInput::make('patient_name')
-                            ->label(__('Patient name'))
-                            ->extraInputAttributes(['name' => 'patient_name'])
-                            ->autocomplete('name')
-                            ->required(),
                         TextInput::make('patient_phone')
                             ->label(__('Phone number'))
                             ->extraInputAttributes(['name' => 'patient_phone'])
                             ->autocomplete('tel')
                             ->tel()
                             ->required()
+                            ->live(debounce: 400)
+                            ->afterStateUpdated(function (?string $state, Set $set): void {
+                                $set('patient_id', null);
+                                $set('patient_name', '');
+                            })
                             ->rule('regex:/^(?:\+?88)?01[3-9]\d{8}$/')
                             ->validationMessages([
                                 'regex' => __('Please enter a valid Bangladeshi mobile number, for example 01712345678.'),
                             ]),
+                        Select::make('patient_id')
+                            ->label(__('Who is this for?'))
+                            ->options(function (Get $get): array {
+                                $phone = $get('patient_phone');
+
+                                if (blank($phone)) {
+                                    return [];
+                                }
+
+                                $patients = app(PatientService::class)->patientsForPhone($phone);
+
+                                if ($patients->isEmpty()) {
+                                    return [];
+                                }
+
+                                return $patients
+                                    ->mapWithKeys(fn (Patient $patient) => [$patient->id => $patient->pickerLabel()])
+                                    ->put('__new__', __('Someone new'))
+                                    ->all();
+                            })
+                            ->visible(function (Get $get): bool {
+                                $phone = $get('patient_phone');
+
+                                if (blank($phone)) {
+                                    return false;
+                                }
+
+                                return app(PatientService::class)->patientsForPhone($phone)->isNotEmpty();
+                            })
+                            ->native(false)
+                            ->live()
+                            ->afterStateUpdated(function (?string $state, Set $set): void {
+                                if ($state && $state !== '__new__') {
+                                    $patient = Patient::find($state);
+                                    $set('patient_name', $patient?->name ?? '');
+                                }
+                            }),
+                        TextInput::make('patient_name')
+                            ->label(__('Patient name'))
+                            ->extraInputAttributes(['name' => 'patient_name'])
+                            ->autocomplete('name')
+                            ->required(),
                         Select::make('bookable')
                             ->label(__('Session'))
                             // Resolved names, never raw ids: two sessions both
@@ -113,13 +187,18 @@ class DailyRoster extends Page implements HasTable, HasForms
                             ? LabCollectionSlot::findOrFail($id)
                             : ScheduleSession::findOrFail($id);
 
-                        // Same service as online bookings — a separate write path
-                        // would bypass the lock and duplicate serial numbers.
+                        $patientId = ($data['patient_id'] ?? null) === '__new__'
+                            ? null
+                            : ($data['patient_id'] ?? null);
+
                         $bookingService->createBookingForBookable(
                             $bookable,
                             today()->toDateString(),
                             $data['patient_name'],
-                            $data['patient_phone']
+                            $data['patient_phone'],
+                            [],
+                            true,
+                            $patientId,
                         );
                     })
                     ->successNotificationTitle(__('Walk-in added to today\'s queue.'))

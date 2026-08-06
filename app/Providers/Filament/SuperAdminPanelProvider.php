@@ -30,7 +30,7 @@ class SuperAdminPanelProvider extends PanelProvider
             ->passwordReset()
             ->domains(config('tenancy.central_domains') ?? [])
             ->colors([
-                'primary' => Color::Amber,
+                'primary' => Color::Blue,
             ])
             ->discoverResources(in: app_path('Filament/SuperAdmin/Resources'), for: 'App\Filament\SuperAdmin\Resources')
             ->discoverPages(in: app_path('Filament/SuperAdmin/Pages'), for: 'App\Filament\SuperAdmin\Pages')

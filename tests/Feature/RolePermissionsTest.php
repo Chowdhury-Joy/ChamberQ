@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Filament\TenantAdmin\Pages\BrandingSettings;
+use App\Filament\TenantAdmin\Pages\ConsultScreen;
 use App\Filament\TenantAdmin\Pages\DailyRoster;
 use App\Filament\TenantAdmin\Pages\LiveQueueControl;
 use App\Filament\TenantAdmin\Pages\OperationalReports;
@@ -71,6 +72,7 @@ class RolePermissionsTest extends TestCase
         $this->assertTrue($admin->canManagePageStructure());
         $this->assertTrue($admin->canManageUsers());
         $this->assertTrue($admin->canManageBranding());
+        $this->assertFalse($admin->canManageQueue());
 
         $this->assertTrue($doctor->isDoctor());
         $this->assertTrue($doctor->canManageOps());
@@ -108,6 +110,7 @@ class RolePermissionsTest extends TestCase
         $this->assertFalse(WebPageResource::canDelete($page));
         $this->assertTrue(DailyRoster::canAccess());
         $this->assertTrue(LiveQueueControl::canAccess());
+        $this->assertFalse(ConsultScreen::canAccess());
         $this->assertFalse(OperationalReports::canAccess());
         $this->assertFalse(UserResource::canViewAny());
         $this->assertFalse(BrandingSettings::canAccess());
@@ -136,7 +139,8 @@ class RolePermissionsTest extends TestCase
         $this->assertTrue(ScheduleSessionResource::canViewAny());
         $this->assertTrue(SlotBlockResource::canViewAny());
         $this->assertTrue(DailyRoster::canAccess());
-        $this->assertTrue(LiveQueueControl::canAccess());
+        $this->assertFalse(LiveQueueControl::canAccess());
+        $this->assertTrue(ConsultScreen::canAccess());
         $this->assertTrue(OperationalReports::canAccess());
         $this->assertFalse(WebPageResource::canViewAny());
         $this->assertFalse(WebPageResource::canCreate());
@@ -164,7 +168,9 @@ class RolePermissionsTest extends TestCase
         $this->assertTrue(UserResource::canViewAny());
         $this->assertTrue(BrandingSettings::canAccess());
         $this->assertTrue(DoctorResource::canViewAny());
-        $this->assertTrue(DailyRoster::canAccess());
+        $this->assertFalse(DailyRoster::canAccess());
+        $this->assertFalse(LiveQueueControl::canAccess());
+        $this->assertFalse(ConsultScreen::canAccess());
         $this->assertTrue(OperationalReports::canAccess());
     }
 }

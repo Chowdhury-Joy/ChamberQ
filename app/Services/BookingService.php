@@ -8,6 +8,7 @@ use App\Models\ScheduleSession;
 use App\Models\LabCollectionSlot;
 use App\Models\LabTest;
 use App\Models\SlotBlock;
+use App\Support\BdPhone;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Model;
@@ -41,10 +42,11 @@ class BookingService
         string $patientPhone,
         array $labTestIds = [],
         bool $sendSms = true,
+        ?string $patientId = null,
     ): Booking {
         $patientPhone = $this->normalizeBdPhone($patientPhone);
 
-        $booking = DB::transaction(function () use ($bookable, $bookingDate, $patientName, $patientPhone, $labTestIds) {
+        $booking = DB::transaction(function () use ($bookable, $bookingDate, $patientName, $patientPhone, $labTestIds, $patientId) {
             $tenant = tenant();
             $capMode = $tenant->slot_cap_mode ?? 'per_session';
             if ($capMode === 'per_day') {
@@ -82,14 +84,28 @@ class BookingService
                 throw BookingUnavailableException::capacityExceeded();
             }
 
-            $duplicate = Booking::where('bookable_type', get_class($lockedBookable))
+            $patient = app(PatientService::class)->resolveForBooking(
+                $patientPhone,
+                $patientName,
+                $patientId,
+            );
+
+            $duplicateQuery = Booking::where('bookable_type', get_class($lockedBookable))
                 ->where('bookable_id', $lockedBookable->id)
                 ->whereDate('booking_date', $bookingDate)
-                ->where('patient_phone', $patientPhone)
                 ->where('status', '!=', 'cancelled')
-                ->exists();
+                ->where(function ($query) use ($patient, $patientPhone, $patientName) {
+                    $query->where('patient_id', $patient->id)
+                        ->orWhere(function ($legacy) use ($patientPhone, $patientName) {
+                            $legacy->whereNull('patient_id')
+                                ->where('patient_phone', $patientPhone)
+                                ->whereRaw('LOWER(TRIM(patient_name)) = ?', [
+                                    strtolower(trim($patientName)),
+                                ]);
+                        });
+                });
 
-            if ($duplicate) {
+            if ($duplicateQuery->exists()) {
                 throw BookingUnavailableException::duplicateBooking();
             }
 
@@ -104,6 +120,7 @@ class BookingService
                 'bookable_type' => get_class($lockedBookable),
                 'bookable_id' => $lockedBookable->id,
                 'booking_date' => $bookingDate,
+                'patient_id' => $patient->id,
                 'patient_name' => $patientName,
                 'patient_phone' => $patientPhone,
                 'serial_number' => $nextSerial,
@@ -249,12 +266,6 @@ class BookingService
      */
     public function normalizeBdPhone(string $phone): string
     {
-        $digits = preg_replace('/\D/', '', $phone) ?? '';
-
-        if (str_starts_with($digits, '88')) {
-            $digits = substr($digits, 2);
-        }
-
-        return $digits;
+        return BdPhone::normalize($phone);
     }
 }

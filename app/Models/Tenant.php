@@ -11,6 +11,9 @@ class Tenant extends BaseTenant
 
     public const DEFAULT_THEME_COLOR = '#2563eb';
 
+    /** Default browser tab icon when a tenant has not uploaded a custom favicon. */
+    public const DEFAULT_FAVICON = '/icons/health-favicon.svg';
+
     /** Max chambers on Solo when multiple_chambers is enabled. Clinic has no cap. */
     public const SOLO_MAX_CHAMBERS = 5;
 
@@ -25,6 +28,10 @@ class Tenant extends BaseTenant
     public const ANNOUNCE_VOICE = 'voice';
 
     public const ANNOUNCE_CHIME_AND_VOICE = 'chime_and_voice';
+
+    public const QUEUE_RUNNER_STAFF = 'staff';
+
+    public const QUEUE_RUNNER_DOCTOR = 'doctor';
 
     /** @return array<string, string> */
     public static function etaModelOptions(): array
@@ -44,6 +51,34 @@ class Tenant extends BaseTenant
             self::ANNOUNCE_VOICE => 'Voice only (“Calling number…”)',
             self::ANNOUNCE_CHIME_AND_VOICE => 'Chime + voice',
         ];
+    }
+
+    /** @return array<string, string> */
+    public static function queueRunnerOptions(): array
+    {
+        return [
+            self::QUEUE_RUNNER_STAFF => 'Staff-run (default) — staff call patients; doctor consult screen follows',
+            self::QUEUE_RUNNER_DOCTOR => 'Doctor-run — doctor calls patients; staff see no queue controls',
+        ];
+    }
+
+    public function queueRunner(): string
+    {
+        $runner = $this->queue_runner ?? self::QUEUE_RUNNER_STAFF;
+
+        return in_array($runner, [self::QUEUE_RUNNER_STAFF, self::QUEUE_RUNNER_DOCTOR], true)
+            ? $runner
+            : self::QUEUE_RUNNER_STAFF;
+    }
+
+    public function isStaffRunQueue(): bool
+    {
+        return $this->queueRunner() === self::QUEUE_RUNNER_STAFF;
+    }
+
+    public function isDoctorRunQueue(): bool
+    {
+        return $this->queueRunner() === self::QUEUE_RUNNER_DOCTOR;
     }
 
     public function usesCallChime(): bool
@@ -103,6 +138,7 @@ class Tenant extends BaseTenant
             'call_audio_path',
             'call_announce_mode',
             'call_announce_locale',
+            'queue_runner',
             'created_at',
             'updated_at',
         ];
@@ -112,6 +148,12 @@ class Tenant extends BaseTenant
     public function displayName(): string
     {
         return filled($this->name) ? $this->name : (string) $this->id;
+    }
+
+    /** Browser tab icon: custom upload, else the shared health cross. */
+    public function faviconHref(): string
+    {
+        return filled($this->favicon_url) ? (string) $this->favicon_url : self::DEFAULT_FAVICON;
     }
 
     /**

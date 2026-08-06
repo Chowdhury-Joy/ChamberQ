@@ -19,9 +19,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
-    @if($tenant->favicon_url)
-    <link rel="icon" href="{{ $tenant->favicon_url }}">
-    @endif
+    <link rel="icon" href="{{ $tenant->faviconHref() }}">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="/css/theme.css">
     <style>
@@ -271,6 +269,27 @@
         }
         .lab-test-error { display: none; color: #dc2626; font-size: 0.9rem; margin-top: 0.75rem; }
         .hidden { display: none !important; }
+
+        .patient-picker-options { display: flex; flex-direction: column; gap: 0.5rem; }
+        .patient-picker-btn {
+            width: 100%;
+            text-align: left;
+            padding: 0.85rem 1rem;
+            border-radius: 0.75rem;
+            border: 1px solid #E0E0E0;
+            background: #ffffff;
+            color: #0f172a;
+            font-family: inherit;
+            font-size: 1rem;
+            cursor: pointer;
+        }
+        .patient-picker-btn:hover { border-color: #d4d4d4; }
+        .patient-picker-btn.selected {
+            border-color: var(--color-primary);
+            background: color-mix(in srgb, var(--color-primary) 8%, white);
+            font-weight: 600;
+        }
+        .patient-picker-btn-new { font-style: italic; color: #64748b; }
 
         .form-group { margin-bottom: 1.5rem; }
         .form-label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: #0f172a; }

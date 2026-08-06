@@ -60,6 +60,7 @@ class BrandingSettings extends Page implements HasForms
                 'call_audio_path' => $tenant->call_audio_path,
                 'call_announce_mode' => $tenant->call_announce_mode ?? \App\Models\Tenant::ANNOUNCE_CHIME_AND_VOICE,
                 'call_announce_locale' => $tenant->call_announce_locale ?? 'en',
+                'queue_runner' => $tenant->queue_runner ?? \App\Models\Tenant::QUEUE_RUNNER_STAFF,
             ]);
         }
     }
@@ -88,7 +89,7 @@ class BrandingSettings extends Page implements HasForms
                             ->placeholder('https://example.com/logo.png'),
                         TextInput::make('favicon_url')
                             ->label(__('Favicon / App Icon URL'))
-                            ->url()
+                            ->helperText(__('Optional. Leave empty to use the default health cross icon.'))
                             ->maxLength(500)
                             ->placeholder('https://example.com/icon.png'),
                     ]),
@@ -162,6 +163,12 @@ class BrandingSettings extends Page implements HasForms
                             ->label('Early Arrival Offset (minutes)')
                             ->numeric()
                             ->default(15)
+                            ->required(),
+                        Select::make('queue_runner')
+                            ->label(__('Who runs the queue'))
+                            ->helperText(__('Staff-run: staff call patients and the doctor’s consult screen follows. Doctor-run: the doctor calls patients; staff see no queue controls. One party at a time.'))
+                            ->options(\App\Models\Tenant::queueRunnerOptions())
+                            ->default(\App\Models\Tenant::QUEUE_RUNNER_STAFF)
                             ->required(),
                         Select::make('call_announce_mode')
                             ->label(__('When a patient is called'))
@@ -268,6 +275,7 @@ class BrandingSettings extends Page implements HasForms
                 'eta_model' => $data['eta_model'],
                 'first_n_patients' => $data['first_n_patients'],
                 'first_n_arrival_offset_minutes' => $data['first_n_arrival_offset_minutes'],
+                'queue_runner' => $data['queue_runner'] ?? \App\Models\Tenant::QUEUE_RUNNER_STAFF,
                 'call_announce_mode' => $announceMode,
                 'call_announce_locale' => $usesVoice ? ($data['call_announce_locale'] ?? 'en') : ($tenant->call_announce_locale ?? 'en'),
                 'call_audio_preset' => $usesChime ? $preset : ($tenant->call_audio_preset ?? 'chime'),

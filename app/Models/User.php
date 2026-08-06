@@ -109,9 +109,55 @@ class User extends Authenticatable implements FilamentUser, CanResetPasswordCont
         return $this->isAdmin();
     }
 
+    /** Daily roster and queue-adjacent workflows — doctor or staff, not account owner. */
     public function canManageQueue(): bool
     {
-        return in_array($this->role, self::TENANT_PANEL_ROLES, true);
+        return in_array($this->role, [self::ROLE_DOCTOR, self::ROLE_STAFF], true);
+    }
+
+    /** Auto-following consult screen — clinical view for doctors only. */
+    public function canViewConsultScreen(): bool
+    {
+        return $this->isDoctor();
+    }
+
+    /** Visit notes, prescriptions, and clinical history — doctors only. */
+    public function canViewVisitNotes(): bool
+    {
+        return $this->isDoctor();
+    }
+
+    /** Recording diagnosis / prescription on complete — doctors only. */
+    public function canRecordVisitNotes(): bool
+    {
+        return $this->isDoctor();
+    }
+
+    /** Live Queue Control — only the party configured to run the queue. */
+    public function canAccessLiveQueueControl(): bool
+    {
+        return $this->canOperateQueueControls();
+    }
+
+    /**
+     * Call / complete / skip controls — one party per practice (staff-run or doctor-run).
+     */
+    public function canOperateQueueControls(): bool
+    {
+        if (! $this->canManageQueue()) {
+            return false;
+        }
+
+        $tenant = tenant();
+        if (! $tenant) {
+            return false;
+        }
+
+        return match ($tenant->queueRunner()) {
+            Tenant::QUEUE_RUNNER_STAFF => $this->isStaff(),
+            Tenant::QUEUE_RUNNER_DOCTOR => $this->isDoctor(),
+            default => $this->isStaff(),
+        };
     }
 
     public function canManageUsers(): bool

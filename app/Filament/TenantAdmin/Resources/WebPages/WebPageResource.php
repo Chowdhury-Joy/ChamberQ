@@ -207,7 +207,18 @@ class WebPageResource extends Resource
                             ->columns(2)
                             ->schema([
                                 Forms\Components\TextInput::make('heading')->default('Visit Our Clinic')->columnSpan(2),
-                                Forms\Components\TextInput::make('google_maps_url')->label('Google Maps Location Link')->required()->placeholder('https://maps.google.com/?q=...')->columnSpan(2),
+                                Forms\Components\Repeater::make('locations')
+                                    ->label('Branches (preferred for multi-location clinics)')
+                                    ->columnSpan(2)
+                                    ->columns(2)
+                                    ->schema([
+                                        Forms\Components\TextInput::make('name')->label('Branch name')->required()->columnSpan(2),
+                                        Forms\Components\TextInput::make('address')->columnSpan(2),
+                                        Forms\Components\TextInput::make('operating_hours')->default('Sat–Thu: 9:00 AM – 8:00 PM'),
+                                        Forms\Components\TextInput::make('phone'),
+                                        Forms\Components\TextInput::make('google_maps_url')->label('Google Maps link')->columnSpan(2),
+                                    ]),
+                                Forms\Components\TextInput::make('google_maps_url')->label('Single-location Google Maps link (fallback)')->placeholder('https://maps.google.com/?q=...')->columnSpan(2),
                                 Forms\Components\TextInput::make('address')->placeholder('123 Health Ave, Suite 400, Medical City'),
                                 Forms\Components\TextInput::make('operating_hours')->default('Mon - Fri: 8:00 AM - 8:00 PM | Sat: 9:00 AM - 4:00 PM'),
                                 Forms\Components\TextInput::make('phone')->placeholder('+1 (555) 234-5678'),

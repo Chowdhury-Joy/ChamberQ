@@ -9,6 +9,8 @@
     --mk-teal-soft: #dcebe3;
     --mk-coral: #e57254;
     --mk-coral-soft: #f7ddd4;
+    --mk-blue: #2563eb;
+    --mk-blue-deep: #1d4ed8;
     --mk-sun: #f1c969;
     --mk-radius-card: 24px;
     --mk-radius-pill: 9999px;
@@ -109,12 +111,12 @@ body.mk {
 .mk-btn:hover { transform: translateY(-1px); }
 
 .mk-btn-primary {
-    background: var(--mk-teal);
+    background: var(--mk-blue);
     color: #fff !important;
 }
 
 .mk-btn-primary:hover {
-    background: var(--mk-teal-deep);
+    background: var(--mk-blue-deep);
     color: #fff !important;
 }
 
@@ -824,12 +826,14 @@ body.mk {
 }
 
 .mk-btn-primary {
-    background: var(--mk-coral);
-    box-shadow: 0 12px 24px -16px rgba(153, 58, 34, 0.8);
+    background: var(--mk-blue);
+    color: #fff !important;
+    box-shadow: 0 12px 24px -16px rgba(37, 99, 235, 0.55);
 }
 
 .mk-btn-primary:hover {
-    background: #cf6046;
+    background: var(--mk-blue-deep);
+    color: #fff !important;
 }
 
 .mk-btn-secondary {
@@ -1516,7 +1520,16 @@ body.mk {
 .mk-plan-featured .mk-plan-list { color: rgba(255, 255, 255, 0.72); }
 
 .mk-plan-featured .mk-plan-list li::before { background: var(--mk-sun); }
-.mk-plan-featured .mk-btn-primary { background: var(--mk-coral); }
+.mk-plan-featured .mk-btn-primary {
+    background: var(--mk-blue);
+    color: #fff !important;
+    box-shadow: 0 12px 24px -16px rgba(15, 23, 42, 0.45);
+}
+
+.mk-plan-featured .mk-btn-primary:hover {
+    background: var(--mk-blue-deep);
+    color: #fff !important;
+}
 
 .mk-plan-badge {
     margin-bottom: 1.2rem;

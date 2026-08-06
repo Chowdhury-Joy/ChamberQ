@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-05T19:59:41+0600
+Last Updated: 2026-08-06T20:57:04+0600
 
 ## Full Site Map
 
@@ -10,7 +10,7 @@ Hosts: values in `CENTRAL_DOMAINS` (e.g. `localhost`).
 |-------|---------|--------|
 | `/` | Sales landing for Doctor Gemini (Solo/Clinic plans, WhatsApp CTAs); captures `?ref=` and `?code=` into session | public |
 | `/admin` | Super Admin Filament login | public login |
-| `/admin/*` | Super Admin: Tenants, Marketers, Discount Codes, Commissions; finance dashboard widgets; confirm doctor payments on tenant edit | super_admin only |
+| `/admin/*` | Super Admin: Tenants, Marketers, Discount Codes, Commissions; finance dashboard widgets; **Client Health** seller overview (`/admin/seller-overview`); **Research data** aggregate view (`/admin/research`); confirm doctor payments on tenant edit | super_admin only |
 | `/partner` | Marketer partner panel login | public login |
 | `/partner/*` | Marketer: referral link, owed/paid stats, referred doctors list, commission history | marketer only |
 | `/up` | Laravel health check | public |
@@ -50,9 +50,21 @@ Available under both platform path (`/{slug}/api/…`) and custom domain (`/api/
 | Route | Purpose | Access |
 |-------|---------|--------|
 | `GET /api/bookings/availability` | Session/lab availability for wizard | public (throttled) |
+| `GET /api/patients/by-phone` | Household members on a phone (booking picker) | public (throttled) |
+| `GET /api/conditions/search` | Coded condition autocomplete for doctor diagnosis picker | doctor auth (throttled) |
 | `POST /api/bookings` | Create booking | public (throttled; blocked if billing closed) |
 | `GET /api/queue/{booking}` | Ticket queue poll by booking UUID | public (throttled) |
 | `GET /api/screen/{session}/{date}` | Screen poll payload | public (throttled) |
+
+### Tenant doctor-only routes (auth)
+Available under both platform path and custom domain. Requires doctor role (`canViewVisitNotes`).
+
+| Route | Purpose | Access |
+|-------|---------|--------|
+| `GET /prescriptions/{prescription}/print` | Printable prescription (browser print / Save as PDF) | doctor auth |
+| `POST /api/visit-media/upload-voice` | Upload voice note blob from Mark Completed modal | doctor auth (throttled) |
+| `GET /visit-records/{visitRecord}/voice` | Stream visit voice note | doctor auth |
+| `GET /visit-records/{visitRecord}/photo` | View paper prescription photo | doctor auth |
 
 ## Customer Journeys
 
@@ -69,7 +81,7 @@ Available under both platform path (`/{slug}/api/…`) and custom domain (`/api/
 
 ### Patient → book serial → ticket
 1. Open `/{slug}/` or custom domain home — see doctor brand + Book CTA.
-2. Book flow — pick session/date, enter name/phone.
+2. Book flow — pick session/date, enter phone; if the number is known, choose **Who is this appointment for?** inline (or enter a new person).
 3. Submit → ticket at `…/bookings/{uuid}`. Goal: proof of serial; share via WhatsApp/copy, or Print / Save as PDF for a paper or file copy.
 4. Optional: PWA install scoped to tenant path or custom domain.
 
@@ -85,7 +97,7 @@ Available under both platform path (`/{slug}/api/…`) and custom domain (`/api/
 
 ### New tenant → go live (Super Admin)
 - **Trigger:** Sales closes a doctor/clinic.
-- **Steps:** Create Tenant with URL **slug** (e.g. `drkarim`; rejected if already taken or if it matches a reserved path prefix such as `admin` / `book`) → optional custom **domain** → set `plan_tier`, attach **marketer** / **discount code**, snapshot pricing → set SMS, `billing_status` → hand off admin login.
+- **Steps:** Create Tenant with URL **slug** (e.g. `drkarim`; rejected if already taken or if it matches a reserved path prefix such as `admin` / `book`) → optional custom **domain** → set `plan_tier`, attach **marketer** / **discount code**, snapshot pricing → set SMS, `billing_status` → **doctor login email** (required; creates doctor user) → hand off admin + doctor logins.
 - **URLs:** Platform `/{slug}/…`; after custom domain DNS, also `drkarim.com/…` at root.
 - **Success:** `/{slug}/book` works; admin at `/{slug}/admin` (or `/admin` on custom domain).
 
@@ -94,10 +106,28 @@ Available under both platform path (`/{slug}/api/…`) and custom domain (`/api/
 - **Steps:** Tenant edit → **Confirm setup paid** or **Confirm monthly paid** (period YYYY-MM) → Commissions list shows **owed** → **Mark payout paid** with bKash trx note.
 - **Success:** Platform finance widget reflects collected cash, owed, paid, and net revenue.
 
+### Sunday client-health review (Super Admin)
+- **Trigger:** Weekly check on whether clients are still using the product (usage predicts churn earlier than payment).
+- **Steps:** Super Admin → **Client Health** (`/admin/seller-overview`) — review **Quiet clients** (worst first: days since last live session, booking drop vs their own baseline, schedule set but never started), **Go-live funnel** (recent signups and where onboarding stalls), **SMS credit warnings** (balance ≤ 5 — confirmations stop silently at zero), **Overdue payments** (who owes and for how long).
+- **Data/systems touched:** `tenants`, aggregate counts from `live_sessions`, `bookings`, `schedule_sessions`, `web_pages`, `billing_payments` — **never** patient names, diagnoses, prescriptions, or visit contents.
+- **Success:** Actionable call list of tenant/clinic names; no clinical data crosses the central-panel boundary.
+
+### Research data review (Super Admin)
+- **Trigger:** Platform owner wants anonymous disease-pattern statistics across all practices.
+- **Steps:** Super Admin → **Research data** (`/admin/research`) — set date range and optional plan tier filter → review coded diagnosis counts (groups of 10+ only). Widen filters if rows are hidden for k-anonymity.
+- **Data/systems touched:** `visit_records` (coded `condition_id` only), `conditions`, `tenants.plan_tier` — **never** individual patient rows, names, phones, or uncoded free-text diagnoses.
+- **Success:** Useful aggregate counts without re-identification risk; suppressed groups prompt filter widening.
+
 ### Open clinic day → run queue
 - **Trigger:** Session day starts.
-- **Steps:** Live Queue Control → Start → Call → Patient arrived → Complete.
-- **Success:** Outdoor screen matches control panel.
+- **Steps:** Queue runner (staff or doctor per Branding **Who runs the queue**) → Live Queue Control → Start → Call → Patient arrived → Complete. Doctor opens **Consult Screen** for auto-updating patient context (no search).
+- **Success:** Outdoor screen matches control panel; consult screen shows the patient in chamber.
+
+### Doctor consult (doctor role)
+- **Trigger:** Patient called into chamber (`live_sessions.current_booking_id` set).
+- **Steps:** Tenant admin → **Consult Screen** — screen updates automatically (poll). Review visit count, warnings, last visit diagnosis/advice/voice/photo/transcript, past visits with reprint, voice playback, and photo links. Amber catch-up banner when today's session is active and completed patients lack notes — tap to fill in. On complete (doctor-run mode), optional visit-notes modal — diagnosis picker, advice, prescription builder, voice note (record 10–20s), optional manual transcript, paper prescription photo; all optional. Staff completing from queue skip the modal. Ending the session from Live Queue Control warns if notes are still missing.
+- **Data/systems touched:** `live_sessions`, `bookings`, `patients`, `visit_records`, `prescriptions`.
+- **Success:** Doctor sees correct person and honest history state; visit notes saved when provided; patient ticket/portal never show clinical data.
 
 ### Content update (staff)
 - **Trigger:** Doctor wants copy/photo change.
@@ -112,3 +142,9 @@ Available under both platform path (`/{slug}/api/…`) and custom domain (`/api/
 ### Ops review (admin/doctor)
 - **Trigger:** End of day/week.
 - **Steps:** Operational Reports → day/week/month KPIs.
+
+### Patient records — lookup and corrections (admin/doctor)
+- **Trigger:** Staff need to see who has visited, fix a duplicate person, or move a visit to the right household member.
+- **Steps:** Tenant admin → **Patients** (search by name/phone) → edit demographics, or use **Join two records** / **Move a visit** actions. Run `php artisan patients:backfill` once per environment to link legacy bookings (use `--dry-run` first).
+- **Data/systems touched:** `patients`, `bookings.patient_id`.
+- **Success:** Each person has one record; family members on one phone can each book the same day; staff can merge mistaken duplicates.

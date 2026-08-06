@@ -41,6 +41,14 @@ class LoginTest extends TestCase
             'tenant_id' => 'solo',
         ]);
 
+        User::create([
+            'name' => 'Solo Staff',
+            'email' => 'staff@solo.com',
+            'password' => Hash::make('password'),
+            'role' => User::ROLE_STAFF,
+            'tenant_id' => 'solo',
+        ]);
+
         $this->clinicTenant = Tenant::create(['id' => 'demo', 'plan_tier' => 'clinic']);
         Domain::create(['domain' => 'demo.localhost', 'tenant_id' => 'demo']);
         $this->clinicAdmin = User::create([
@@ -169,7 +177,7 @@ class LoginTest extends TestCase
 
         \Livewire\Livewire::test(\Filament\Auth\Pages\Login::class)
             ->fillForm([
-                'email' => 'admin@solo.com',
+                'email' => 'staff@solo.com',
                 'password' => 'password',
             ])
             ->call('authenticate')

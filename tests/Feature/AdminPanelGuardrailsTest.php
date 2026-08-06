@@ -317,12 +317,26 @@ class AdminPanelGuardrailsTest extends TestCase
         $this->superAdmin();
 
         Livewire::test(CreateTenant::class)
-            ->fillForm(['id' => 'drkarim', 'name' => 'Copycat', 'plan_tier' => 'solo', 'billing_status' => 'trial', 'sms_balance' => 0])
+            ->fillForm([
+                'id' => 'drkarim',
+                'name' => 'Copycat',
+                'plan_tier' => 'solo',
+                'billing_status' => 'trial',
+                'sms_balance' => 0,
+                'initial_doctor_email' => 'doctor@copycat.test',
+            ])
             ->call('create')
             ->assertHasFormErrors(['id']);
 
         Livewire::test(CreateTenant::class)
-            ->fillForm(['id' => 'admin', 'name' => 'Unreachable', 'plan_tier' => 'solo', 'billing_status' => 'trial', 'sms_balance' => 0])
+            ->fillForm([
+                'id' => 'admin',
+                'name' => 'Unreachable',
+                'plan_tier' => 'solo',
+                'billing_status' => 'trial',
+                'sms_balance' => 0,
+                'initial_doctor_email' => 'doctor@unreachable.test',
+            ])
             ->call('create')
             ->assertHasFormErrors(['id']);
 

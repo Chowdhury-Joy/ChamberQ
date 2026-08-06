@@ -3,6 +3,10 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\BookingController;
+use App\Http\Controllers\ConditionController;
+use App\Http\Controllers\PatientController;
+use App\Http\Controllers\PrescriptionController;
+use App\Http\Controllers\VisitMediaController;
 use App\Http\Controllers\PWAController;
 use App\Http\Controllers\QueueStatusController;
 use App\Http\Controllers\ScreenController;
@@ -47,6 +51,27 @@ $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
 
     Route::get('/api/bookings/availability', [BookingController::class, 'availability'])
         ->middleware(['throttle:60,1']);
+
+    Route::get('/api/patients/by-phone', [PatientController::class, 'lookupByPhone'])
+        ->middleware(['throttle:60,1']);
+
+    Route::get('/api/conditions/search', [ConditionController::class, 'search'])
+        ->middleware(['auth', 'throttle:120,1']);
+
+    Route::get('/prescriptions/{prescription}/print', [PrescriptionController::class, 'print'])
+        ->middleware(['auth'])
+        ->name($routeName('prescriptions.print'));
+
+    Route::post('/api/visit-media/upload-voice', [VisitMediaController::class, 'uploadVoice'])
+        ->middleware(['auth', 'throttle:30,1']);
+
+    Route::get('/visit-records/{visitRecord}/voice', [VisitMediaController::class, 'voice'])
+        ->middleware(['auth'])
+        ->name($routeName('visit-records.voice'));
+
+    Route::get('/visit-records/{visitRecord}/photo', [VisitMediaController::class, 'photo'])
+        ->middleware(['auth'])
+        ->name($routeName('visit-records.photo'));
 
     Route::get('/manifest.webmanifest', [PWAController::class, 'manifest']);
     Route::get('/sw.js', [PWAController::class, 'serviceWorker']);

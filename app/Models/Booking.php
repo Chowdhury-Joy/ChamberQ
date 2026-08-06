@@ -14,6 +14,7 @@ class Booking extends Model
         'bookable_type',
         'bookable_id',
         'booking_date',
+        'patient_id',
         'patient_name',
         'patient_phone',
         'serial_number',
@@ -67,6 +68,16 @@ class Booking extends Model
     public function slotBlock()
     {
         return $this->belongsTo(SlotBlock::class, 'slot_block_id');
+    }
+
+    public function patient()
+    {
+        return $this->belongsTo(Patient::class);
+    }
+
+    public function visitRecord()
+    {
+        return $this->hasOne(VisitRecord::class);
     }
     
     public function bookable()

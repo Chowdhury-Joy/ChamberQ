@@ -71,5 +71,8 @@ class MarketingLandingPageTest extends TestCase
 
         $this->assertStringContainsString('.mk-btn-primary', $css);
         $this->assertMatchesRegularExpression('/\.mk-btn-primary\s*\{[^}]*color:\s*#fff/s', $css);
+        $this->assertMatchesRegularExpression('/\.mk-btn-primary\s*\{[^}]*background:\s*var\(--mk-blue\)/s', $css);
+        $this->assertDoesNotMatchRegularExpression('/\.mk-btn-primary\s*\{[^}]*background:\s*var\(--mk-coral\)/s', $css);
+        $this->assertDoesNotMatchRegularExpression('/\.mk-plan-featured\s+\.mk-btn-primary\s*\{[^}]*background:\s*var\(--mk-coral\)/s', $css);
     }
 }

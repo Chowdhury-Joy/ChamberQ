@@ -106,10 +106,10 @@ class SmsService
         $ticket = $this->ticketUrl($booking);
 
         // Keep ASCII/English so one credit = one GSM segment for v1.
+        $name = $booking->patient_name;
         $parts = array_filter([
             $clinic.':',
-            $booking->patient_name.',',
-            'serial '.$booking->serial_number,
+            $name.' — serial '.$booking->serial_number,
             $date !== '' ? 'on '.$date : null,
             $session !== '' ? '('.$session.')' : null,
             'Ticket: '.$ticket,

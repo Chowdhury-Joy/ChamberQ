@@ -40,6 +40,7 @@ class DatabaseSeeder extends Seeder
             'contact_phone' => '01712345678',
             'whatsapp_number' => '8801712345678',
             'theme_color' => '#30A9E5',
+            'favicon_url' => '/icons/health-favicon.svg',
             'font_family' => 'Outfit',
             'default_locale' => 'en',
             'tagline' => 'Consultant physician care in Dhanmondi — book online, pay at the chamber.',
@@ -253,6 +254,7 @@ class DatabaseSeeder extends Seeder
             'contact_phone' => '029876543',
             'whatsapp_number' => '8801812345678',
             'theme_color' => Tenant::DEFAULT_THEME_COLOR,
+            'favicon_url' => '/icons/health-favicon.svg',
             'font_family' => 'Outfit',
             'default_locale' => 'en',
             'tagline' => 'Diagnostics and consultations under one roof',
@@ -330,7 +332,7 @@ class DatabaseSeeder extends Seeder
             ['start_time' => '08:00', 'end_time' => '11:00', 'slot_cap' => 30]
         );
 
-        // Facility-led landing page, per the clinic tier's emphasis.
+        // Facility-led landing page — same visual language as solo, clinic content.
         WebPage::updateOrCreate(['slug' => '/'], [
             'title' => 'Shefa Diagnostic & Consultation Centre',
             'is_published' => true,
@@ -340,24 +342,116 @@ class DatabaseSeeder extends Seeder
                     'subheadline' => 'Book a doctor or lab serial online and follow the queue from your phone.',
                     'cta_text' => 'Book Appointment',
                     'cta_link' => '/book',
+                    'secondary_cta_text' => 'Patient’s Portal',
+                    'secondary_cta_link' => '/portal',
                     'image_url' => 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=1800&q=80',
                 ]],
-                ['type' => 'rich_text', 'data' => [
-                    'content' => '<h2>About us</h2><p>Shefa has served Dhaka since 2009, offering consultant '
-                        . 'appointments alongside a full diagnostic laboratory. Book a doctor or a test online, '
-                        . 'get a serial number, and follow the queue from your phone.</p>',
+                ['type' => 'condition_library', 'data' => [
+                    'heading' => 'What we help with',
+                    'conditions' => [
+                        [
+                            'name' => 'Cardiology',
+                            'description' => 'Heart check-ups, ECG review, and ongoing cardiac care.',
+                            'features' => ['ECG & consult', 'Follow-up serials', 'Clear next steps'],
+                        ],
+                        [
+                            'name' => 'Internal medicine',
+                            'description' => 'Fever, diabetes, blood pressure, and everyday adult medicine.',
+                            'features' => ['Same-day serials', 'Medicine review', 'Lab when needed'],
+                        ],
+                        [
+                            'name' => 'Paediatrics',
+                            'description' => 'Gentle care for children — cough, fever, growth, and vaccines.',
+                            'features' => ['Child-friendly slots', 'Parent guidance', 'Fast lab links'],
+                        ],
+                        [
+                            'name' => 'Diagnostics',
+                            'description' => 'Blood and urine tests with clear turnaround times.',
+                            'features' => ['CBC & sugar', 'Lipid & thyroid', 'Same-day reports'],
+                        ],
+                    ],
                 ]],
                 ['type' => 'doctor_grid', 'data' => [
                     'heading' => 'Our Consultants',
-                    'subheadline' => 'Experienced physicians across key specialties.',
+                    'subheadline' => 'Experienced physicians across key specialties — book the doctor you need.',
+                ]],
+                ['type' => 'about_facility', 'data' => [
+                    'heading' => 'About Shefa',
+                    'mission_statement' => 'Shefa has served Dhaka since 2009 with consultant appointments and a full diagnostic laboratory under one roof. Book online, get a serial, and spend less time waiting.',
+                    'gallery' => [
+                        [
+                            'title' => 'Consultation rooms',
+                            'image_url' => 'https://images.unsplash.com/photo-1516549655169-df83a0774514?auto=format&fit=crop&w=900&q=80',
+                        ],
+                        [
+                            'title' => 'Diagnostic lab',
+                            'image_url' => 'https://images.unsplash.com/photo-1582719471384-894fbb16e074?auto=format&fit=crop&w=900&q=80',
+                        ],
+                    ],
                 ]],
                 ['type' => 'service_matrix', 'data' => [
-                    'heading' => 'Why choose us',
-                    'description' => 'Book online, get a serial, and follow the queue from your phone.',
+                    'heading' => 'Why patients choose us',
+                    'description' => 'Online serials, live queue updates, and diagnostics at two Dhaka branches.',
                     'items' => [
-                        ['title' => 'Online serial', 'description' => 'Book from home and track the queue live — no waiting room guessing.'],
-                        ['title' => 'Two branches', 'description' => 'Mirpur and Uttara, both with full diagnostic facilities.'],
+                        ['title' => 'Online serial', 'description' => 'Book from home and track the queue live — no waiting-room guessing.'],
+                        ['title' => 'Two branches', 'description' => 'Mirpur and Uttara, both with consultants and lab collection.'],
                         ['title' => 'Same-day reports', 'description' => 'Most routine tests are reported the same day.'],
+                        ['title' => 'Pay at chamber', 'description' => 'No online payment stress — settle at reception after your visit.'],
+                    ],
+                ]],
+                ['type' => 'location_hours', 'data' => [
+                    'heading' => 'Our locations',
+                    'locations' => [
+                        [
+                            'name' => 'Mirpur Main Branch',
+                            'address' => 'Plot 7, Block C, Mirpur 10, Dhaka 1216',
+                            'operating_hours' => 'Sat–Thu: 9:00 AM – 8:00 PM',
+                            'phone' => '029876543',
+                            'google_maps_url' => 'https://www.google.com/maps?q=23.8069%2C90.3687',
+                        ],
+                        [
+                            'name' => 'Uttara Branch',
+                            'address' => 'House 15, Sector 7, Uttara, Dhaka 1230',
+                            'operating_hours' => 'Sat–Thu: 9:00 AM – 8:00 PM',
+                            'phone' => '029876544',
+                            'google_maps_url' => 'https://www.google.com/maps?q=23.8759%2C90.3795',
+                        ],
+                    ],
+                ]],
+                ['type' => 'testimonials', 'data' => [
+                    'heading' => 'What our patients say',
+                    'items' => [
+                        [
+                            'quote' => 'I booked a cardiology serial from home, checked the queue on my phone, and was in and out without the old waiting chaos.',
+                            'name' => 'Karim Hossain',
+                            'label' => 'Verified Patient — Mirpur',
+                        ],
+                        [
+                            'quote' => 'Lab and doctor on the same day at Uttara. The serial made it clear when to arrive.',
+                            'name' => 'Nusrat Jahan',
+                            'label' => 'Verified Patient — Uttara',
+                        ],
+                    ],
+                ]],
+                ['type' => 'faq', 'data' => [
+                    'heading' => 'Everything you need to know',
+                    'faqs' => [
+                        [
+                            'question' => 'How do I book a doctor or lab test?',
+                            'answer' => 'Tap Book Appointment, choose a consultation or lab collection, pick a time, and enter your name and phone. You get a serial ticket you can reopen anytime.',
+                        ],
+                        [
+                            'question' => 'Do I pay online?',
+                            'answer' => 'No. Pay at the chamber after your visit. Cash and common mobile financial services are accepted at reception.',
+                        ],
+                        [
+                            'question' => 'Can I book labs without seeing a doctor?',
+                            'answer' => 'Yes. Choose lab collection in the booking flow, pick your tests and a collection slot, then come at your serial time.',
+                        ],
+                        [
+                            'question' => 'Which branch should I choose?',
+                            'answer' => 'Mirpur Main and Uttara both offer consultants and diagnostics. Pick the branch that matches the doctor or slot you need.',
+                        ],
                     ],
                 ]],
             ],

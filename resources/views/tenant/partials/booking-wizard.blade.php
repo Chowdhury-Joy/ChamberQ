@@ -145,6 +145,12 @@
                         <span class="field-error" id="phone-error" role="alert" aria-live="polite" style="display:none"></span>
                     </div>
 
+                    <div class="form-group hidden" id="patientPickerGroup" aria-live="polite">
+                        <p class="form-label" style="margin-bottom:0.75rem;font-weight:600;">{{ __('Who is this appointment for?') }}</p>
+                        <div id="patientPickerOptions" class="patient-picker-options"></div>
+                        <input type="hidden" name="patient_id" id="patient_id" value="">
+                    </div>
+
                     <div class="btn-group">
                         <button type="button" class="btn btn-back" onclick="prevStep()">{{ __('Back') }}</button>
                         <button type="submit" class="btn btn-primary" id="submitBtn">{{ __('Confirm Booking') }}</button>
@@ -215,8 +221,12 @@
             stepLabWindow: @json(__('Pick collection time')),
             stepLabTests: @json(__('Select tests')),
             stepIdentity: @json(__('Your details')),
+            whoIsThisFor: @json(__('Who is this appointment for?')),
+            someoneNew: @json(__('Someone new')),
         };
         
+        let selectedPatientId = null;
+        let patientLookupTimer = null;
         const sessionsData = @json($sessions);
         const labSlotsData = @json($labSlots);
         const dayLabels = @json(array_values(\App\Support\DayOfWeek::options()));
@@ -427,20 +437,93 @@
                 phoneError.style.display = 'none';
                 const before = phoneInput.value;
                 const cleaned = before.replace(/[^\d+]/g, '');
-                if (cleaned === before) return;
+                if (cleaned === before) {
+                    schedulePatientLookup();
+                    return;
+                }
                 const caret = phoneInput.selectionStart ?? before.length;
                 const head = before.slice(0, caret);
                 const removed = head.length - head.replace(/[^\d+]/g, '').length;
                 phoneInput.value = cleaned;
                 const pos = Math.max(0, caret - removed);
                 phoneInput.setSelectionRange(pos, pos);
+                schedulePatientLookup();
             };
+            phoneInput.onblur = () => schedulePatientLookup(true);
             dateError.style.display = 'none';
             phoneError.style.display = 'none';
             submitBtn.disabled = false;
             submitBtn.textContent = config.confirmLabel;
             updateReviewSummary();
             refreshIdentityAvailability();
+        }
+
+        function schedulePatientLookup(immediate = false) {
+            clearTimeout(patientLookupTimer);
+            patientLookupTimer = setTimeout(() => lookupPatientsForPhone(), immediate ? 0 : 400);
+        }
+
+        async function lookupPatientsForPhone() {
+            const phoneInput = document.getElementById('patient_phone');
+            const pickerGroup = document.getElementById('patientPickerGroup');
+            const pickerOptions = document.getElementById('patientPickerOptions');
+            const phone = phoneInput.value.trim();
+
+            if (!isValidBdPhone(phone)) {
+                pickerGroup.classList.add('hidden');
+                selectedPatientId = null;
+                document.getElementById('patient_id').value = '';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${config.basePath}/api/patients/by-phone?phone=${encodeURIComponent(phone)}`, {
+                    headers: { 'Accept': 'application/json' },
+                });
+                const data = await response.json();
+
+                if (!response.ok || !data.patients || data.patients.length === 0) {
+                    pickerGroup.classList.add('hidden');
+                    selectedPatientId = null;
+                    document.getElementById('patient_id').value = '';
+                    return;
+                }
+
+                pickerOptions.innerHTML = '';
+                data.patients.forEach((patient) => {
+                    const btn = document.createElement('button');
+                    btn.type = 'button';
+                    btn.className = 'patient-picker-btn';
+                    btn.textContent = patient.label;
+                    btn.dataset.patientId = patient.id;
+                    btn.dataset.patientName = patient.name;
+                    btn.onclick = () => selectPatient(patient.id, patient.name, btn);
+                    pickerOptions.appendChild(btn);
+                });
+
+                const newBtn = document.createElement('button');
+                newBtn.type = 'button';
+                newBtn.className = 'patient-picker-btn patient-picker-btn-new';
+                newBtn.textContent = i18n.someoneNew;
+                newBtn.onclick = () => selectPatient(null, '', newBtn);
+                pickerOptions.appendChild(newBtn);
+
+                pickerGroup.classList.remove('hidden');
+            } catch (e) {
+                pickerGroup.classList.add('hidden');
+            }
+        }
+
+        function selectPatient(patientId, patientName, clickedBtn) {
+            selectedPatientId = patientId;
+            document.getElementById('patient_id').value = patientId || '';
+            document.querySelectorAll('.patient-picker-btn').forEach((btn) => btn.classList.remove('selected'));
+            if (clickedBtn) clickedBtn.classList.add('selected');
+
+            const nameInput = document.getElementById('patient_name');
+            if (patientId && patientName) {
+                nameInput.value = patientName;
+            }
         }
 
         function updateReviewSummary() {
@@ -801,7 +884,10 @@
             formData.append('booking_date', document.getElementById('booking_date').value);
             formData.append('patient_name', document.getElementById('patient_name').value);
             formData.append('patient_phone', phone);
-            
+            const patientId = document.getElementById('patient_id').value;
+            if (patientId) {
+                formData.append('patient_id', patientId);
+            }
             if (state.type === 'lab') {
                 document.querySelectorAll('input[name="lab_tests[]"]:checked').forEach(cb => {
                     formData.append('lab_tests[]', cb.value);

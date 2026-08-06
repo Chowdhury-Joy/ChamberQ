@@ -1,0 +1,245 @@
+code,name,aliases,icd10_unverified,category
+SLD-GI-001,Gastritis / Acid peptic disease,gastric|acidity|APD|acid peptic|গ্যাস্ট্রিক|gastric problem|hyperacidity,K29.7,Gastrointestinal
+SLD-GI-002,Gastro-oesophageal reflux disease,GERD|reflux|heartburn|acid reflux|বুক জ্বালা,K21.9,Gastrointestinal
+SLD-GI-003,Peptic ulcer disease,PUD|gastric ulcer|stomach ulcer|আলসার,K27.9,Gastrointestinal
+SLD-GI-004,Duodenal ulcer,DU|duodenal,K26.9,Gastrointestinal
+SLD-GI-005,Functional dyspepsia,dyspepsia|indigestion|বদহজম,K30,Gastrointestinal
+SLD-GI-006,Irritable bowel syndrome,IBS|spastic colon,K58.9,Gastrointestinal
+SLD-GI-007,Acute gastroenteritis,AGE|gastroenteritis|diarrhoea|diarrhea|ডায়রিয়া|loose motion,A09,Gastrointestinal
+SLD-GI-008,Amoebiasis,amoebic dysentery|আমাশয়|amebiasis,A06.0,Gastrointestinal
+SLD-GI-009,Giardiasis,giardia,A07.1,Gastrointestinal
+SLD-GI-010,Bacillary dysentery,shigellosis|blood dysentery|রক্ত আমাশয়,A03.9,Gastrointestinal
+SLD-GI-011,Constipation,কোষ্ঠকাঠিন্য|chronic constipation,K59.0,Gastrointestinal
+SLD-GI-012,Haemorrhoids,piles|hemorrhoids|পাইলস|অর্শ,K64.9,Gastrointestinal
+SLD-GI-013,Anal fissure,fissure|ফিসার,K60.2,Gastrointestinal
+SLD-GI-014,Perianal abscess / fistula,fistula in ano|ভগন্দর,K61.0,Gastrointestinal
+SLD-GI-015,Intestinal worm infestation,worms|helminthiasis|কৃমি|ascaris,B82.0,Gastrointestinal
+SLD-GI-016,Hepatitis A,HAV|jaundice viral,B15.9,Gastrointestinal
+SLD-GI-017,Hepatitis B,HBV|hep B,B16.9,Gastrointestinal
+SLD-GI-018,Hepatitis C,HCV|hep C,B18.2,Gastrointestinal
+SLD-GI-019,Non-alcoholic fatty liver disease,NAFLD|fatty liver|fatty change liver,K76.0,Gastrointestinal
+SLD-GI-020,Chronic liver disease / cirrhosis,CLD|cirrhosis|liver failure,K74.6,Gastrointestinal
+SLD-GI-021,Cholelithiasis,gallstone|gall bladder stone|পিত্তথলির পাথর,K80.2,Gastrointestinal
+SLD-GI-022,Acute cholecystitis,cholecystitis,K81.0,Gastrointestinal
+SLD-GI-023,Jaundice unspecified,jaundice|জন্ডিস,R17,Gastrointestinal
+SLD-GI-024,Food poisoning,foodborne illness,A05.9,Gastrointestinal
+SLD-GI-025,Lactose intolerance,milk intolerance,E73.9,Gastrointestinal
+SLD-GI-026,Acute appendicitis,appendicitis|অ্যাপেন্ডিসাইটিস,K35.80,Gastrointestinal
+SLD-GI-027,Inguinal hernia,hernia|হার্নিয়া,K40.90,Gastrointestinal
+SLD-GI-028,Abdominal pain unspecified,pet betha|পেট ব্যথা|abdominal pain,R10.9,Gastrointestinal
+SLD-RES-001,Upper respiratory tract infection,URTI|common cold|cold|সর্দি,J06.9,Respiratory
+SLD-RES-002,Acute pharyngitis,sore throat|pharyngitis|গলা ব্যথা,J02.9,Respiratory
+SLD-RES-003,Acute tonsillitis,tonsillitis|টনসিল,J03.90,Respiratory
+SLD-RES-004,Acute sinusitis,sinusitis|সাইনাস,J01.90,Respiratory
+SLD-RES-005,Chronic sinusitis,chronic sinus,J32.9,Respiratory
+SLD-RES-006,Acute bronchitis,bronchitis|ব্রংকাইটিস,J20.9,Respiratory
+SLD-RES-007,Community acquired pneumonia,pneumonia|নিউমোনিয়া|CAP,J18.9,Respiratory
+SLD-RES-008,Bronchial asthma,asthma|হাঁপানি|শ্বাসকষ্ট,J45.909,Respiratory
+SLD-RES-009,Chronic obstructive pulmonary disease,COPD|chronic bronchitis|emphysema,J44.9,Respiratory
+SLD-RES-010,Allergic rhinitis,rhinitis|nasal allergy|এলার্জি সর্দি,J30.9,Respiratory
+SLD-RES-011,Pulmonary tuberculosis,TB|PTB|যক্ষ্মা|tuberculosis,A15.0,Respiratory
+SLD-RES-012,Extrapulmonary tuberculosis,EPTB|TB lymph node,A18.9,Respiratory
+SLD-RES-013,Influenza,flu|ফ্লু,J11.1,Respiratory
+SLD-RES-014,COVID-19,corona|covid|SARS-CoV-2,U07.1,Respiratory
+SLD-RES-015,Acute laryngitis,laryngitis|hoarseness,J04.0,Respiratory
+SLD-RES-016,Cough unspecified,cough|কাশি,R05,Respiratory
+SLD-RES-017,Bronchiectasis,bronchiectasis,J47.9,Respiratory
+SLD-RES-018,Pleural effusion,pleural effusion|water in lung,J90,Respiratory
+SLD-CVS-001,Essential hypertension,HTN|high blood pressure|উচ্চ রক্তচাপ|high BP|pressure,I10,Cardiovascular
+SLD-CVS-002,Ischaemic heart disease,IHD|coronary artery disease|CAD|heart disease,I25.9,Cardiovascular
+SLD-CVS-003,Angina pectoris,angina|chest pain cardiac,I20.9,Cardiovascular
+SLD-CVS-004,Acute myocardial infarction,MI|heart attack|হার্ট অ্যাটাক,I21.9,Cardiovascular
+SLD-CVS-005,Congestive cardiac failure,CCF|heart failure|CHF,I50.9,Cardiovascular
+SLD-CVS-006,Atrial fibrillation,AF|irregular heartbeat,I48.91,Cardiovascular
+SLD-CVS-007,Palpitation,palpitation|বুক ধড়ফড়,R00.2,Cardiovascular
+SLD-CVS-008,Dyslipidaemia,high cholesterol|hyperlipidaemia|lipid,E78.5,Cardiovascular
+SLD-CVS-009,Rheumatic heart disease,RHD|valvular heart disease,I09.9,Cardiovascular
+SLD-CVS-010,Deep vein thrombosis,DVT|clot leg,I82.409,Cardiovascular
+SLD-CVS-011,Varicose veins,varicose|ভেরিকোস,I83.90,Cardiovascular
+SLD-CVS-012,Postural hypotension,low blood pressure|low BP|নিম্ন রক্তচাপ,I95.1,Cardiovascular
+SLD-END-001,Type 2 diabetes mellitus,T2DM|diabetes|DM|ডায়াবেটিস|sugar,E11.9,Endocrine
+SLD-END-002,Type 1 diabetes mellitus,T1DM|juvenile diabetes,E10.9,Endocrine
+SLD-END-003,Prediabetes / impaired glucose tolerance,IGT|prediabetes|borderline sugar,R73.03,Endocrine
+SLD-END-004,Gestational diabetes mellitus,GDM|pregnancy diabetes,O24.419,Endocrine
+SLD-END-005,Diabetic neuropathy,diabetic nerve|DPN,E11.40,Endocrine
+SLD-END-006,Diabetic foot ulcer,diabetic foot|diabetic ulcer,E11.621,Endocrine
+SLD-END-007,Hypothyroidism,thyroid low|থাইরয়েড,E03.9,Endocrine
+SLD-END-008,Hyperthyroidism,thyrotoxicosis|thyroid high,E05.90,Endocrine
+SLD-END-009,Goitre,goiter|গলগণ্ড,E04.9,Endocrine
+SLD-END-010,Obesity,overweight|মোটা,E66.9,Endocrine
+SLD-END-011,Polycystic ovary syndrome,PCOS|PCOD,E28.2,Endocrine
+SLD-END-012,Gout,gout|uric acid|ইউরিক এসিড,M10.9,Endocrine
+SLD-END-013,Vitamin D deficiency,vit D|low vitamin D,E55.9,Endocrine
+SLD-END-014,Vitamin B12 deficiency,B12 deficiency,E53.8,Endocrine
+SLD-END-015,Metabolic syndrome,metabolic syndrome,E88.81,Endocrine
+SLD-NEU-001,Migraine,migraine|মাইগ্রেন,G43.909,Neurological
+SLD-NEU-002,Tension type headache,tension headache|TTH|মাথাব্যথা,G44.209,Neurological
+SLD-NEU-003,Headache unspecified,headache|মাথা ব্যথা,R51.9,Neurological
+SLD-NEU-004,Epilepsy,seizure|fits|খিঁচুনি|convulsion,G40.909,Neurological
+SLD-NEU-005,Cerebrovascular accident,stroke|CVA|স্ট্রোক|paralysis,I63.9,Neurological
+SLD-NEU-006,Transient ischaemic attack,TIA|mini stroke,G45.9,Neurological
+SLD-NEU-007,Peripheral neuropathy,neuropathy|nerve pain|জ্বালাপোড়া,G62.9,Neurological
+SLD-NEU-008,Benign paroxysmal positional vertigo,BPPV|vertigo|মাথা ঘোরা|dizziness,H81.10,Neurological
+SLD-NEU-009,Bell palsy,facial palsy|Bell's palsy|মুখ বাঁকা,G51.0,Neurological
+SLD-NEU-010,Parkinson disease,parkinsonism|parkinson,G20,Neurological
+SLD-NEU-011,Dementia,alzheimer|memory loss|ভুলে যাওয়া,F03.90,Neurological
+SLD-NEU-012,Sciatica,sciatica|leg radiating pain,M54.30,Neurological
+SLD-NEU-013,Carpal tunnel syndrome,CTS|carpal tunnel,G56.00,Neurological
+SLD-NEU-014,Insomnia,sleeplessness|ঘুম না হওয়া|sleep problem,G47.00,Neurological
+SLD-NEU-015,Cervical radiculopathy,neck nerve pain,M54.12,Neurological
+SLD-MSK-001,Low back pain,LBP|back pain|কোমর ব্যথা,M54.50,Musculoskeletal
+SLD-MSK-002,Cervical spondylosis,neck spondylosis|ঘাড় ব্যথা,M47.812,Musculoskeletal
+SLD-MSK-003,Lumbar spondylosis,lumbar spondylosis,M47.816,Musculoskeletal
+SLD-MSK-004,Lumbar disc prolapse,PLID|disc prolapse|slipped disc,M51.26,Musculoskeletal
+SLD-MSK-005,Osteoarthritis knee,OA knee|knee pain|হাঁটু ব্যথা,M17.9,Musculoskeletal
+SLD-MSK-006,Rheumatoid arthritis,RA|বাত,M06.9,Musculoskeletal
+SLD-MSK-007,Frozen shoulder,adhesive capsulitis|shoulder pain,M75.00,Musculoskeletal
+SLD-MSK-008,Osteoporosis,bone loss|হাড় ক্ষয়,M81.0,Musculoskeletal
+SLD-MSK-009,Plantar fasciitis,heel pain|পায়ের গোড়ালি ব্যথা,M72.2,Musculoskeletal
+SLD-MSK-010,Lateral epicondylitis,tennis elbow,M77.10,Musculoskeletal
+SLD-MSK-011,Ankylosing spondylitis,AS|spondyloarthritis,M45.9,Musculoskeletal
+SLD-MSK-012,Fibromyalgia,fibromyalgia|body ache chronic,M79.7,Musculoskeletal
+SLD-MSK-013,Myalgia / muscle strain,muscle pain|শরীর ব্যথা|body ache,M79.10,Musculoskeletal
+SLD-MSK-014,Soft tissue injury,sprain|strain|আঘাত,T14.90,Musculoskeletal
+SLD-MSK-015,Fracture unspecified,fracture|হাড় ভাঙা|broken bone,T14.90,Musculoskeletal
+SLD-MSK-016,Gouty arthritis,gout attack|acute gout,M10.00,Musculoskeletal
+SLD-MSK-017,Ganglion cyst,ganglion,M67.40,Musculoskeletal
+SLD-INF-001,Dengue fever,dengue|ডেঙ্গু,A90,Infectious
+SLD-INF-002,Dengue haemorrhagic fever,DHF|severe dengue,A91,Infectious
+SLD-INF-003,Chikungunya,chikungunya|চিকুনগুনিয়া,A92.0,Infectious
+SLD-INF-004,Malaria,malaria|ম্যালেরিয়া,B54,Infectious
+SLD-INF-005,Enteric fever,typhoid|টাইফয়েড|paratyphoid,A01.00,Infectious
+SLD-INF-006,Visceral leishmaniasis,kala azar|কালাজ্বর,B55.0,Infectious
+SLD-INF-007,Pyrexia of unknown origin,PUO|fever|জ্বর|viral fever,R50.9,Infectious
+SLD-INF-008,Viral fever,viral fever|ভাইরাল জ্বর,B34.9,Infectious
+SLD-INF-009,Cellulitis,cellulitis|skin infection,L03.90,Infectious
+SLD-INF-010,Cutaneous abscess,abscess|boil|ফোঁড়া,L02.91,Infectious
+SLD-INF-011,Chickenpox,varicella|জলবসন্ত,B01.9,Infectious
+SLD-INF-012,Measles,measles|হাম,B05.9,Infectious
+SLD-INF-013,Mumps,mumps|গালফুলা,B26.9,Infectious
+SLD-INF-014,Herpes zoster,shingles|zoster,B02.9,Infectious
+SLD-INF-015,Herpes simplex,HSV|cold sore,B00.9,Infectious
+SLD-INF-016,Leprosy,hansen disease|কুষ্ঠ,A30.9,Infectious
+SLD-INF-017,Animal bite / rabies exposure,dog bite|কুকুরের কামড়|rabies,W54.0,Infectious
+SLD-INF-018,Snake bite,snake bite|সাপের কামড়,T63.001,Infectious
+SLD-INF-019,Tetanus prophylaxis,tetanus|TT,Z23,Infectious
+SLD-INF-020,Filariasis,filaria|গোদ,B74.9,Infectious
+SLD-DER-001,Atopic dermatitis / eczema,eczema|একজিমা|atopic,L20.9,Dermatological
+SLD-DER-002,Contact dermatitis,contact allergy|skin allergy,L25.9,Dermatological
+SLD-DER-003,Psoriasis,psoriasis|সোরিয়াসিস,L40.9,Dermatological
+SLD-DER-004,Acne vulgaris,acne|pimple|ব্রণ,L70.0,Dermatological
+SLD-DER-005,Urticaria,hives|allergy rash|চুলকানি র‍্যাশ,L50.9,Dermatological
+SLD-DER-006,Tinea corporis,ringworm|দাদ|fungal infection,B35.4,Dermatological
+SLD-DER-007,Tinea cruris,jock itch|groin fungus,B35.6,Dermatological
+SLD-DER-008,Tinea pedis,athlete foot|foot fungus,B35.3,Dermatological
+SLD-DER-009,Onychomycosis,nail fungus|fungal nail,B35.1,Dermatological
+SLD-DER-010,Scabies,scabies|খোসপাঁচড়া,B86,Dermatological
+SLD-DER-011,Pediculosis,head lice|উকুন,B85.0,Dermatological
+SLD-DER-012,Vitiligo,vitiligo|শ্বেতী|leucoderma,L80,Dermatological
+SLD-DER-013,Melasma,melasma|face pigmentation|মেছতা,L81.1,Dermatological
+SLD-DER-014,Alopecia,hair fall|চুল পড়া|hair loss,L65.9,Dermatological
+SLD-DER-015,Seborrhoeic dermatitis,dandruff|খুশকি,L21.9,Dermatological
+SLD-DER-016,Folliculitis,folliculitis,L73.9,Dermatological
+SLD-DER-017,Viral wart,wart|আঁচিল,B07.9,Dermatological
+SLD-DER-018,Pruritus unspecified,itching|চুলকানি,L29.9,Dermatological
+SLD-DER-019,Keloid,keloid|scar,L91.0,Dermatological
+SLD-DER-020,Pityriasis versicolor,tinea versicolor|ছুলি,B36.0,Dermatological
+SLD-REN-001,Urinary tract infection,UTI|urine infection|প্রস্রাবে জ্বালা,N39.0,Renal & Urology
+SLD-REN-002,Acute pyelonephritis,pyelonephritis|kidney infection,N10,Renal & Urology
+SLD-REN-003,Urolithiasis,kidney stone|renal stone|পাথর,N20.0,Renal & Urology
+SLD-REN-004,Chronic kidney disease,CKD|kidney failure|কিডনি রোগ,N18.9,Renal & Urology
+SLD-REN-005,Acute kidney injury,AKI|acute renal failure,N17.9,Renal & Urology
+SLD-REN-006,Benign prostatic hyperplasia,BPH|prostate enlargement,N40.0,Renal & Urology
+SLD-REN-007,Prostatitis,prostatitis,N41.9,Renal & Urology
+SLD-REN-008,Nephrotic syndrome,nephrotic,N04.9,Renal & Urology
+SLD-REN-009,Erectile dysfunction,ED|impotence,N52.9,Renal & Urology
+SLD-REN-010,Urinary retention,retention of urine|প্রস্রাব বন্ধ,R33.9,Renal & Urology
+SLD-REN-011,Haematuria,blood in urine|রক্ত প্রস্রাব,R31.9,Renal & Urology
+SLD-REN-012,Hydrocele,hydrocele|একশিরা,N43.3,Renal & Urology
+SLD-OBG-001,Normal pregnancy / antenatal care,ANC|pregnancy|গর্ভাবস্থা|pregnant,Z34.90,Obstetrics & Gynaecology
+SLD-OBG-002,Anaemia in pregnancy,pregnancy anaemia,O99.019,Obstetrics & Gynaecology
+SLD-OBG-003,Pre-eclampsia,pre eclampsia|PIH|pregnancy hypertension,O14.90,Obstetrics & Gynaecology
+SLD-OBG-004,Hyperemesis gravidarum,pregnancy vomiting|morning sickness,O21.0,Obstetrics & Gynaecology
+SLD-OBG-005,Threatened abortion,threatened miscarriage,O20.0,Obstetrics & Gynaecology
+SLD-OBG-006,Dysmenorrhoea,period pain|মাসিকের ব্যথা,N94.6,Obstetrics & Gynaecology
+SLD-OBG-007,Menorrhagia,heavy period|অতিরিক্ত রক্তস্রাব,N92.0,Obstetrics & Gynaecology
+SLD-OBG-008,Oligomenorrhoea / irregular menses,irregular period|অনিয়মিত মাসিক,N91.5,Obstetrics & Gynaecology
+SLD-OBG-009,Amenorrhoea,no period|মাসিক বন্ধ,N91.2,Obstetrics & Gynaecology
+SLD-OBG-010,Vaginal candidiasis,yeast infection|white discharge|সাদা স্রাব,B37.3,Obstetrics & Gynaecology
+SLD-OBG-011,Bacterial vaginosis,BV|vaginosis,N76.0,Obstetrics & Gynaecology
+SLD-OBG-012,Pelvic inflammatory disease,PID,N73.9,Obstetrics & Gynaecology
+SLD-OBG-013,Leucorrhoea,vaginal discharge|স্রাব,N89.8,Obstetrics & Gynaecology
+SLD-OBG-014,Uterine fibroid,fibroid|টিউমার জরায়ু,D25.9,Obstetrics & Gynaecology
+SLD-OBG-015,Ovarian cyst,ovarian cyst,N83.20,Obstetrics & Gynaecology
+SLD-OBG-016,Infertility female,infertility|বন্ধ্যাত্ব,N97.9,Obstetrics & Gynaecology
+SLD-OBG-017,Menopausal syndrome,menopause,N95.1,Obstetrics & Gynaecology
+SLD-OBG-018,Contraception counselling,family planning|birth control|জন্মনিয়ন্ত্রণ,Z30.09,Obstetrics & Gynaecology
+SLD-OBG-019,Breast lump,breast lump|স্তনে চাকা,N63.0,Obstetrics & Gynaecology
+SLD-OBG-020,Mastitis,mastitis|breast infection,N61.0,Obstetrics & Gynaecology
+SLD-OBG-021,Uterine prolapse,prolapse|জরায়ু নামা,N81.4,Obstetrics & Gynaecology
+SLD-PED-001,Acute diarrhoea in child,child diarrhoea|শিশু ডায়রিয়া,A09,Paediatric
+SLD-PED-002,Childhood pneumonia,child pneumonia,J18.9,Paediatric
+SLD-PED-003,Severe acute malnutrition,SAM|malnutrition|অপুষ্টি,E43,Paediatric
+SLD-PED-004,Neonatal jaundice,newborn jaundice|নবজাতক জন্ডিস,P59.9,Paediatric
+SLD-PED-005,Febrile convulsion,febrile seizure|জ্বরে খিঁচুনি,R56.00,Paediatric
+SLD-PED-006,Infantile colic,colic|পেট ব্যথা শিশু,R10.83,Paediatric
+SLD-PED-007,Teething problem,teething,K00.7,Paediatric
+SLD-PED-008,Attention deficit hyperactivity disorder,ADHD,F90.9,Paediatric
+SLD-PED-009,Autism spectrum disorder,autism|ASD,F84.0,Paediatric
+SLD-PED-010,Delayed development,developmental delay,F88,Paediatric
+SLD-PED-011,Routine immunisation,vaccination|টিকা|immunization,Z23,Paediatric
+SLD-PED-012,Failure to thrive,poor weight gain|ওজন কম,R62.51,Paediatric
+SLD-PED-013,Bronchiolitis,bronchiolitis,J21.9,Paediatric
+SLD-PED-014,Nocturnal enuresis,bedwetting|বিছানায় প্রস্রাব,F98.0,Paediatric
+SLD-HEM-001,Iron deficiency anaemia,IDA|anaemia|রক্তশূন্যতা|anemia,D50.9,Haematological
+SLD-HEM-002,Anaemia unspecified,anaemia NOS,D64.9,Haematological
+SLD-HEM-003,Thalassaemia,thalassemia|থ্যালাসেমিয়া,D56.9,Haematological
+SLD-HEM-004,Immune thrombocytopenic purpura,ITP|low platelet,D69.3,Haematological
+SLD-HEM-005,Leukaemia,leukemia|blood cancer|রক্ত ক্যান্সার,C95.90,Haematological
+SLD-HEM-006,Lymphadenopathy,lymph node swelling|গ্ল্যান্ড ফোলা,R59.9,Haematological
+SLD-EYE-001,Acute conjunctivitis,conjunctivitis|red eye|চোখ ওঠা,H10.30,Eye
+SLD-EYE-002,Cataract,cataract|ছানি,H26.9,Eye
+SLD-EYE-003,Refractive error,short sight|glasses|চশমা|myopia,H52.7,Eye
+SLD-EYE-004,Glaucoma,glaucoma,H40.9,Eye
+SLD-EYE-005,Hordeolum,stye|অঞ্জনি,H00.019,Eye
+SLD-EYE-006,Dry eye syndrome,dry eye,H04.129,Eye
+SLD-EYE-007,Diabetic retinopathy,diabetic eye|retinopathy,E11.319,Eye
+SLD-EYE-008,Pterygium,pterygium|নখুনা,H11.009,Eye
+SLD-ENT-001,Acute otitis media,ear infection|কানে ব্যথা|AOM,H66.90,Ear Nose Throat
+SLD-ENT-002,Chronic suppurative otitis media,CSOM|ear discharge|কান পাকা,H66.3X9,Ear Nose Throat
+SLD-ENT-003,Impacted cerumen,ear wax|কানের ময়লা,H61.20,Ear Nose Throat
+SLD-ENT-004,Hearing loss,deafness|কানে কম শোনা,H91.90,Ear Nose Throat
+SLD-ENT-005,Epistaxis,nose bleed|নাক দিয়ে রক্ত,R04.0,Ear Nose Throat
+SLD-ENT-006,Deviated nasal septum,DNS|septum deviation,J34.2,Ear Nose Throat
+SLD-ENT-007,Nasal polyp,nasal polyp|পলিপ,J33.9,Ear Nose Throat
+SLD-ENT-008,Tinnitus,ear ringing|কানে শব্দ,H93.19,Ear Nose Throat
+SLD-ENT-009,Adenoid hypertrophy,adenoid,J35.2,Ear Nose Throat
+SLD-ENT-010,Dental caries / toothache,tooth pain|দাঁত ব্যথা|caries,K02.9,Ear Nose Throat
+SLD-ENT-011,Aphthous ulcer,mouth ulcer|মুখে ঘা,K12.0,Ear Nose Throat
+SLD-PSY-001,Generalised anxiety disorder,anxiety|GAD|দুশ্চিন্তা,F41.1,Mental Health
+SLD-PSY-002,Major depressive disorder,depression|বিষণ্নতা|MDD,F32.9,Mental Health
+SLD-PSY-003,Panic disorder,panic attack,F41.0,Mental Health
+SLD-PSY-004,Obsessive compulsive disorder,OCD,F42.9,Mental Health
+SLD-PSY-005,Somatoform disorder,somatisation|medically unexplained,F45.9,Mental Health
+SLD-PSY-006,Bipolar affective disorder,bipolar|manic depression,F31.9,Mental Health
+SLD-PSY-007,Schizophrenia,schizophrenia,F20.9,Mental Health
+SLD-PSY-008,Substance use disorder,addiction|drug abuse|নেশা,F19.20,Mental Health
+SLD-PSY-009,Tobacco use disorder,smoking|ধূমপান|tobacco,F17.200,Mental Health
+SLD-PSY-010,Adjustment disorder,stress reaction,F43.20,Mental Health
+SLD-GEN-001,Fever unspecified,fever|জ্বর,R50.9,General
+SLD-GEN-002,Fatigue / generalised weakness,weakness|দুর্বলতা|tiredness,R53.83,General
+SLD-GEN-003,Unintentional weight loss,weight loss|ওজন কমা,R63.4,General
+SLD-GEN-004,Loss of appetite,anorexia|খাওয়ার রুচি নেই,R63.0,General
+SLD-GEN-005,Dizziness,dizziness|মাথা ঘোরা,R42,General
+SLD-GEN-006,Allergy unspecified,allergy|এলার্জি,T78.40,General
+SLD-GEN-007,Drug reaction,drug allergy|ওষুধে এলার্জি,T88.7,General
+SLD-GEN-008,Health check up,checkup|routine examination|চেকআপ,Z00.00,General
+SLD-GEN-009,Vitamin deficiency unspecified,vitamin deficiency,E56.9,General
+SLD-GEN-010,Burn,burn|পোড়া,T30.0,General
+SLD-GEN-011,Road traffic injury,RTA|accident|দুর্ঘটনা,T14.90,General
+SLD-GEN-012,Insect bite,insect bite|পোকার কামড়,T63.481,General
+SLD-GEN-013,Heat exhaustion,heat stroke|গরমে অসুস্থ,T67.5,General
+SLD-GEN-014,Chest pain unspecified,chest pain|বুকে ব্যথা,R07.9,General
+SLD-GEN-015,Oedema unspecified,swelling|পা ফোলা|edema,R60.9,General
+SLD-GEN-016,Follow up visit,follow up|ফলোআপ|review,Z09,General
+SLD-GEN-017,Medical certificate,certificate|fitness certificate,Z02.79,General

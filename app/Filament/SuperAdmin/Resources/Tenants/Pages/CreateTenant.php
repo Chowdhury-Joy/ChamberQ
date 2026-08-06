@@ -5,6 +5,7 @@ namespace App\Filament\SuperAdmin\Resources\Tenants\Pages;
 use App\Filament\SuperAdmin\Resources\Tenants\TenantResource;
 use App\Models\DiscountCode;
 use App\Services\CommissionService;
+use App\Services\TenantUserBootstrapService;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateTenant extends CreateRecord
@@ -37,6 +38,9 @@ class CreateTenant extends CreateRecord
             $data['referred_at'] = now();
         }
 
+        // Not tenant columns — handled in afterCreate.
+        unset($data['initial_doctor_email'], $data['initial_doctor_name']);
+
         return $data;
     }
 
@@ -54,5 +58,12 @@ class CreateTenant extends CreateRecord
         if ($tenant->marketer_id) {
             $commissions->createPendingSetupCommission($tenant);
         }
+
+        $formState = $this->form->getState();
+        app(TenantUserBootstrapService::class)->ensureDoctorLogin(
+            $tenant,
+            $formState['initial_doctor_email'] ?? null,
+            $formState['initial_doctor_name'] ?? null,
+        );
     }
 }

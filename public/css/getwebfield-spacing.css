@@ -1,0 +1,177 @@
+/* Getwebfield spacing + layout shell (from design-tokens.css)
+   Breakpoints: mobile → 640px tablet → 1200px desktop
+   Section padding stacks: never collapse adjacent same-color sections.
+*/
+:root {
+  --space-0: 0px;
+  --space-xxs: 4px;
+  --space-xs: 6px;
+  --space-sm: 8px;
+  --space-md: 12px;
+  --space-lg: 16px;
+  --space-xl: 24px;
+  --space-xxl: 32px;
+  --space-section-y: 48px;
+  --space-section-x: 16px;
+  --layout-max-width: 1400px;
+}
+@media (min-width: 640px) {
+  :root {
+    --space-xxs: 6px;
+    --space-xs: 6px;
+    --space-sm: 8px;
+    --space-md: 12px;
+    --space-lg: 20px;
+    --space-xl: 24px;
+    --space-xxl: 40px;
+    --space-section-y: 48px;
+    --space-section-x: 32px;
+  }
+}
+@media (min-width: 1200px) {
+  :root {
+    --space-xxs: 6px;
+    --space-xs: 8px;
+    --space-sm: 12px;
+    --space-md: 16px;
+    --space-lg: 24px;
+    --space-xl: 32px;
+    --space-xxl: 48px;
+    --space-section-y: 96px;
+    --space-section-x: 40px;
+  }
+}
+.space-section {
+  padding-top: var(--space-section-y);
+  padding-bottom: var(--space-section-y);
+  padding-left: var(--space-section-x);
+  padding-right: var(--space-section-x);
+}
+.space-section-y {
+  padding-top: var(--space-section-y);
+  padding-bottom: var(--space-section-y);
+}
+.space-inline {
+  padding-left: var(--space-section-x);
+  padding-right: var(--space-section-x);
+}
+.layout-container {
+  width: 100%;
+  max-width: var(--layout-max-width);
+  margin-left: auto;
+  margin-right: auto;
+}
+.space-card {
+  padding: var(--space-lg);
+}
+@media (min-width: 640px) {
+  .space-card { padding: var(--space-xl); }
+}
+@media (min-width: 1200px) {
+  .space-card { padding: var(--space-xxl); }
+}
+.stack-header {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-md);
+}
+.stack-header.is-center { align-items: center; text-align: center; }
+.stack-after-header { margin-top: var(--space-xxl); }
+.stack-copy {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-md);
+}
+.stack-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+.stack-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  gap: var(--space-lg);
+}
+.stack-card-body {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-sm);
+}
+.gap-container-sm { gap: var(--space-sm); }
+.gap-container-md { gap: var(--space-md); }
+.gap-container-lg { gap: var(--space-lg); }
+.gap-container-xl { gap: var(--space-xl); }
+.gap-container-xxl { gap: var(--space-xxl); }
+.grid-cards,
+.grid-services {
+  display: grid;
+  grid-template-columns: 1fr;
+  column-gap: var(--space-lg);
+  row-gap: var(--space-lg);
+}
+@media (min-width: 640px) {
+  .grid-cards,
+  .grid-services {
+    grid-template-columns: repeat(2, 1fr);
+    row-gap: var(--space-xl);
+  }
+}
+@media (min-width: 1200px) {
+  .grid-cards,
+  .grid-services { grid-template-columns: repeat(4, 1fr); }
+  .grid-cards[data-card-count="1"],
+  .grid-services[data-card-count="1"] { grid-template-columns: 1fr; }
+  .grid-cards[data-card-count="2"],
+  .grid-services[data-card-count="2"] { grid-template-columns: repeat(2, 1fr); }
+  .grid-cards[data-card-count="3"],
+  .grid-cards[data-card-count="5"],
+  .grid-cards[data-card-count="6"],
+  .grid-cards[data-card-count="9"],
+  .grid-services[data-card-count="3"],
+  .grid-services[data-card-count="5"],
+  .grid-services[data-card-count="6"],
+  .grid-services[data-card-count="9"] { grid-template-columns: repeat(3, 1fr); }
+}
+.grid-hero {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-xl);
+}
+@media (min-width: 1200px) {
+  .grid-hero {
+    grid-template-columns: repeat(12, 1fr);
+    align-items: center;
+  }
+  .grid-hero > .hero-copy { grid-column: span 7 / span 7; }
+  .grid-hero > .hero-media { grid-column: span 5 / span 5; }
+}
+.grid-split {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-xl);
+  align-items: center;
+}
+@media (min-width: 1200px) {
+  .grid-split { grid-template-columns: 1fr 1fr; }
+}
+.grid-stats {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: var(--space-md);
+}
+@media (min-width: 640px) {
+  .grid-stats {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-lg);
+  }
+}
+@media (min-width: 1200px) {
+  .grid-stats {
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-xl);
+  }
+}

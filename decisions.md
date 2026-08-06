@@ -590,3 +590,72 @@
  <action>Establish `public/previews/clireo-homepage.html` as the canonical **clinic-tier homepage design reference** (Clireo layout + Getwebfield spacing + CBPH demo content). Future clinic Blade work (`tenant/webpage.blade.php`, `tenant/sections/*`) should follow this mock — not the interim solo-style clinic shell from 2026-08-05. Solo homepage blades stay locked. The static file remains the showroom until live templates are migrated; booking CTAs there are still not wired to Doctor Gemini.</action>
  <reason>Locks the approved clinic visual direction in project memory so agents and implementers do not revert to DM Sans / solo-style clinic chrome or re-litigate the Alvion/Clireo choice.</reason>
 </decision>
+
+## 2026-08-06T20:16:38+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Patient Records Stage 1 (`patient-records-plan.md` Part 1): bookings were keyed only by phone, blocking families from booking two children the same day, and the queue had no row lock on `live_sessions`.</context>
+ <action>Introduce tenant-scoped `patients` (person per household member, shared phone) with nullable `bookings.patient_id`. `BookingService` resolves/creates a patient on every new booking, blocks duplicate same **person** on same bookable + date (legacy null-`patient_id` rows still match phone + normalized name). Inline household picker on the booking wizard phone step and Daily Roster walk-in via `GET /api/patients/by-phone`. `patients:backfill` with `--dry-run` links historical bookings. Filament **Patients** list with join-records and move-visit actions. `LiveSessionService` queue mutations use `lockForUpdate()` on the live session row. SMS confirmations lead with `Name — serial N`.</action>
+## 2026-08-06T20:26:30+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Patient Records Stage 2 (`patient-records-plan.md` Part 2): doctors need a consult screen that auto-follows the queue; queue operation must be doctor-or-staff only (not account owner); solo practices must have a doctor login; one party runs the queue per practice.</context>
+ <action>Filament **Consult Screen** auto-follows `live_sessions.current_booking_id` (name, age, sex, visit count, warnings, honest “no notes” states). `canManageQueue()` is doctor/staff only — admin (owner) removed. Per-tenant `queue_runner` (`staff` default | `doctor`) in Branding Settings toggles who gets Live Queue Control and call/complete actions; doctors use Consult Screen in staff-run mode. `TenantUserBootstrapService` + required doctor email on Super Admin tenant create ensures a doctor login exists. Super Admin Create Tenant form requires `initial_doctor_email`.</action>
+ <reason>Matches how chambers actually run (staff call, doctor consults), prevents owner-only solo setups from being locked out of the queue, and keeps clinical view separate from operational queue controls.</reason>
+</decision>
+
+## 2026-08-06T20:31:09+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Patient Records Stage 3 (`patient-records-plan.md` Part 4): diagnosis must be coded for future research counts; doctors need fast two-tap picks with their own frequent conditions floating to top; free text must remain allowed as uncoded.</context>
+ <action>Global `conditions` table (code, name, JSON aliases, category) loaded from `data/condition-list-draft.csv` via `conditions:load`. `condition_usages` tracks per-tenant doctor frequency/recency. `ConditionService` searches name + aliases (min 3 chars), ranks by match + usage boost, `resolveSelection()` returns coded or uncoded payload. Doctor-only `GET /api/conditions/search` for the Stage 4 diagnosis picker.</action>
+ <reason>Retrofitting codes onto free text later is prohibitively expensive; building the master list and picker now lets Stage 4 visit recording store structured diagnoses from day one while still accepting uncoded entries.</reason>
+</decision>
+
+## 2026-08-06T20:38:53+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Patient Records Stage 4 (`patient-records-plan.md` Part 3): doctors need almost-free visit capture at Mark Completed; staff must not record or read clinical notes; patient-facing pages must never leak diagnoses or prescriptions.</context>
+ <action>`visit_records` (one per booking when content exists): coded `condition_id` or `diagnosis_uncoded`, advice, tests advised, reports seen, follow-up date. Optional `prescriptions` + `prescription_items` with browser-print layout at doctor-auth `GET /prescriptions/{id}/print`. Doctors get an optional Filament modal on Mark Completed (Daily Roster, Live Queue Control, Consult Screen) with condition search + free text; staff complete without modal. `canViewVisitNotes` / `canRecordVisitNotes` are doctor-only. Empty submissions create no visit row so “N previous visits · no notes recorded” stays honest.</action>
+ <reason>Notes must never block queue throughput; only doctors were in the consult; separating read/write permissions keeps staff on demographics while clinical data stays off tickets and portal.</reason>
+</decision>
+
+## 2026-08-06T20:44:49+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Patient Records Stage 5 (`patient-records-plan.md` Part 5): Super Admin needs usage signals that predict churn before payment fails — quiet clients, onboarding stalls, SMS wallets empty, overdue accounts — without crossing the patient-records boundary.</context>
+ <action>Super Admin **Client Health** page (`SellerOverview` + `SellerOverviewService`) at `/admin/seller-overview`: quiet clients (days since last live session, booking drop vs own 4-week baseline, schedule set but never started), go-live funnel for signups in the last 90 days, SMS warnings at balance ≤ 5, overdue payments list with days overdue. All aggregates are tenant-level counts — never patient names, diagnoses, prescriptions, or visit contents. Tenant-scoped models queried with `withoutGlobalScope(TenantScope::class)` on the central domain.</action>
+ <reason>Payment tells you someone left last month; usage tells you three weeks earlier. A Sunday-morning call list needs tenant names and signals, not clinical data.</reason>
+</decision>
+
+## 2026-08-06T20:44:49+0600
+
+<decision>
+ <category>Code</category>
+ <context>`patient-records-plan.md` Part 5 warns that a future “log in as this doctor” support button is the back door through the Super Admin clinical boundary; the signup agreement draft in Appendix B already promises staff cannot view patient records.</context>
+ <action>Do **not** add impersonation or “view as tenant” without an explicit owner decision. If built later: doctor must opt in, session must expire, every use must be audited, and Appendix B / `decisions.md` wording must be updated first.</action>
+ <reason>Decide the boundary now so a convenience support feature does not silently violate the counts-only central panel rule or the research/signup promise.</reason>
+</decision>
+
+## 2026-08-06T20:48:23+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Patient Records Stage 6 (`patient-records-plan.md` Part 6): platform needs cross-practice disease-pattern statistics from coded diagnoses, but small filter slices can re-identify patients; doctors must have agreed to anonymous aggregates at signup.</context>
+ <action>Super Admin **Research data** page (`ResearchData` + `ResearchDataService`) at `/admin/research`: aggregate `visit_records` with `condition_id` set only (uncoded excluded), across all tenants. Filters: date range, plan tier — no per-tenant or per-patient slicing. **K-anonymity:** `MIN_GROUP_SIZE` 10 — counts below 10 suppressed; UI warns to widen filters. Page copy states aggregate anonymous research only and references signup agreement Appendix B.</action>
+ <reason>Standard cheap privacy protection built in from day one; coded list from Stage 3 is what makes counting possible without reading free text.</reason>
+</decision>
+
+## 2026-08-06T20:57:04+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Patient Records Stage 4 deferred items (`patient-records-plan.md` Part 3): doctors need voice notes and paper prescription photos without typing; end-of-session catch-up for missed notes; transcript is convenience only.</context>
+ <action>`visit_records` extended with `voice_path`, `photo_path`, `voice_transcript`. Voice stored on `public` disk at `visit-audio/{tenant_id}/` via browser MediaRecorder + `POST /api/visit-media/upload-voice`; photos at `visit-photos/{tenant_id}/` via Filament upload. Doctor-auth stream routes for playback/view; staff forbidden. Transcript is a manual optional field in the modal — **no speech-to-text integration** in this pass; it never sets coded diagnosis. Consult Screen shows catch-up banner during active sessions; end session warns doctors. No handwriting recognition on photos.</action>
+ <reason>Recording is the primary capture for doctors who will not type; transcript and photo are layered on without replacing audio or risking misread drug names from OCR.</reason>
+</decision>

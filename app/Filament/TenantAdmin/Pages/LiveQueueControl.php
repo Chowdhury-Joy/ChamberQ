@@ -2,14 +2,20 @@
 
 namespace App\Filament\TenantAdmin\Pages;
 
+use App\Filament\TenantAdmin\Support\CompleteBookingWithVisitNotes;
+use App\Filament\TenantAdmin\Support\VisitNotesFormSchema;
+use App\Models\Patient;
 use App\Models\ScheduleSession;
 use App\Models\LiveSession;
 use App\Services\LiveSessionService;
+use App\Services\PatientService;
 use Carbon\Carbon;
 use Filament\Pages\Page;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Notifications\Notification;
 use Filament\Support\Colors\Color;
 use Filament\Actions\Concerns\InteractsWithActions;
@@ -17,6 +23,7 @@ use Filament\Actions\Contracts\HasActions;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Concerns\InteractsWithTable;
 use App\Services\BookingService;
+use App\Services\VisitRecordService;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Illuminate\Support\Str;
@@ -38,7 +45,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
         /** @var \App\Models\User|null $user */
         $user = auth()->user();
 
-        return $user?->canManageQueue() ?? false;
+        return $user?->canAccessLiveQueueControl() ?? false;
     }
 
     public $selectedSessionId = null;
@@ -71,30 +78,79 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                 ->icon('heroicon-o-user-plus')
                 ->visible(fn () => $this->selectedSessionId !== null)
                 ->schema([
-                    \Filament\Forms\Components\TextInput::make('patient_name')
-                        ->label(__('Patient name'))
-                        ->extraInputAttributes(['name' => 'patient_name'])
-                        ->autocomplete('name')
-                        ->required(),
-                    \Filament\Forms\Components\TextInput::make('patient_phone')
+                    TextInput::make('patient_phone')
                         ->label(__('Phone number'))
                         ->extraInputAttributes(['name' => 'patient_phone'])
                         ->autocomplete('tel')
                         ->tel()
                         ->required()
+                        ->live(debounce: 400)
+                        ->afterStateUpdated(function (?string $state, Set $set): void {
+                            $set('patient_id', null);
+                            $set('patient_name', '');
+                        })
                         ->rule('regex:/^(?:\+?88)?01[3-9]\d{8}$/')
                         ->validationMessages([
                             'regex' => __('Please enter a valid Bangladeshi mobile number, for example 01712345678.'),
                         ]),
+                    Select::make('patient_id')
+                        ->label(__('Who is this for?'))
+                        ->options(function (Get $get): array {
+                            $phone = $get('patient_phone');
+
+                            if (blank($phone)) {
+                                return [];
+                            }
+
+                            $patients = app(PatientService::class)->patientsForPhone($phone);
+
+                            if ($patients->isEmpty()) {
+                                return [];
+                            }
+
+                            return $patients
+                                ->mapWithKeys(fn (Patient $patient) => [$patient->id => $patient->pickerLabel()])
+                                ->put('__new__', __('Someone new'))
+                                ->all();
+                        })
+                        ->visible(function (Get $get): bool {
+                            $phone = $get('patient_phone');
+
+                            if (blank($phone)) {
+                                return false;
+                            }
+
+                            return app(PatientService::class)->patientsForPhone($phone)->isNotEmpty();
+                        })
+                        ->native(false)
+                        ->live()
+                        ->afterStateUpdated(function (?string $state, Set $set): void {
+                            if ($state && $state !== '__new__') {
+                                $patient = Patient::find($state);
+                                $set('patient_name', $patient?->name ?? '');
+                            }
+                        }),
+                    TextInput::make('patient_name')
+                        ->label(__('Patient name'))
+                        ->extraInputAttributes(['name' => 'patient_name'])
+                        ->autocomplete('name')
+                        ->required(),
                 ])
-                ->action(function (array $data, \App\Services\BookingService $bookingService) {
-                    $bookable = \App\Models\ScheduleSession::findOrFail($this->selectedSessionId);
+                ->action(function (array $data, BookingService $bookingService) {
+                    $bookable = ScheduleSession::findOrFail($this->selectedSessionId);
+
+                    $patientId = ($data['patient_id'] ?? null) === '__new__'
+                        ? null
+                        : ($data['patient_id'] ?? null);
 
                     $bookingService->createBookingForBookable(
                         $bookable,
-                        \Carbon\Carbon::today()->toDateString(),
+                        Carbon::today()->toDateString(),
                         $data['patient_name'],
-                        $data['patient_phone']
+                        $data['patient_phone'],
+                        [],
+                        true,
+                        $patientId,
                     );
                 })
                 ->successNotificationTitle(__('Walk-in added directly to this session\'s live queue.')),
@@ -116,8 +172,25 @@ class LiveQueueControl extends Page implements HasActions, HasTable
             ])
             ->action(function () {
                 if (!$this->activeLiveSession) return;
+                $catchUpCount = 0;
+                if (auth()->user()?->canRecordVisitNotes()) {
+                    $catchUpCount = app(VisitRecordService::class)->countCompletedBookingsWithoutNotesToday(
+                        $this->activeLiveSession,
+                    );
+                }
                 app(LiveSessionService::class)->endSession($this->activeLiveSession);
-                Notification::make()->title('Session Ended')->success()->send();
+                if ($catchUpCount > 0 && auth()->user()?->canRecordVisitNotes()) {
+                    Notification::make()
+                        ->title(__('Session ended'))
+                        ->body(__(':count patients today without notes — open Consult Screen to fill in while the evening is fresh.', [
+                            'count' => $catchUpCount,
+                        ]))
+                        ->warning()
+                        ->duration(12000)
+                        ->send();
+                } else {
+                    Notification::make()->title('Session Ended')->success()->send();
+                }
             })
             ->visible(fn () => $this->activeLiveSession && in_array($this->activeLiveSession->status, ['active', 'paused']));
     }
@@ -230,12 +303,44 @@ class LiveQueueControl extends Page implements HasActions, HasTable
 
     public function nextPatient()
     {
-        if (!$this->activeLiveSession) return;
-        
+        if (! $this->activeLiveSession) {
+            return;
+        }
+
+        if (auth()->user()?->canRecordVisitNotes()) {
+            $this->mountAction('completeAndCallNext');
+
+            return;
+        }
+
         app(LiveSessionService::class)->completeCurrentPatient($this->activeLiveSession);
-        
+
         Notification::make()->title('Called Next Patient')->success()->send();
         $this->dispatchCallAnnounce();
+    }
+
+    public function completeAndCallNextAction(): Action
+    {
+        return Action::make('completeAndCallNext')
+            ->label(__('Complete & call next'))
+            ->form(VisitNotesFormSchema::components())
+            ->modalHeading(__('Complete visit'))
+            ->modalDescription(__('Add optional notes, or leave everything blank and tap Complete.'))
+            ->modalSubmitActionLabel(__('Complete'))
+            ->action(function (
+                array $data,
+                LiveSessionService $liveSessionService,
+                VisitRecordService $visitRecordService,
+            ): void {
+                CompleteBookingWithVisitNotes::finishCurrentSessionPatient(
+                    $data,
+                    $liveSessionService,
+                    $visitRecordService,
+                    $this->activeLiveSession,
+                );
+
+                $this->dispatchCallAnnounce();
+            });
     }
 
     /**

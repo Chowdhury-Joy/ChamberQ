@@ -64,6 +64,21 @@ class TenantForm
                             ->maxLength(20),
                     ]),
 
+                Fieldset::make(__('First doctor login'))
+                    ->visible(fn (string $operation): bool => $operation === 'create')
+                    ->schema([
+                        TextInput::make('initial_doctor_email')
+                            ->label(__('Doctor login email'))
+                            ->email()
+                            ->required()
+                            ->maxLength(255)
+                            ->helperText(__('Required so the practice can run the queue and consult screen — not only an owner account.')),
+                        TextInput::make('initial_doctor_name')
+                            ->label(__('Doctor name on login'))
+                            ->maxLength(255)
+                            ->placeholder(fn (Get $get): string => (string) ($get('name') ?: 'Dr.')),
+                    ]),
+
                 Fieldset::make(__('Plan & Billing'))
                     ->schema([
                         Select::make('plan_tier')

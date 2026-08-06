@@ -11,5 +11,7 @@ class Doctor extends Model
     
     protected $fillable = [
         'name',
+        'qualifications',
+        'registration_number',
     ];
 }

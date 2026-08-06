@@ -184,3 +184,21 @@
 
 ## 2026-08-06T18:42:00+0600
 - Owner approved `public/previews/clireo-homepage.html` (CBPH on Clireo layout) as the canonical clinic-tier homepage design reference; live `tenant/webpage.blade.php` migration deferred.
+
+## 2026-08-06T20:16:38+0600
+- Patient Records Stage 1: `patients` table + `bookings.patient_id`, `PatientService`, `patients:backfill`, household picker on booking wizard and Daily Roster walk-in, Filament Patients admin (join/move visit), `LiveSessionService` `lockForUpdate()` on queue mutations, SMS name-first format; see `decisions.md` 2026-08-06T20:16:38+0600.
+
+## 2026-08-06T20:26:30+0600
+- Patient Records Stage 2: Consult Screen Filament page, `queue_runner` tenant setting, queue roles limited to doctor/staff, `TenantUserBootstrapService` + doctor login on tenant create; see `decisions.md` 2026-08-06T20:26:30+0600.
+
+## 2026-08-06T20:31:09+0600
+- Patient Records Stage 3: global `conditions` master list + `condition_usages` per doctor, `ConditionService` search/ranking, `conditions:load` CSV importer, doctor-only `GET /api/conditions/search`; see `decisions.md` 2026-08-06T20:31:09+0600.
+
+## 2026-08-06T20:44:49+0600
+- Patient Records Stage 5: Super Admin **Client Health** page (`SellerOverview` + `SellerOverviewService`) — quiet clients, go-live funnel, SMS credit warnings, overdue payment list; tenant counts only; see `decisions.md` 2026-08-06T20:44:49+0600.
+
+## 2026-08-06T20:48:23+0600
+- Patient Records Stage 6: Super Admin **Research data** page (`ResearchData` + `ResearchDataService`) at `/admin/research` — cross-tenant coded diagnosis aggregates with k-anonymity (min group 10), date range + plan tier filters; see `decisions.md` 2026-08-06T20:48:23+0600.
+
+## 2026-08-06T20:57:04+0600
+- Patient Records Stage 4 deferred: visit voice notes (`visit-audio/{tenant_id}/`), prescription photos (`visit-photos/{tenant_id}/`), manual voice transcript, doctor-auth media routes, Consult Screen catch-up banner + end-session warning; no STT or handwriting recognition; see `decisions.md` 2026-08-06T20:57:04+0600.

@@ -59,6 +59,7 @@ class BookingController extends Controller
             'patient_name' => 'required|string|max:255',
             // Bangladeshi mobile: optional +88 prefix, then 01[3-9] and 8 digits.
             'patient_phone' => ['required', 'string', 'regex:/^(?:\+?88)?01[3-9]\d{8}$/'],
+            'patient_id' => 'nullable|uuid|exists:patients,id',
             // Deliberately NOT `exists:lab_tests,id` — that rule is not tenant
             // scoped and would accept another tenant's test ids. The service
             // resolves them through the tenant scope and rejects the booking if
@@ -85,7 +86,9 @@ class BookingController extends Controller
                 $validated['booking_date'],
                 $validated['patient_name'],
                 $this->normalizeBdPhone($validated['patient_phone']),
-                $validated['lab_tests'] ?? []
+                $validated['lab_tests'] ?? [],
+                true,
+                $validated['patient_id'] ?? null,
             );
         } catch (BookingUnavailableException $e) {
             // Only this exception type is safe to echo back to an anonymous

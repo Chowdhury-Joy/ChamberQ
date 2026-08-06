@@ -12,6 +12,14 @@ use Illuminate\Support\Facades\DB;
 class LiveSessionService
 {
     /**
+     * Pessimistic lock — two staff pressing Call at once cannot both overwrite current_booking_id.
+     */
+    private function lockSession(LiveSession $liveSession): LiveSession
+    {
+        return LiveSession::where('id', $liveSession->id)->lockForUpdate()->firstOrFail();
+    }
+
+    /**
      * Start a new live session for a schedule session today
      */
     public function startSession(ScheduleSession $scheduleSession): LiveSession
@@ -28,6 +36,8 @@ class LiveSessionService
                 'started_at' => now(),
             ]);
 
+            $liveSession = $this->lockSession($liveSession);
+
             if ($liveSession->status === 'scheduled' || $liveSession->status === 'delayed') {
                 $liveSession->update([
                     'status' => 'active',
@@ -37,10 +47,10 @@ class LiveSessionService
 
             // Call first patient if none is called
             if (!$liveSession->current_booking_id) {
-                $this->callNextPatient($liveSession);
+                $this->advanceQueue($liveSession);
             }
 
-            return $liveSession;
+            return $liveSession->fresh();
         });
     }
 
@@ -50,6 +60,17 @@ class LiveSessionService
     public function callNextPatient(LiveSession $liveSession): ?Booking
     {
         return DB::transaction(function () use ($liveSession) {
+            $liveSession = $this->lockSession($liveSession);
+
+            return $this->advanceQueue($liveSession);
+        });
+    }
+
+    /**
+     * Queue advance logic — caller must already hold a lock on the live session row.
+     */
+    private function advanceQueue(LiveSession $liveSession): ?Booking
+    {
             $currentBooking = $liveSession->currentBooking;
             
             // First check if any skipped patients are due for retry based on serial position
@@ -101,7 +122,6 @@ class LiveSessionService
             ]);
 
             return null;
-        });
     }
 
     private function setAsCurrent(LiveSession $liveSession, Booking $booking): Booking
@@ -122,18 +142,23 @@ class LiveSessionService
 
     public function patientArrived(LiveSession $liveSession)
     {
-        $booking = $liveSession->currentBooking;
-        if ($booking) {
-            $booking->update([
-                'status' => 'in_chamber',
-                'in_chamber_at' => now(),
-            ]);
-        }
+        DB::transaction(function () use ($liveSession) {
+            $liveSession = $this->lockSession($liveSession);
+            $booking = $liveSession->currentBooking;
+
+            if ($booking) {
+                $booking->update([
+                    'status' => 'in_chamber',
+                    'in_chamber_at' => now(),
+                ]);
+            }
+        });
     }
 
     public function completeCurrentPatient(LiveSession $liveSession)
     {
         return DB::transaction(function () use ($liveSession) {
+            $liveSession = $this->lockSession($liveSession);
             $booking = $liveSession->currentBooking;
             if ($booking) {
                 $booking->update([
@@ -142,7 +167,7 @@ class LiveSessionService
                 ]);
             }
 
-            return $this->callNextPatient($liveSession);
+            return $this->advanceQueue($liveSession);
         });
     }
 
@@ -172,6 +197,8 @@ class LiveSessionService
                 'started_at' => $now,
             ]);
 
+            $liveSession = $this->lockSession($liveSession);
+
             if (in_array($liveSession->status, ['scheduled', 'delayed'], true)) {
                 $liveSession->update([
                     'status' => 'active',
@@ -200,10 +227,23 @@ class LiveSessionService
         DB::transaction(function () use ($booking) {
             $liveSession = $booking->liveSession();
 
-            if ($liveSession && $liveSession->current_booking_id === $booking->id) {
-                $this->completeCurrentPatient($liveSession);
+            if ($liveSession) {
+                $liveSession = $this->lockSession($liveSession);
 
-                return;
+                if ($liveSession->current_booking_id === $booking->id) {
+                    $booking = $liveSession->currentBooking;
+
+                    if ($booking) {
+                        $booking->update([
+                            'status' => 'completed',
+                            'completed_at' => now(),
+                        ]);
+                    }
+
+                    $this->advanceQueue($liveSession);
+
+                    return;
+                }
             }
 
             $booking->update([
@@ -216,6 +256,7 @@ class LiveSessionService
     public function skipPatient(LiveSession $liveSession)
     {
         return DB::transaction(function () use ($liveSession) {
+            $liveSession = $this->lockSession($liveSession);
             $booking = $liveSession->currentBooking;
             if ($booking) {
                 $skipCount = $booking->skip_count + 1;
@@ -236,7 +277,7 @@ class LiveSessionService
                 }
             }
 
-            return $this->callNextPatient($liveSession);
+            return $this->advanceQueue($liveSession);
         });
     }
 
@@ -258,6 +299,7 @@ class LiveSessionService
     public function endSession(LiveSession $liveSession, string $reason = 'Session ended')
     {
         DB::transaction(function () use ($liveSession, $reason) {
+            $liveSession = $this->lockSession($liveSession);
             // Fatima is already with the doctor — do not cancel mid-consult.
             // Mark her completed; cancel everyone still waiting / called / skipped.
             $liveSession->bookings()
@@ -295,6 +337,8 @@ class LiveSessionService
     public function markAbsent(LiveSession $liveSession, string $reason = 'Doctor unavailable')
     {
         DB::transaction(function () use ($liveSession, $reason) {
+            $liveSession = $this->lockSession($liveSession);
+
             $liveSession->update([
                 'status' => 'cancelled',
                 'cancellation_reason' => $reason,

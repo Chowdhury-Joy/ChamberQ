@@ -1,16 +1,10 @@
 @php
     $tenant = tenant();
-    $fontFamily = $tenant->font_family ?? 'Outfit';
     $themeColor = $tenant->theme_color ?: \App\Models\Tenant::DEFAULT_THEME_COLOR;
-    $fontUrl = match($fontFamily) {
-        'Inter' => 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap',
-        'Roboto' => 'https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap',
-        'Hind Siliguri' => 'https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap',
-        default => 'https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap',
-    };
     $customPages = \App\Models\WebPage::where('is_published', true)->where('slug', '!=', '/')->get();
     $banglaHomepage = $tenant->hasFeature('bangla_homepage');
     $locale = app()->getLocale();
+    $brand = $tenant->displayName();
 @endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', $locale) }}" class="h-full" style="color-scheme: light;">
@@ -19,14 +13,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light only">
     <meta name="theme-color" content="{{ $themeColor }}">
-    <title>{{ $page->title }} | {{ $tenant->displayName() }}</title>
+    <title>{{ $page->title }} | {{ $brand }}</title>
     <link rel="manifest" href="{{ tenant_web_url('/manifest.webmanifest') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="{{ $fontUrl }}">
-    @if($tenant->favicon_url)
-    <link rel="icon" href="{{ $tenant->favicon_url }}">
-    @endif
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+    <link rel="icon" href="{{ $tenant->faviconHref() }}">
     <script>
         tailwind.config = {
             darkMode: 'class',
@@ -39,10 +31,11 @@
                         },
                     },
                     fontFamily: {
-                        sans: ['{{ $fontFamily }}', 'system-ui', 'sans-serif'],
+                        display: ['Instrument Serif', 'Georgia', 'serif'],
+                        sans: ['DM Sans', 'system-ui', 'sans-serif'],
                     },
                     maxWidth: {
-                        site: '1320px',
+                        site: '1280px',
                     },
                 },
             },
@@ -56,18 +49,73 @@
         :root {
             --color-primary: {{ $themeColor }};
             --color-primary-hover: #1d4ed8;
-            --font-family-base: '{{ $fontFamily }}', system-ui, sans-serif;
+            --font-family-base: 'DM Sans', system-ui, sans-serif;
+            --font-family-display: 'Instrument Serif', Georgia, serif;
             color-scheme: light;
         }
         html { color-scheme: light only; }
         body { font-family: var(--font-family-base); }
+        .font-display { font-family: var(--font-family-display); }
         [x-cloak] { display: none !important; }
         .text-brand { color: var(--color-primary); }
         .bg-brand { background-color: var(--color-primary); }
-        .bg-brand-soft { background-color: color-mix(in srgb, var(--color-primary) 12%, white); }
-        .hover\:bg-brand-dark:hover { background-color: var(--color-primary-hover); }
-        .ring-brand { --tw-ring-color: var(--color-primary); }
-        .border-brand\/20 { border-color: color-mix(in srgb, var(--color-primary) 20%, transparent); }
+        .border-brand { border-color: var(--color-primary); }
+        .solo-cta {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            border-radius: 9999px;
+            background: var(--color-primary);
+            color: #fff;
+            font-weight: 600;
+            font-size: 0.95rem;
+            padding: 16px 32px;
+            transition: opacity 0.15s ease, transform 0.15s ease;
+            text-decoration: none;
+        }
+        .solo-cta:hover { opacity: 0.92; color: #fff; }
+        .solo-cta-outline {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 9999px;
+            border: 1.5px solid color-mix(in srgb, var(--color-primary) 55%, white);
+            color: var(--color-primary);
+            background: color-mix(in srgb, var(--color-primary) 6%, white);
+            font-weight: 600;
+            font-size: 0.95rem;
+            padding: 8px 32px;
+            transition: background 0.15s ease;
+            text-decoration: none;
+        }
+        .solo-cta-outline:hover { background: color-mix(in srgb, var(--color-primary) 12%, white); }
+        @keyframes soloFadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .solo-fade-up { animation: soloFadeUp 0.65s ease-out both; }
+        .solo-fade-up-delay { animation: soloFadeUp 0.75s ease-out 0.12s both; }
+        .solo-section {
+            padding-top: 40px;
+            padding-bottom: 40px;
+        }
+        @media (min-width: 640px) {
+            .solo-section {
+                padding-top: 56px;
+                padding-bottom: 56px;
+            }
+        }
+        @media (min-width: 1024px) {
+            .solo-section {
+                padding-top: 96px;
+                padding-bottom: 96px;
+            }
+        }
+        .solo-section-hero {
+            padding-top: 0;
+            padding-bottom: 0;
+        }
     </style>
     <script>
         if ('serviceWorker' in navigator) {
@@ -75,24 +123,26 @@
         }
     </script>
 </head>
-<body class="min-h-full flex flex-col bg-slate-50 text-slate-900 antialiased" x-data="{ menuOpen: false }">
-    <header class="fixed inset-x-0 top-0 z-50 border-b border-slate-200/80 bg-white">
-        <div class="mx-auto flex h-16 max-w-[1320px] items-center justify-between gap-4 px-4 sm:h-[4.25rem] sm:px-6 lg:px-8">
-            <a href="{{ tenant_web_url('/') }}" class="min-w-0 truncate text-base font-bold tracking-tight text-slate-900 sm:text-lg">
+<body class="min-h-full flex flex-col bg-white text-slate-900 antialiased" x-data="{ menuOpen: false }">
+    <header class="sticky top-0 z-50 border-b border-slate-100 bg-white/95 backdrop-blur">
+        <div class="mx-auto flex h-[68px] max-w-[1280px] items-center justify-between gap-4 px-3 sm:h-[95px] sm:px-10">
+            <a href="{{ tenant_web_url('/') }}" class="min-w-0 truncate font-display text-xl tracking-tight text-slate-900 sm:text-[1.65rem]">
                 @if($tenant->logo_url)
-                    <img src="{{ $tenant->logo_url }}" alt="{{ $tenant->displayName() }}" class="h-9 w-auto">
+                    <img src="{{ $tenant->logo_url }}" alt="{{ $brand }}" class="h-9 w-auto sm:h-11">
                 @else
-                    {{ $tenant->displayName() }}
+                    {{ $brand }}
                 @endif
             </a>
 
-            <nav class="hidden items-center gap-6 text-sm font-medium text-slate-700 md:flex lg:gap-8" aria-label="{{ __('Main') }}">
+            <nav class="hidden items-center gap-8 text-base font-medium text-slate-800 md:flex" aria-label="{{ __('Main') }}">
                 <a href="{{ tenant_web_url('/') }}" class="transition hover:text-brand">{{ __('Home') }}</a>
+                <a href="#services" class="transition hover:text-brand">{{ __('Services') }}</a>
+                <a href="#doctors" class="transition hover:text-brand">{{ __('Doctors') }}</a>
+                <a href="#locations" class="transition hover:text-brand">{{ __('Locations') }}</a>
                 @foreach($customPages as $customPage)
                     <a href="{{ $customPage->slug }}" class="transition hover:text-brand">{{ $customPage->title }}</a>
                 @endforeach
-                <a href="{{ tenant_web_url('/book') }}" class="transition hover:text-brand">{{ __('Book Appointment') }}</a>
-                <a href="{{ tenant_web_url('/portal') }}" class="font-medium text-slate-500 transition hover:text-brand">{{ __('Patient Portal') }}</a>
+                <a href="{{ tenant_web_url('/portal') }}" class="solo-cta-outline">{{ __('Patient’s Portal') }}</a>
                 @if($banglaHomepage)
                     <span class="flex items-center gap-1.5 border-l border-slate-200 pl-4 text-xs font-semibold tracking-wide">
                         <a href="{{ tenant_web_url('/lang/en') }}" class="{{ $locale === 'en' ? 'text-brand' : 'text-slate-400 hover:text-slate-700' }}">EN</a>
@@ -102,26 +152,31 @@
                 @endif
             </nav>
 
-            <button
-                type="button"
-                class="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-800 md:hidden"
-                @click="menuOpen = !menuOpen"
-                :aria-expanded="menuOpen.toString()"
-                aria-controls="site-mobile-nav"
-                aria-label="{{ __('Menu') }}"
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></svg>
-            </button>
+            <div class="flex items-center gap-2 md:hidden">
+                <a href="{{ tenant_web_url('/portal') }}" class="solo-cta-outline text-sm">{{ __('Patient’s Portal') }}</a>
+                <button
+                    type="button"
+                    class="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-800"
+                    @click="menuOpen = !menuOpen"
+                    :aria-expanded="menuOpen.toString()"
+                    aria-controls="site-mobile-nav"
+                    aria-label="{{ __('Menu') }}"
+                >
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" d="M4 7h16M4 12h16M4 17h16"/></svg>
+                </button>
+            </div>
         </div>
 
         <div id="site-mobile-nav" class="border-t border-slate-100 bg-white md:hidden" x-show="menuOpen" x-cloak>
-            <div class="mx-auto flex max-w-[1320px] flex-col gap-1 px-4 py-3 text-base font-medium">
+            <div class="mx-auto flex max-w-[1280px] flex-col gap-1 px-3 py-3 text-base font-medium sm:px-10">
                 <a href="{{ tenant_web_url('/') }}" class="rounded-lg px-3 py-3 hover:bg-slate-50" @click="menuOpen = false">{{ __('Home') }}</a>
+                <a href="#services" class="rounded-lg px-3 py-3 hover:bg-slate-50" @click="menuOpen = false">{{ __('Services') }}</a>
+                <a href="#doctors" class="rounded-lg px-3 py-3 hover:bg-slate-50" @click="menuOpen = false">{{ __('Doctors') }}</a>
+                <a href="#locations" class="rounded-lg px-3 py-3 hover:bg-slate-50" @click="menuOpen = false">{{ __('Locations') }}</a>
                 @foreach($customPages as $customPage)
                     <a href="{{ $customPage->slug }}" class="rounded-lg px-3 py-3 hover:bg-slate-50" @click="menuOpen = false">{{ $customPage->title }}</a>
                 @endforeach
                 <a href="{{ tenant_web_url('/book') }}" class="rounded-lg px-3 py-3 hover:bg-slate-50" @click="menuOpen = false">{{ __('Book Appointment') }}</a>
-                <a href="{{ tenant_web_url('/portal') }}" class="rounded-lg px-3 py-3 text-slate-500 hover:bg-slate-50" @click="menuOpen = false">{{ __('Patient Portal') }}</a>
                 @if($banglaHomepage)
                     <div class="flex gap-3 px-3 py-3 text-xs font-semibold">
                         <a href="{{ tenant_web_url('/lang/en') }}" class="{{ $locale === 'en' ? 'text-brand' : 'text-slate-400' }}">EN</a>
@@ -132,7 +187,7 @@
         </div>
     </header>
 
-    <main class="w-full flex-1 pt-16 sm:pt-[4.25rem]">
+    <main class="w-full flex-1">
         @foreach ($page->content ?? [] as $block)
             @php $blockType = $block['type'] ?? ''; @endphp
             @if(empty($block['data']['is_hidden']) && view()->exists('tenant.sections.' . $blockType))
@@ -145,29 +200,17 @@
         @endforeach
     </main>
 
-    <footer class="mt-auto border-t border-slate-800 bg-slate-900 text-slate-400">
-        <div class="mx-auto grid max-w-[1320px] gap-10 px-4 py-12 sm:px-6 md:grid-cols-3 lg:px-8 lg:py-16">
+    <footer class="mt-auto border-t border-slate-100 bg-white text-slate-600">
+        <div class="mx-auto flex max-w-[1280px] flex-col gap-6 px-3 py-10 sm:px-10 sm:py-14 md:flex-row md:items-start md:justify-between">
             <div>
-                <h3 class="text-base font-bold text-white sm:text-lg">{{ $tenant->displayName() }}</h3>
-                <p class="mt-3 max-w-sm text-sm leading-relaxed sm:text-[0.95rem]">
+                <p class="font-display text-xl text-slate-900">{{ $brand }}</p>
+                <p class="mt-2 max-w-md text-sm leading-relaxed">
                     {{ $tenant->tagline ?: __('Compassionate care with online serial booking and live queue updates on your phone.') }}
                 </p>
             </div>
-            <div>
-                <h4 class="text-sm font-bold text-white">{{ __('Quick Links') }}</h4>
-                <ul class="mt-3 space-y-2 text-sm">
-                    <li><a href="{{ tenant_web_url('/') }}" class="hover:text-white">{{ __('Home') }}</a></li>
-                    @foreach($customPages as $customPage)
-                        <li><a href="{{ $customPage->slug }}" class="hover:text-white">{{ $customPage->title }}</a></li>
-                    @endforeach
-                    <li><a href="{{ tenant_web_url('/book') }}" class="hover:text-white">{{ __('Book Appointment') }}</a></li>
-                    <li><a href="{{ tenant_web_url('/portal') }}" class="hover:text-white">{{ __('Patient Portal') }}</a></li>
-                </ul>
-            </div>
-            <div>
-                <h4 class="text-sm font-bold text-white">{{ __('Contact') }}</h4>
-                <p class="mt-3 text-sm">{{ __('Phone') }}: {{ $tenant->contact_phone ?? __('Contact the clinic') }}</p>
-                <p class="mt-2 text-sm">&copy; {{ date('Y') }} {{ $tenant->displayName() }}</p>
+            <div class="text-sm">
+                <p>{{ __('Phone') }}: {{ $tenant->contact_phone ?? __('Contact the clinic') }}</p>
+                <p class="mt-2">&copy; {{ date('Y') }}, {{ $brand }}</p>
             </div>
         </div>
     </footer>
