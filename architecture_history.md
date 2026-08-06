@@ -109,3 +109,78 @@
 
 ## 2026-08-05T21:41:16+0600
 - Locked the no-expiry session settings against future reverts, mirroring the patient homepage lock: added `.cursor/rules/session-expiry-lock.mdc` and a **Session expiry lock** section in `CLAUDE.md`, naming SESSION_LIFETIME / SESSION_EXPIRE_ON_CLOSE / AUTH_PASSWORD_TIMEOUT and the unlock phrases. The non-standard `525600` default in `config/session.php` is called out explicitly so it is not "tidied" back to the framework's 120.
+
+## 2026-08-05
+- Clinic public site restyled to solo visual language (shell, hero banner, sections, book/ticket/portal); demo clinic homepage content expanded; shared `testimonials` section + multi-branch `location_hours` locations list.
+
+## 2026-08-05
+- Added shared health favicon (`public/icons/health-favicon.svg`) and `Tenant::faviconHref()` default for patient-site browser tabs.
+
+## 2026-08-05T23:15:17+0600
+- Added look-only Alvion-style clinic homepage preview at `public/previews/alvion-clinic-homepage.html` (dark/lime hospital layout, placeholder CTAs) for owner review before any live clinic template change.
+
+## 2026-08-05T23:22:36+0600
+- Removed Alvion preview; replaced with look-only Clireo homepage structural copy at `public/previews/clireo-homepage.html` matching https://clireo.framer.website (navy/pink, Golos Text, hero booking card, treatments, reviews, approach, doctors, FAQ).
+
+## 2026-08-05T23:33:27+0600
+- Clireo preview now uses Getwebfield spacing shell (`public/css/getwebfield-spacing.css`: stacked section padding, 1400px container, card/hero/split/stats grids) plus scroll reveals, hover lifts, approach tab fades, and `prefers-reduced-motion` respect.
+
+## 2026-08-06T00:11:34+0600
+- Clireo preview: removed before/after; kept Our Values; added Framer-like hero word blur/rise, cyan “health” underline, and dual-text hover on nav/CTAs (CSS animations for reliable hero reveal).
+
+## 2026-08-06T12:21:46+0600
+- Added ChamberQ brand mark at `public/icons/chamberq-logo.png` (300×300 PNG: C+Q monogram with medical cross).
+
+## 2026-08-06T12:25:33+0600
+- Added alternate ChamberQ logo concept at `public/icons/chamberq-logo-v2.png` (navy circular badge, C+Q with Rod of Asclepius / queue-tail motif).
+
+## 2026-08-06T12:28:09+0600
+- Added ChamberQ logo v3 at `public/icons/chamberq-logo-v3.png` (PRIMARY-inspired lime cross + navy C/Q line overlay + wordmark).
+
+## 2026-08-06T12:29:30+0600
+- Added ChamberQ logo v4 at `public/icons/chamberq-logo-v4.png` (PRIMECARE-inspired geometric navy/sky-blue flag mark + wordmark).
+
+## 2026-08-06T12:31:43+0600
+- Added ChamberQ mark-only logo at `public/icons/chamberq-mark-v5.png` (thin bracket cross, two-tone blue, no wordmark).
+
+## 2026-08-06T12:39:30+0600
+- Refined `public/icons/chamberq-logo.png` v1 mark: thinner strokes, deeper teal, simpler C+Q with minimal cross for a more premium look.
+
+## 2026-08-06T12:41:47+0600
+- Added ChamberQ logomark v6 at `public/icons/chamberq-mark-v6.png` (layered geometric heart, teal mosaic, person in negative space; no C/Q letters).
+
+## 2026-08-06T12:45:14+0600
+- Added segmented organic Q logomark at `public/icons/chamberq-mark-q-segmented.png` (mosaic tiles, nature greens, white gaps).
+
+## 2026-08-06T12:50:11+0600
+- Added v6 logomark shape variants: shield, arch, and circle at `public/icons/chamberq-mark-v6-{shield,arch,circle}.png`.
+
+## 2026-08-06T12:53:50+0600
+- Added fluid separate C+Q two-blob logomark at `public/icons/chamberq-mark-cq-fluid.png`.
+
+## 2026-08-06T12:55:27+0600
+- Simplified `chamberq-mark-v6-shield.png`: fewer larger mosaic tiles, less grid density, same shield + person silhouette.
+
+## 2026-08-06T12:57:00+0600
+- Refined `chamberq-mark-v6-shield.png`: removed central person silhouette so mosaic shield tiles are the focal point.
+
+## 2026-08-06T12:58:30+0600
+- Refined `chamberq-mark-v6-shield.png`: squat wide shield proportions, 3D beveled mosaic tiles with depth/shadow.
+
+## 2026-08-06T13:01:46+0600
+- Rebalanced `chamberq-logo.png` v1 to medium stroke weight (between original thick and over-thin refined mark).
+
+## 2026-08-06T13:22:56+0600
+- Thinned `chamberq-logo.png` v1 strokes ~40% vs prior medium-weight mark.
+
+## 2026-08-06T13:36:30+0600
+- Reverted `chamberq-mark-v6-shield.png` to prior flat mosaic version (no person, no 3D).
+
+## 2026-08-06T13:38:25+0600
+- Shortened `chamberq-mark-v6-shield.png` height: squat wide flat mosaic shield, still no person or 3D.
+
+## 2026-08-06
+- Clireo preview treatments carousel: desktop `--treat-visible` 6 (4 focused + 2 dim peeks), infinite loop via prepended/appended card clones; see decisions.md.
+
+## 2026-08-06T18:42:00+0600
+- Owner approved `public/previews/clireo-homepage.html` (CBPH on Clireo layout) as the canonical clinic-tier homepage design reference; live `tenant/webpage.blade.php` migration deferred.

@@ -324,3 +324,269 @@
  <action>Lock them the same way the patient homepage is locked: `.cursor/rules/session-expiry-lock.mdc` plus a **Session expiry lock** section in `CLAUDE.md`, naming the locked keys and requiring the phrase **change session expiry** or **restore session timeout** to alter them. The rule states the accepted trade-off so it is not re-litigated, and explicitly says the separate "session replaced within seconds of login" defect must not be answered by touching these values.</action>
  <reason>Locks in this repo are how a settled owner decision survives contact with future agents. The homepage lock exists because drive-by edits kept undoing an approved design; this value has the same exposure, with the added trap that reverting it looks like a security improvement rather than a regression.</reason>
 </decision>
+
+## 2026-08-05T21:55:46+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Primary CTAs on the central sales site and Filament admin panels used coral/amber (orange), which the owner wanted replaced with a clearer blue + white treatment.</context>
+ <action>Marketing `.mk-btn-primary` (including the featured Solo plan CTA) now uses `--mk-blue` / `--mk-blue-deep` (`#2563eb` / `#1d4ed8`) with white label text. Super Admin and Tenant Admin Filament panels switch `primary` from `Color::Amber` to `Color::Blue`. Coral accents on non-button marketing chrome (eyebrows, highlights) stay as secondary decoration.</action>
+ <reason>Owner asked for all orange buttons to become blue with white text; blue matches the shared patient-site primary (`theme.css` / `Tenant::DEFAULT_THEME_COLOR`) so sales and admin feel like one product family.</reason>
+</decision>
+
+## 2026-08-05T22:15:09+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The clinic public site looked like a different product from the solo doctor site (Outfit, dark footer, short homepage), so patients and sales demos felt inconsistent across plan tiers.</context>
+ <action>Restyle clinic homepage shell, facility-banner hero, and clinic sections to the solo visual language (DM Sans + Instrument Serif, pill CTAs, white sticky header/footer, `.solo-section` rhythm). Align clinic book/ticket/portal shells the same way. Enrich demo clinic homepage seed with conditions, doctors, about facility, why-us, multi-branch locations, testimonials, and FAQ. Add clinic `testimonials` section view and multi-branch `locations[]` support on `location_hours` (Filament + Blade). Solo homepage files stay locked/unchanged.</action>
+ <reason>Owner asked for clinic to match solo style across the full patient journey while keeping a wide facility photo hero (not the solo portrait split) and clinic-specific content (multi-doctor, labs, branches).</reason>
+</decision>
+
+## 2026-08-05T22:22:54+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Patient sites had no default favicon, so browser tabs looked empty or showed a generic document icon.</context>
+ <action>Added `public/icons/health-favicon.svg` (blue rounded square + white medical cross). `Tenant::faviconHref()` returns a custom `favicon_url` or that default. Clinic/book/ticket/portal shells (and solo book/ticket) always emit the icon link; demo seed sets `favicon_url` for solo and clinic tenants.</action>
+ <reason>A simple health cross reads as medical care in the tab without requiring each doctor to upload an icon first.</reason>
+</decision>
+
+## 2026-08-05T23:15:17+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Owner wanted to try an Alvion Framer hospital look for clinic patient sites without risking the live clinic or locked solo homepage.</context>
+ <action>Ship a standalone look-only mock at `public/previews/alvion-clinic-homepage.html` (dark full-bleed hero, lime accents, services/team/pricing/blog, BD-style demo copy and ৳ prices). Book/Contact/Discover buttons stay placeholders (`href="#"`). No live Blade, route, or booking changes.</action>
+ <reason>Same preview-first path as solo-homepage-v2: review the storefront look in a showroom before remodeling the real clinic site.</reason>
+</decision>
+
+## 2026-08-05T23:22:36+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Owner rejected the Alvion preview and asked for a 1:1 copy of Clireo (https://clireo.framer.website) instead.</context>
+ <action>Delete `public/previews/alvion-clinic-homepage.html`. Add `public/previews/clireo-homepage.html` as a look-only structural recreation of Clireo’s homepage (Golos Text, navy `#1B2978` / pink `#FA84E0`, hero booking card, about, treatment scroller, before/after, reviews, why/approach/doctors/stats, blog, FAQ, CTA, footer). Forms and CTAs are not wired to Doctor Gemini booking.</action>
+ <reason>Owner-directed design swap; Clireo is the review reference now. Live solo/clinic templates stay untouched until explicitly approved.</reason>
+</decision>
+
+## 2026-08-05T23:33:27+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Owner liked the Clireo preview and asked to follow the Getwebfield spacing system and add animation where needed.</context>
+ <action>Keep Clireo brand (navy/pink, Golos Text). Wire the preview to `public/css/getwebfield-spacing.css` (`.space-section` 48/96 stacked padding, `.layout-container` 1400px, `.stack-header`, `.grid-cards` / `.grid-hero` / `.grid-split` / `.grid-stats`, `.space-card`). Add scroll-in reveals, card/button hover lifts, approach-tab crossfade, and honor `prefers-reduced-motion`.</action>
+ <reason>Spacing rhythm matches the machine-wide Getwebfield system while preserving the approved Clireo look; motion adds presence without changing conversion layout.</reason>
+</decision>
+
+## 2026-08-06T00:11:34+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Clireo preview was close but not 1:1 — missing Framer text effects, and the before/after block was not wanted.</context>
+ <action>Remove the before/after section from `public/previews/clireo-homepage.html`. Keep all other Clireo sections (including Our Values). Match Framer text effects: hero word-by-word blur/rise (CSS keyframes), cyan underline on “health”, dual-label hover on nav links and CTAs, section heading word reveals on scroll. Still look-only; not wired to booking.</action>
+ <reason>Owner asked for a full visual copy of Clireo’s text motion, with before/after explicitly dropped from this review mock.</reason>
+</decision>
+
+## 2026-08-06T00:23:40+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Clireo preview section headings looked smaller than the live Framer theme.</context>
+ <action>Match Framer’s measured type scale on `public/previews/clireo-homepage.html`: H1/rating 90px, section H2 54px or 46px by section, about statement 40px, marquee 74px, card titles 26px; font-weight 400 and tight letter-spacing. Apply sizes to `.fx-heading` (the real markup), not the unused `.section h2` selector.</action>
+ <reason>Owner asked for heading sizes to match Clireo 1:1; desktop measurements taken from https://clireo.framer.website.</reason>
+</decision>
+
+## 2026-08-06T10:25:20+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Owner shared a Clireo About-section screenshot and asked the preview to match that layout (not the photo-collage + stacked feature list we had).</context>
+ <action>Rebuild About in `public/previews/clireo-homepage.html`: centered statement, white “More about us” pill with navy arrow tile, Trusted-by avatars inline, then three equal white icon cards; keep the scrolling specialty marquee under it with star separators.</action>
+ <reason>Match the Framer About composition the owner approved by screenshot.</reason>
+</decision>
+
+## 2026-08-06T10:30:52+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>About CTA and feature cards were visible at the same time as the heading word reveal, which felt early compared to Clireo.</context>
+ <action>Keep `.about-cta-row` and `.about-feature` hidden until the About heading finishes its word-by-word reveal, then fade them in (CTA first, cards staggered). Honor reduced-motion by showing them immediately.</action>
+ <reason>Owner asked for button, trust row, and cards to appear only after the About text is fully visible.</reason>
+</decision>
+
+## 2026-08-06T11:29:29+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Owner wanted the Clireo preview booking card without a message box, and a doctor picker next to phone.</context>
+ <action>In `public/previews/clireo-homepage.html` hero form: remove Message textarea; put Phone and Select Doctor side-by-side (same row pattern as Date &amp; Time), with the four preview doctors as options.</action>
+ <reason>Owner-directed form tweak for the look-only Clireo mock.</reason>
+</decision>
+
+## 2026-08-06T11:54:07+0600
+<decision>
+ <category>UI/UX</category>
+ <context>Owner said the Treatments section in the Clireo preview looked less premium than the live template (light band + separate white cards under photos).</context>
+ <action>Restyle `#treatments` in `public/previews/clireo-homepage.html` to match Clireo: navy `#1B2978` section band, white heading/eyebrow, outline “View all” CTA, full-bleed photo cards with bottom gradient mask, white in-image icons/titles/copy, light outline carousel arrows and muted footer line. Keep mobile ~1.2-card horizontal peek.</action>
+ <reason>Matches the template’s dark treatment band and image-overlay cards instead of a flat light-section card strip.</reason>
+</decision>
+
+## 2026-08-06T11:55:21+0600
+<decision>
+ <category>UI/UX</category>
+ <context>Owner asked the Treatments horizontal scroller to show ~1.8 cards in view (was ~1.2).</context>
+ <action>In `public/previews/clireo-homepage.html`, set `.treat-scroller` `grid-auto-columns` to `calc((100% - gap) / 1.8)` below the desktop breakpoint.</action>
+ <reason>Owner-directed peek width for the look-only Clireo treatments carousel.</reason>
+</decision>
+
+## 2026-08-06T12:06:33+0600
+<decision>
+ <category>UI/UX</category>
+ <context>Owner wanted visible gaps between Treatments cards on desktop, and ~2.5 cards visible on tablet.</context>
+ <action>In `public/previews/clireo-homepage.html` `.treat-scroller`: mobile keeps ~1.8 cards; tablet (≥640) uses ~2.5-card columns with `space-xl` gap; desktop (≥1200) keeps rem card widths with `space-xl` gap so cards are clearly separated.</action>
+ <reason>Aligns peek counts and spacing with Getwebfield breakpoints and the owner’s Clireo preview feedback.</reason>
+</decision>
+
+## 2026-08-06T12:21:46+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Product will be renamed ChamberQ; needed a brand mark that reads as medical queue/chamber software, not a generic app icon.</context>
+ <action>Create `public/icons/chamberq-logo.png` (300×300): teal rounded square with a white C+Q monogram and medical cross in the negative space. Asset only — not wired into panels or favicon yet.</action>
+ <reason>Locks a rename-ready logo file owners can review before swapping SolDoc/Doctor Gemini chrome.</reason>
+</decision>
+
+## 2026-08-06T13:51:37+0600
+<decision>
+ <category>UI/UX</category>
+ <context>Owner shared Clireo desktop treatments reference: 24px card gaps, 3 focused center cards, dimmed partial peeks on left/right, full-bleed scalable carousel.</context>
+ <action>In `public/previews/clireo-homepage.html`: wrap scroller in `.treat-stage` (full-bleed desktop); desktop uses `--treat-gap: 24px` and `--treat-visible: 3.5` for viewport-scaled columns; `.treat-card.is-dim` navy overlay on clipped edge cards; JS toggles dim on scroll/resize, centers initial peek, arrow scroll = card width + gap.</action>
+ <reason>Matches Clireo’s focused-carousel pattern in the look-only preview without touching locked solo homepage blades.</reason>
+</decision>
+
+## 2026-08-06T13:53:38+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Owner wanted the doctors block to follow treatments on the Clireo homepage preview — show who delivers care right after what they offer.</context>
+ <action>In `public/previews/clireo-homepage.html`, move the “Meet The Doctors Behind Expert Care” section (including stats band) to sit immediately after `#treatments` and before `#values`; add `id="doctors"` on that section.</action>
+ <reason>Treatments → doctors is a stronger trust narrative for the look-only preview; no change to locked solo patient homepage blades.</reason>
+</decision>
+
+## 2026-08-06T13:58:53+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Owner asked the Clireo preview treatments carousel to show four fully focused cards in the main viewport with one dimmed peek on each side, and to loop infinitely when scrolling or using arrows.</context>
+ <action>In `public/previews/clireo-homepage.html`: desktop `--treat-visible` changes from `3.5` to `6` (4 focused + 2 side peeks); JS clones the five treatment cards prepend/append for seamless infinite scroll, jumps scroll position when entering clone zones, and dims first/last visible cards (plus any clipped cards) via `.is-dim`. Mobile/tablet peek counts unchanged.</action>
+ <reason>Matches owner’s Clireo carousel reference without touching locked solo homepage blades.</reason>
+</decision>
+
+## 2026-08-06T14:05:00+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Owner shared Clireo desktop treatments reference showing three fully focused center cards with one dimmed peek on each side (not four focused).</context>
+ <action>In `public/previews/clireo-homepage.html`: desktop `--treat-visible` changes from `6` to `5` (3 focused + 2 side peeks); keep `--treat-gap: 24px` and existing infinite-loop clone + `.is-dim` edge logic unchanged.</action>
+ <reason>Matches the owner’s reference image: scalable viewport cards, 24px gaps, three bright center cards with non-focused side peeks.</reason>
+</decision>
+
+## 2026-08-06T14:15:00+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Owner wanted every Clireo preview section to scroll in with strict top-to-bottom order: eyebrow → heading → sub-description → cards → footer text — not independent per-element reveals.</context>
+ <action>In `public/previews/clireo-homepage.html`: add `data-reveal-section` + numbered `data-reveal-step` markers on About, Treatments, Doctors, Values, Reviews, Why choose, Approach, Blog, FAQ, and Final CTA; replace global `.reveal` IntersectionObserver for section content with a section orchestrator (fade, word-reveal heading, staggered cards); fold About’s one-off `showAboutFollowers` into the same system; hero stays immediate; `prefers-reduced-motion` shows all instantly.</action>
+ <reason>Consistent reading-order entrance animation across the look-only Clireo preview without touching locked solo homepage blades.</reason>
+</decision>
+
+## 2026-08-06T16:12:00+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Owner clarified section reveals should not use predefined step numbers — whatever content is visually first from the top should animate first, and whatever is last should animate last.</context>
+ <action>In `public/previews/clireo-homepage.html`: replace numbered `data-reveal-step` with `data-reveal-block`; section orchestrator now sorts blocks by visual top position (then left) at reveal time and runs them in that order — no hardcoded sequence numbers.</action>
+ <reason>Flexible top-to-bottom entrance that follows actual layout order as sections evolve, without maintaining step indices per section.</reason>
+</decision>
+
+## 2026-08-06T16:18:00+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Owner removed Our Approach from the Clireo preview and reported hero sub-copy, rating row, and booking card were visible on load before the headline finished animating.</context>
+ <action>Delete the Approach section (HTML, CSS, tab JS) from `public/previews/clireo-homepage.html`. Hero joins `data-reveal-section`: backed row, lead, rating, and book form start hidden and reveal top-to-bottom after ~1.1s headline word animation; removed immediate hero `.is-in` forcing.</action>
+ <reason>Cleaner preview scope and headline-first hero entrance without flashing secondary hero content on load.</reason>
+</decision>
+
+## 2026-08-06T16:48:00+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Owner asked to remove Our Values and Why Choose Clireo from the preview and align the reviews block with the Clireo template Treatment Results section and its scroll-in animation pattern.</context>
+ <action>In `public/previews/clireo-homepage.html`: delete `#values` and `#why-choose` sections; rebuild `#reviews` as template Treatment Results (eyebrow, “Real Results From Before &amp; After Treatment” heading, review scroller, Google 4.8 row, book CTA) with centered header and top-to-bottom `data-reveal-block` sequence (heading word reveal → scroller fade → footer row fade).</action>
+ <reason>Matches Clireo template section copy/structure without restoring the old before/after slider; keeps Framer-like section entrance on the look-only preview.</reason>
+</decision>
+
+## 2026-08-06T16:58:00+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Owner clarified they wanted Why Choose Clireo restored with the same top-to-bottom section reveal pattern as the Clireo template (not removed).</context>
+ <action>Re-add `#why-choose` after `#reviews` in `public/previews/clireo-homepage.html`: eyebrow → heading word reveal → section lead → Book Consultation CTA → 4-card grid, each as `data-reveal-block` in visual order (grid fades as one block, not per-card stagger).</action>
+ <reason>Template-like section entrance without cards animating out of reading order.</reason>
+</decision>
+
+## 2026-08-06T17:04:00+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Owner shared Clireo template screenshot for Why Choose: centered copy with navy floating cards on diagonal corners (not a 4-column grid).</context>
+ <action>Rebuild `#why-choose` in `public/previews/clireo-homepage.html` as `.why-choose-stage` with centered core (eyebrow → heading word reveal → lead → `btn-about` CTA) and absolutely positioned `.why-float-card` slots (tl/br on tablet+, four corners on desktop); cards fade in as a group after core via `data-reveal-priority`; pink icons in white boxes on navy cards.</action>
+ <reason>Matches Clireo template layout and scroll entrance pattern in the look-only preview.</reason>
+</decision>
+
+## 2026-08-06T17:09:00+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Owner asked to remove Why Choose Clireo and make the About section load/reveal faster.</context>
+ <action>Delete `#why-choose` section and its CSS from `public/previews/clireo-homepage.html`. Speed up `#about`: faster word-reveal interval (24ms), shorter settle (320ms), 200ms step gaps, 0.4s fades; feature cards fade in as one block instead of stagger.</action>
+ <reason>Leaner preview and snappier About entrance after hero.</reason>
+</decision>
+
+## 2026-08-06T17:13:00+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Owner asked to apply the same faster section reveal timing used on About to all other Clireo preview sections.</context>
+ <action>Global fast reveal in `public/previews/clireo-homepage.html`: 0.4s fades, 0.45s heading words, 24ms word interval / 320ms settle, 200ms step gaps (hero stays 160ms); doctors + blog card grids fade as one block instead of stagger.</action>
+ <reason>Consistent snappy scroll-in across the look-only preview.</reason>
+</decision>
+
+## 2026-08-06T17:14:00+0600
+
+<decision>
+ <category>Content</category>
+ <context>Owner asked to change the Clireo preview contents based on https://www.facebook.com/cbphbd.</context>
+ <action>Rebrand preview copy to Chattogram Best Physiotherapy Hospital (CBPH): hero/about/services/doctors/reviews/blog/FAQ/CTA/footer updated with physiotherapy rehab focus, Panchlaish address, phone numbers 01630-078675 &amp; 01882-373894, Facebook links, and verified team names (Dr. Antar Das, Batia Nahar Ahsan, Dr. Mohammad Golam Eazdani). Clireo template layout and motion unchanged.</action>
+ <reason>Look-only preview now reflects the owner’s CBPH Facebook reference while keeping the approved Clireo shell.</reason>
+</decision>
+
+## 2026-08-06T17:22:00+0600
+
+<decision>
+ <category>Content</category>
+ <context>Owner asked to replace Western placeholder photos with Asian imagery in the CBPH preview.</context>
+ <action>Swap hero/CTA backgrounds, avatars, service cards, team portraits, reviews, blog, and FAQ images in `public/previews/clireo-homepage.html` to Unsplash/Pexels Asian &amp; South Asian physiotherapy and portrait photos. Decorative SVG icons left unchanged.</action>
+ <reason>Preview visuals better match CBPH’s Chattogram audience; stock icons retained for UI consistency.</reason>
+</decision>
+
+## 2026-08-06T18:42:00+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Owner approved the CBPH Clireo preview (`public/previews/clireo-homepage.html`) after iterative review and said to use this design for clinic patient sites going forward.</context>
+ <action>Establish `public/previews/clireo-homepage.html` as the canonical **clinic-tier homepage design reference** (Clireo layout + Getwebfield spacing + CBPH demo content). Future clinic Blade work (`tenant/webpage.blade.php`, `tenant/sections/*`) should follow this mock — not the interim solo-style clinic shell from 2026-08-05. Solo homepage blades stay locked. The static file remains the showroom until live templates are migrated; booking CTAs there are still not wired to Doctor Gemini.</action>
+ <reason>Locks the approved clinic visual direction in project memory so agents and implementers do not revert to DM Sans / solo-style clinic chrome or re-litigate the Alvion/Clireo choice.</reason>
+</decision>

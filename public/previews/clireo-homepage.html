@@ -1,0 +1,2052 @@
+<!DOCTYPE html>
+<!-- Clinic-tier homepage design reference (approved 2026-08-06). Canonical path: public/previews/clireo-homepage.html. Live tenant/webpage.blade.php not yet migrated. Solo homepage blades are locked separately. -->
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CBPH — Chattogram Best Physiotherapy Hospital · Clinic Design Reference</title>
+  <meta name="robots" content="noindex">
+  <link rel="icon" href="/images/cbph-logo.png" type="image/png">
+  <link rel="apple-touch-icon" href="/images/cbph-logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/css/getwebfield-spacing.css">
+  <style>
+    :root {
+      --navy: #1B2978;
+      --navy-deep: #0E1954;
+      --pink: #FA84E0;
+      --pink-2: #FF6BCB;
+      --bg: #F5F7F7;
+      --white: #ffffff;
+      --muted: #6B7399;
+      --line: #E4E8F0;
+      --font: "Golos Text", system-ui, sans-serif;
+      --radius: 16px;
+      --ease: cubic-bezier(0.22, 1, 0.36, 1);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      font-family: var(--font);
+      color: var(--navy);
+      background: var(--bg);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+    a { color: inherit; text-decoration: none; }
+    img { max-width: 100%; display: block; }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; border: 0; background: none; }
+
+    /* Nav — sits above hero in document flow */
+    .nav {
+      position: relative; z-index: 30;
+      background: var(--white);
+      border-bottom: 1px solid var(--line);
+      padding: var(--space-md) var(--space-section-x);
+    }
+    .nav-inner {
+      max-width: var(--layout-max-width); margin: 0 auto;
+      display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+    }
+    .logo {
+      display: inline-flex; align-items: center; gap: 0.45rem;
+      color: var(--navy); font-weight: 700; font-size: 1.2rem;
+    }
+    .logo-img {
+      height: clamp(3.5rem, 5vw, 4rem);
+      width: auto;
+      display: block;
+    }
+    .logo-img--footer {
+      height: clamp(3.75rem, 6vw, 4.5rem);
+      width: auto;
+    }
+    .logo-img--sm {
+      height: 3rem;
+      width: auto;
+    }
+    .logo-img--drawer {
+      height: 3.5rem;
+      width: auto;
+    }
+    .nav-links { display: none; gap: 1.5rem; align-items: center; }
+    .nav-links a { color: var(--muted); font-size: 0.95rem; font-weight: 500; }
+    .nav-links a:hover { color: var(--navy); }
+    .btn-contact {
+      display: none; background: var(--navy); color: var(--white);
+      border-radius: 11px; padding: 0.7rem 1.15rem; font-weight: 600; font-size: 0.9rem;
+    }
+    .nav-burger {
+      width: 2.5rem; height: 2.5rem; border-radius: 50%;
+      background: var(--bg); color: var(--navy);
+      display: grid; place-items: center;
+    }
+    @media (min-width: 900px) {
+      .nav-links { display: flex !important; }
+      .btn-contact { display: inline-flex !important; }
+      .nav-burger { display: none !important; }
+    }
+
+    /* Hero */
+    .hero {
+      position: relative; min-height: 100vh; min-height: 100dvh;
+      color: var(--white); display: flex; align-items: center;
+      padding-top: var(--space-section-y);
+      padding-bottom: var(--space-section-y);
+      overflow: hidden;
+    }
+    .hero-bg {
+      position: absolute; inset: 0;
+      background:
+        linear-gradient(90deg, rgba(14,25,84,0.92) 0%, rgba(27,41,120,0.72) 42%, rgba(27,41,120,0.15) 100%),
+        url("https://images.pexels.com/photos/7579833/pexels-photo-7579833.jpeg?auto=compress&cs=tinysrgb&w=2400")
+          center / cover no-repeat;
+    }
+    .hero .grid-hero { position: relative; z-index: 2; }
+    @media (min-width: 1200px) {
+      .hero .grid-hero { align-items: center; }
+    }
+    .backed {
+      display: inline-flex; align-items: center; gap: 0.65rem;
+      margin-bottom: 1.25rem; font-size: 0.9rem;
+    }
+    .backed-avs { display: flex; }
+    .backed-avs img {
+      width: 2.1rem; height: 2.1rem; border-radius: 50%; object-fit: cover;
+      border: 2px solid rgba(255,255,255,0.35); margin-left: -0.45rem;
+    }
+    .backed-avs img:first-child { margin-left: 0; }
+    .hero-lead {
+      margin: 1.25rem 0 0; max-width: 32rem;
+      color: rgba(255,255,255,0.82); font-size: 1.05rem;
+    }
+    .rating-row {
+      display: flex; flex-wrap: wrap; align-items: center; gap: 0.85rem;
+      margin-top: 2rem;
+    }
+    .rating-score {
+      font-size: clamp(2.75rem, 4vw + 1rem, 5.625rem); /* Framer 90px */
+      font-weight: 400; line-height: 0.98; letter-spacing: -0.064em;
+    }
+    .rating-avs { display: flex; align-items: center; }
+    .rating-avs img {
+      width: 2.25rem; height: 2.25rem; border-radius: 50%; object-fit: cover;
+      border: 2px solid rgba(255,255,255,0.4); margin-left: -0.4rem;
+    }
+    .rating-avs img:first-child { margin-left: 0; }
+    .rating-plus {
+      width: 2.25rem; height: 2.25rem; border-radius: 50%; margin-left: -0.4rem;
+      background: var(--pink); color: var(--navy-deep);
+      display: grid; place-items: center; font-weight: 700;
+    }
+    .rating-copy { max-width: 11rem; font-size: 0.9rem; color: rgba(255,255,255,0.85); }
+
+    .book-card {
+      background: var(--white); color: var(--navy);
+      border-radius: 20px;
+      box-shadow: 0 24px 60px rgba(14,25,84,0.22);
+    }
+    .book-card h2 { margin: 0 0 1.15rem; font-size: 1.625rem; font-weight: 400; letter-spacing: -0.035em; line-height: 1.2; color: var(--navy-deep); }
+    .field { margin-bottom: 0.85rem; }
+    .field label {
+      display: block; font-size: 0.8rem; font-weight: 600; color: var(--navy-deep); margin-bottom: 0.35rem;
+    }
+    .field input, .field select, .field textarea {
+      width: 100%; border: 1px solid var(--line); border-radius: 10px;
+      padding: 0.75rem 0.85rem; background: #fafbfc; color: var(--navy-deep); outline: none;
+    }
+    .field select {
+      padding-right: 2.25rem;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8' fill='none'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%231B2978' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 0.85rem center;
+      background-size: 0.75rem;
+    }
+    .field input[type="date"] {
+      padding-right: 0.65rem;
+    }
+    .field input:focus, .field select:focus, .field textarea:focus { border-color: var(--navy); }
+    .field-row { display: grid; gap: 0.65rem; }
+    @media (min-width: 480px) { .field-row { grid-template-columns: 1fr 1fr; } }
+    .field textarea { min-height: 5.5rem; resize: vertical; }
+    .btn-pink {
+      display: inline-flex; align-items: center; justify-content: center; width: 100%;
+      border-radius: 40px; padding: 0.95rem 1.25rem; font-weight: 600;
+      color: #111; background: linear-gradient(90deg, var(--pink), var(--pink-2));
+      transition: transform 0.25s var(--ease), filter 0.2s ease;
+    }
+    .btn-pink:hover { transform: translateY(-1px); filter: brightness(1.03); }
+    .btn-pink.sm { width: auto; padding: 0.8rem 1.35rem; }
+    .btn-navy {
+      display: inline-flex; align-items: center; justify-content: center; gap: 0.4rem;
+      background: var(--navy); color: var(--white); border-radius: 14px;
+      padding: 0.85rem 1.25rem; font-weight: 600;
+      transition: transform 0.25s var(--ease);
+    }
+    .btn-navy:hover { transform: translateY(-1px); }
+    .btn-outline {
+      display: inline-flex; align-items: center; gap: 0.35rem;
+      border: 1px solid color-mix(in srgb, var(--navy) 25%, transparent);
+      border-radius: 14px; padding: 0.8rem 1.15rem; font-weight: 600; color: var(--navy);
+      background: var(--white);
+    }
+
+    /* Sections use .space-section from Getwebfield */
+    .eyebrow {
+      display: inline-flex; align-items: center; gap: 0.4rem;
+      font-size: 0.78rem; font-weight: 700; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--muted); margin-bottom: 0.85rem;
+    }
+    .eyebrow::before {
+      content: ""; width: 0.55rem; height: 0.55rem; border-radius: 2px; background: var(--navy);
+    }
+
+    /*
+      Clireo / Framer type scale (desktop measured on clireo.framer.website @ 1920):
+      H1 90 · H2-xl 54 · H2-lg 46 · H2-md 40 · H3-marquee 74 · H4/card 26
+    */
+    h2.fx-heading,
+    .space-section > .layout-container > h2,
+    .stack-header h2,
+    .stack-header .fx-heading {
+      margin: 0;
+      font-size: clamp(2rem, 1.2rem + 2.2vw, 3.375rem); /* → 54px */
+      font-weight: 400;
+      letter-spacing: -0.06em;
+      line-height: 1.04;
+      color: var(--navy);
+    }
+    /* 46px tier — treatments, reviews, blog */
+    #treatments h2.fx-heading,
+    #reviews h2.fx-heading,
+    #blog h2.fx-heading {
+      font-size: clamp(1.75rem, 1.1rem + 1.8vw, 2.875rem); /* → 46px */
+      letter-spacing: -0.055em;
+      line-height: 1.08;
+    }
+    .section-lead { margin: 0.85rem 0 0; color: var(--muted); max-width: 40rem; font-size: 1.05rem; }
+    .center { text-align: center; }
+    .center .section-lead, .center h2 { margin-left: auto; margin-right: auto; }
+
+    /* About — centered statement + 3 equal cards (Clireo layout) */
+    .about-head { max-width: 45rem; margin: 0 auto; text-align: center; }
+    .about-head h2,
+    .about-head h2.fx-heading {
+      font-size: clamp(1.5rem, 1rem + 1.5vw, 2.5rem); /* → 40px */
+      color: var(--navy);
+      font-weight: 400;
+      letter-spacing: -0.068em;
+      line-height: 1.12;
+    }
+    .about-head h2 em,
+    .about-head h2 .fx-em { font-style: normal; color: var(--navy); }
+
+    .about-cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 1.25rem 1.75rem;
+      margin-top: 1.75rem;
+    }
+    .btn-about {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.85rem;
+      background: var(--white);
+      color: var(--navy-deep);
+      font-weight: 500;
+      font-size: 0.95rem;
+      padding: 0.35rem 0.35rem 0.35rem 1.35rem;
+      border-radius: 16px;
+      box-shadow:
+        rgba(26, 40, 120, 0.06) 0 0.6px 0.6px -1.25px,
+        rgba(26, 40, 120, 0.05) 0 2.3px 2.3px -2.5px,
+        rgba(26, 40, 120, 0.02) 0 10px 10px -3.75px;
+      transition: transform 0.25s var(--ease);
+    }
+    .btn-about:hover { transform: translateY(-2px); }
+    .btn-about .arrow {
+      width: 2.35rem;
+      height: 2.35rem;
+      border-radius: 12px;
+      background: var(--navy);
+      color: var(--white);
+      display: grid;
+      place-items: center;
+      flex-shrink: 0;
+    }
+    .btn-about .arrow svg { width: 0.95rem; height: 0.95rem; }
+
+    .about-trust {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.7rem;
+      text-align: left;
+    }
+    .about-trust-avs { display: flex; }
+    .about-trust-avs img {
+      width: 2.35rem;
+      height: 2.35rem;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid var(--white);
+      margin-left: -0.55rem;
+      box-shadow: 0 2px 8px rgba(27, 41, 120, 0.12);
+    }
+    .about-trust-avs img:first-child { margin-left: 0; }
+    .about-trust-copy {
+      font-size: 0.82rem;
+      line-height: 1.25;
+      color: var(--muted);
+    }
+    .about-trust-copy strong {
+      display: block;
+      color: var(--navy);
+      font-weight: 600;
+      font-size: 0.9rem;
+    }
+
+    .about-features {
+      display: grid;
+      gap: var(--space-lg);
+      margin-top: var(--space-xxl);
+      /* Mobile: horizontal swipe, ~1.2 cards in view */
+      grid-auto-flow: column;
+      grid-auto-columns: calc((100% - var(--space-lg)) / 1.2);
+      overflow-x: auto;
+      overflow-y: hidden;
+      scroll-snap-type: x mandatory;
+      scroll-padding-inline: 0;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-x: contain;
+      padding-bottom: 0.35rem;
+      scrollbar-width: thin;
+    }
+    .about-features::-webkit-scrollbar { height: 4px; }
+    .about-features::-webkit-scrollbar-thumb {
+      background: #c9d0e8; border-radius: 99px;
+    }
+    @media (min-width: 900px) {
+      .about-features {
+        grid-auto-flow: row;
+        grid-auto-columns: unset;
+        grid-template-columns: repeat(3, 1fr);
+        overflow: visible;
+        scroll-snap-type: none;
+        padding-bottom: 0;
+      }
+    }
+    .about-feature {
+      background: var(--white);
+      border-radius: 16px;
+      padding: 1.85rem 1.75rem;
+      box-shadow:
+        rgba(26, 40, 120, 0.04) 0 0.6px 0.6px -1.25px,
+        rgba(26, 40, 120, 0.04) 0 2.3px 2.3px -2.5px,
+        rgba(26, 40, 120, 0.02) 0 10px 10px -3.75px;
+      text-align: left;
+      scroll-snap-align: start;
+      min-width: 0;
+    }
+    .about-feature .icon {
+      width: 3.1rem;
+      height: 3.1rem;
+      margin-bottom: 1.15rem;
+      display: grid;
+      place-items: center;
+    }
+    .about-feature .icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    .about-feature h3 {
+      margin: 0 0 0.55rem;
+      font-size: 1.625rem;
+      font-weight: 400;
+      letter-spacing: -0.035em;
+      line-height: 1.2;
+      color: var(--navy);
+    }
+    .about-feature p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.95rem;
+      line-height: 1.55;
+    }
+
+    /* Section reveal — top-to-bottom by visual position on scroll-in */
+    [data-reveal-section] [data-reveal-block][data-reveal-kind="fade"] {
+      opacity: 0;
+      transform: translateY(22px);
+      transition: opacity 0.4s var(--ease), transform 0.4s var(--ease);
+      pointer-events: none;
+    }
+    [data-reveal-section] [data-reveal-block][data-reveal-kind="fade"].is-in {
+      opacity: 1;
+      transform: none;
+      pointer-events: auto;
+    }
+    [data-reveal-section] [data-reveal-block][data-reveal-kind="heading"] {
+      opacity: 1;
+      transform: none;
+    }
+    [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"] {
+      opacity: 1;
+      transform: none;
+    }
+    [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"] .about-feature,
+    [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"] .treat-card:not([data-treat-clone]),
+    [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"] .doc-card,
+    [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"] .why-card,
+    [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"] .review-card,
+    [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"] .blog-card {
+      opacity: 0;
+      transform: translateY(22px);
+      transition: opacity 0.4s var(--ease), transform 0.4s var(--ease);
+      pointer-events: none;
+    }
+    [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"] .about-feature.is-in,
+    [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"] .treat-card:not([data-treat-clone]).is-in,
+    [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"] .doc-card.is-in,
+    [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"] .why-card.is-in,
+    [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"] .review-card.is-in,
+    [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"] .blog-card.is-in {
+      opacity: 1;
+      transform: none;
+      pointer-events: auto;
+    }
+
+    /* Marquee — Clireo specialty ticker */
+    .marquee {
+      overflow: hidden;
+      padding: clamp(1.5rem, 3vw, 2.25rem) 0;
+      background: var(--bg);
+      border: 0;
+      -webkit-mask-image: linear-gradient(
+        90deg,
+        transparent 0%,
+        #000 7%,
+        #000 93%,
+        transparent 100%
+      );
+      mask-image: linear-gradient(
+        90deg,
+        transparent 0%,
+        #000 7%,
+        #000 93%,
+        transparent 100%
+      );
+    }
+    .marquee-track {
+      display: flex;
+      width: max-content;
+      gap: 0;
+      animation: marquee 28s linear infinite;
+      will-change: transform;
+    }
+    .marquee-group {
+      display: inline-flex;
+      align-items: center;
+      gap: clamp(1.5rem, 3vw, 2.75rem);
+      padding-right: clamp(1.5rem, 3vw, 2.75rem);
+      white-space: nowrap;
+      font-size: clamp(2.75rem, 6.5vw, 4.625rem); /* ~44→74px */
+      font-weight: 400;
+      color: var(--navy);
+      letter-spacing: -0.062em;
+      line-height: 1.01;
+    }
+    .marquee-group span {
+      display: inline-block;
+    }
+    .marquee-group i {
+      width: 0.28em;
+      height: 0.28em;
+      flex: 0 0 auto;
+      display: inline-block;
+      background: var(--navy);
+      opacity: 0.55;
+      /* 8-point sparkle (Clireo) */
+      clip-path: polygon(
+        50% 0%,
+        58% 42%,
+        100% 50%,
+        58% 58%,
+        50% 100%,
+        42% 58%,
+        0% 50%,
+        42% 42%
+      );
+    }
+    @keyframes marquee {
+      from { transform: translateX(0); }
+      to { transform: translateX(-50%); }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .marquee-track { animation: none; }
+    }
+
+    /* Treatments — dark navy band + image-overlay cards (Clireo) */
+    #treatments {
+      background: var(--navy);
+      color: var(--white);
+    }
+    #treatments .eyebrow {
+      color: rgba(255, 255, 255, 0.72);
+    }
+    #treatments .eyebrow::before {
+      background: var(--pink);
+    }
+    #treatments h2.fx-heading {
+      color: var(--white);
+    }
+    #treatments .btn-outline {
+      background: rgba(255, 255, 255, 0.08);
+      border-color: rgba(255, 255, 255, 0.28);
+      color: var(--white);
+    }
+    #treatments .btn-outline:hover {
+      background: rgba(255, 255, 255, 0.14);
+    }
+    .treat-head {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 1.25rem;
+      align-items: end;
+      margin-bottom: var(--space-xxl);
+    }
+    .treat-stage {
+      position: relative;
+    }
+    @media (min-width: 1200px) {
+      .treat-stage:not(.is-positioned) .treat-scroller {
+        visibility: hidden;
+      }
+    }
+    .treat-scroller {
+      display: grid;
+      grid-auto-flow: column;
+      /* Mobile: ~1.8 cards in view */
+      grid-auto-columns: calc((100% - var(--space-lg)) / 1.8);
+      gap: var(--space-lg);
+      overflow-x: auto;
+      overflow-y: hidden;
+      scroll-snap-type: x mandatory;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-x: contain;
+      padding-bottom: 0.35rem;
+      scrollbar-width: thin;
+    }
+    /* Tablet (Getwebfield ≥640): ~2.5 cards */
+    @media (min-width: 640px) and (max-width: 1199px) {
+      .treat-scroller {
+        gap: var(--space-xl);
+        grid-auto-columns: calc((100% - 1.5 * var(--space-xl)) / 2.5);
+      }
+    }
+    /*
+      Desktop: full-bleed stage, 24px gaps, 5 cards in view
+      (3 focused center + 1 dim peek each side). Edge cards get .is-dim.
+    */
+    @media (min-width: 1200px) {
+      .treat-stage {
+        width: 100vw;
+        max-width: 100vw;
+        margin-left: calc(50% - 50vw);
+        margin-right: calc(50% - 50vw);
+      }
+      .treat-scroller {
+        --treat-gap: 24px;
+        --treat-visible: 5;
+        gap: var(--treat-gap);
+        grid-auto-columns: calc(
+          (100vw - (var(--treat-visible) - 1) * var(--treat-gap)) / var(--treat-visible)
+        );
+        padding-bottom: 0;
+        scrollbar-width: none;
+        scroll-snap-type: x proximity;
+      }
+      .treat-scroller::-webkit-scrollbar { display: none; }
+      .treat-nav {
+        justify-content: center;
+        margin-top: 1.75rem;
+      }
+      .treat-nav p { display: none; }
+      #treatments .arrow-btn {
+        width: 3rem;
+        height: 3rem;
+        border-color: rgba(255, 255, 255, 0.55);
+        background: rgba(255, 255, 255, 0.1);
+      }
+    }
+    .treat-scroller::-webkit-scrollbar { height: 4px; }
+    .treat-scroller::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.28); border-radius: 99px;
+    }
+    .treat-card {
+      scroll-snap-align: center;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      width: 100%;
+      min-width: 0;
+      min-height: 0;
+      aspect-ratio: 0.82;
+      background: var(--navy-deep);
+      border-radius: 18px;
+      overflow: hidden;
+      border: 0;
+      color: var(--white);
+      transition: transform 0.35s var(--ease), box-shadow 0.35s var(--ease);
+    }
+    .treat-card::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 3;
+      border-radius: inherit;
+      background: color-mix(in srgb, var(--navy) 62%, transparent);
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.4s var(--ease);
+    }
+    .treat-card.is-dim::after {
+      opacity: 1;
+    }
+    .treat-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 24px 50px rgba(0, 0, 0, 0.28);
+    }
+    .treat-card.is-dim:hover {
+      transform: none;
+      box-shadow: none;
+    }
+    .treat-card .media {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      -webkit-mask-image: linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.22) 0%,
+        rgba(0, 0, 0, 0.92) 42%,
+        #000 52%
+      );
+      mask-image: linear-gradient(
+        0deg,
+        rgba(0, 0, 0, 0.22) 0%,
+        rgba(0, 0, 0, 0.92) 42%,
+        #000 52%
+      );
+    }
+    .treat-card .media img.cover {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.55s var(--ease);
+    }
+    .treat-card:not(.is-dim):hover .media img.cover {
+      transform: scale(1.04);
+    }
+    .treat-card .body {
+      position: relative;
+      z-index: 2;
+      padding: 1.25rem 1.3rem 1.45rem;
+    }
+    .treat-card .icon {
+      width: 2.55rem;
+      height: 2.55rem;
+      margin-bottom: 0.85rem;
+      display: grid;
+      place-items: center;
+      background: rgba(255, 255, 255, 0.14);
+      padding: 0.5rem;
+      border-radius: 10px;
+      filter: brightness(0) invert(1);
+    }
+    .treat-card .icon img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+    .treat-card h3 {
+      margin: 0 0 0.4rem;
+      font-size: 1.625rem;
+      font-weight: 400;
+      letter-spacing: -0.035em;
+      line-height: 1.2;
+      color: var(--white);
+    }
+    .treat-card p {
+      margin: 0;
+      color: rgba(255, 255, 255, 0.82);
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }
+    .treat-nav {
+      display: flex;
+      gap: 0.75rem;
+      margin-top: 1.5rem;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .treat-nav p {
+      margin: 0;
+      color: rgba(255, 255, 255, 0.65);
+      font-size: 0.92rem;
+      max-width: 28rem;
+    }
+    .treat-arrows { display: flex; gap: 0.55rem; }
+    #treatments .arrow-btn {
+      width: 2.5rem;
+      height: 2.5rem;
+      border-radius: 50%;
+      border: 1px solid rgba(255, 255, 255, 0.28);
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--white);
+      display: grid;
+      place-items: center;
+      font-size: 1rem;
+      transition: background 0.2s ease, border-color 0.2s ease;
+    }
+    #treatments .arrow-btn:hover {
+      background: rgba(255, 255, 255, 0.16);
+      border-color: rgba(255, 255, 255, 0.45);
+    }
+    .arrow-btn {
+      width: 2.5rem; height: 2.5rem; border-radius: 50%; border: 1px solid var(--line);
+      background: var(--white); color: var(--navy); display: grid; place-items: center; font-size: 1rem;
+    }
+
+
+    /* Reviews / Treatment results */
+    .reviews { background: var(--white); }
+    .reviews .stack-header.is-center { max-width: 52rem; margin: 0 auto; }
+    .review-scroller {
+      display: grid; grid-auto-flow: column; grid-auto-columns: minmax(17rem, 20rem);
+      gap: var(--space-lg); overflow-x: auto; scroll-snap-type: x mandatory; margin-top: var(--space-xxl);
+      padding-bottom: 0.5rem;
+      -webkit-overflow-scrolling: touch;
+    }
+    .review-card {
+      scroll-snap-align: start; background: var(--bg); border-radius: 18px; padding: 1.35rem;
+    }
+    .review-card p { margin: 0 0 1.25rem; font-size: 0.98rem; color: var(--navy-deep); }
+    .review-person { display: flex; align-items: center; gap: 0.75rem; }
+    .review-person img { width: 2.75rem; height: 2.75rem; border-radius: 50%; object-fit: cover; }
+    .review-person strong { display: block; font-size: 0.95rem; }
+    .review-person span { font-size: 0.8rem; color: var(--muted); }
+    .google-row {
+      display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+      gap: 1rem; margin-top: 1.75rem; padding-top: 1.25rem; border-top: 1px solid var(--line);
+    }
+    .google-score { display: flex; align-items: center; gap: 0.65rem; font-weight: 600; }
+    .google-score .logo-img--sm { flex: 0 0 auto; }
+
+    /* Doctors — uses .grid-cards */
+    .doc-grid { margin-top: var(--space-xxl); }
+    .doc-card { border-radius: 18px; overflow: hidden; background: var(--white); }
+    .doc-card img {
+      width: 100%; aspect-ratio: 3/4; object-fit: cover; object-position: center center;
+    }
+    .doc-card .meta { padding: 0.95rem 1rem 1.15rem; }
+    .doc-card h3 { margin: 0; font-size: 1rem; font-weight: 600; }
+    .doc-card span { font-size: 0.82rem; color: var(--muted); }
+
+    /* Stats */
+    .stats-band {
+      margin-top: var(--space-xxl); background: var(--navy); color: var(--white);
+      border-radius: 22px; text-align: center;
+    }
+    .stats-band h3 { margin: 0 0 1.5rem; font-size: clamp(1.5rem, 1rem + 1.5vw, 2.5rem); font-weight: 400; letter-spacing: -0.045em; line-height: 1.1; }
+    .stat .num { font-size: clamp(2rem, 4vw, 2.75rem); font-weight: 500; line-height: 1; }
+    .stat .lbl { margin-top: 0.35rem; font-size: 0.88rem; color: rgba(255,255,255,0.7); }
+
+    /* Blog — uses .grid-cards */
+    .blog-grid { margin-top: var(--space-xxl); }
+    .blog-card {
+      background: var(--white); border-radius: 18px; overflow: hidden;
+      transition: transform 0.3s var(--ease);
+    }
+    .blog-card:hover { transform: translateY(-3px); }
+    .blog-card img { width: 100%; aspect-ratio: 4/3; object-fit: cover; }
+    .blog-card .body { padding: 1.1rem 1.15rem 1.35rem; }
+    .blog-meta { font-size: 0.78rem; color: var(--muted); margin-bottom: 0.4rem; }
+    .blog-card h3 { margin: 0; font-size: 1.05rem; font-weight: 600; letter-spacing: -0.01em; }
+
+    /* FAQ */
+    .faq { background: var(--white); }
+    .faq-layout {
+      display: grid; gap: var(--space-xl); margin-top: var(--space-xxl);
+    }
+    @media (min-width: 900px) { .faq-layout { grid-template-columns: 0.85fr 1.15fr; align-items: start; } }
+    .faq-promo {
+      position: relative; border-radius: 20px; overflow: hidden; min-height: 22rem;
+      color: var(--white);
+    }
+    .faq-promo img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+    .faq-promo .overlay {
+      position: relative; z-index: 2; height: 100%; min-height: 22rem;
+      display: flex; flex-direction: column; justify-content: flex-end;
+      padding: 1.5rem; background: linear-gradient(transparent 30%, rgba(14,25,84,0.88));
+    }
+    .faq-promo h3 { margin: 0 0 1rem; font-size: clamp(1.5rem, 1rem + 1.2vw, 2rem); font-weight: 400; letter-spacing: -0.04em; line-height: 1.15; }
+    .faq-list { display: grid; gap: 0.65rem; }
+    .faq-item {
+      border: 1px solid var(--line); border-radius: 14px; background: var(--bg); overflow: hidden;
+    }
+    .faq-item summary {
+      list-style: none; cursor: pointer; padding: 1rem 1.15rem; font-weight: 600;
+      display: flex; justify-content: space-between; gap: 1rem; align-items: center;
+    }
+    .faq-item summary::-webkit-details-marker { display: none; }
+    .faq-item summary::after { content: "+"; color: var(--muted); font-size: 1.2rem; }
+    .faq-item[open] summary::after { content: "–"; }
+    .faq-item .ans { padding: 0 1.15rem 1.1rem; color: var(--muted); font-size: 0.92rem; }
+
+    /* Final CTA */
+    .final-cta {
+      position: relative; border-radius: 0; overflow: hidden; color: var(--white);
+      text-align: center;
+      min-height: 80vh;
+      min-height: 80dvh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding-top: var(--space-lg);
+      padding-bottom: var(--space-lg);
+    }
+    .final-cta-bg {
+      position: absolute; inset: 0;
+      background:
+        linear-gradient(rgba(14,25,84,0.78), rgba(14,25,84,0.78)),
+        url("https://images.pexels.com/photos/8460157/pexels-photo-8460157.jpeg?auto=compress&cs=tinysrgb&w=2400")
+          center / cover no-repeat;
+    }
+    .final-cta .layout-container {
+      position: relative; z-index: 2; width: 100%;
+    }
+    .final-cta .wrap { position: relative; z-index: 2; }
+    .final-cta h2,
+    .final-cta h2.fx-heading {
+      margin: 0 0 0.5rem; color: var(--white);
+      font-size: clamp(2rem, 1.2rem + 2.2vw, 3.375rem); /* → 54px */
+      font-weight: 400;
+      letter-spacing: -0.06em;
+      line-height: 1.04;
+    }
+    .final-cta p { margin: 0 auto 0.65rem; max-width: 32rem; color: rgba(255,255,255,0.82); }
+    .trust-mini { margin-top: 0.85rem; font-size: 0.9rem; color: rgba(255,255,255,0.75); }
+
+    /* Footer */
+    .footer {
+      background: var(--white); color: var(--muted);
+    }
+    .footer .logo { display: inline-flex; margin-bottom: 0.75rem; }
+    .footer-top {
+      display: grid; gap: 2rem; padding-bottom: 2rem; border-bottom: 1px solid var(--line);
+    }
+    @media (min-width: 900px) {
+      .footer-top { grid-template-columns: 1.2fr 0.8fr 0.8fr 0.8fr; }
+    }
+    .footer h3 { margin: 0 0 0.85rem; color: var(--navy-deep); font-size: 0.95rem; font-weight: 600; }
+    .footer a { display: block; padding: 0.28rem 0; font-size: 0.92rem; color: var(--navy); }
+    .footer a:hover { color: var(--pink-2); }
+    .newsletter {
+      display: flex; gap: 0.5rem; margin-top: 0.85rem;
+    }
+    .newsletter input {
+      flex: 1; border-radius: 999px; border: 1px solid var(--line);
+      background: var(--bg); color: var(--navy-deep); padding: 0.75rem 1rem; outline: none;
+    }
+    .newsletter input::placeholder { color: var(--muted); }
+    .newsletter input:focus { border-color: var(--navy); }
+    .newsletter button {
+      width: 2.75rem; height: 2.75rem; border-radius: 50%;
+      background: linear-gradient(90deg, var(--pink), var(--pink-2)); color: #111; font-weight: 700;
+    }
+    .footer-bottom {
+      display: flex; flex-wrap: wrap; justify-content: space-between; gap: 0.75rem;
+      padding-top: 1.25rem; font-size: 0.8rem; color: var(--muted);
+    }
+
+    /* Drawer */
+    .drawer {
+      position: fixed; inset: 0; z-index: 90; pointer-events: none; opacity: 0;
+      transition: opacity 0.25s ease;
+    }
+    .drawer.open { pointer-events: auto; opacity: 1; }
+    .drawer-backdrop { position: absolute; inset: 0; background: rgba(14,25,84,0.5); }
+    .drawer-panel {
+      position: absolute; top: 0; right: 0; width: min(18rem, 88vw); height: 100%;
+      background: var(--navy-deep); color: var(--white); padding: 1.5rem;
+      transform: translateX(100%); transition: transform 0.35s var(--ease);
+    }
+    .drawer.open .drawer-panel { transform: none; }
+    .drawer-panel a { display: block; padding: 0.85rem 0; font-weight: 600; border-bottom: 1px solid rgba(255,255,255,0.08); }
+    .drawer-close { margin-bottom: 1.25rem; color: var(--pink); font-weight: 700; }
+    .drawer-logo { display: inline-flex; margin-bottom: 1rem; }
+
+    @media (min-width: 640px) { :root { --pad: 2rem; } }
+
+
+    /* —— Clireo text effects (Framer-style) —— */
+    .hero-title {
+      margin: 0;
+      font-weight: 400;
+      letter-spacing: -0.064em;
+      line-height: 0.98;
+      font-size: clamp(2.75rem, 4vw + 1.5rem, 5.625rem); /* Framer 90px */
+      max-width: 11ch;
+    }
+    .hero-title .fx-line {
+      display: block;
+    }
+    @keyframes fx-word-in {
+      from {
+        opacity: 0.001;
+        filter: blur(5px);
+        transform: translate3d(0, 20px, 0);
+      }
+      to {
+        opacity: 1;
+        filter: blur(0);
+        transform: translate3d(0, 0, 0);
+      }
+    }
+    .fx-word {
+      display: inline-block;
+      will-change: transform, opacity, filter;
+      opacity: 0.001;
+      filter: blur(5px);
+      transform: translate3d(0, 20px, 0);
+      transition: opacity 0.75s var(--ease), filter 0.75s var(--ease), transform 0.75s var(--ease);
+    }
+    .fx-word.is-in {
+      opacity: 1;
+      filter: blur(0);
+      transform: translate3d(0, 0, 0);
+    }
+    .hero[data-reveal-section] [data-reveal-block][data-reveal-kind="fade"] {
+      transition: opacity 0.4s var(--ease), transform 0.4s var(--ease);
+    }
+
+    /* Hero: CSS animation so words always appear (no timer dependency) */
+    .hero-title .fx-word {
+      opacity: 0.001;
+      filter: blur(5px);
+      transform: translate3d(0, 20px, 0);
+      transition: none;
+      animation: fx-word-in 0.48s var(--ease) forwards;
+    }
+    .hero-title .fx-line:nth-child(1) .fx-word:nth-child(1) { animation-delay: 0.03s; }
+    .hero-title .fx-line:nth-child(1) .fx-word:nth-child(2) { animation-delay: 0.07s; }
+    .hero-title .fx-line:nth-child(2) .fx-word:nth-child(1) { animation-delay: 0.11s; }
+    .hero-title .fx-line:nth-child(2) .fx-word:nth-child(2) { animation-delay: 0.15s; }
+
+    /* Dual-text hover — Framer pattern: clip to one line, stack two labels */
+    .fx-btn {
+      --fx-line: 1.15em;
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      vertical-align: middle;
+      line-height: var(--fx-line);
+    }
+    .fx-btn-track {
+      display: flex;
+      flex-direction: column;
+      height: var(--fx-line);
+      overflow: hidden;
+      transition: transform 0.45s var(--ease);
+      line-height: var(--fx-line);
+    }
+    .fx-btn:hover .fx-btn-track,
+    .fx-btn:focus-visible .fx-btn-track {
+      transform: translateY(calc(-1 * var(--fx-line)));
+    }
+    .fx-btn-track > span {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.35rem;
+      flex: 0 0 var(--fx-line);
+      height: var(--fx-line);
+      white-space: nowrap;
+    }
+    .nav-links a.fx-btn {
+      --fx-line: 1.25em;
+      height: var(--fx-line);
+      max-height: var(--fx-line);
+      overflow: hidden;
+      flex: 0 0 auto;
+      align-items: flex-start;
+      color: var(--muted);
+      font-size: 0.95rem;
+      font-weight: 500;
+      background: transparent;
+      padding: 0;
+      border-radius: 0;
+    }
+    .nav-links a.fx-btn:hover,
+    .nav-links a.fx-btn:focus-visible {
+      color: var(--navy);
+    }
+    .nav-links a.fx-btn .fx-btn-track > span {
+      justify-content: flex-start;
+    }
+    .btn-contact.fx-btn {
+      height: calc(var(--fx-line) + 1.4rem);
+      overflow: hidden;
+    }
+    .btn-pink.fx-btn {
+      height: calc(var(--fx-line) + 1.7rem);
+      padding-top: 0;
+      padding-bottom: 0;
+      overflow: hidden;
+    }
+    .btn-pink.fx-btn .fx-btn-track {
+      width: 100%;
+    }
+    .btn-pink.sm.fx-btn {
+      height: calc(var(--fx-line) + 1.4rem);
+      width: auto;
+    }
+    .btn-navy.fx-btn,
+    .btn-outline.fx-btn {
+      height: calc(var(--fx-line) + 1.5rem);
+      padding-top: 0;
+      padding-bottom: 0;
+      overflow: hidden;
+    }
+
+    /* Section heading word reveals */
+    .fx-heading .fx-word {
+      transition-duration: 0.45s;
+    }
+
+    /* Soft grey/blue mix for about headline (Clireo scroll settle uses navy) */
+    .about-head h2 .fx-em {
+      color: var(--navy);
+    }
+
+    /* —— Motion (Getwebfield: purposeful, respect reduced-motion) —— */
+    .reveal {
+      opacity: 0;
+      transform: translateY(22px);
+      transition: opacity 0.4s var(--ease), transform 0.4s var(--ease);
+    }
+    .reveal.is-in {
+      opacity: 1;
+      transform: none;
+    }
+    .reveal-delay-1 { transition-delay: 0.08s; }
+    .reveal-delay-2 { transition-delay: 0.16s; }
+    .reveal-delay-3 { transition-delay: 0.24s; }
+    .reveal-delay-4 { transition-delay: 0.32s; }
+    .hero-copy.reveal,
+    .hero-media.reveal {
+      transition-duration: 0.9s;
+    }
+    .hero-media.reveal {
+      transform: translateY(28px) scale(0.98);
+    }
+    .hero-media.reveal.is-in {
+      transform: none;
+    }
+    .treat-card,
+    .why-card,
+    .doc-card,
+    .blog-card,
+    .review-card,
+    .feature-item {
+      transition: transform 0.35s var(--ease), box-shadow 0.35s var(--ease);
+    }
+    .treat-card:hover,
+    .why-card:hover,
+    .doc-card:hover,
+    .blog-card:hover {
+      transform: translateY(-4px);
+    }
+    .btn-pink,
+    .btn-navy,
+    .btn-outline,
+    .btn-contact {
+      transition: transform 0.25s var(--ease), filter 0.2s ease, background 0.2s ease;
+    }
+    .btn-pink:hover,
+    .btn-navy:hover,
+    .btn-outline:hover,
+    .btn-contact:hover {
+      transform: translateY(-2px);
+    }
+    .faq-item {
+      transition: border-color 0.25s ease, background 0.25s ease;
+    }
+    .faq-item[open] {
+      border-color: color-mix(in srgb, var(--navy) 28%, var(--line));
+      background: var(--white);
+    }
+    @media (prefers-reduced-motion: reduce) {
+      .reveal,
+      .reveal.is-in,
+      .hero-media.reveal,
+      .hero-media.reveal.is-in,
+      .treat-card,
+      .why-card,
+      .doc-card,
+      .blog-card,
+      .review-card,
+      .feature-item,
+      .btn-pink,
+      .btn-navy,
+      .btn-outline,
+      .btn-contact,
+      .marquee-track,
+      .fx-word,
+      .fx-word.is-in,
+      .fx-btn-track {
+        transition: none !important;
+        animation: none !important;
+        transform: none !important;
+        opacity: 1 !important;
+        filter: none !important;
+      }
+      [data-reveal-section] [data-reveal-block],
+      [data-reveal-section] [data-reveal-block].is-in,
+      [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"] .about-feature,
+      [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"] .treat-card,
+      [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"] .doc-card,
+      [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"] .why-card,
+      [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"] .review-card,
+      [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"] .blog-card,
+      [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"] .about-feature.is-in,
+      [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"] .treat-card.is-in,
+      [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"] .doc-card.is-in,
+      [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"] .why-card.is-in,
+      [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"] .review-card.is-in,
+      [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"] .blog-card.is-in {
+        transition: none !important;
+        animation: none !important;
+        transform: none !important;
+        opacity: 1 !important;
+        pointer-events: auto !important;
+      }
+      .fx-btn:hover .fx-btn-track { transform: none !important; }
+    }
+
+  </style>
+</head>
+<body>
+  <header class="nav">
+    <div class="nav-inner">
+      <a class="logo" href="#" aria-label="Chattogram Best Physiotherapy Hospital home">
+        <img class="logo-img" src="/images/cbph-logo.png" alt="Chattogram Best Physiotherapy Hospital">
+      </a>
+      <nav class="nav-links" aria-label="Primary">
+        <a class="fx-btn" href="#"><span class="fx-btn-track"><span>Home</span><span aria-hidden="true">Home</span></span></a>
+        <a class="fx-btn" href="#treatments"><span class="fx-btn-track"><span>Services</span><span aria-hidden="true">Services</span></span></a>
+        <a class="fx-btn" href="#reviews"><span class="fx-btn-track"><span>Reviews</span><span aria-hidden="true">Reviews</span></span></a>
+        <a class="fx-btn" href="#about"><span class="fx-btn-track"><span>About</span><span aria-hidden="true">About</span></span></a>
+        <a class="fx-btn" href="#blog"><span class="fx-btn-track"><span>Health tips</span><span aria-hidden="true">Health tips</span></span></a>
+      </nav>
+      <a class="btn-contact fx-btn" href="#contact"><span class="fx-btn-track"><span>Contact us</span><span aria-hidden="true">Contact us</span></span></a>
+      <button class="nav-burger" type="button" data-open-menu aria-label="Open menu">☰</button>
+    </div>
+  </header>
+
+  <section class="hero space-inline" data-reveal-section>
+    <div class="hero-bg" aria-hidden="true"></div>
+    <div class="layout-container grid-hero">
+      <div class="hero-copy">
+        <div class="backed" data-reveal-block data-reveal-kind="fade">
+          <div class="backed-avs">
+            <img src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=80&h=80&q=80" alt="">
+            <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=80&h=80&q=80" alt="">
+            <img src="https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&w=80&h=80&q=80" alt="">
+          </div>
+          <span>Backed by <strong>8+ Physiotherapists</strong></span>
+        </div>
+        <h1 class="hero-title" aria-label="Where every recovery matters">
+          <span class="fx-line">
+            <span class="fx-word">Where</span>
+            <span class="fx-word">every</span>
+          </span>
+          <span class="fx-line">
+            <span class="fx-word">recovery</span>
+            <span class="fx-word">matters</span>
+          </span>
+        </h1>
+        <p class="hero-lead" data-reveal-block data-reveal-kind="fade">Specialized physiotherapy and rehabilitation in Panchlaish, Chattogram — stroke recovery, chronic pain, paralysis, sports injuries, and neuromuscular care.</p>
+        <div class="rating-row" data-reveal-block data-reveal-kind="fade">
+          <div class="rating-score">4.9*</div>
+          <div class="rating-avs">
+            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&h=80&q=80" alt="">
+            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&h=80&q=80" alt="">
+            <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=80&h=80&q=80" alt="">
+            <span class="rating-plus">+</span>
+          </div>
+          <div class="rating-copy">Patients trust our recovery-focused physiotherapy care!</div>
+        </div>
+      </div>
+
+        <form class="book-card space-card hero-media" id="contact" action="#" method="get" onsubmit="return false;" data-reveal-block data-reveal-kind="fade">
+        <h2>Book appointment</h2>
+        <div class="field">
+          <label for="name">Full Name*</label>
+          <input id="name" required placeholder="Rahim Ahmed">
+        </div>
+        <div class="field">
+          <label>Phone &amp; Physiotherapist*</label>
+          <div class="field-row">
+            <input id="phone" type="tel" required placeholder="+880 1630 078675" aria-label="Phone">
+            <select id="doctor" required aria-label="Select Physiotherapist">
+              <option value="" disabled selected>Select Physiotherapist</option>
+              <option>Dr. Antar Das</option>
+              <option>Batia Nahar Ahsan</option>
+              <option>Dr. Mohammad Golam Eazdani</option>
+              <option>Any available physiotherapist</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Date &amp; Time*</label>
+          <div class="field-row">
+            <input type="date" aria-label="Date" required>
+            <select required aria-label="Select Time">
+              <option value="" disabled selected>Select Time</option>
+              <option>9am - 12pm</option>
+              <option>3pm - 8pm</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn-pink fx-btn" type="button"><span class="fx-btn-track"><span>Send message</span><span aria-hidden="true">Send message</span></span></button>
+      </form>
+    </div>
+  </section>
+
+  <section class="space-section" id="about" data-reveal-section>
+    <div class="layout-container">
+      <div class="about-head stack-header is-center">
+        <div class="eyebrow" style="justify-content:center" data-reveal-block data-reveal-kind="fade">About CBPH</div>
+        <h2 class="fx-heading" data-fx-words data-fx-em="expert,physiotherapy,rehabilitation,stroke,recovery,mobility,independence,compassionate,care" data-reveal-block data-reveal-kind="heading">Chattogram Best Physiotherapy Hospital combines expert physiotherapists, modern rehab techniques &amp; compassionate care to help every patient restore mobility, reduce pain &amp; regain independence.</h2>
+        <div class="about-cta-row" data-reveal-block data-reveal-kind="fade">
+          <a class="btn-about" href="https://www.facebook.com/cbphbd" target="_blank" rel="noopener noreferrer">
+            <span>More about us</span>
+            <span class="arrow" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 17L17 7M9 7h8v8"/></svg>
+            </span>
+          </a>
+          <div class="about-trust">
+            <div class="about-trust-avs">
+              <img src="https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=80&h=80&q=80" alt="">
+              <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=80&h=80&q=80" alt="">
+              <img src="https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&w=80&h=80&q=80" alt="">
+            </div>
+            <div class="about-trust-copy">Trusted by<strong>patients across Chattogram</strong></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="about-features" data-reveal-block data-reveal-kind="fade">
+        <article class="about-feature">
+          <div class="icon"><img src="https://framerusercontent.com/images/SebajAOsz6a8sWPvrYcEDu50c.svg?width=140&height=123" alt=""></div>
+          <h3>Stroke &amp; Neurology Rehab</h3>
+          <p>Evidence-based programs for stroke, paralysis, SCI, and neurological conditions using modern neuro-rehabilitation techniques.</p>
+        </article>
+        <article class="about-feature">
+          <div class="icon"><img src="https://framerusercontent.com/images/xa99qvpg8IUc9n1GZ7kGFxevJ0.svg?width=129&height=140" alt=""></div>
+          <h3>Pain &amp; Musculoskeletal Care</h3>
+          <p>Manual therapy, electrotherapy, and exercise therapy for back pain, arthritis, sports injuries, and post-surgical recovery.</p>
+        </article>
+        <article class="about-feature">
+          <div class="icon"><img src="https://framerusercontent.com/images/QVULYcKsFklavhQU9fbshqfZw.svg?width=150&height=150" alt=""></div>
+          <h3>Patient-First Rehabilitation</h3>
+          <p>Personalized treatment plans with dedicated male and female therapy departments for comfort, privacy, and better outcomes.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <div class="marquee" aria-hidden="true">
+    <div class="marquee-track">
+      <div class="marquee-group">
+        <span>Stroke Rehab</span><i></i>
+        <span>Pain Relief</span><i></i>
+        <span>Sports Injury</span><i></i>
+        <span>Neurology</span><i></i>
+        <span>Manual Therapy</span><i></i>
+      </div>
+      <div class="marquee-group">
+        <span>Stroke Rehab</span><i></i>
+        <span>Pain Relief</span><i></i>
+        <span>Sports Injury</span><i></i>
+        <span>Neurology</span><i></i>
+        <span>Manual Therapy</span><i></i>
+      </div>
+    </div>
+  </div>
+
+  <section class="space-section" id="treatments" data-reveal-section>
+    <div class="layout-container">
+      <div class="treat-head">
+        <div class="stack-header">
+          <div class="eyebrow" data-reveal-block data-reveal-kind="fade">Our services</div>
+          <h2 class="fx-heading" data-fx-words data-reveal-block data-reveal-kind="heading">Expert Physiotherapy For Every Recovery Need</h2>
+        </div>
+        <a class="btn-outline fx-btn" href="https://www.facebook.com/cbphbd" target="_blank" rel="noopener noreferrer" data-reveal-block data-reveal-kind="fade"><span class="fx-btn-track"><span>View all services →</span><span aria-hidden="true">View all services →</span></span></a>
+      </div>
+      <div class="treat-stage" data-reveal-block data-reveal-kind="fade">
+        <div class="treat-scroller" data-treat-scroll>
+        <a class="treat-card" href="#">
+          <div class="media">
+            <img class="cover" src="https://images.pexels.com/photos/8460125/pexels-photo-8460125.jpeg?auto=compress&cs=tinysrgb&w=800&h=800&fit=crop" alt="Stroke rehabilitation session">
+          </div>
+          <div class="body">
+            <span class="icon"><img src="https://framerusercontent.com/images/pJSdUV9FevHoktES8cyLiFSD8jM.svg" alt=""></span>
+            <h3>Stroke Rehabilitation</h3>
+            <p>Specialized programs to restore movement, balance, and independence after stroke and neurological injury.</p>
+          </div>
+        </a>
+        <a class="treat-card" href="#">
+          <div class="media">
+            <img class="cover" src="https://images.pexels.com/photos/8460126/pexels-photo-8460126.jpeg?auto=compress&cs=tinysrgb&w=800&h=800&fit=crop" alt="Pain and paralysis physiotherapy">
+          </div>
+          <div class="body">
+            <span class="icon"><img src="https://framerusercontent.com/images/0U0qZF8m25gT9NcRC3H63SGwo.svg" alt=""></span>
+            <h3>Pain &amp; Paralysis</h3>
+            <p>Targeted therapy for chronic pain, hemiplegia, paralysis, and mobility-limiting conditions.</p>
+          </div>
+        </a>
+        <a class="treat-card" href="#">
+          <div class="media">
+            <img class="cover" src="https://images.pexels.com/photos/8460127/pexels-photo-8460127.jpeg?auto=compress&cs=tinysrgb&w=800&h=800&fit=crop" alt="Sports injury rehabilitation">
+          </div>
+          <div class="body">
+            <span class="icon"><img src="https://framerusercontent.com/images/5jWBbSjEFIHfAYKeD5tZGxvBGZ0.svg" alt=""></span>
+            <h3>Sports Injury Rehab</h3>
+            <p>Recovery plans for sprains, strains, and sports-related injuries to get you back in action safely.</p>
+          </div>
+        </a>
+        <a class="treat-card" href="#">
+          <div class="media">
+            <img class="cover" src="https://images.pexels.com/photos/8460128/pexels-photo-8460128.jpeg?auto=compress&cs=tinysrgb&w=800&h=800&fit=crop" alt="Neurological rehabilitation">
+          </div>
+          <div class="body">
+            <span class="icon"><img src="https://framerusercontent.com/images/KUlEux6SUGltrbOun5GlhZaydtQ.svg" alt=""></span>
+            <h3>Neurological Rehab</h3>
+            <p>Advanced neuro-physiotherapy for Parkinsonism, neuropathy, ataxia, and vestibular disorders.</p>
+          </div>
+        </a>
+        <a class="treat-card" href="#">
+          <div class="media">
+            <img class="cover" src="https://images.pexels.com/photos/7579834/pexels-photo-7579834.jpeg?auto=compress&cs=tinysrgb&w=800&h=800&fit=crop" alt="Orthopedic physiotherapy">
+          </div>
+          <div class="body">
+            <span class="icon"><img src="https://framerusercontent.com/images/qdBNVG8bwfV08i3g2bfy2XAc.svg" alt=""></span>
+            <h3>Orthopedic Physiotherapy</h3>
+            <p>Musculoskeletal assessment, manual therapy, and exercise for fractures, arthritis, and back pain.</p>
+          </div>
+        </a>
+      </div>
+      </div>
+      <div class="treat-nav" data-reveal-block data-reveal-kind="fade">
+        <p>Explore evidence-based rehabilitation programs tailored to every recovery goal.</p>
+        <div class="treat-arrows">
+          <button class="arrow-btn" type="button" data-treat-prev aria-label="Previous">←</button>
+          <button class="arrow-btn" type="button" data-treat-next aria-label="Next">→</button>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <section class="space-section" id="doctors" data-reveal-section>
+    <div class="layout-container">
+      <div class="treat-head">
+        <div class="stack-header">
+          <div class="eyebrow" data-reveal-block data-reveal-kind="fade">Our physiotherapists</div>
+          <h2 class="fx-heading" data-fx-words data-reveal-block data-reveal-kind="heading">Meet The Experts Behind Your Recovery</h2>
+        </div>
+        <a class="btn-pink sm fx-btn" href="#contact" data-reveal-block data-reveal-kind="fade"><span class="fx-btn-track"><span>Book appointment</span><span aria-hidden="true">Book appointment</span></span></a>
+      </div>
+      <div class="doc-grid grid-cards" data-card-count="4" data-reveal-block data-reveal-kind="fade">
+        <article class="doc-card">
+          <img src="/images/cbph/doctors/doctor-antar-das.jpg" alt="Dr. Antar Das">
+          <div class="meta"><h3>Dr. Antar Das</h3><span>Consultant Physiotherapist, MPT (Neurology)</span></div>
+        </article>
+        <article class="doc-card">
+          <img src="/images/cbph/doctors/doctor-batia-ahsan.jpg" alt="Batia Nahar Ahsan">
+          <div class="meta"><h3>Batia Nahar Ahsan</h3><span>Senior Physiotherapist, Female Dept.</span></div>
+        </article>
+        <article class="doc-card">
+          <img src="/images/cbph/doctors/doctor-eazdani.jpg" alt="Dr. Mohammad Golam Eazdani">
+          <div class="meta"><h3>Dr. Mohammad Golam Eazdani</h3><span>Clinical Physiotherapist</span></div>
+        </article>
+        <article class="doc-card">
+          <img src="/images/cbph/doctors/doctor-rehab-team.jpg" alt="CBPH rehabilitation team">
+          <div class="meta"><h3>Rehabilitation Team</h3><span>Orthopedic &amp; Manual Therapy</span></div>
+        </article>
+      </div>
+
+      <div class="stats-band space-card" data-reveal-block data-reveal-kind="fade">
+        <h3>Trusted Physiotherapy Centre In Panchlaish, Chattogram</h3>
+        <div class="grid-stats">
+          <div class="stat"><div class="num" data-count="8">0</div><div class="lbl">+ Expert Physiotherapists</div></div>
+          <div class="stat"><div class="num" data-count="6">0</div><div class="lbl">Rehabilitation Programs</div></div>
+          <div class="stat"><div class="num" data-count="2">0</div><div class="lbl">Therapy Departments</div></div>
+          <div class="stat"><div class="num" data-count="100">0</div><div class="lbl">% Patient-Focused Care</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="space-section reviews" id="reviews" data-reveal-section>
+    <div class="layout-container center">
+      <div class="stack-header is-center">
+        <div class="eyebrow" style="justify-content:center" data-reveal-block data-reveal-kind="fade">Recovery stories</div>
+        <h2 class="fx-heading" data-fx-words data-reveal-block data-reveal-kind="heading">Real Progress From Rehabilitation Treatment</h2>
+      </div>
+      <div class="review-scroller" data-reveal-block data-reveal-kind="fade">
+        <article class="review-card">
+          <p>“After my stroke, the CBPH team helped me walk again with patience, clear guidance, and excellent neuro-rehabilitation support every session.”</p>
+          <div class="review-person">
+            <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=120&h=120&q=80" alt="">
+            <div><strong>Fatima Rahman</strong><span>Stroke recovery patient</span></div>
+          </div>
+        </article>
+        <article class="review-card">
+          <p>“My chronic back pain improved significantly after manual therapy and exercise sessions. The physiotherapists explained every step clearly.”</p>
+          <div class="review-person">
+            <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&h=120&q=80" alt="">
+            <div><strong>Karim Hossain</strong><span>Back pain patient</span></div>
+          </div>
+        </article>
+        <article class="review-card">
+          <p>“I recovered from a sports injury faster than expected. The rehab plan was personalized and the staff were professional and encouraging.”</p>
+          <div class="review-person">
+            <img src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&h=120&q=80" alt="">
+            <div><strong>Nusrat Jahan</strong><span>Sports injury patient</span></div>
+          </div>
+        </article>
+        <article class="review-card">
+          <p>“The female department made my mother feel comfortable throughout her paralysis rehabilitation. We are grateful for the compassionate care.”</p>
+          <div class="review-person">
+            <img src="https://images.unsplash.com/photo-1584515933487-779824d29309?auto=format&fit=crop&w=120&h=120&q=80" alt="">
+            <div><strong>Abdul Malek</strong><span>Family caregiver</span></div>
+          </div>
+        </article>
+      </div>
+      <div class="google-row" data-reveal-block data-reveal-kind="fade">
+        <div class="google-score">
+          <img class="logo-img logo-img--sm" src="/images/cbph-logo.png" alt="Chattogram Best Physiotherapy Hospital">
+          <a href="https://www.facebook.com/cbphbd" target="_blank" rel="noopener noreferrer">Follow us on Facebook →</a>
+        </div>
+        <a class="btn-pink sm fx-btn" href="#contact"><span class="fx-btn-track"><span>Book appointment</span><span aria-hidden="true">Book appointment</span></span></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="space-section" id="blog" data-reveal-section>
+    <div class="layout-container">
+      <div class="treat-head">
+        <div class="stack-header">
+          <div class="eyebrow" data-reveal-block data-reveal-kind="fade">Health tips</div>
+          <h2 class="fx-heading" data-fx-words data-reveal-block data-reveal-kind="heading">Latest Physiotherapy Tips &amp; Insights</h2>
+        </div>
+        <a class="btn-outline fx-btn" href="https://www.facebook.com/cbphbd" target="_blank" rel="noopener noreferrer" data-reveal-block data-reveal-kind="fade"><span class="fx-btn-track"><span>View all posts →</span><span aria-hidden="true">View all posts →</span></span></a>
+      </div>
+      <div class="blog-grid grid-cards" data-card-count="3" data-reveal-block data-reveal-kind="fade">
+        <a class="blog-card" href="https://www.facebook.com/cbphbd" target="_blank" rel="noopener noreferrer">
+          <img src="https://images.pexels.com/photos/7579831/pexels-photo-7579831.jpeg?auto=compress&cs=tinysrgb&w=900&h=700&fit=crop" alt="Stroke recovery exercises">
+          <div class="body">
+            <div class="blog-meta">Jan 12, 2026 · Stroke Care</div>
+            <h3>5 habits that support stroke recovery at home</h3>
+          </div>
+        </a>
+        <a class="blog-card" href="https://www.facebook.com/cbphbd" target="_blank" rel="noopener noreferrer">
+          <img src="https://images.pexels.com/photos/7579832/pexels-photo-7579832.jpeg?auto=compress&cs=tinysrgb&w=900&h=700&fit=crop" alt="Back pain physiotherapy">
+          <div class="body">
+            <div class="blog-meta">Nov 18, 2025 · Pain Relief</div>
+            <h3>When to see a physiotherapist for chronic back pain</h3>
+          </div>
+        </a>
+        <a class="blog-card" href="https://www.facebook.com/cbphbd" target="_blank" rel="noopener noreferrer">
+          <img src="https://images.pexels.com/photos/7579835/pexels-photo-7579835.jpeg?auto=compress&cs=tinysrgb&w=900&h=700&fit=crop" alt="Sports injury rehabilitation">
+          <div class="body">
+            <div class="blog-meta">Sep 4, 2025 · Sports Rehab</div>
+            <h3>How to recover safely after a sports injury</h3>
+          </div>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <section class="space-section faq" data-reveal-section>
+    <div class="layout-container">
+      <div class="stack-header">
+        <div class="eyebrow" data-reveal-block data-reveal-kind="fade">FAQs</div>
+        <h2 class="fx-heading" data-fx-words data-reveal-block data-reveal-kind="heading">Frequently Questions</h2>
+      </div>
+      <div class="faq-layout">
+        <aside class="faq-promo" data-reveal-block data-reveal-kind="fade">
+          <img src="https://images.pexels.com/photos/8460127/pexels-photo-8460127.jpeg?auto=compress&cs=tinysrgb&w=900&h=1200&fit=crop" alt="Physiotherapist assisting patient at CBPH">
+          <div class="overlay">
+            <h3>Need physiotherapy? Book an appointment</h3>
+            <a class="btn-pink sm fx-btn" href="#contact" style="width:auto"><span class="fx-btn-track"><span>Get in touch</span><span aria-hidden="true">Get in touch</span></span></a>
+          </div>
+        </aside>
+        <div class="faq-list stack-list" data-reveal-block data-reveal-kind="fade">
+          <details class="faq-item" open>
+            <summary>What services does CBPH provide?</summary>
+            <div class="ans">Chattogram Best Physiotherapy Hospital offers stroke rehabilitation, pain and paralysis care, sports injury rehab, neurological physiotherapy, orthopedic therapy, manual therapy, and electrotherapy — delivered by qualified BPT and MPT physiotherapists in Panchlaish, Chattogram.</div>
+          </details>
+          <details class="faq-item">
+            <summary>How can I schedule an appointment?</summary>
+            <div class="ans">Use the booking form on this page, call 01630-078675 or 01882-373894, or message us on Facebook at facebook.com/cbphbd. Our team will confirm your preferred date and time.</div>
+          </details>
+          <details class="faq-item">
+            <summary>Do you have a separate department for women?</summary>
+            <div class="ans">Yes. CBPH has a dedicated female physiotherapy department so women patients can receive comfortable, private rehabilitation care from our senior female physiotherapists.</div>
+          </details>
+          <details class="faq-item">
+            <summary>What conditions do you treat?</summary>
+            <div class="ans">We treat stroke and paralysis, chronic pain, back and neck pain, arthritis, sports injuries, post-surgical rehab, neurological disorders, and musculoskeletal conditions requiring physiotherapy.</div>
+          </details>
+          <details class="faq-item">
+            <summary>What should I bring to my first visit?</summary>
+            <div class="ans">Please bring your prescription or referral (if any), previous medical reports, X-rays or MRI scans, a list of current medications, and a photo ID.</div>
+          </details>
+          <details class="faq-item">
+            <summary>Why choose CBPH for physiotherapy?</summary>
+            <div class="ans">Expert physiotherapists, modern rehabilitation equipment, dedicated male and female departments, and a patient-first approach focused on mobility, pain relief, and long-term recovery.</div>
+          </details>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="final-cta space-section" data-reveal-section>
+    <div class="final-cta-bg" aria-hidden="true"></div>
+    <div class="layout-container">
+      <h2 class="fx-heading" data-fx-words data-reveal-block data-reveal-kind="heading">Prioritize Your Recovery Today</h2>
+      <p data-reveal-block data-reveal-kind="fade">Take the first step toward better mobility with expert physiotherapy and rehabilitation tailored to your needs in Panchlaish, Chattogram.</p>
+      <a class="btn-pink sm fx-btn" href="#contact" data-reveal-block data-reveal-kind="fade"><span class="fx-btn-track"><span>Book an appointment</span><span aria-hidden="true">Book an appointment</span></span></a>
+      <div class="trust-mini" data-reveal-block data-reveal-kind="fade"><strong>01630-078675</strong> · 553 O.R. Nizam Road, GEC, Panchlaish</div>
+    </div>
+  </section>
+
+  <footer class="footer space-section">
+    <div class="layout-container footer-top space-section-y">
+      <div>
+        <a class="logo" href="#" aria-label="Chattogram Best Physiotherapy Hospital home">
+          <img class="logo-img logo-img--footer" src="/images/cbph-logo.png" alt="Chattogram Best Physiotherapy Hospital">
+        </a>
+        <p style="margin:0;font-size:0.92rem">Chattogram Best Physiotherapy Hospital — specialized rehab in Panchlaish, Chattogram.</p>
+        <p style="margin:0.75rem 0 0;font-size:0.8rem;opacity:0.65">553 O.R. Nizam Road, GEC · 01630-078675</p>
+        <form class="newsletter" onsubmit="return false;">
+          <input type="email" placeholder="Your email for health tips" required>
+          <button type="button" aria-label="Subscribe">→</button>
+        </form>
+      </div>
+      <div>
+        <h3>Services</h3>
+        <a href="#treatments">Stroke Rehabilitation</a>
+        <a href="#treatments">Pain &amp; Paralysis</a>
+        <a href="#treatments">Sports Injury Rehab</a>
+        <a href="#treatments">Neurological Rehab</a>
+        <a href="#treatments">Orthopedic Physiotherapy</a>
+      </div>
+      <div>
+        <h3>Pages</h3>
+        <a href="#">Home</a>
+        <a href="#about">About</a>
+        <a href="#treatments">Services</a>
+        <a href="#contact">Contact</a>
+        <a href="#blog">Health Tips</a>
+      </div>
+      <div>
+        <h3>Socials</h3>
+        <a href="https://www.facebook.com/cbphbd" target="_blank" rel="noopener noreferrer">Facebook</a>
+        <a href="tel:+8801630078675">Call 01630-078675</a>
+        <a href="tel:+8801882373894">Call 01882-373894</a>
+      </div>
+    </div>
+    <div class="layout-container footer-bottom">
+      <span>© 2026 Chattogram Best Physiotherapy Hospital. All rights reserved.</span>
+      <span>Clinic design reference · Doctor Gemini · Clireo layout</span>
+    </div>
+  </footer>
+
+  <div class="drawer" data-drawer aria-hidden="true">
+    <div class="drawer-backdrop" data-close-menu></div>
+    <div class="drawer-panel">
+      <a class="logo drawer-logo" href="#" data-close-menu aria-label="Chattogram Best Physiotherapy Hospital home">
+        <img class="logo-img logo-img--drawer" src="/images/cbph-logo.png" alt="Chattogram Best Physiotherapy Hospital">
+      </a>
+      <button class="drawer-close" type="button" data-close-menu>Close</button>
+      <a href="#" data-close-menu>Home</a>
+      <a href="#treatments" data-close-menu>Services</a>
+      <a href="#reviews" data-close-menu>Reviews</a>
+      <a href="#about" data-close-menu>About</a>
+      <a href="#blog" data-close-menu>Health tips</a>
+      <a href="#contact" data-close-menu>Contact us</a>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+
+      // Framer-like word blur reveal
+      function splitWords(el, emWords) {
+        if (!el || el.dataset.fxSplit === '1') return;
+        // Never split a wrapper that contains nested headings/blocks
+        if (el.querySelector('h1,h2,h3,h4,p,a,button,ul,ol,section,div')) return;
+        emWords = emWords || [];
+        var text = el.textContent.replace(/\s+/g, ' ').trim();
+        var parts = text.split(' ');
+        el.innerHTML = parts.map(function (w, i) {
+          var clean = w.replace(/[^a-zA-Z0-9+]/g, '');
+          var isEm = emWords.some(function (e) { return e.toLowerCase() === clean.toLowerCase(); });
+          var cls = 'fx-word' + (isEm ? ' fx-em' : '');
+          return '<span class="' + cls + '">' + w + '</span>' + (i < parts.length - 1 ? ' ' : '');
+        }).join('');
+        el.dataset.fxSplit = '1';
+      }
+
+      document.querySelectorAll('h1[data-fx-words], h2[data-fx-words], h3[data-fx-words], .fx-heading[data-fx-words]').forEach(function (el) {
+        var em = (el.getAttribute('data-fx-em') || '').split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+        splitWords(el, em);
+      });
+
+      function revealWords(root, baseDelay, onDone, timing) {
+        baseDelay = baseDelay || 0;
+        timing = timing || { interval: 70, settle: 700 };
+        var words = root.querySelectorAll ? root.querySelectorAll('.fx-word') : [];
+        if (!words.length) {
+          if (onDone) onDone();
+          return;
+        }
+        words.forEach(function (w, i) {
+          setTimeout(function () { w.classList.add('is-in'); }, baseDelay + i * timing.interval);
+        });
+        if (onDone) {
+          var doneAt = baseDelay + (words.length - 1) * timing.interval + timing.settle;
+          setTimeout(onDone, doneAt);
+        }
+      }
+
+      function wordRevealTiming() {
+        return { interval: 24, baseDelay: 16, settle: 320 };
+      }
+
+      var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var SECTION_STEP_MS = 200;
+      var HERO_STEP_MS = 160;
+      var STAGGER_MS = 40;
+      var activeRevealSection = null;
+      var counted = false;
+
+      function stepMs() {
+        if (activeRevealSection && activeRevealSection.classList.contains('hero')) {
+          return HERO_STEP_MS;
+        }
+        return SECTION_STEP_MS;
+      }
+
+      function staggerMs() {
+        if (activeRevealSection && activeRevealSection.classList.contains('hero')) {
+          return 50;
+        }
+        return STAGGER_MS;
+      }
+
+      function runCounters() {
+        if (counted) return;
+        counted = true;
+        document.querySelectorAll('[data-count]').forEach(function (el) {
+          var target = parseInt(el.getAttribute('data-count'), 10) || 0;
+          var steps = 40;
+          var i = 0;
+          var timer = setInterval(function () {
+            i += 1;
+            el.textContent = Math.round((target * i) / steps);
+            if (i >= steps) clearInterval(timer);
+          }, 30);
+        });
+      }
+
+      function revealFadeElement(el, onDone) {
+        if (!el) { if (onDone) onDone(); return; }
+        function finish() {
+          el.classList.add('is-in');
+          if (el.classList.contains('stats-band')) runCounters();
+          if (onDone) setTimeout(onDone, reduceMotion ? 0 : stepMs());
+        }
+        if (el.classList.contains('treat-stage') && typeof window.__prepareTreatStage === 'function' && !reduceMotion) {
+          window.__prepareTreatStage(finish);
+          return;
+        }
+        finish();
+      }
+
+      function revealHeading(el, onDone) {
+        if (!el) { if (onDone) onDone(); return; }
+        if (reduceMotion) {
+          el.querySelectorAll('.fx-word').forEach(function (w) { w.classList.add('is-in'); });
+          if (onDone) onDone();
+          return;
+        }
+        var timing = wordRevealTiming();
+        revealWords(el, timing.baseDelay, onDone, timing);
+      }
+
+      function revealStagger(step, onDone) {
+        if (!step) { if (onDone) onDone(); return; }
+        step.classList.add('is-in');
+        var selector = step.getAttribute('data-reveal-stagger') || ':scope > *';
+        var items = step.querySelectorAll(selector);
+        if (!items.length) { if (onDone) onDone(); return; }
+        if (reduceMotion) {
+          items.forEach(function (item) { item.classList.add('is-in'); });
+          if (onDone) onDone();
+          return;
+        }
+        var i = 0;
+        function revealNext() {
+          if (i >= items.length) {
+            if (onDone) setTimeout(onDone, stepMs());
+            return;
+          }
+          items[i].classList.add('is-in');
+          i += 1;
+          setTimeout(revealNext, staggerMs());
+        }
+        revealNext();
+      }
+
+      function getRevealBlocks(section) {
+        var blocks = Array.prototype.slice.call(section.querySelectorAll('[data-reveal-block]'));
+        return blocks.sort(function (a, b) {
+          var pa = parseInt(a.getAttribute('data-reveal-priority') || '2', 10);
+          var pb = parseInt(b.getAttribute('data-reveal-priority') || '2', 10);
+          if (pa !== pb) return pa - pb;
+          var rectA = a.getBoundingClientRect();
+          var rectB = b.getBoundingClientRect();
+          var topA = rectA.top + window.scrollY;
+          var topB = rectB.top + window.scrollY;
+          if (Math.abs(topA - topB) < 12) {
+            return rectA.left - rectB.left;
+          }
+          return topA - topB;
+        });
+      }
+
+      function revealBlock(block, onDone) {
+        var kind = block.getAttribute('data-reveal-kind') || 'fade';
+        if (kind === 'heading') {
+          var heading = block.matches('h1,h2,h3') ? block : block.querySelector('h1.fx-heading, h2.fx-heading, h3.fx-heading');
+          revealHeading(heading || block, onDone);
+        } else if (kind === 'stagger') {
+          revealStagger(block, onDone);
+        } else {
+          revealFadeElement(block, onDone);
+        }
+      }
+
+      function runSectionSequence(section) {
+        if (section.dataset.revealDone === '1') return;
+        section.dataset.revealDone = '1';
+        activeRevealSection = section;
+        var blocks = getRevealBlocks(section);
+        if (!blocks.length) return;
+        if (reduceMotion) {
+          blocks.forEach(function (block) {
+            var kind = block.getAttribute('data-reveal-kind') || 'fade';
+            if (kind === 'heading') {
+              var heading = block.matches('h1,h2,h3') ? block : block.querySelector('h1.fx-heading, h2.fx-heading, h3.fx-heading');
+              if (heading) heading.querySelectorAll('.fx-word').forEach(function (w) { w.classList.add('is-in'); });
+            } else if (kind === 'stagger') {
+              block.classList.add('is-in');
+              var selector = block.getAttribute('data-reveal-stagger') || ':scope > *';
+              block.querySelectorAll(selector).forEach(function (item) { item.classList.add('is-in'); });
+            } else {
+              block.classList.add('is-in');
+              if (block.classList.contains('stats-band')) runCounters();
+            }
+          });
+          return;
+        }
+        var idx = 0;
+        function next() {
+          if (idx >= blocks.length) return;
+          revealBlock(blocks[idx++], next);
+        }
+        next();
+      }
+
+      function initSectionReveals() {
+        var sections = document.querySelectorAll('[data-reveal-section]');
+        if (!sections.length) return;
+        var heroDelay = reduceMotion ? 0 : 480;
+        var sio = null;
+
+        function bindSection(section) {
+          if (section.classList.contains('hero')) {
+            setTimeout(function () { runSectionSequence(section); }, heroDelay);
+            return;
+          }
+          if (reduceMotion || !('IntersectionObserver' in window)) {
+            runSectionSequence(section);
+            return;
+          }
+          sio.observe(section);
+        }
+
+        if (!reduceMotion && 'IntersectionObserver' in window) {
+          sio = new IntersectionObserver(function (entries) {
+            entries.forEach(function (entry) {
+              if (!entry.isIntersecting) return;
+              runSectionSequence(entry.target);
+              sio.unobserve(entry.target);
+            });
+          }, { threshold: 0.12, rootMargin: '0px 0px -48px 0px' });
+        }
+
+        sections.forEach(bindSection);
+      }
+
+      initSectionReveals();
+
+      var drawer = document.querySelector('[data-drawer]');
+      var openBtn = document.querySelector('[data-open-menu]');
+      function setOpen(open) {
+        if (!drawer || !openBtn) return;
+        drawer.classList.toggle('open', open);
+        drawer.setAttribute('aria-hidden', open ? 'false' : 'true');
+      }
+      if (openBtn) openBtn.addEventListener('click', function () { setOpen(true); });
+      document.querySelectorAll('[data-close-menu]').forEach(function (el) {
+        el.addEventListener('click', function () { setOpen(false); });
+      });
+
+      var scroller = document.querySelector('[data-treat-scroll]');
+      var prev = document.querySelector('[data-treat-prev]');
+      var next = document.querySelector('[data-treat-next]');
+      if (scroller && prev && next) {
+        var treatDesktop = window.matchMedia('(min-width: 1200px)');
+        var originalCards = Array.prototype.slice.call(
+          scroller.querySelectorAll('.treat-card:not([data-treat-clone])')
+        );
+        var originalCount = originalCards.length;
+        var isJumping = false;
+        var loopReady = false;
+        var scrollEndTimer;
+
+        function ensureTreatClones() {
+          if (scroller.dataset.treatLooped === '1' || originalCount < 1) return;
+          originalCards.slice().reverse().forEach(function (card) {
+            var clone = card.cloneNode(true);
+            clone.setAttribute('data-treat-clone', 'prepend');
+            clone.setAttribute('aria-hidden', 'true');
+            clone.setAttribute('tabindex', '-1');
+            clone.classList.remove('reveal');
+            scroller.insertBefore(clone, scroller.firstChild);
+          });
+          originalCards.forEach(function (card) {
+            var clone = card.cloneNode(true);
+            clone.setAttribute('data-treat-clone', 'append');
+            clone.setAttribute('aria-hidden', 'true');
+            clone.setAttribute('tabindex', '-1');
+            clone.classList.remove('reveal');
+            scroller.appendChild(clone);
+          });
+          originalCards.forEach(function (card) {
+            card.setAttribute('data-treat-original', '1');
+          });
+          scroller.dataset.treatLooped = '1';
+        }
+
+        function treatCards() {
+          return scroller.querySelectorAll('.treat-card');
+        }
+
+        function treatStep() {
+          var cards = treatCards();
+          var card = cards[0];
+          if (!card) return 320;
+          var gap = parseFloat(getComputedStyle(scroller).columnGap || getComputedStyle(scroller).gap) || 24;
+          return card.getBoundingClientRect().width + gap;
+        }
+
+        function originalBlockWidth() {
+          return originalCount * treatStep();
+        }
+
+        function updateTreatDim() {
+          var cards = treatCards();
+          if (!treatDesktop.matches) {
+            cards.forEach(function (c) { c.classList.remove('is-dim'); });
+            return;
+          }
+          var bounds = scroller.getBoundingClientRect();
+          var visible = [];
+          cards.forEach(function (card) {
+            var rect = card.getBoundingClientRect();
+            var visibleLeft = Math.max(rect.left, bounds.left);
+            var visibleRight = Math.min(rect.right, bounds.right);
+            var visibleWidth = Math.max(0, visibleRight - visibleLeft);
+            var ratio = rect.width > 0 ? visibleWidth / rect.width : 0;
+            if (ratio > 0.12) {
+              visible.push({ card: card, left: rect.left, ratio: ratio });
+            }
+          });
+          visible.sort(function (a, b) { return a.left - b.left; });
+          cards.forEach(function (c) { c.classList.remove('is-dim'); });
+          visible.forEach(function (entry, index) {
+            var isEdge = index === 0 || index === visible.length - 1;
+            var isClipped = entry.ratio < 0.92;
+            if (isEdge || isClipped) {
+              entry.card.classList.add('is-dim');
+            }
+          });
+        }
+
+        function checkTreatLoop() {
+          if (!treatDesktop.matches || !loopReady || isJumping || originalCount < 1) return;
+          var block = originalBlockWidth();
+          if (block < 2) return;
+          var sl = scroller.scrollLeft;
+          if (sl >= block * 2 - 4) {
+            isJumping = true;
+            scroller.scrollLeft = sl - block;
+            requestAnimationFrame(function () {
+              isJumping = false;
+              updateTreatDim();
+            });
+          } else if (sl <= 4) {
+            isJumping = true;
+            scroller.scrollLeft = sl + block;
+            requestAnimationFrame(function () {
+              isJumping = false;
+              updateTreatDim();
+            });
+          }
+        }
+
+        function scheduleLoopCheck() {
+          clearTimeout(scrollEndTimer);
+          scrollEndTimer = setTimeout(function () {
+            checkTreatLoop();
+            updateTreatDim();
+          }, 140);
+        }
+
+        function initTreatDesktopScroll(onReady) {
+          if (!treatDesktop.matches || originalCount < 1) {
+            if (onReady) onReady();
+            return;
+          }
+          ensureTreatClones();
+          loopReady = false;
+          var stage = scroller.closest('.treat-stage');
+          if (stage) stage.classList.remove('is-positioned');
+          requestAnimationFrame(function () {
+            var step = treatStep();
+            var block = originalBlockWidth();
+            if (step < 2 || block < 2) {
+              if (stage) stage.classList.add('is-positioned');
+              if (onReady) onReady();
+              return;
+            }
+            scroller.scrollLeft = block - step;
+            loopReady = true;
+            updateTreatDim();
+            if (stage) stage.classList.add('is-positioned');
+            if (onReady) onReady();
+          });
+        }
+
+        window.__prepareTreatStage = function (done) {
+          initTreatDesktopScroll(done || function () {});
+        };
+
+        function resetTreatMobileScroll() {
+          loopReady = false;
+          scroller.scrollLeft = 0;
+          updateTreatDim();
+        }
+
+        prev.addEventListener('click', function () {
+          scroller.scrollBy({ left: -treatStep(), behavior: 'smooth' });
+        });
+        next.addEventListener('click', function () {
+          scroller.scrollBy({ left: treatStep(), behavior: 'smooth' });
+        });
+
+        scroller.addEventListener('scroll', function () {
+          if (isJumping) return;
+          window.requestAnimationFrame(updateTreatDim);
+          scheduleLoopCheck();
+        }, { passive: true });
+
+        scroller.addEventListener('scrollend', function () {
+          checkTreatLoop();
+          updateTreatDim();
+        });
+
+        window.addEventListener('resize', function () {
+          window.requestAnimationFrame(function () {
+            if (treatDesktop.matches) initTreatDesktopScroll();
+            else resetTreatMobileScroll();
+          });
+        });
+
+        treatDesktop.addEventListener('change', function () {
+          if (treatDesktop.matches) initTreatDesktopScroll();
+          else resetTreatMobileScroll();
+        });
+
+        if (document.readyState === 'complete') {
+          requestAnimationFrame(function () { initTreatDesktopScroll(); });
+        } else {
+          window.addEventListener('load', function () {
+            requestAnimationFrame(function () { initTreatDesktopScroll(); });
+          });
+        }
+        updateTreatDim();
+      }
+
+      var reduceMotionReveal = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduceMotionReveal) {
+        document.querySelectorAll('.reveal').forEach(function (el) { el.classList.add('is-in'); });
+      } else if ('IntersectionObserver' in window) {
+        var rio = new IntersectionObserver(function (entries) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              entry.target.classList.add('is-in');
+              rio.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.12, rootMargin: '0px 0px -48px 0px' });
+        document.querySelectorAll('.reveal').forEach(function (el) {
+          if (el.closest('[data-reveal-section]')) return;
+          rio.observe(el);
+        });
+      } else {
+        document.querySelectorAll('.reveal').forEach(function (el) { el.classList.add('is-in'); });
+      }
+    })();
+  </script>
+</body>
+</html>
