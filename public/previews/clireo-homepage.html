@@ -151,6 +151,33 @@
       box-shadow: 0 24px 60px rgba(14,25,84,0.22);
     }
     .book-card h2 { margin: 0 0 1.15rem; font-size: 1.625rem; font-weight: 400; letter-spacing: -0.035em; line-height: 1.2; color: var(--navy-deep); }
+    .book-cta-card .book-cta-lead {
+      margin: 0 0 1rem;
+      font-size: 0.95rem;
+      color: var(--muted);
+      line-height: 1.55;
+    }
+    .book-cta-points {
+      margin: 0 0 1.35rem;
+      padding: 0;
+      list-style: none;
+      font-size: 0.88rem;
+      color: var(--navy);
+    }
+    .book-cta-points li {
+      position: relative;
+      padding: 0.3rem 0 0.3rem 1.15rem;
+    }
+    .book-cta-points li::before {
+      content: '';
+      position: absolute;
+      left: 0;
+      top: 0.62rem;
+      width: 0.4rem;
+      height: 0.4rem;
+      border-radius: 50%;
+      background: var(--pink);
+    }
     .field { margin-bottom: 0.85rem; }
     .field label {
       display: block; font-size: 0.8rem; font-weight: 600; color: var(--navy-deep); margin-bottom: 0.35rem;
@@ -1160,7 +1187,7 @@
         <a class="fx-btn" href="#about"><span class="fx-btn-track"><span>About</span><span aria-hidden="true">About</span></span></a>
         <a class="fx-btn" href="#blog"><span class="fx-btn-track"><span>Health tips</span><span aria-hidden="true">Health tips</span></span></a>
       </nav>
-      <a class="btn-contact fx-btn" href="#contact"><span class="fx-btn-track"><span>Contact us</span><span aria-hidden="true">Contact us</span></span></a>
+      <a class="btn-contact fx-btn" href="/book"><span class="fx-btn-track"><span>Book appointment</span><span aria-hidden="true">Book appointment</span></span></a>
       <button class="nav-burger" type="button" data-open-menu aria-label="Open menu">☰</button>
     </div>
   </header>
@@ -1200,38 +1227,16 @@
         </div>
       </div>
 
-        <form class="book-card space-card hero-media" id="contact" action="#" method="get" onsubmit="return false;" data-reveal-block data-reveal-kind="fade">
+        <div class="book-card book-cta-card space-card hero-media" id="book" data-reveal-block data-reveal-kind="fade">
         <h2>Book appointment</h2>
-        <div class="field">
-          <label for="name">Full Name*</label>
-          <input id="name" required placeholder="Rahim Ahmed">
-        </div>
-        <div class="field">
-          <label>Phone &amp; Physiotherapist*</label>
-          <div class="field-row">
-            <input id="phone" type="tel" required placeholder="+880 1630 078675" aria-label="Phone">
-            <select id="doctor" required aria-label="Select Physiotherapist">
-              <option value="" disabled selected>Select Physiotherapist</option>
-              <option>Dr. Antar Das</option>
-              <option>Batia Nahar Ahsan</option>
-              <option>Dr. Mohammad Golam Eazdani</option>
-              <option>Any available physiotherapist</option>
-            </select>
-          </div>
-        </div>
-        <div class="field">
-          <label>Date &amp; Time*</label>
-          <div class="field-row">
-            <input type="date" aria-label="Date" required>
-            <select required aria-label="Select Time">
-              <option value="" disabled selected>Select Time</option>
-              <option>9am - 12pm</option>
-              <option>3pm - 8pm</option>
-            </select>
-          </div>
-        </div>
-        <button class="btn-pink fx-btn" type="button"><span class="fx-btn-track"><span>Send message</span><span aria-hidden="true">Send message</span></span></button>
-      </form>
+        <p class="book-cta-lead">Choose your physiotherapist, session, and visit time in our booking wizard. You'll receive a serial ticket when you're done.</p>
+        <ul class="book-cta-points">
+          <li>Pick location and doctor</li>
+          <li>Select your session</li>
+          <li>Get your queue ticket instantly</li>
+        </ul>
+        <a class="btn-pink fx-btn" href="/book"><span class="fx-btn-track"><span>Start booking</span><span aria-hidden="true">Start booking</span></span></a>
+      </div>
     </div>
   </section>
 
@@ -1378,7 +1383,7 @@
           <div class="eyebrow" data-reveal-block data-reveal-kind="fade">Our physiotherapists</div>
           <h2 class="fx-heading" data-fx-words data-reveal-block data-reveal-kind="heading">Meet The Experts Behind Your Recovery</h2>
         </div>
-        <a class="btn-pink sm fx-btn" href="#contact" data-reveal-block data-reveal-kind="fade"><span class="fx-btn-track"><span>Book appointment</span><span aria-hidden="true">Book appointment</span></span></a>
+        <a class="btn-pink sm fx-btn" href="/book" data-reveal-block data-reveal-kind="fade"><span class="fx-btn-track"><span>Book appointment</span><span aria-hidden="true">Book appointment</span></span></a>
       </div>
       <div class="doc-grid grid-cards" data-card-count="4" data-reveal-block data-reveal-kind="fade">
         <article class="doc-card">
@@ -1452,7 +1457,7 @@
           <img class="logo-img logo-img--sm" src="/images/cbph-logo.png" alt="Chattogram Best Physiotherapy Hospital">
           <a href="https://www.facebook.com/cbphbd" target="_blank" rel="noopener noreferrer">Follow us on Facebook →</a>
         </div>
-        <a class="btn-pink sm fx-btn" href="#contact"><span class="fx-btn-track"><span>Book appointment</span><span aria-hidden="true">Book appointment</span></span></a>
+        <a class="btn-pink sm fx-btn" href="/book"><span class="fx-btn-track"><span>Book appointment</span><span aria-hidden="true">Book appointment</span></span></a>
       </div>
     </div>
   </section>
@@ -1503,7 +1508,7 @@
           <img src="https://images.pexels.com/photos/8460127/pexels-photo-8460127.jpeg?auto=compress&cs=tinysrgb&w=900&h=1200&fit=crop" alt="Physiotherapist assisting patient at CBPH">
           <div class="overlay">
             <h3>Need physiotherapy? Book an appointment</h3>
-            <a class="btn-pink sm fx-btn" href="#contact" style="width:auto"><span class="fx-btn-track"><span>Get in touch</span><span aria-hidden="true">Get in touch</span></span></a>
+            <a class="btn-pink sm fx-btn" href="/book" style="width:auto"><span class="fx-btn-track"><span>Get in touch</span><span aria-hidden="true">Get in touch</span></span></a>
           </div>
         </aside>
         <div class="faq-list stack-list" data-reveal-block data-reveal-kind="fade">
@@ -1541,7 +1546,7 @@
     <div class="layout-container">
       <h2 class="fx-heading" data-fx-words data-reveal-block data-reveal-kind="heading">Prioritize Your Recovery Today</h2>
       <p data-reveal-block data-reveal-kind="fade">Take the first step toward better mobility with expert physiotherapy and rehabilitation tailored to your needs in Panchlaish, Chattogram.</p>
-      <a class="btn-pink sm fx-btn" href="#contact" data-reveal-block data-reveal-kind="fade"><span class="fx-btn-track"><span>Book an appointment</span><span aria-hidden="true">Book an appointment</span></span></a>
+      <a class="btn-pink sm fx-btn" href="/book" data-reveal-block data-reveal-kind="fade"><span class="fx-btn-track"><span>Book an appointment</span><span aria-hidden="true">Book an appointment</span></span></a>
       <div class="trust-mini" data-reveal-block data-reveal-kind="fade"><strong>01630-078675</strong> · 553 O.R. Nizam Road, GEC, Panchlaish</div>
     </div>
   </section>
@@ -1572,7 +1577,7 @@
         <a href="#">Home</a>
         <a href="#about">About</a>
         <a href="#treatments">Services</a>
-        <a href="#contact">Contact</a>
+        <a href="/book">Book appointment</a>
         <a href="#blog">Health Tips</a>
       </div>
       <div>
@@ -1600,7 +1605,7 @@
       <a href="#reviews" data-close-menu>Reviews</a>
       <a href="#about" data-close-menu>About</a>
       <a href="#blog" data-close-menu>Health tips</a>
-      <a href="#contact" data-close-menu>Contact us</a>
+      <a href="/book" data-close-menu>Book appointment</a>
     </div>
   </div>
 
