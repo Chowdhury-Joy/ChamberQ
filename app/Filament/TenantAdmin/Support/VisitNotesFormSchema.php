@@ -108,59 +108,7 @@ class VisitNotesFormSchema
                     ->values()
                     ->all()
                 : [],
-            '_machine_filled' => [],
         ];
-    }
-
-    /**
-     * @param  array<string, mixed>  $current
-     * @param  array<string, mixed>  $draft
-     * @return array<string, mixed>
-     */
-    public static function mergeDraftIntoState(array $current, array $draft): array
-    {
-        $machineFilled = $draft['machine_filled'] ?? [];
-
-        if (in_array('voice_transcript', $machineFilled, true) && blank($current['voice_transcript'] ?? null)) {
-            $current['voice_transcript'] = $draft['transcript'] ?? null;
-        }
-
-        if (in_array('diagnosis_free_text', $machineFilled, true) && blank($current['diagnosis'] ?? null)) {
-            $text = $draft['diagnosis_free_text'] ?? null;
-            if (filled($text)) {
-                $current['diagnosis'] = self::FREE_DIAGNOSIS_PREFIX.$text;
-            }
-        }
-
-        foreach (['advice', 'tests_advised', 'reports_seen'] as $field) {
-            if (in_array($field, $machineFilled, true) && blank($current[$field] ?? null)) {
-                $current[$field] = $draft[$field] ?? null;
-            }
-        }
-
-        if (in_array('prescription_items', $machineFilled, true) && empty($current['prescription_items'] ?? [])) {
-            $current['prescription_items'] = collect($draft['prescription_items'] ?? [])
-                ->map(fn (array $item): array => [
-                    'medicine_name' => $item['medicine_name'] ?? null,
-                    'generic_name' => $item['generic_name'] ?? null,
-                    'dose' => self::isDosePreset($item['dose'] ?? null) ? $item['dose'] : (filled($item['dose'] ?? null) ? 'other' : null),
-                    'dose_other' => self::isDosePreset($item['dose'] ?? null) ? null : ($item['dose'] ?? null),
-                    'frequency' => $item['frequency'] ?? null,
-                    'frequency_other' => self::isFrequencyPreset($item['frequency'] ?? null) ? null : ($item['frequency'] ?? null),
-                    'duration' => $item['duration'] ?? null,
-                    'duration_other' => self::isDurationPreset($item['duration'] ?? null) ? null : ($item['duration'] ?? null),
-                    '_prefilled' => true,
-                    '_uncertain' => (bool) ($item['uncertain'] ?? false),
-                ])
-                ->all();
-        }
-
-        $current['_machine_filled'] = array_values(array_unique(array_merge(
-            $current['_machine_filled'] ?? [],
-            $machineFilled
-        )));
-
-        return $current;
     }
 
     /**
@@ -322,13 +270,12 @@ class VisitNotesFormSchema
                     Hidden::make('voice_path')
                         ->extraAttributes(['data-visit-voice-path' => 'true']),
                     Textarea::make('voice_transcript')
-                        ->label(__('Voice transcript'))
-                        ->helperText(__('Editable draft from recording — confirm before saving.'))
+                        ->label(__('Voice note summary'))
+                        ->helperText(__('Optional. Type a short summary of what you said, so the note is searchable later.'))
                         ->rows(3)
                         ->columnSpanFull(),
                 ]),
             self::paperPhotoSection(),
-            Hidden::make('_machine_filled')->dehydrated(false),
         ];
     }
 

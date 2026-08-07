@@ -250,3 +250,6 @@
 
 ## 2026-08-07T14:32:26+0600
 - Medicine picker UX: pruned 10 junk ORS rows and moved ORS brands to Rehydration; `displayLabel()` includes generic for dropdown search; `+` create action replaces Other/custom field; prescription repeater collapses filled items; `medicines:load --prune`.
+
+## 2026-08-07T15:39:46+0600
+- Deferred the voice → field speech-to-text auto-fill: removed `app/Services/Transcription/`, `config/transcription.php`, the `POST /api/visit-media/transcribe` route and controller method, the `visit-notes-draft` Livewire listener, `VisitNotesFormSchema::mergeDraftIntoState()` / `_machine_filled`, and the `voice_transcription` tenant feature flag. Code stashed unloaded in `docs/deferred/voice-transcription/`. Plain voice notes (record, store, play back) are untouched.

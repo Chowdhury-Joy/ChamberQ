@@ -39,25 +39,6 @@ class VisitMediaController extends Controller
         ]);
     }
 
-    public function transcribe(Request $request, \App\Services\Transcription\VisitTranscriptionService $transcriptionService): JsonResponse
-    {
-        $user = $request->user();
-
-        if (! $user?->canRecordVisitNotes()) {
-            abort(403);
-        }
-
-        if (! tenant()?->hasFeature('voice_transcription')) {
-            abort(403, __('Voice transcription is not enabled for this practice.'));
-        }
-
-        $validated = $request->validate([
-            'path' => ['required', 'string', 'max:255'],
-        ]);
-
-        return response()->json($transcriptionService->transcribeFromPath($validated['path'], $user));
-    }
-
     public function voice(Request $request, VisitRecord $visitRecord): BinaryFileResponse
     {
         if (! $request->user()?->canViewVisitNotes()) {

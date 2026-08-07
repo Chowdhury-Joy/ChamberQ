@@ -76,9 +76,6 @@ $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
     Route::post('/api/visit-media/upload-voice', [VisitMediaController::class, 'uploadVoice'])
         ->middleware(['auth', 'throttle:30,1']);
 
-    Route::post('/api/visit-media/transcribe', [VisitMediaController::class, 'transcribe'])
-        ->middleware(['auth', 'throttle:30,1']);
-
     Route::get('/visit-records/{visitRecord}/voice', [VisitMediaController::class, 'voice'])
         ->middleware(['auth'])
         ->name($routeName('visit-records.voice'));

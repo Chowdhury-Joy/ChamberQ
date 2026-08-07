@@ -1,9 +1,7 @@
 <div
     x-data="visitVoiceRecorder({
         uploadUrl: @js(tenant_web_url('/api/visit-media/upload-voice')),
-        transcribeUrl: @js(tenant_web_url('/api/visit-media/transcribe')),
         maxSeconds: 20,
-        transcriptionEnabled: @js(tenant()?->hasFeature('voice_transcription') ?? false),
     })"
     class="cs-voice-recorder"
     x-ref="recorderRoot"
@@ -12,7 +10,7 @@
         {{ __('Voice note') }}
     </div>
     <p class="cs-voice-recorder__hint">
-        {{ __('Record up to 20 seconds. The audio is always kept. When transcription is on, fields below fill as a draft you confirm before saving.') }}
+        {{ __('Record up to 20 seconds. The audio is saved with the visit and only you can play it back.') }}
     </p>
 
     <div class="cs-voice-recorder__controls">
@@ -36,11 +34,8 @@
         <span class="cs-voice-recorder__status" x-show="recording">
             {{ __('Recording…') }} <span x-text="elapsed"></span>s
         </span>
-        <span class="cs-voice-recorder__saved" x-show="uploadedPath && !recording && !transcribing">
+        <span class="cs-voice-recorder__saved" x-show="uploadedPath && !recording">
             {{ __('Voice saved') }}
-        </span>
-        <span class="cs-voice-recorder__status" x-show="transcribing">
-            {{ __('Transcribing…') }}
         </span>
         <span class="cs-voice-recorder__error" x-show="errorMessage" x-text="errorMessage"></span>
     </div>
@@ -58,12 +53,9 @@
 <script>
     Alpine.data('visitVoiceRecorder', (config) => ({
         uploadUrl: config.uploadUrl,
-        transcribeUrl: config.transcribeUrl,
         maxSeconds: config.maxSeconds || 20,
-        transcriptionEnabled: config.transcriptionEnabled || false,
         recording: false,
         uploading: false,
-        transcribing: false,
         elapsed: 0,
         previewUrl: null,
         uploadedPath: null,
@@ -158,44 +150,10 @@
                 const payload = await response.json();
                 this.uploadedPath = payload.path;
                 this.setVoicePath(payload.path);
-
-                if (this.transcriptionEnabled && payload.path) {
-                    await this.requestTranscription(payload.path);
-                }
             } catch (error) {
                 this.errorMessage = error.message || @js(__('Upload failed.'));
             } finally {
                 this.uploading = false;
-            }
-        },
-
-        async requestTranscription(path) {
-            this.transcribing = true;
-            this.errorMessage = null;
-
-            try {
-                const response = await fetch(this.transcribeUrl, {
-                    method: 'POST',
-                    credentials: 'same-origin',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
-                        Accept: 'application/json',
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ path }),
-                });
-
-                if (!response.ok) {
-                    const payload = await response.json().catch(() => ({}));
-                    throw new Error(payload.message || @js(__('Transcription failed.')));
-                }
-
-                const draft = await response.json();
-                Livewire.dispatch('visit-notes-draft', draft);
-            } catch (error) {
-                this.errorMessage = error.message || @js(__('Transcription failed.'));
-            } finally {
-                this.transcribing = false;
             }
         },
 
