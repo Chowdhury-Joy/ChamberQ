@@ -17,6 +17,7 @@ class LoginTest extends TestCase
     private Tenant $clinicTenant;
     private User $superAdmin;
     private User $soloAdmin;
+    private User $soloDoctor;
     private User $clinicAdmin;
 
     protected function setUp(): void
@@ -41,11 +42,11 @@ class LoginTest extends TestCase
             'tenant_id' => 'solo',
         ]);
 
-        User::create([
-            'name' => 'Solo Staff',
-            'email' => 'staff@solo.com',
+        $this->soloDoctor = User::create([
+            'name' => 'Solo Doctor',
+            'email' => 'doctor@solo.com',
             'password' => Hash::make('password'),
-            'role' => User::ROLE_STAFF,
+            'role' => User::ROLE_DOCTOR,
             'tenant_id' => 'solo',
         ]);
 
@@ -177,7 +178,7 @@ class LoginTest extends TestCase
 
         \Livewire\Livewire::test(\Filament\Auth\Pages\Login::class)
             ->fillForm([
-                'email' => 'staff@solo.com',
+                'email' => 'doctor@solo.com',
                 'password' => 'password',
             ])
             ->call('authenticate')

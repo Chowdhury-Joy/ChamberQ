@@ -7,6 +7,7 @@ use App\Models\Domain;
 use App\Models\MedicineUsage;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\MedicineService;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -71,7 +72,8 @@ class MyMedicinesPageTest extends TestCase
         Livewire::test(MyMedicines::class)
             ->assertSee('NAPA')
             ->callTableAction('edit', $usage, data: [
-                'medicine_name' => 'NAPA EXTRA',
+                'medicine_name' => MedicineService::CUSTOM_MEDICINE_VALUE,
+                'medicine_name_custom' => 'NAPA EXTRA',
                 'generic_name' => 'Paracetamol',
                 'last_dose' => '500 mg',
                 'last_frequency' => '1+0+1',

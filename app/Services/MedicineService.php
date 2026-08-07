@@ -2,11 +2,13 @@
 
 namespace App\Services;
 
+use App\Models\Booking;
+use App\Models\Doctor;
 use App\Models\Medicine;
 use App\Models\MedicineUsage;
+use App\Models\ScheduleSession;
 use App\Models\User;
 use Illuminate\Support\Collection;
-use Illuminate\Support\Str;
 
 class MedicineService
 {
@@ -15,6 +17,113 @@ class MedicineService
     public const MAX_RESULTS = 20;
 
     public const FREE_TEXT_PREFIX = '__free__:';
+
+    public const CUSTOM_MEDICINE_VALUE = '__custom__';
+
+    public function resolvePrescribingDoctor(?Booking $booking = null): ?Doctor
+    {
+        if ($booking?->bookable instanceof ScheduleSession) {
+            return $booking->bookable->doctor;
+        }
+
+        $tenant = tenant();
+
+        if ($tenant?->isSoloDoctor()) {
+            return Doctor::query()->first();
+        }
+
+        return null;
+    }
+
+    /**
+     * Grouped options for prescription / My medicines dropdowns.
+     *
+     * @return array<string, array<string, string>>
+     */
+    public function groupedSelectOptions(?User $doctor, ?Doctor $prescribingDoctor = null): array
+    {
+        $prescribingDoctor ??= $this->resolvePrescribingDoctor();
+        $practiceType = $prescribingDoctor?->practice_type ?? Doctor::PRACTICE_GENERAL;
+
+        $groups = [];
+
+        if ($doctor) {
+            $personal = $this->personalMedicineOptions($doctor, $practiceType);
+
+            if ($personal !== []) {
+                $groups[__('Your medicines')] = $personal;
+            }
+        }
+
+        foreach ($this->catalogMedicinesForPracticeType($practiceType) as $category => $options) {
+            $groups[$category] = $options;
+        }
+
+        $groups[__('Other')] = [
+            self::CUSTOM_MEDICINE_VALUE => __('Other medicine — type below'),
+        ];
+
+        return $groups;
+    }
+
+    /**
+     * @return Collection<int, Medicine>
+     */
+    public function catalogForPracticeType(?string $practiceType): Collection
+    {
+        return Medicine::query()
+            ->orderBy('category')
+            ->orderBy('brand_name')
+            ->get()
+            ->filter(fn (Medicine $medicine) => $medicine->visibleToPracticeType($practiceType));
+    }
+
+    /**
+     * @return array<string, array<string, string>>
+     */
+    private function catalogMedicinesForPracticeType(?string $practiceType): array
+    {
+        $grouped = [];
+
+        foreach ($this->catalogForPracticeType($practiceType) as $medicine) {
+            $category = filled($medicine->category) ? $medicine->category : __('General');
+            $grouped[$category][$medicine->brand_name] = $medicine->displayLabel();
+        }
+
+        return $grouped;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    private function personalMedicineOptions(User $doctor, ?string $practiceType): array
+    {
+        $hidden = $this->hiddenNameSet($doctor);
+        $options = [];
+
+        foreach (MedicineUsage::query()
+            ->where('user_id', $doctor->id)
+            ->whereNull('hidden_at')
+            ->orderByDesc('use_count')
+            ->orderByDesc('last_used_at')
+            ->get() as $usage) {
+            $brand = $this->normalizeMedicineName($usage->medicine_name);
+
+            if (in_array($brand, $hidden, true)) {
+                continue;
+            }
+
+            $catalog = Medicine::query()->where('brand_name', $brand)->first();
+
+            if ($catalog && ! $catalog->visibleToPracticeType($practiceType)) {
+                continue;
+            }
+
+            $options[$brand] = $brand;
+        }
+
+        return $options;
+    }
 
     /**
      * @return Collection<int, array{
@@ -30,7 +139,7 @@ class MedicineService
      *     source: string
      * }>
      */
-    public function search(string $query, ?User $doctor = null): Collection
+    public function search(string $query, ?User $doctor = null, ?Doctor $prescribingDoctor = null): Collection
     {
         $needle = $this->normalizeQuery($query);
 
@@ -38,12 +147,13 @@ class MedicineService
             return collect();
         }
 
+        $prescribingDoctor ??= $this->resolvePrescribingDoctor();
+        $practiceType = $prescribingDoctor?->practice_type ?? Doctor::PRACTICE_GENERAL;
+
         $usageBoosts = $doctor ? $this->usageBoostMap($doctor) : [];
         $hiddenNames = $doctor ? $this->hiddenNameSet($doctor) : [];
 
-        $catalogMatches = Medicine::query()
-            ->orderBy('brand_name')
-            ->get()
+        $catalogMatches = $this->catalogForPracticeType($practiceType)
             ->map(function (Medicine $medicine) use ($needle, $usageBoosts, $hiddenNames): ?array {
                 if (in_array($this->normalizeMedicineName($medicine->brand_name), $hiddenNames, true)) {
                     return null;
@@ -79,11 +189,17 @@ class MedicineService
                 ->where('user_id', $doctor->id)
                 ->whereNull('hidden_at')
                 ->get()
-                ->map(function (MedicineUsage $usage) use ($needle, $usageBoosts): ?array {
+                ->map(function (MedicineUsage $usage) use ($needle, $usageBoosts, $practiceType): ?array {
                     $normalized = $this->normalizeMedicineName($usage->medicine_name);
                     $matchScore = $this->matchScoreOnTerms([$normalized, mb_strtolower($usage->generic_name ?? '')], $needle);
 
                     if ($matchScore === 0) {
+                        return null;
+                    }
+
+                    $catalog = Medicine::query()->where('brand_name', $normalized)->first();
+
+                    if ($catalog && ! $catalog->visibleToPracticeType($practiceType)) {
                         return null;
                     }
 
@@ -179,6 +295,17 @@ class MedicineService
     public function normalizeMedicineName(string $name): string
     {
         return mb_strtoupper(trim($name));
+    }
+
+    public function resolveMedicineNameFromFormState(array $item): ?string
+    {
+        $name = $item['medicine_name'] ?? null;
+
+        if ($name === self::CUSTOM_MEDICINE_VALUE) {
+            $name = $item['medicine_name_custom'] ?? null;
+        }
+
+        return filled($name) ? $this->normalizeMedicineName((string) $name) : null;
     }
 
     private function normalizeQuery(string $query): string

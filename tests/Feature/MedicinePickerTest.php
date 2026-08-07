@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Domain;
+use App\Models\Doctor;
 use App\Models\Medicine;
 use App\Models\MedicineUsage;
 use App\Models\Tenant;
@@ -139,5 +140,70 @@ class MedicinePickerTest extends TestCase
             ->getJson($url)
             ->assertOk()
             ->assertJsonPath('results.0.brand_name', 'NAPA');
+    }
+
+    public function test_catalog_filters_by_doctor_practice_type(): void
+    {
+        tenancy()->initialize($this->tenant);
+
+        Medicine::create([
+            'brand_name' => 'ORALDYNE',
+            'generic_name' => 'Chlorhexidine',
+            'default_strength' => '0.12%',
+            'form' => 'mouthwash',
+            'aliases' => ['oraldyne'],
+            'category' => 'Dental',
+            'practice_types' => [Doctor::PRACTICE_DENTIST, Doctor::PRACTICE_GENERAL],
+        ]);
+
+        $dentistDoctor = Doctor::create([
+            'name' => 'Dr Dentist',
+            'practice_type' => Doctor::PRACTICE_DENTIST,
+        ]);
+
+        $options = $this->medicineService->groupedSelectOptions($this->doctor, $dentistDoctor);
+
+        $this->assertArrayHasKey('Dental', $options);
+        $this->assertArrayHasKey('ORALDYNE', $options['Dental']);
+
+        $generalOnly = Doctor::create([
+            'name' => 'Dr GP',
+            'practice_type' => Doctor::PRACTICE_GENERAL,
+        ]);
+
+        $gpOptions = $this->medicineService->groupedSelectOptions($this->doctor, $generalOnly);
+        $flatGp = collect($gpOptions)
+            ->except([__('Other'), __('Your medicines')])
+            ->flatMap(fn (array $group): array => array_keys($group));
+
+        $this->assertTrue($flatGp->contains('NAPA'));
+        $this->assertTrue($flatGp->contains('ORALDYNE'));
+    }
+
+    public function test_dentist_catalog_hides_general_only_medicines(): void
+    {
+        tenancy()->initialize($this->tenant);
+
+        Medicine::create([
+            'brand_name' => 'GPONLY',
+            'generic_name' => 'Test',
+            'default_strength' => '5 mg',
+            'form' => 'tablet',
+            'aliases' => [],
+            'category' => 'Analgesic',
+            'practice_types' => [Doctor::PRACTICE_GENERAL],
+        ]);
+
+        $dentistDoctor = Doctor::create([
+            'name' => 'Dr Dentist',
+            'practice_type' => Doctor::PRACTICE_DENTIST,
+        ]);
+
+        $options = $this->medicineService->groupedSelectOptions($this->doctor, $dentistDoctor);
+        $flat = collect($options)
+            ->except([__('Other'), __('Your medicines')])
+            ->flatMap(fn (array $group): array => array_keys($group));
+
+        $this->assertFalse($flat->contains('GPONLY'));
     }
 }

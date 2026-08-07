@@ -82,6 +82,7 @@ class DailyRoster extends Page implements HasTable, HasForms
                         ? VisitNotesFormSchema::components(
                             $record->patient,
                             app(VisitRecordService::class)->lastRecordedVisitForPatient($record->patient, $record->id),
+                            $record,
                         )
                         : [])
                     ->modalHeading(fn (): ?string => auth()->user()?->canRecordVisitNotes()

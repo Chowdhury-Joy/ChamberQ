@@ -2,6 +2,7 @@
 
 namespace App\Filament\TenantAdmin\Resources\Doctors\Tables;
 
+use App\Models\Doctor;
 use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -20,6 +21,9 @@ class DoctorsTable
             ->columns([
                 TextColumn::make('name')
                     ->searchable(),
+                TextColumn::make('practice_type')
+                    ->label(__('Practice type'))
+                    ->formatStateUsing(fn (?string $state, Doctor $record): string => $record->practiceTypeLabel()),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

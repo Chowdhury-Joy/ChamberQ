@@ -226,6 +226,7 @@ class ConsultScreen extends Page implements HasActions
                     return VisitNotesFormSchema::components(
                         $this->currentPatient,
                         $this->lastVisitRecord,
+                        $this->currentBooking,
                     );
                 })
                 ->fillForm(fn (): array => auth()->user()?->canRecordVisitNotes()
@@ -329,6 +330,7 @@ class ConsultScreen extends Page implements HasActions
             ->form(fn (): array => VisitNotesFormSchema::components(
                 $this->currentPatient,
                 $this->lastVisitRecord,
+                $this->currentBooking,
             ))
             ->fillForm(fn (): array => VisitNotesFormSchema::stateFromRecord($this->currentVisitRecord))
             ->action(function (array $data, VisitRecordService $visitRecordService): void {
@@ -359,7 +361,7 @@ class ConsultScreen extends Page implements HasActions
                 $bookingId = $action->getArguments()['bookingId'] ?? null;
                 $booking = $bookingId ? Booking::with('patient')->find($bookingId) : null;
 
-                return VisitNotesFormSchema::components($booking?->patient, null);
+                return VisitNotesFormSchema::components($booking?->patient, null, $booking);
             })
             ->modalHeading(__('Add visit notes'))
             ->modalDescription(__('All fields optional — voice, photo, diagnosis, or prescription.'))

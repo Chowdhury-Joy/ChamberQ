@@ -2,6 +2,8 @@
 
 namespace App\Filament\TenantAdmin\Pages;
 
+use App\Filament\TenantAdmin\Support\MedicinePickerFields;
+use App\Filament\TenantAdmin\Support\VisitNotesFormSchema;
 use App\Models\MedicineUsage;
 use App\Services\MedicineService;
 use Filament\Actions\Action;
@@ -62,22 +64,35 @@ class MyMedicines extends Page implements HasActions, HasTable
                 Action::make('edit')
                     ->label(__('Edit defaults'))
                     ->form([
-                        TextInput::make('medicine_name')->required()->maxLength(120),
+                        ...MedicinePickerFields::schema(),
                         TextInput::make('generic_name')->maxLength(120),
                         TextInput::make('last_dose')->maxLength(80),
                         TextInput::make('last_frequency')->maxLength(80),
                         TextInput::make('last_duration')->maxLength(80),
                     ])
-                    ->fillForm(fn (MedicineUsage $record): array => [
-                        'medicine_name' => $record->medicine_name,
-                        'generic_name' => $record->generic_name,
-                        'last_dose' => $record->last_dose,
-                        'last_frequency' => $record->last_frequency,
-                        'last_duration' => $record->last_duration,
-                    ])
+                    ->fillForm(function (MedicineUsage $record): array {
+                        $base = VisitNotesFormSchema::prescriptionItemStateFromStored(
+                            $record->medicine_name,
+                            $record->generic_name,
+                            $record->last_dose,
+                            $record->last_frequency,
+                            $record->last_duration,
+                        );
+
+                        return [
+                            'medicine_name' => $base['medicine_name'],
+                            'medicine_name_custom' => $base['medicine_name_custom'],
+                            'generic_name' => $record->generic_name,
+                            'last_dose' => $record->last_dose,
+                            'last_frequency' => $record->last_frequency,
+                            'last_duration' => $record->last_duration,
+                        ];
+                    })
                     ->action(function (MedicineUsage $record, array $data, MedicineService $medicineService): void {
+                        $name = $medicineService->resolveMedicineNameFromFormState($data);
+
                         $record->update([
-                            'medicine_name' => $medicineService->normalizeMedicineName($data['medicine_name']),
+                            'medicine_name' => $name,
                             'generic_name' => filled($data['generic_name'] ?? null) ? trim($data['generic_name']) : null,
                             'last_dose' => filled($data['last_dose'] ?? null) ? trim($data['last_dose']) : null,
                             'last_frequency' => filled($data['last_frequency'] ?? null) ? trim($data['last_frequency']) : null,
@@ -99,7 +114,7 @@ class MyMedicines extends Page implements HasActions, HasTable
                 Action::make('add')
                     ->label(__('Add medicine'))
                     ->form([
-                        TextInput::make('medicine_name')->required()->maxLength(120),
+                        ...MedicinePickerFields::schema(),
                         TextInput::make('generic_name')->maxLength(120),
                         TextInput::make('last_dose')->maxLength(80),
                         TextInput::make('last_frequency')->maxLength(80),
@@ -107,7 +122,7 @@ class MyMedicines extends Page implements HasActions, HasTable
                     ])
                     ->action(function (array $data, MedicineService $medicineService): void {
                         $medicineService->recordUsage(auth()->user(), [
-                            'medicine_name' => $data['medicine_name'],
+                            'medicine_name' => $medicineService->resolveMedicineNameFromFormState($data) ?? '',
                             'generic_name' => $data['generic_name'] ?? null,
                             'dose' => $data['last_dose'] ?? null,
                             'frequency' => $data['last_frequency'] ?? null,

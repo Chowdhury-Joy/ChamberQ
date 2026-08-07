@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Models\Doctor;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -17,10 +18,12 @@ class Medicine extends Model
         'form',
         'aliases',
         'category',
+        'practice_types',
     ];
 
     protected $casts = [
         'aliases' => 'array',
+        'practice_types' => 'array',
     ];
 
     public function usages(): HasMany
@@ -54,5 +57,20 @@ class Medicine extends Model
         }
 
         return $label;
+    }
+
+    public function visibleToPracticeType(?string $practiceType): bool
+    {
+        $types = $this->practice_types ?? [];
+
+        if ($types === [] || $practiceType === null) {
+            return true;
+        }
+
+        if ($practiceType === Doctor::PRACTICE_GENERAL) {
+            return true;
+        }
+
+        return in_array($practiceType, $types, true);
     }
 }

@@ -478,7 +478,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                     ? app(VisitRecordService::class)->lastRecordedVisitForPatient($patient, $booking?->id)
                     : null;
 
-                return VisitNotesFormSchema::components($patient, $lastVisit);
+                return VisitNotesFormSchema::components($patient, $lastVisit, $booking);
             })
             ->fillForm(function (): array {
                 $booking = $this->activeLiveSession?->currentBooking;

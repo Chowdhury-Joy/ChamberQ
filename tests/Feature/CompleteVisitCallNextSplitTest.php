@@ -8,6 +8,7 @@ use App\Models\Booking;
 use App\Models\Chamber;
 use App\Models\Doctor;
 use App\Models\Domain;
+use App\Models\Medicine;
 use App\Models\LiveSession;
 use App\Models\Patient;
 use App\Models\Prescription;
@@ -109,6 +110,34 @@ class CompleteVisitCallNextSplitTest extends TestCase
             'current_booking_id' => $this->first->id,
         ]);
 
+        Medicine::create([
+            'brand_name' => 'SERGEL',
+            'generic_name' => 'Esomeprazole',
+            'default_strength' => '40 mg',
+            'form' => 'capsule',
+            'aliases' => ['sergel'],
+            'category' => 'GI',
+            'practice_types' => [Doctor::PRACTICE_GENERAL],
+        ]);
+        Medicine::create([
+            'brand_name' => 'NAPA',
+            'generic_name' => 'Paracetamol',
+            'default_strength' => '500 mg',
+            'form' => 'tablet',
+            'aliases' => ['napa'],
+            'category' => 'Analgesic',
+            'practice_types' => [Doctor::PRACTICE_GENERAL],
+        ]);
+        Medicine::create([
+            'brand_name' => 'OMEPRAZOLE',
+            'generic_name' => 'Omeprazole',
+            'default_strength' => '20 mg',
+            'form' => 'capsule',
+            'aliases' => ['omeprazole'],
+            'category' => 'GI',
+            'practice_types' => [Doctor::PRACTICE_GENERAL],
+        ]);
+
         tenancy()->end();
     }
 
@@ -134,7 +163,7 @@ class CompleteVisitCallNextSplitTest extends TestCase
             ->callAction('completeVisit', data: [
                 'diagnosis' => VisitNotesFormSchema::FREE_DIAGNOSIS_PREFIX.'Acidity',
                 'prescription_items' => [
-                    ['medicine_name' => 'Omeprazole', 'dose' => '20mg', 'frequency' => '1+1+1', 'duration' => '7 days'],
+                    ['medicine_name' => 'OMEPRAZOLE', 'dose' => '20 mg', 'frequency' => '1+1+1', 'duration' => '7 days'],
                 ],
             ]);
 
@@ -190,7 +219,7 @@ class CompleteVisitCallNextSplitTest extends TestCase
             ->callAction('writePrescription', data: [
                 'diagnosis' => VisitNotesFormSchema::FREE_DIAGNOSIS_PREFIX.'Acidity',
                 'prescription_items' => [
-                    ['medicine_name' => 'Sergel', 'dose' => '20mg', 'frequency' => '1+0+1', 'duration' => '14 days'],
+                    ['medicine_name' => 'SERGEL', 'dose' => 'other', 'dose_other' => '20 mg', 'frequency' => '1+0+1', 'duration' => '14 days'],
                 ],
             ]);
 
@@ -212,7 +241,7 @@ class CompleteVisitCallNextSplitTest extends TestCase
                 'diagnosis' => VisitNotesFormSchema::FREE_DIAGNOSIS_PREFIX.'Acidity',
                 'advice' => 'Avoid spicy food',
                 'prescription_items' => [
-                    ['medicine_name' => 'Sergel', 'dose' => '20mg', 'frequency' => '1+0+1', 'duration' => '14 days'],
+                    ['medicine_name' => 'SERGEL', 'dose' => 'other', 'dose_other' => '20 mg', 'frequency' => '1+0+1', 'duration' => '14 days'],
                 ],
             ]);
 
@@ -238,15 +267,15 @@ class CompleteVisitCallNextSplitTest extends TestCase
 
         $service->saveForCompletedBooking($this->first, $this->doctor, [
             'prescription_items' => [
-                ['medicine_name' => 'Sergel', 'dose' => '20mg', 'frequency' => '1+0+1', 'duration' => '14 days'],
+                ['medicine_name' => 'SERGEL', 'dose' => '20mg', 'frequency' => '1+0+1', 'duration' => '14 days'],
             ],
         ]);
 
         // Doctor reopens and adds the medicine the patient mentioned late.
         $service->saveForCompletedBooking($this->first, $this->doctor, [
             'prescription_items' => [
-                ['medicine_name' => 'Sergel', 'dose' => '20mg', 'frequency' => '1+0+1', 'duration' => '14 days'],
-                ['medicine_name' => 'Napa', 'dose' => '500mg', 'frequency' => '1+1+1', 'duration' => '3 days'],
+                ['medicine_name' => 'SERGEL', 'dose' => '20mg', 'frequency' => '1+0+1', 'duration' => '14 days'],
+                ['medicine_name' => 'NAPA', 'dose' => '500 mg', 'frequency' => '1+1+1', 'duration' => '3 days'],
             ],
         ]);
 
@@ -260,7 +289,7 @@ class CompleteVisitCallNextSplitTest extends TestCase
         // And removing one on a later edit must actually remove it.
         $service->saveForCompletedBooking($this->first, $this->doctor, [
             'prescription_items' => [
-                ['medicine_name' => 'Napa', 'dose' => '500mg', 'frequency' => '1+1+1', 'duration' => '3 days'],
+                ['medicine_name' => 'NAPA', 'dose' => '500 mg', 'frequency' => '1+1+1', 'duration' => '3 days'],
             ],
         ]);
 
@@ -274,7 +303,7 @@ class CompleteVisitCallNextSplitTest extends TestCase
         Livewire::test(ConsultScreen::class)
             ->callAction('writePrescription', data: [
                 'prescription_items' => [
-                    ['medicine_name' => 'Sergel', 'dose' => '20mg', 'frequency' => '1+0+1', 'duration' => '14 days'],
+                    ['medicine_name' => 'SERGEL', 'dose' => 'other', 'dose_other' => '20 mg', 'frequency' => '1+0+1', 'duration' => '14 days'],
                 ],
             ])
             // Complete carries the written notes in, so finishing does not blank them.
@@ -343,7 +372,7 @@ class CompleteVisitCallNextSplitTest extends TestCase
         Livewire::test(ConsultScreen::class)
             ->callAction('completeVisit', data: [
                 'prescription_items' => [
-                    ['medicine_name' => 'Napa', 'dose' => '500mg', 'frequency' => '1+1+1', 'duration' => '5 days'],
+                    ['medicine_name' => 'NAPA', 'dose' => '500 mg', 'frequency' => '1+1+1', 'duration' => '5 days'],
                 ],
             ])
             ->assertSee('Visit completed')
@@ -357,7 +386,7 @@ class CompleteVisitCallNextSplitTest extends TestCase
 
         app(\App\Services\VisitRecordService::class)->saveForCompletedBooking($this->first, $this->doctor, [
             'prescription_items' => [
-                ['medicine_name' => 'Sergel', 'dose' => '40 mg', 'frequency' => '1+0+1', 'duration' => '14 days'],
+                ['medicine_name' => 'SERGEL', 'dose' => '40 mg', 'frequency' => '1+0+1', 'duration' => '14 days'],
             ],
         ]);
 
@@ -367,7 +396,7 @@ class CompleteVisitCallNextSplitTest extends TestCase
 
         app(\App\Services\VisitRecordService::class)->saveForCompletedBooking($this->first->fresh(), $this->doctor, [
             'prescription_items' => [
-                ['medicine_name' => 'Sergel', 'dose' => '40 mg', 'frequency' => '1+0+1', 'duration' => '14 days'],
+                ['medicine_name' => 'SERGEL', 'dose' => '40 mg', 'frequency' => '1+0+1', 'duration' => '14 days'],
             ],
         ]);
 

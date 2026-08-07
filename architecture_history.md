@@ -238,3 +238,9 @@
 
 ## 2026-08-07T12:42:47+0600
 - Visit-notes modals use `VisitNotesFormSchema::configureModal()` (`stickyModalHeader` + `stickyModalFooter`) on Consult Screen, Live Queue Control, Daily Roster, and `CompleteBookingWithVisitNotes::applyDoctorModal`; tenant admin theme CSS full-height modal + safe-area sticky footer on phones.
+
+## 2026-08-07T12:49:39+0600
+- Prescription dose field in visit-notes modal uses `ToggleButtons` presets (`500 mg`, `10 mg`, … + Other) like frequency/duration; `normalizeSubmission()` resolves `dose_other`.
+
+## 2026-08-07T13:20:43+0600
+- Medicine picker is a grouped dropdown (category + Your medicines + Other) instead of free search; `doctors.practice_type` and `medicines.practice_types` filter the list per specialty; admin sets practice type on Doctors resource.

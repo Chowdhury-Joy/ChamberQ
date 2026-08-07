@@ -61,10 +61,13 @@ class DatabaseSeeder extends Seeder
             'role' => User::ROLE_DOCTOR, 'tenant_id' => 'solo',
         ]);
 
-        User::withoutGlobalScope(\App\Scopes\TenantScope::class)->firstOrCreate(['email' => 'staff@solo.com'], [
-            'name' => 'Solo Staff', 'password' => Hash::make('password'),
-            'role' => User::ROLE_STAFF, 'tenant_id' => 'solo',
-        ]);
+        // Solo demo = doctor working alone. Keep queue_runner at the default
+        // (staff-run); with no staff user, effectiveQueueRunner() falls back to
+        // the doctor so demos don't need a second login.
+        User::withoutGlobalScope(\App\Scopes\TenantScope::class)
+            ->where('tenant_id', 'solo')
+            ->where('role', User::ROLE_STAFF)
+            ->delete();
 
         tenancy()->initialize($tenant);
 

@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\Doctor;
 use App\Models\Medicine;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
@@ -53,13 +54,35 @@ class LoadMedicinesCommand extends Command
                 continue;
             }
 
-            [$brand, $generic, $strength, $form, $aliasesRaw, $category] = array_pad($row, 6, null);
+            [$brand, $generic, $strength, $form, $aliasesRaw, $category, $practiceTypesRaw] = array_pad($row, 7, null);
 
             $aliases = collect(explode('|', (string) $aliasesRaw))
                 ->map(fn (string $alias) => trim($alias))
                 ->filter()
                 ->values()
                 ->all();
+
+            $practiceTypes = collect(explode('|', (string) $practiceTypesRaw))
+                ->map(fn (string $type) => trim($type))
+                ->filter()
+                ->values()
+                ->all();
+
+            if ($practiceTypes === []) {
+                $practiceTypes = [Doctor::PRACTICE_GENERAL];
+
+                if (trim((string) $category) === 'Dermatology') {
+                    $practiceTypes[] = Doctor::PRACTICE_DERMATOLOGIST;
+                }
+
+                if (trim((string) $category) === 'Dental') {
+                    $practiceTypes[] = Doctor::PRACTICE_DENTIST;
+                }
+
+                if (trim((string) $category) === 'Gynecology') {
+                    $practiceTypes[] = Doctor::PRACTICE_GYNECOLOGIST;
+                }
+            }
 
             $medicine = Medicine::query()->updateOrCreate(
                 ['brand_name' => mb_strtoupper(trim($brand))],
@@ -69,6 +92,7 @@ class LoadMedicinesCommand extends Command
                     'form' => filled($form) ? trim($form) : null,
                     'aliases' => $aliases,
                     'category' => filled($category) ? trim($category) : null,
+                    'practice_types' => $practiceTypes,
                 ]
             );
 

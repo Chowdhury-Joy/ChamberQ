@@ -2,7 +2,10 @@
 
 namespace App\Filament\TenantAdmin\Support;
 
+use App\Models\Booking;
 use App\Models\Condition;
+use App\Models\Doctor;
+use App\Models\Medicine;
 use App\Models\Patient;
 use App\Models\VisitRecord;
 use App\Services\ConditionService;
@@ -44,6 +47,9 @@ class VisitNotesFormSchema
     /** @var list<string> */
     public const DURATION_PRESETS = ['3 days', '5 days', '7 days', '10 days', '14 days', '1 month', 'Continue'];
 
+    /** @var list<string> */
+    public const DOSE_PRESETS = ['500 mg', '10 mg', '20 mg', '40 mg', '400 mg', '5 mg', '50 mg'];
+
     /**
      * @return array<string, mixed>
      */
@@ -74,16 +80,13 @@ class VisitNotesFormSchema
             'prescription_photo' => filled($record->photo_path) ? [$record->photo_path] : [],
             'prescription_items' => $record->prescription
                 ? $record->prescription->items
-                    ->map(fn (\App\Models\PrescriptionItem $item): array => [
-                        'medicine_name' => $item->medicine_name,
-                        'generic_name' => $item->generic_name,
-                        'dose' => $item->dose,
-                        'frequency' => self::isFrequencyPreset($item->frequency) ? $item->frequency : (filled($item->frequency) ? 'other' : null),
-                        'frequency_other' => self::isFrequencyPreset($item->frequency) ? null : $item->frequency,
-                        'duration' => self::isDurationPreset($item->duration) ? $item->duration : (filled($item->duration) ? 'other' : null),
-                        'duration_other' => self::isDurationPreset($item->duration) ? null : $item->duration,
-                        '_prefilled' => false,
-                    ])
+                    ->map(fn (\App\Models\PrescriptionItem $item): array => self::prescriptionItemStateFromStored(
+                        $item->medicine_name,
+                        $item->generic_name,
+                        $item->dose,
+                        $item->frequency,
+                        $item->duration,
+                    ))
                     ->values()
                     ->all()
                 : [],
@@ -122,7 +125,8 @@ class VisitNotesFormSchema
                 ->map(fn (array $item): array => [
                     'medicine_name' => $item['medicine_name'] ?? null,
                     'generic_name' => $item['generic_name'] ?? null,
-                    'dose' => $item['dose'] ?? null,
+                    'dose' => self::isDosePreset($item['dose'] ?? null) ? $item['dose'] : (filled($item['dose'] ?? null) ? 'other' : null),
+                    'dose_other' => self::isDosePreset($item['dose'] ?? null) ? null : ($item['dose'] ?? null),
                     'frequency' => $item['frequency'] ?? null,
                     'frequency_other' => self::isFrequencyPreset($item['frequency'] ?? null) ? null : ($item['frequency'] ?? null),
                     'duration' => $item['duration'] ?? null,
@@ -173,6 +177,8 @@ class VisitNotesFormSchema
 
         $items = collect($data['prescription_items'] ?? [])
             ->map(function (array $item): array {
+                $medicineService = app(MedicineService::class);
+
                 $frequency = $item['frequency'] ?? null;
                 if ($frequency === 'other') {
                     $frequency = $item['frequency_other'] ?? null;
@@ -183,10 +189,15 @@ class VisitNotesFormSchema
                     $duration = $item['duration_other'] ?? null;
                 }
 
+                $dose = $item['dose'] ?? null;
+                if ($dose === 'other') {
+                    $dose = $item['dose_other'] ?? null;
+                }
+
                 return [
-                    'medicine_name' => $item['medicine_name'] ?? null,
+                    'medicine_name' => $medicineService->resolveMedicineNameFromFormState($item),
                     'generic_name' => $item['generic_name'] ?? null,
-                    'dose' => $item['dose'] ?? null,
+                    'dose' => $dose,
                     'frequency' => $frequency,
                     'duration' => $duration,
                 ];
@@ -201,20 +212,23 @@ class VisitNotesFormSchema
     /**
      * @return list<\Filament\Forms\Components\Component>
      */
-    public static function components(?Patient $patient = null, ?VisitRecord $lastVisitRecord = null): array
-    {
+    public static function components(
+        ?Patient $patient = null,
+        ?VisitRecord $lastVisitRecord = null,
+        ?Booking $booking = null,
+    ): array {
+        $medicineService = app(MedicineService::class);
+        $prescribingDoctor = $medicineService->resolvePrescribingDoctor($booking);
+
         $lastItems = $lastVisitRecord?->prescription?->items
             ? $lastVisitRecord->prescription->items
-                ->map(fn (\App\Models\PrescriptionItem $item): array => [
-                    'medicine_name' => $item->medicine_name,
-                    'generic_name' => $item->generic_name,
-                    'dose' => $item->dose,
-                    'frequency' => self::isFrequencyPreset($item->frequency) ? $item->frequency : (filled($item->frequency) ? 'other' : null),
-                    'frequency_other' => self::isFrequencyPreset($item->frequency) ? null : $item->frequency,
-                    'duration' => self::isDurationPreset($item->duration) ? $item->duration : (filled($item->duration) ? 'other' : null),
-                    'duration_other' => self::isDurationPreset($item->duration) ? null : $item->duration,
-                    '_prefilled' => false,
-                ])
+                ->map(fn (\App\Models\PrescriptionItem $item): array => self::prescriptionItemStateFromStored(
+                    $item->medicine_name,
+                    $item->generic_name,
+                    $item->dose,
+                    $item->frequency,
+                    $item->duration,
+                ))
                 ->values()
                 ->all()
             : [];
@@ -238,15 +252,21 @@ class VisitNotesFormSchema
                         ->visible(fn (): bool => $lastItems !== []),
                     Repeater::make('prescription_items')
                         ->label(__('Medicines'))
-                        ->schema(self::prescriptionItemSchema())
+                        ->schema(self::prescriptionItemSchema($prescribingDoctor))
                         ->columns(1)
                         ->defaultItems(0)
                         ->addActionLabel(__('Add medicine'))
                         ->reorderable()
                         ->collapsible()
-                        ->itemLabel(fn (array $state): ?string => filled($state['medicine_name'] ?? null)
-                            ? mb_strtoupper((string) $state['medicine_name'])
-                            : null),
+                        ->itemLabel(function (array $state): ?string {
+                            $name = $state['medicine_name'] ?? null;
+
+                            if ($name === MedicineService::CUSTOM_MEDICINE_VALUE) {
+                                $name = $state['medicine_name_custom'] ?? null;
+                            }
+
+                            return filled($name) ? mb_strtoupper((string) $name) : null;
+                        }),
                 ])
                 ->columnSpanFull(),
             Section::make(__('Diagnosis'))
@@ -375,64 +395,67 @@ class VisitNotesFormSchema
     /**
      * @return list<\Filament\Forms\Components\Component>
      */
-    private static function prescriptionItemSchema(): array
+    private static function prescriptionItemSchema(?Doctor $prescribingDoctor = null): array
     {
         return [
             Select::make('medicine_name')
                 ->label(__('Medicine (brand)'))
-                ->placeholder(__('Type to search…'))
+                ->placeholder(__('Choose from the list…'))
+                ->options(fn (): array => app(MedicineService::class)->groupedSelectOptions(
+                    auth()->user(),
+                    $prescribingDoctor,
+                ))
                 ->searchable()
                 ->live()
                 ->required()
-                ->getSearchResultsUsing(function (string $search): array {
-                    if (mb_strlen(trim($search)) < MedicineService::MIN_SEARCH_LENGTH) {
-                        return [];
-                    }
-
-                    $options = app(MedicineService::class)
-                        ->search($search, auth()->user())
-                        ->mapWithKeys(fn (array $row) => [$row['brand_name'] => $row['label']])
-                        ->all();
-
-                    $upper = mb_strtoupper(trim($search));
-                    if (! array_key_exists($upper, $options)) {
-                        $options[$upper] = __('Use: :text', ['text' => $upper]);
-                    }
-
-                    return $options;
-                })
-                ->getOptionLabelUsing(fn (?string $value): ?string => $value)
+                ->native(false)
                 ->afterStateUpdated(function (?string $state, Set $set, Get $get): void {
-                    if (blank($state)) {
+                    if (blank($state) || $state === MedicineService::CUSTOM_MEDICINE_VALUE) {
                         return;
                     }
 
                     $set('medicine_name', mb_strtoupper(trim($state)));
 
-                    $match = app(MedicineService::class)
-                        ->search($state, auth()->user())
-                        ->first(fn (array $row) => $row['brand_name'] === mb_strtoupper(trim($state)));
+                    $match = Medicine::query()
+                        ->where('brand_name', mb_strtoupper(trim($state)))
+                        ->first();
 
                     if (! $match) {
                         return;
                     }
 
                     if (blank($get('generic_name'))) {
-                        $set('generic_name', $match['generic_name']);
+                        $set('generic_name', $match->generic_name);
                     }
                     if (blank($get('dose'))) {
-                        $set('dose', $match['dose']);
+                        $prefillDose = $match->default_strength;
+                        if (self::isDosePreset($prefillDose)) {
+                            $set('dose', $prefillDose);
+                            $set('dose_other', null);
+                        } elseif (filled($prefillDose)) {
+                            $set('dose', 'other');
+                            $set('dose_other', $prefillDose);
+                        }
                     }
                     if (blank($get('frequency'))) {
-                        $set('frequency', $match['frequency'] ?? '1+1+1');
+                        $set('frequency', '1+1+1');
                     }
                     if (blank($get('duration'))) {
-                        $set('duration', $match['duration'] ?? '5 days');
+                        $set('duration', '5 days');
                     }
 
                     $set('_prefilled', true);
-                })
-                ->native(false),
+                }),
+            TextInput::make('medicine_name_custom')
+                ->label(__('Medicine name'))
+                ->placeholder(__('Type medicine name'))
+                ->maxLength(120)
+                ->live(onBlur: true)
+                ->visible(fn (Get $get): bool => $get('medicine_name') === MedicineService::CUSTOM_MEDICINE_VALUE)
+                ->required(fn (Get $get): bool => $get('medicine_name') === MedicineService::CUSTOM_MEDICINE_VALUE)
+                ->afterStateUpdated(fn (?string $state, Set $set): mixed => filled($state)
+                    ? $set('medicine_name_custom', mb_strtoupper(trim($state)))
+                    : null),
             View::make('filament.tenant-admin.components.medicine-prefill-hint')
                 ->visible(fn (Get $get): bool => (bool) $get('_prefilled'))
                 ->columnSpanFull(),
@@ -442,10 +465,19 @@ class VisitNotesFormSchema
                 ->label(__('Generic name'))
                 ->placeholder(__('e.g. Paracetamol'))
                 ->maxLength(120),
-            TextInput::make('dose')
+            ToggleButtons::make('dose')
                 ->label(__('Dose'))
-                ->placeholder(__('e.g. 500 mg'))
-                ->maxLength(80),
+                ->options(array_merge(
+                    array_combine(self::DOSE_PRESETS, self::DOSE_PRESETS),
+                    ['other' => __('Other')]
+                ))
+                ->inline()
+                ->live(),
+            TextInput::make('dose_other')
+                ->label(__('Dose (other)'))
+                ->placeholder(__('e.g. 625 mg'))
+                ->maxLength(80)
+                ->visible(fn (Get $get): bool => $get('dose') === 'other'),
             ToggleButtons::make('frequency')
                 ->label(__('Frequency'))
                 ->options(array_merge(
@@ -542,5 +574,37 @@ class VisitNotesFormSchema
     private static function isDurationPreset(?string $value): bool
     {
         return filled($value) && in_array($value, self::DURATION_PRESETS, true);
+    }
+
+    private static function isDosePreset(?string $value): bool
+    {
+        return filled($value) && in_array($value, self::DOSE_PRESETS, true);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public static function prescriptionItemStateFromStored(
+        ?string $medicineName,
+        ?string $genericName,
+        ?string $dose,
+        ?string $frequency,
+        ?string $duration,
+    ): array {
+        $brand = filled($medicineName) ? mb_strtoupper(trim($medicineName)) : null;
+        $inCatalog = $brand && Medicine::query()->where('brand_name', $brand)->exists();
+
+        return [
+            'medicine_name' => $inCatalog ? $brand : MedicineService::CUSTOM_MEDICINE_VALUE,
+            'medicine_name_custom' => $inCatalog ? null : $brand,
+            'generic_name' => $genericName,
+            'dose' => self::isDosePreset($dose) ? $dose : (filled($dose) ? 'other' : null),
+            'dose_other' => self::isDosePreset($dose) ? null : $dose,
+            'frequency' => self::isFrequencyPreset($frequency) ? $frequency : (filled($frequency) ? 'other' : null),
+            'frequency_other' => self::isFrequencyPreset($frequency) ? null : $frequency,
+            'duration' => self::isDurationPreset($duration) ? $duration : (filled($duration) ? 'other' : null),
+            'duration_other' => self::isDurationPreset($duration) ? null : $duration,
+            '_prefilled' => false,
+        ];
     }
 }

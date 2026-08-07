@@ -1,4 +1,4 @@
-brand_name,generic_name,default_strength,form,aliases,category
+brand_name,generic_name,default_strength,form,aliases,category,practice_types
 NAPA,Paracetamol,500 mg,tablet,napa|paracetamol,Analgesic
 SETRIL,Cetirizine,10 mg,tablet,setril|cetirizine,Allergy
 OMEE,Omeprazole,20 mg,capsule,omee|omeprazole,GI
@@ -94,3 +94,6 @@ ORS PLUS ORS LIFE,ORS,,sachet,ors plus ors life,GI
 ORS PLUS ORS CARE,ORS,,sachet,ors plus ors care,GI
 ORS PLUS ORS FAST,ORS,,sachet,ors plus ors fast,GI
 ORS PLUS ORS GOLD,ORS,,sachet,ors plus ors gold,GI
+ORALDYNE,Chlorhexidine,0.12%,mouthwash,oraldyne,Dental,dentist|general_physician
+DENTOGEL,Metronidazole,1%,gel,dentogel,Dental,dentist|general_physician
+GYNOFAST,Clotrimazole,1%,cream,gynofast,Gynecology,gynecologist|general_physician
