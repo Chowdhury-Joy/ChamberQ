@@ -122,7 +122,9 @@ class PatientRecordsStage4Test extends TestCase
     {
         tenancy()->initialize($this->tenant);
 
-        $record = app(VisitRecordService::class)->saveForCompletedBooking($this->booking, $this->doctor, [
+        $this->booking->update(['status' => 'completed', 'completed_at' => now()]);
+
+        $record = app(VisitRecordService::class)->saveForCompletedBooking($this->booking->fresh(), $this->doctor, [
             'condition_id' => $this->condition->id,
             'advice' => 'Avoid spicy food',
         ]);

@@ -783,3 +783,19 @@
   <action>The card and the write-prescription button now key off whether the saved visit record actually has a prescription with at least one medicine (`->prescription?->items->isNotEmpty()`), not merely whether a `VisitRecord` row exists. Notes-only state reads "Notes so far — no medicines yet" and the button stays "Write prescription"; only once a medicine exists does it become "Prescription so far" / "Edit prescription". Added chips for Advice, Tests advised, Reports seen, and Follow-up set so nothing saved is invisible on the summary.</action>
   <reason>"Prescription" is a specific clinical claim — it should not be used for a bag of unrelated notes fields. Matching the label to what was actually written keeps the summary honest and prevents a doctor from being told there's something to "edit" that was never written.</reason>
 </decision>
+
+## 2026-08-07T12:21:37+0600
+
+<decision>
+  <category>Business_Logic</category>
+  <context>Doctors in Bangladesh prescribe by brand name; retyping dose/frequency/duration every visit is slow. A shared national catalogue helps new doctors, but each doctor's real defaults differ and must learn from their own completed visits — not from mid-consult drafts that might never be handed to the patient.</context>
+  <action>Added tenant-agnostic `medicines` catalogue (~95 Bangladeshi brands from `data/medicine-list-draft.csv`) plus per-doctor `medicine_usages` learning rows. `MedicineService::search()` ranks catalogue + personal usage; selecting a medicine in `VisitNotesFormSchema` prefills only blank sibling fields with a visible hint. `MedicineService::recordUsage()` and `ConditionService::recordUsage()` run only when the booking is already `completed` at save time. Doctors manage their own rows on **My medicines** (edit defaults, hide, add manual) without editing the shared catalogue.</action>
+  <reason>Brand-first prescribing matches paper scripts; learning must reflect what was actually dispensed, not notes still being edited mid-consult.</reason>
+</decision>
+
+<decision>
+  <category>UI/UX</category>
+  <context>Owner walk-through: the consult modal buried prescription under diagnosis, used awkward field labels, date-first follow-up, and the voice recorder buttons did nothing in the Livewire modal. The tenant admin panel also lacked Tailwind utilities for mobile layout work on Consult Screen.</context>
+  <action>Reordered `VisitNotesFormSchema` (prescription first), unified Diagnosis select with free-text option, renamed "Reports seen" → "Reports the patient brought", relative follow-up chips + `follow_up_note`, frequency/duration quick picks, **Same as last visit**, allergy strip, complete-visit read-only summary with Edit. Consult Screen: warnings above write section, mobile sticky bottom queue actions, two-column layout from tablet up. Filament `tenantAdmin` Vite theme (`resources/css/filament/tenantAdmin/theme.css`) registered via `ConfiguresTenantAdminPanel::viteTheme()`. Voice recorder wrapped in `@script`; optional STT auto-fills blank fields only when tenant `voice_transcription` is enabled — doctor confirms everything. Supersedes the 2026-08-06 "no STT" deferral for tenants that opt in.</action>
+  <reason>Mobile-first consult room: the doctor's thumb reaches primary actions; medicine entry is the hot path; voice should draft, not silently commit.</reason>
+</decision>

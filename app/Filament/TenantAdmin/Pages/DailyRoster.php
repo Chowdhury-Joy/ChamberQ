@@ -78,8 +78,11 @@ class DailyRoster extends Page implements HasTable, HasForms
                     ->color('success')
                     ->visible(fn (Booking $record): bool => auth()->user()?->canOperateQueueControls()
                         && in_array($record->status, ['waiting', 'in_chamber', 'called']))
-                    ->form(fn (): array => auth()->user()?->canRecordVisitNotes()
-                        ? VisitNotesFormSchema::components()
+                    ->form(fn (Booking $record): array => auth()->user()?->canRecordVisitNotes()
+                        ? VisitNotesFormSchema::components(
+                            $record->patient,
+                            app(VisitRecordService::class)->lastRecordedVisitForPatient($record->patient, $record->id),
+                        )
                         : [])
                     ->modalHeading(fn (): ?string => auth()->user()?->canRecordVisitNotes()
                         ? __('Complete visit')

@@ -281,6 +281,7 @@ class Tenant extends BaseTenant
                 'multiple_chambers' => true,
                 'multiple_doctors' => false,
                 'bangla_homepage' => false,
+                'voice_transcription' => false,
                 default => false,
             },
             'clinic' => match ($feature) {
@@ -288,6 +289,7 @@ class Tenant extends BaseTenant
                 'multiple_chambers' => true,
                 'multiple_doctors' => true,
                 'bangla_homepage' => false,
+                'voice_transcription' => false,
                 default => false,
             },
             default => false,

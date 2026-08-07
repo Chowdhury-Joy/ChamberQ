@@ -8,6 +8,7 @@ use App\Models\LiveSession;
 use App\Models\ScheduleSession;
 use App\Models\Patient;
 use App\Models\VisitRecord;
+use App\Filament\TenantAdmin\Concerns\AppliesVisitNotesDrafts;
 use App\Filament\TenantAdmin\Support\CompleteBookingWithVisitNotes;
 use App\Filament\TenantAdmin\Support\VisitNotesFormSchema;
 use App\Services\LiveSessionService;
@@ -21,6 +22,7 @@ use Filament\Pages\Page;
 
 class ConsultScreen extends Page implements HasActions
 {
+    use AppliesVisitNotesDrafts;
     use InteractsWithActions;
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-clipboard-document-list';
 
@@ -208,11 +210,24 @@ class ConsultScreen extends Page implements HasActions
                 ->icon('heroicon-o-check-circle')
                 ->color('primary')
                 ->visible(fn (): bool => $this->currentBooking?->status === 'in_chamber')
-                ->form(fn (): array => auth()->user()?->canRecordVisitNotes()
-                    ? VisitNotesFormSchema::components()
-                    : [])
-                // Carries in anything already written mid-consult, so finishing
-                // never shows a blank form over a prescription that exists.
+                ->form(function (Action $action): array {
+                    if (! auth()->user()?->canRecordVisitNotes()) {
+                        return [];
+                    }
+
+                    $arguments = $action->getArguments();
+                    $forceForm = (bool) ($arguments['forceForm'] ?? false);
+                    $record = $this->currentVisitRecord;
+
+                    if ($record?->hasClinicalContent() && ! $forceForm) {
+                        return VisitNotesFormSchema::summaryComponents($record);
+                    }
+
+                    return VisitNotesFormSchema::components(
+                        $this->currentPatient,
+                        $this->lastVisitRecord,
+                    );
+                })
                 ->fillForm(fn (): array => auth()->user()?->canRecordVisitNotes()
                     ? VisitNotesFormSchema::stateFromRecord($this->currentVisitRecord)
                     : [])
@@ -223,6 +238,15 @@ class ConsultScreen extends Page implements HasActions
                     ? __('Check the notes, or leave everything blank and tap Complete.')
                     : null)
                 ->modalSubmitActionLabel(__('Complete'))
+                ->extraModalFooterActions([
+                    Action::make('editVisitNotes')
+                        ->label(__('Edit'))
+                        ->color('gray')
+                        ->visible(fn (): bool => (bool) $this->currentVisitRecord?->hasClinicalContent())
+                        ->action(function (): void {
+                            $this->replaceMountedAction('completeVisit', ['forceForm' => true]);
+                        }),
+                ])
                 ->action(function (
                     array $data,
                     LiveSessionService $liveSessionService,
@@ -302,7 +326,10 @@ class ConsultScreen extends Page implements HasActions
             ->modalHeading($label)
             ->modalDescription(__('Saved without ending the visit — you can reopen and change this until you tap Complete visit.'))
             ->modalSubmitActionLabel(__('Save'))
-            ->form(VisitNotesFormSchema::components())
+            ->form(fn (): array => VisitNotesFormSchema::components(
+                $this->currentPatient,
+                $this->lastVisitRecord,
+            ))
             ->fillForm(fn (): array => VisitNotesFormSchema::stateFromRecord($this->currentVisitRecord))
             ->action(function (array $data, VisitRecordService $visitRecordService): void {
                 $booking = $this->currentBooking;
@@ -328,7 +355,12 @@ class ConsultScreen extends Page implements HasActions
     {
         return Action::make('catchUpBooking')
             ->label(__('Add notes'))
-            ->form(VisitNotesFormSchema::components())
+            ->form(function (Action $action): array {
+                $bookingId = $action->getArguments()['bookingId'] ?? null;
+                $booking = $bookingId ? Booking::with('patient')->find($bookingId) : null;
+
+                return VisitNotesFormSchema::components($booking?->patient, null);
+            })
             ->modalHeading(__('Add visit notes'))
             ->modalDescription(__('All fields optional — voice, photo, diagnosis, or prescription.'))
             ->modalSubmitActionLabel(__('Save notes'))

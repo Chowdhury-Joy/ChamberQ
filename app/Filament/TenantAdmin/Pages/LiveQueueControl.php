@@ -2,6 +2,7 @@
 
 namespace App\Filament\TenantAdmin\Pages;
 
+use App\Filament\TenantAdmin\Concerns\AppliesVisitNotesDrafts;
 use App\Filament\TenantAdmin\Support\CompleteBookingWithVisitNotes;
 use App\Filament\TenantAdmin\Support\VisitNotesFormSchema;
 use App\Models\Patient;
@@ -31,6 +32,7 @@ use App\Models\Booking;
 
 class LiveQueueControl extends Page implements HasActions, HasTable
 {
+    use AppliesVisitNotesDrafts;
     use InteractsWithActions, InteractsWithTable;
 
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-queue-list';
@@ -457,10 +459,44 @@ class LiveQueueControl extends Page implements HasActions, HasTable
     {
         return Action::make('completeVisit')
             ->label(__('Complete visit'))
-            ->form(VisitNotesFormSchema::components())
+            ->form(function (Action $action): array {
+                if (! auth()->user()?->canRecordVisitNotes()) {
+                    return [];
+                }
+
+                $arguments = $action->getArguments();
+                $forceForm = (bool) ($arguments['forceForm'] ?? false);
+                $booking = $this->activeLiveSession?->currentBooking;
+                $record = $booking?->visitRecord;
+
+                if ($record?->hasClinicalContent() && ! $forceForm) {
+                    return VisitNotesFormSchema::summaryComponents($record);
+                }
+
+                $patient = $booking?->patient;
+                $lastVisit = $patient
+                    ? app(VisitRecordService::class)->lastRecordedVisitForPatient($patient, $booking?->id)
+                    : null;
+
+                return VisitNotesFormSchema::components($patient, $lastVisit);
+            })
+            ->fillForm(function (): array {
+                $booking = $this->activeLiveSession?->currentBooking;
+
+                return VisitNotesFormSchema::stateFromRecord($booking?->visitRecord);
+            })
             ->modalHeading(__('Complete visit'))
             ->modalDescription(__('Add optional notes, or leave everything blank and tap Complete.'))
             ->modalSubmitActionLabel(__('Complete'))
+            ->extraModalFooterActions([
+                Action::make('editVisitNotes')
+                    ->label(__('Edit'))
+                    ->color('gray')
+                    ->visible(fn (): bool => (bool) $this->activeLiveSession?->currentBooking?->visitRecord?->hasClinicalContent())
+                    ->action(function (): void {
+                        $this->replaceMountedAction('completeVisit', ['forceForm' => true]);
+                    }),
+            ])
             ->action(function (
                 array $data,
                 LiveSessionService $liveSessionService,

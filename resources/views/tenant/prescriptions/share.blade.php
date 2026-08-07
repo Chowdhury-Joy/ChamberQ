@@ -170,7 +170,12 @@
                 </div>
             @endif
 
-            @if ($prescription->follow_up_date)
+            @if ($prescription->visitRecord?->follow_up_note)
+                <div class="block">
+                    <strong>{{ __('Follow-up') }}:</strong>
+                    {{ $prescription->visitRecord->follow_up_note }}
+                </div>
+            @elseif ($prescription->follow_up_date)
                 <div class="block">
                     <strong>{{ __('Follow-up') }}:</strong>
                     {{ $prescription->follow_up_date->translatedFormat('j F Y') }}

@@ -414,3 +414,19 @@
   <root_cause>Two separate bugs stacked. (1) The hint field used `->label('')` to suppress its label; in this Filament version an empty-string label is falsy and the renderer falls back to an auto-generated label from the field's internal name (`_visit_notes_hint` → "visit notes hint") — `->label('')` does not mean "no label," only `->hiddenLabel()` does. This affected every action using the shared `VisitNotesFormSchema`, including the pre-existing catch-up flow, but was masked there because the field's `->default()` text still rendered underneath it. (2) The newly added `->fillForm()` on `writePrescriptionAction` and `completeVisit` (added this session to let a doctor reopen and re-edit a saved prescription) replaces Filament's normal per-field default-value hydration with exactly the array returned by the closure; `VisitNotesFormSchema::stateFromRecord()` never included a key for the hint field, so on any action with `->fillForm()` the field's `->default()` was never applied and it rendered empty — silently, since `dehydrated(false)` means nothing about it is validated or saved.</symptom>
   <prevention_rule>Use `->hiddenLabel()` to hide a field's label, never `->label('')` — an empty string is falsy and several Filament code paths treat "falsy label" as "no label configured," not "empty label," falling back to the auto-generated one. Separately: the moment an action gains `->fillForm()`, every component in that form relying on `->default()` must have its value included in the state array explicitly (or the default duplicated at the point of use), because `->fillForm()` is a full replacement, not a supplement, of the schema's normal default-filling. Test disabled/instructional fields the same as data fields — a `dehydrated(false)` field being blank causes no validation error and no failed test unless something explicitly asserts its rendered value, so this shipped invisibly.</prevention_rule>
 </bug>
+
+## 2026-08-07T12:21:37+0600
+
+<bug>
+  <category>Code</category>
+  <symptom>Complete visit modal crashed PHP with memory exhaustion the first time a doctor opened it after the summary/edit work; voice recorder Start/Stop buttons did nothing inside the modal; prescription photo uploads could land on the public disk if saved through the form path.</symptom>
+  <root_cause>(1) `completeVisit`/`LiveQueueControl::completeVisitAction` form closures called `$this->getMountedAction()` while Filament was already building that same action's schema — infinite recursion. (2) Voice recorder JS used a global `document.querySelector` and was not in a Livewire `@script` block, so it never bound when the modal opened. (3) `VisitNotesFormSchema` `FileUpload` still pointed at a public disk before this pass.</root_cause>
+  <prevention_rule>Inside an Action's `->form()` closure, read arguments from the injected `Action $action` parameter — never `getMountedAction()`. Modal Alpine/JS that must run when Filament opens an action goes in `@script` with roots scoped via `x-ref`, not bare `document.querySelector`. Clinical `FileUpload` fields must use `disk('local')` + `VisitMediaService::{voice,photo}Directory()` — verify with `ClinicalMediaPrivacyTest` for both API and form paths.</prevention_rule>
+</bug>
+
+<bug>
+  <category>Business_Logic</category>
+  <symptom>Condition and medicine learning counters incremented while the doctor was still mid-consult (Write prescription), so a draft that never reached the patient still boosted search ranking.</symptom>
+  <root_cause>`VisitRecordService::recordUsagesFromSubmission()` ran on every `saveForCompletedBooking()` call regardless of booking status.</root_cause>
+  <prevention_rule>Personal learning stats (`condition_usages`, `medicine_usages`) increment only when `$booking->status === 'completed'` at save time — mid-consult saves may persist clinical data but must not train pickers.</prevention_rule>
+</bug>

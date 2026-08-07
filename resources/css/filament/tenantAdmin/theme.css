@@ -1,0 +1,41 @@
+@import '../../../../vendor/filament/filament/resources/css/theme.css';
+
+@source '../../../../app/Filament/TenantAdmin/**/*';
+@source '../../../../resources/views/filament/tenant-admin/**/*';
+
+/* Visit notes modal — full height on phones, sticky save area */
+@media (max-width: 767px) {
+    .fi-modal-window:has(.fi-modal-content) {
+        max-height: 100dvh;
+        margin: 0;
+        width: 100%;
+        border-radius: 0;
+    }
+}
+
+.cs-voice-recorder { display: flex; flex-direction: column; gap: 0.75rem; }
+.cs-voice-recorder__title { font-size: 0.875rem; font-weight: 600; color: var(--gray-700); }
+.dark .cs-voice-recorder__title { color: var(--gray-200); }
+.cs-voice-recorder__hint { font-size: 0.75rem; color: var(--gray-500); }
+.cs-voice-recorder__controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.cs-voice-recorder__btn { min-height: 2.75rem; }
+.cs-voice-recorder__status { font-size: 0.75rem; color: var(--gray-500); }
+.cs-voice-recorder__saved { font-size: 0.75rem; color: var(--success-600); }
+.cs-voice-recorder__error { font-size: 0.75rem; color: var(--danger-600); }
+.cs-voice-recorder__audio { width: 100%; max-width: 100%; }
+
+.cs-modal-warnings { display: flex; flex-direction: column; gap: 0.625rem; }
+.cs-modal-warning { padding: 0.75rem; border-radius: 0.5rem; border: 1px solid var(--warning-200); background: color-mix(in srgb, var(--warning-50) 80%, transparent); }
+.dark .cs-modal-warning { border-color: var(--warning-800); background: color-mix(in srgb, var(--warning-950) 50%, transparent); }
+.cs-modal-warning__label { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; color: var(--warning-800); }
+.cs-modal-warning__value { font-size: 0.875rem; margin-top: 0.125rem; }
+.cs-copy-last { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; justify-content: space-between; }
+.cs-copy-last__text { font-size: 0.8125rem; color: var(--gray-600); }
+.cs-prefill-hint { font-size: 0.75rem; color: var(--primary-600); margin: 0; }
+.cs-summary-panel { padding: 0.75rem; border: 1px solid var(--gray-200); border-radius: 0.625rem; background: var(--gray-50); }
+.dark .cs-summary-panel { border-color: var(--gray-800); background: var(--gray-900); }
+.cs-summary-panel__title { font-weight: 700; font-size: 1rem; }
+.cs-summary-panel__hint { font-size: 0.8125rem; color: var(--gray-500); margin: 0.375rem 0 0.75rem; }
+.cs-summary-panel__row { display: flex; flex-direction: column; gap: 0.125rem; margin-top: 0.5rem; font-size: 0.875rem; }
+.cs-summary-panel__label { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; color: var(--gray-500); }
+.cs-summary-panel__list { margin: 0.5rem 0 0; padding-left: 1.125rem; font-size: 0.8125rem; }

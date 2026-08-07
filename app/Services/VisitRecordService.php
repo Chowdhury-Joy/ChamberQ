@@ -11,6 +11,7 @@ use App\Models\ScheduleSession;
 use App\Models\User;
 use App\Models\LiveSession;
 use App\Models\VisitRecord;
+use App\Filament\TenantAdmin\Support\VisitNotesFormSchema;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -18,6 +19,7 @@ class VisitRecordService
 {
     public function __construct(
         private readonly ConditionService $conditionService,
+        private readonly MedicineService $medicineService,
         private readonly VisitMediaService $visitMediaService,
     ) {}
 
@@ -33,19 +35,14 @@ class VisitRecordService
             abort(403);
         }
 
+        $data = VisitNotesFormSchema::normalizeSubmission($data);
+
         if (! $this->submissionHasContent($data)) {
             return null;
         }
 
         return DB::transaction(function () use ($booking, $doctor, $data) {
             $diagnosis = $this->resolveDiagnosis($data);
-
-            if ($diagnosis['coded']) {
-                $this->conditionService->recordUsage(
-                    $doctor,
-                    Condition::query()->findOrFail($diagnosis['condition_id'])
-                );
-            }
 
             $existing = VisitRecord::query()->where('booking_id', $booking->id)->first();
             $voicePath = $this->nullableString($data['voice_path'] ?? null);
@@ -72,6 +69,7 @@ class VisitRecordService
                     'tests_advised' => $this->nullableString($data['tests_advised'] ?? null),
                     'reports_seen' => $this->nullableString($data['reports_seen'] ?? null),
                     'follow_up_date' => $data['follow_up_date'] ?? null,
+                    'follow_up_note' => $this->nullableString($data['follow_up_note'] ?? null),
                     'voice_path' => $voicePath,
                     'photo_path' => $photoPath,
                     'voice_transcript' => $voiceTranscript,
@@ -80,6 +78,10 @@ class VisitRecordService
             );
 
             $this->syncPrescription($visitRecord, $doctor, $data);
+
+            if ($booking->status === 'completed') {
+                $this->recordUsagesFromSubmission($doctor, $data, $diagnosis);
+            }
 
             return $visitRecord->fresh(['condition', 'prescription.items']);
         });
@@ -113,11 +115,13 @@ class VisitRecordService
      */
     public function submissionHasContent(array $data): bool
     {
+        $data = VisitNotesFormSchema::normalizeSubmission($data);
+
         if (filled($data['condition_id'] ?? null) || filled($data['diagnosis_free_text'] ?? null)) {
             return true;
         }
 
-        foreach (['advice', 'tests_advised', 'reports_seen', 'voice_path', 'voice_transcript'] as $field) {
+        foreach (['advice', 'tests_advised', 'reports_seen', 'voice_path', 'voice_transcript', 'follow_up_note'] as $field) {
             if (filled($data[$field] ?? null)) {
                 return true;
             }
@@ -138,7 +142,7 @@ class VisitRecordService
         );
     }
 
-  /**
+    /**
      * Completed bookings today that still have no clinical notes (honest catch-up list).
      */
     public function completedBookingsWithoutNotesToday(?LiveSession $session = null): Collection
@@ -219,12 +223,40 @@ class VisitRecordService
         foreach ($items as $index => $item) {
             PrescriptionItem::create([
                 'prescription_id' => $prescription->id,
-                'medicine_name' => mb_strtoupper(trim((string) $item['medicine_name'])),
+                'medicine_name' => $this->medicineService->normalizeMedicineName((string) $item['medicine_name']),
                 'generic_name' => $this->nullableString($item['generic_name'] ?? null),
                 'dose' => $this->nullableString($item['dose'] ?? null),
                 'frequency' => $this->nullableString($item['frequency'] ?? null),
                 'duration' => $this->nullableString($item['duration'] ?? null),
                 'sort_order' => $index,
+            ]);
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @param  array{coded: bool, condition_id: ?string, name: ?string}  $diagnosis
+     */
+    private function recordUsagesFromSubmission(User $doctor, array $data, array $diagnosis): void
+    {
+        if ($diagnosis['coded'] && filled($diagnosis['condition_id'])) {
+            $this->conditionService->recordUsage(
+                $doctor,
+                Condition::query()->findOrFail($diagnosis['condition_id'])
+            );
+        }
+
+        foreach ($data['prescription_items'] ?? [] as $item) {
+            if (blank($item['medicine_name'] ?? null)) {
+                continue;
+            }
+
+            $this->medicineService->recordUsage($doctor, [
+                'medicine_name' => $item['medicine_name'],
+                'generic_name' => $item['generic_name'] ?? null,
+                'dose' => $item['dose'] ?? null,
+                'frequency' => $item['frequency'] ?? null,
+                'duration' => $item['duration'] ?? null,
             ]);
         }
     }

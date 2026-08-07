@@ -204,7 +204,9 @@
             </div>
         @endif
 
-        @if ($prescription->follow_up_date)
+        @if ($prescription->visitRecord?->follow_up_note)
+            <p><strong>{{ __('Follow-up') }}:</strong> {{ $prescription->visitRecord->follow_up_note }}</p>
+        @elseif ($prescription->follow_up_date)
             <p><strong>{{ __('Follow-up') }}:</strong> {{ $prescription->follow_up_date->translatedFormat('j F Y') }}</p>
         @endif
 

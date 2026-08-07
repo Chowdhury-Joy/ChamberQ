@@ -59,6 +59,9 @@ $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
     Route::get('/api/conditions/search', [ConditionController::class, 'search'])
         ->middleware(['auth', 'throttle:120,1']);
 
+    Route::get('/api/medicines/search', [\App\Http\Controllers\MedicineController::class, 'search'])
+        ->middleware(['auth', 'throttle:120,1']);
+
     Route::get('/prescriptions/{prescription}/print', [PrescriptionController::class, 'print'])
         ->middleware(['auth'])
         ->name($routeName('prescriptions.print'));
@@ -71,6 +74,9 @@ $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
         ->name($routeName('prescriptions.share'));
 
     Route::post('/api/visit-media/upload-voice', [VisitMediaController::class, 'uploadVoice'])
+        ->middleware(['auth', 'throttle:30,1']);
+
+    Route::post('/api/visit-media/transcribe', [VisitMediaController::class, 'transcribe'])
         ->middleware(['auth', 'throttle:30,1']);
 
     Route::get('/visit-records/{visitRecord}/voice', [VisitMediaController::class, 'voice'])

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Services\VisitMediaService;
+use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
@@ -51,6 +52,37 @@ class ClinicalMediaPrivacyTest extends TestCase
         $this->get('/storage/'.$probe)->assertForbidden();
 
         Storage::disk('local')->delete($probe);
+    }
+
+    public function test_prescription_photo_directory_matches_private_form_upload(): void
+    {
+        tenancy()->initialize(Tenant::create([
+            'id' => 'photo-dir-test',
+            'plan_tier' => 'solo',
+        ]));
+
+        $directory = app(VisitMediaService::class)->photoDirectory();
+
+        $this->assertSame('visit-photos/photo-dir-test', $directory);
+
+        $probe = $directory.'/form-upload.jpg';
+        Storage::disk('local')->put($probe, 'prescription-photo');
+
+        $absolute = realpath(Storage::disk('local')->path($probe));
+        $webRoot = realpath(public_path());
+
+        $this->assertNotFalse($absolute);
+        $this->assertStringNotContainsString(
+            $webRoot.DIRECTORY_SEPARATOR,
+            $absolute,
+            'Form prescription photos must not land in the public web root.'
+        );
+
+        $this->get('/storage/'.$probe)->assertForbidden();
+
+        Storage::disk('local')->delete($probe);
+
+        tenancy()->end();
     }
 
     public function test_service_exposes_no_public_url_accessor(): void

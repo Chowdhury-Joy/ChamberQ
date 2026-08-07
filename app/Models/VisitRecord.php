@@ -22,6 +22,7 @@ class VisitRecord extends Model
         'tests_advised',
         'reports_seen',
         'follow_up_date',
+        'follow_up_note',
         'voice_path',
         'photo_path',
         'voice_transcript',
@@ -77,6 +78,7 @@ class VisitRecord extends Model
             || filled($this->voice_path)
             || filled($this->photo_path)
             || filled($this->voice_transcript)
+            || filled($this->follow_up_note)
             || $this->follow_up_date !== null
             || ($this->relationLoaded('prescription')
                 ? $this->prescription !== null

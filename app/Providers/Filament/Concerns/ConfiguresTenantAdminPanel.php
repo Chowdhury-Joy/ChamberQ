@@ -12,6 +12,7 @@ trait ConfiguresTenantAdminPanel
     {
         return $panel
             ->brandName('ChamberQ')
+            ->viteTheme('resources/css/filament/tenantAdmin/theme.css')
             ->login()
             ->passwordReset()
             ->colors([

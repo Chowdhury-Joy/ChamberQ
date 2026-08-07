@@ -65,8 +65,9 @@
         .dark .cs-pill { background-color: var(--gray-800); color: var(--gray-300); }
 
         .cs-summary {
-            flex-shrink: 0; min-width: 14rem; padding: 0.75rem 1rem; border-radius: 0.625rem;
+            flex-shrink: 0; min-width: 0; padding: 0.75rem 1rem; border-radius: 0.625rem;
             background-color: var(--gray-50); border: 1px solid var(--gray-200);
+            width: 100%;
         }
         .dark .cs-summary { background-color: var(--gray-900); border-color: var(--gray-800); }
         .cs-summary-row { display: flex; align-items: center; gap: 0.5rem; font-size: 0.8125rem; color: var(--gray-700); }
@@ -84,7 +85,31 @@
         /* Status line itself lives in the shared call-next-nudge partial. */
 
         .cs-write-row {
-            display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1rem;
+            display: flex; flex-direction: column; align-items: stretch; gap: 1rem;
+        }
+        .cs-primary-btn { width: 100%; min-height: 2.75rem; }
+        .cs-sticky-actions {
+            position: sticky; bottom: 0; z-index: 20;
+            margin-top: 1rem; padding: 0.75rem 0 calc(0.75rem + env(safe-area-inset-bottom));
+            background: linear-gradient(to top, var(--gray-50), color-mix(in srgb, var(--gray-50) 92%, transparent));
+            border-top: 1px solid var(--gray-200);
+        }
+        .dark .cs-sticky-actions {
+            background: linear-gradient(to top, var(--gray-950), color-mix(in srgb, var(--gray-950) 92%, transparent));
+            border-color: var(--gray-800);
+        }
+        .cs-sticky-actions__btn { width: 100%; min-height: 2.75rem; }
+        .cs-media-chip audio { height: 2rem; width: 100%; max-width: none; }
+        @media (min-width: 768px) {
+            .cs-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.25rem; align-items: start; }
+            .cs-layout__main { display: flex; flex-direction: column; gap: 1.25rem; }
+            .cs-layout__side { display: flex; flex-direction: column; gap: 1.25rem; }
+            .cs-write-row { flex-direction: row; align-items: center; justify-content: space-between; }
+            .cs-primary-btn { width: auto; }
+            .cs-sticky-actions { display: none; }
+        }
+        @media (min-width: 1280px) {
+            .cs-layout__side { position: sticky; top: 1rem; }
         }
         .cs-write-summary { min-width: 0; }
         .cs-write-title { font-size: 0.9375rem; font-weight: 600; color: var(--gray-950); }
@@ -102,7 +127,7 @@
             color: var(--primary-300);
         }
 
-        .cs-warning-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(11rem, 1fr)); gap: 0.875rem; }
+        .cs-warning-grid { display: grid; grid-template-columns: 1fr; gap: 0.875rem; }
         .cs-warning-item {
             padding: 0.75rem 0.875rem; border-radius: 0.625rem;
             background-color: color-mix(in srgb, var(--warning-100) 65%, transparent);
@@ -258,8 +283,36 @@
                 </div>
             </x-filament::section>
 
-            {{-- Patient is in the room: this is where the doctor writes, not the
-                 header's "Complete visit" button, which reads as "I am finished". --}}
+            {{-- Warnings first on mobile — allergies must not sit below the fold. --}}
+            @if ($patient?->hasClinicalWarnings())
+                <x-filament::section>
+                    <x-slot name="heading">
+                        <span style="color: var(--warning-700);">{{ __('Warnings') }}</span>
+                    </x-slot>
+                    <div class="cs-warning-grid">
+                        @if (filled($patient->allergies))
+                            <div class="cs-warning-item">
+                                <div class="cs-warning-label">{{ __('Allergies') }}</div>
+                                <div class="cs-warning-value">{{ $patient->allergies }}</div>
+                            </div>
+                        @endif
+                        @if (filled($patient->conditions))
+                            <div class="cs-warning-item">
+                                <div class="cs-warning-label">{{ __('Ongoing conditions') }}</div>
+                                <div class="cs-warning-value">{{ $patient->conditions }}</div>
+                            </div>
+                        @endif
+                        @if (filled($patient->medicines))
+                            <div class="cs-warning-item">
+                                <div class="cs-warning-label">{{ __('Current medicines') }}</div>
+                                <div class="cs-warning-value">{{ $patient->medicines }}</div>
+                            </div>
+                        @endif
+                    </div>
+                </x-filament::section>
+            @endif
+
+            {{-- Patient is in the room: write prescription here, not only in the header. --}}
             @if ($canWriteNotes && $booking->status === 'in_chamber')
                 @php
                     $written = $this->currentVisitRecord;
@@ -311,7 +364,7 @@
                             @endif
                         </div>
                         <x-filament::button
-                            size="sm"
+                            class="cs-primary-btn"
                             color="primary"
                             icon="heroicon-m-pencil-square"
                             wire:click="mountAction('writePrescription')"
@@ -331,35 +384,6 @@
                             'booking' => $booking,
                             'prescription' => $booking->visitRecord?->prescription,
                         ])
-                    </div>
-                </x-filament::section>
-            @endif
-
-            {{-- Warnings --}}
-            @if ($patient?->hasClinicalWarnings())
-                <x-filament::section>
-                    <x-slot name="heading">
-                        <span style="color: var(--warning-700);">{{ __('Warnings') }}</span>
-                    </x-slot>
-                    <div class="cs-warning-grid">
-                        @if (filled($patient->allergies))
-                            <div class="cs-warning-item">
-                                <div class="cs-warning-label">{{ __('Allergies') }}</div>
-                                <div class="cs-warning-value">{{ $patient->allergies }}</div>
-                            </div>
-                        @endif
-                        @if (filled($patient->conditions))
-                            <div class="cs-warning-item">
-                                <div class="cs-warning-label">{{ __('Ongoing conditions') }}</div>
-                                <div class="cs-warning-value">{{ $patient->conditions }}</div>
-                            </div>
-                        @endif
-                        @if (filled($patient->medicines))
-                            <div class="cs-warning-item">
-                                <div class="cs-warning-label">{{ __('Current medicines') }}</div>
-                                <div class="cs-warning-value">{{ $patient->medicines }}</div>
-                            </div>
-                        @endif
                     </div>
                 </x-filament::section>
             @endif
@@ -517,5 +541,23 @@
                 </x-filament::section>
             @endif
         </div>
+
+        @if (auth()->user()?->canOperateQueueControls())
+            <div class="cs-sticky-actions">
+                @if ($booking->status === 'called')
+                    <x-filament::button class="cs-sticky-actions__btn" color="success" wire:click="mountAction('patientArrived')">
+                        {{ __('Patient arrived') }}
+                    </x-filament::button>
+                @elseif ($canWriteNotes && $booking->status === 'in_chamber')
+                    <x-filament::button class="cs-sticky-actions__btn" color="primary" wire:click="mountAction('completeVisit')">
+                        {{ __('Complete visit') }}
+                    </x-filament::button>
+                @elseif ($booking->status === 'completed')
+                    <x-filament::button class="cs-sticky-actions__btn" color="primary" wire:click="mountAction('callNext')">
+                        {{ __('Call next patient') }}
+                    </x-filament::button>
+                @endif
+            </div>
+        @endif
     @endif
 </x-filament-panels::page>

@@ -132,9 +132,9 @@ class CompleteVisitCallNextSplitTest extends TestCase
 
         Livewire::test(ConsultScreen::class)
             ->callAction('completeVisit', data: [
-                'diagnosis_free_text' => 'Acidity',
+                'diagnosis' => VisitNotesFormSchema::FREE_DIAGNOSIS_PREFIX.'Acidity',
                 'prescription_items' => [
-                    ['medicine_name' => 'Omeprazole', 'dose' => '20mg', 'frequency' => 'BD', 'duration' => '7 days'],
+                    ['medicine_name' => 'Omeprazole', 'dose' => '20mg', 'frequency' => '1+1+1', 'duration' => '7 days'],
                 ],
             ]);
 
@@ -188,7 +188,7 @@ class CompleteVisitCallNextSplitTest extends TestCase
         Livewire::test(ConsultScreen::class)
             ->assertSee('Nothing written yet')
             ->callAction('writePrescription', data: [
-                'diagnosis_free_text' => 'Acidity',
+                'diagnosis' => VisitNotesFormSchema::FREE_DIAGNOSIS_PREFIX.'Acidity',
                 'prescription_items' => [
                     ['medicine_name' => 'Sergel', 'dose' => '20mg', 'frequency' => '1+0+1', 'duration' => '14 days'],
                 ],
@@ -209,7 +209,7 @@ class CompleteVisitCallNextSplitTest extends TestCase
 
         Livewire::test(ConsultScreen::class)
             ->callAction('writePrescription', data: [
-                'diagnosis_free_text' => 'Acidity',
+                'diagnosis' => VisitNotesFormSchema::FREE_DIAGNOSIS_PREFIX.'Acidity',
                 'advice' => 'Avoid spicy food',
                 'prescription_items' => [
                     ['medicine_name' => 'Sergel', 'dose' => '20mg', 'frequency' => '1+0+1', 'duration' => '14 days'],
@@ -221,7 +221,7 @@ class CompleteVisitCallNextSplitTest extends TestCase
         Livewire::test(ConsultScreen::class)
             ->mountAction('writePrescription')
             ->assertSchemaStateSet([
-                'diagnosis_free_text' => 'Acidity',
+                'diagnosis' => VisitNotesFormSchema::FREE_DIAGNOSIS_PREFIX.'Acidity',
                 'advice' => 'Avoid spicy food',
             ]);
     }
@@ -343,11 +343,37 @@ class CompleteVisitCallNextSplitTest extends TestCase
         Livewire::test(ConsultScreen::class)
             ->callAction('completeVisit', data: [
                 'prescription_items' => [
-                    ['medicine_name' => 'Napa', 'dose' => '500mg', 'frequency' => 'TDS', 'duration' => '5 days'],
+                    ['medicine_name' => 'Napa', 'dose' => '500mg', 'frequency' => '1+1+1', 'duration' => '5 days'],
                 ],
             ])
             ->assertSee('Visit completed')
             ->assertSee('Print prescription')
             ->assertSee('Send via WhatsApp');
+    }
+
+    public function test_medicine_usage_is_recorded_only_when_visit_is_completed(): void
+    {
+        tenancy()->initialize($this->tenant);
+
+        app(\App\Services\VisitRecordService::class)->saveForCompletedBooking($this->first, $this->doctor, [
+            'prescription_items' => [
+                ['medicine_name' => 'Sergel', 'dose' => '40 mg', 'frequency' => '1+0+1', 'duration' => '14 days'],
+            ],
+        ]);
+
+        $this->assertSame(0, \App\Models\MedicineUsage::query()->count());
+
+        $this->first->update(['status' => 'completed', 'completed_at' => now()]);
+
+        app(\App\Services\VisitRecordService::class)->saveForCompletedBooking($this->first->fresh(), $this->doctor, [
+            'prescription_items' => [
+                ['medicine_name' => 'Sergel', 'dose' => '40 mg', 'frequency' => '1+0+1', 'duration' => '14 days'],
+            ],
+        ]);
+
+        $this->assertDatabaseHas('medicine_usages', [
+            'user_id' => $this->doctor->id,
+            'medicine_name' => 'SERGEL',
+        ]);
     }
 }

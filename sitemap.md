@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-07T10:33:28+0600
+Last Updated: 2026-08-07T12:21:37+0600
 
 ## Full Site Map
 
@@ -62,7 +62,9 @@ Available under both platform path and custom domain. Requires doctor role (`can
 | Route | Purpose | Access |
 |-------|---------|--------|
 | `GET /prescriptions/{prescription}/print` | Printable prescription (browser print / Save as PDF) | doctor auth |
+| `GET /api/medicines/search` | Ranked medicine brand search for prescription picker | doctor auth (throttled) |
 | `POST /api/visit-media/upload-voice` | Upload voice note blob from Mark Completed modal | doctor auth (throttled) |
+| `POST /api/visit-media/transcribe` | Structured STT draft from uploaded voice (tenant `voice_transcription` feature) | doctor auth (throttled) |
 | `GET /visit-records/{visitRecord}/voice` | Stream visit voice note | doctor auth |
 | `GET /visit-records/{visitRecord}/photo` | View paper prescription photo | doctor auth |
 
@@ -132,10 +134,16 @@ The one patient-facing route that shows prescription content. Deliberately outsi
 
 ### Doctor consult (doctor role)
 - **Trigger:** Patient called into chamber (`live_sessions.current_booking_id` set).
-- **Steps:** Tenant admin → **Consult Screen** — screen updates automatically (poll). Review visit count, warnings, last visit diagnosis/advice/voice/photo/transcript, past visits with reprint, voice playback, and photo links. Amber catch-up banner when today's session is active and completed patients lack notes — tap to fill in. While the patient is in the chamber the card carries **Write prescription** (then **Edit prescription**) — the doctor writes during the conversation and can reopen and change it as many times as needed; saving does not end the visit, and the card shows "Prescription so far". The consult then ends in **two steps**: **Complete visit** opens the same modal, pre-filled with whatever was already written (diagnosis picker, advice, prescription builder, voice note 10–20s, optional manual transcript, paper prescription photo — all optional) and closes the visit *without* advancing the queue; the patient stays on screen under "Visit completed — ready for next patient" with **Print prescription** and **Send via WhatsApp** so the script is handed over while they are still in the room; then **Call next patient** advances the queue. Staff completing from the queue skip the modal. Ending the session from Live Queue Control warns if notes are still missing.
+- **Steps:** Tenant admin → **Consult Screen** — screen updates automatically (poll). Review visit count, warnings (above the write section on mobile), last visit diagnosis/advice/voice/photo/transcript, past visits with reprint, voice playback, and photo links. Amber catch-up banner when today's session is active and completed patients lack notes — tap to fill in. While the patient is in the chamber the card carries **Write prescription** (then **Edit prescription**) — prescription-first modal with searchable medicine picker (prefills dose/frequency/duration from the doctor's history), quick-pick frequency/duration chips, **Same as last visit**, relative follow-up chips, voice note with optional STT draft when `voice_transcription` is enabled; saving does not end the visit. The consult ends in **two steps**: **Complete visit** shows a read-only summary when notes already exist (Edit to reopen the full form), then closes the visit *without* advancing the queue; the patient stays on screen under "Visit completed — ready for next patient" with **Print prescription** and **Send via WhatsApp**; sticky bottom actions on phones mirror the header queue controls. Then **Call next patient** advances the queue. Staff completing from the queue skip the modal. Ending the session from Live Queue Control warns if notes are still missing.
 - **Data/systems touched:** `live_sessions`, `bookings`, `patients`, `visit_records`, `prescriptions`.
 - **Key CTA:** Complete visit → Print / Send via WhatsApp → Call next patient.
 - **Success:** Doctor sees correct person and honest history state; visit notes saved when provided; the prescription can be printed or sent before the next patient is called; patient ticket/portal never show clinical data, and the shared link exposes only that one prescription.
+
+### Manage personal medicine list (doctor)
+- **Trigger:** Doctor wants to fix default dose/frequency/duration or hide a brand from their picker.
+- **Steps:** Tenant admin → **My medicines** (Operations group) → edit defaults, hide from search, or add a manual entry.
+- **Data/systems touched:** `medicine_usages` only — never the shared `medicines` catalogue.
+- **Success:** Next prescription search ranks and prefills from the doctor's corrected defaults.
 
 ### Content update (staff)
 - **Trigger:** Doctor wants copy/photo change.
