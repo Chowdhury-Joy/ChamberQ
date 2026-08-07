@@ -21,7 +21,7 @@ class QueueStatusController extends Controller
         
         $queue = Booking::where('bookable_type', $booking->bookable_type)
             ->where('bookable_id', $booking->bookable_id)
-            ->whereDate('booking_date', $booking->booking_date);
+            ->where('booking_date', $booking->booking_date->toDateString());
 
         $nowServing = null;
         if ($liveSession && $liveSession->currentBooking) {

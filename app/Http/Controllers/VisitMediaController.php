@@ -15,7 +15,11 @@ class VisitMediaController extends Controller
     {
         $user = $request->user();
 
-        if (! $user?->canRecordVisitNotes()) {
+        // Role AND practice. These routes carry no Filament panel guard, and
+        // every panel shares one session cookie, so "is a doctor" alone would
+        // let a doctor of another tenant write into this tenant's media
+        // directory. See User::belongsToCurrentTenant().
+        if (! $user?->canRecordVisitNotes() || ! $user->belongsToCurrentTenant()) {
             abort(403);
         }
 
@@ -41,9 +45,7 @@ class VisitMediaController extends Controller
 
     public function voice(Request $request, VisitRecord $visitRecord): BinaryFileResponse
     {
-        if (! $request->user()?->canViewVisitNotes()) {
-            abort(403);
-        }
+        $this->authorizeClinicalRead($request);
 
         $absolute = app(VisitMediaService::class)->absolutePath($visitRecord->voice_path);
 
@@ -56,9 +58,7 @@ class VisitMediaController extends Controller
 
     public function photo(Request $request, VisitRecord $visitRecord): BinaryFileResponse
     {
-        if (! $request->user()?->canViewVisitNotes()) {
-            abort(403);
-        }
+        $this->authorizeClinicalRead($request);
 
         $absolute = app(VisitMediaService::class)->absolutePath($visitRecord->photo_path);
 
@@ -67,5 +67,23 @@ class VisitMediaController extends Controller
         }
 
         return response()->file($absolute);
+    }
+
+    /**
+     * A doctor **of this practice**.
+     *
+     * Route-model binding scopes the record to the current tenant, but the
+     * signed-in user is not scoped to anything — the session is shared across
+     * every panel on the host. Without the tenant half of this check, a doctor
+     * at one clinic holding a record URL for another could stream that
+     * clinic's patient voice notes and prescription photos.
+     */
+    private function authorizeClinicalRead(Request $request): void
+    {
+        $user = $request->user();
+
+        if (! $user?->canViewVisitNotes() || ! $user->belongsToCurrentTenant()) {
+            abort(403);
+        }
     }
 }

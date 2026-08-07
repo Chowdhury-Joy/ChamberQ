@@ -12,7 +12,10 @@ class MedicineController extends Controller
     {
         $user = $request->user();
 
-        if (! $user?->canRecordVisitNotes()) {
+        // Results are ranked by this practice's own prescribing history, so the
+        // tenant half of the check matters here too. See
+        // User::belongsToCurrentTenant().
+        if (! $user?->canRecordVisitNotes() || ! $user->belongsToCurrentTenant()) {
             abort(403);
         }
 

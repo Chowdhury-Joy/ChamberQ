@@ -93,4 +93,65 @@ class FamilyBookingTest extends TestCase
             $phone,
         );
     }
+
+    /**
+     * The public wizard is only shown masked initials for an existing
+     * household member, so it submits an id and no name. The stored record
+     * must supply the real name — for the ticket, the SMS, and the roster —
+     * and must never be renamed to the mask.
+     */
+    public function test_booking_an_existing_member_by_id_keeps_their_real_name(): void
+    {
+        $phone = '01733333333';
+
+        $existing = Patient::create(['name' => 'Fatima Rahman', 'phone' => $phone]);
+
+        $booking = $this->bookingService->createBookingForBookable(
+            $this->session,
+            $this->bookingDate,
+            '',            // the wizard has no real name to send
+            $phone,
+            patientId: $existing->id,
+        );
+
+        $this->assertSame($existing->id, $booking->patient_id);
+        $this->assertSame('Fatima Rahman', $booking->patient_name);
+        $this->assertSame('Fatima Rahman', $existing->fresh()->name);
+        $this->assertSame(1, Patient::count(), 'A duplicate patient was created.');
+    }
+
+    public function test_a_masked_label_submitted_as_a_name_cannot_rename_the_patient(): void
+    {
+        $phone = '01744444444';
+
+        $existing = Patient::create(['name' => 'Fatima Rahman', 'phone' => $phone]);
+
+        $booking = $this->bookingService->createBookingForBookable(
+            $this->session,
+            $this->bookingDate,
+            'F. R.',       // what a tampered/legacy client might send back
+            $phone,
+            patientId: $existing->id,
+        );
+
+        $this->assertSame('Fatima Rahman', $existing->fresh()->name);
+        $this->assertSame('Fatima Rahman', $booking->patient_name);
+    }
+
+    /** The masked label must not carry the name it is meant to hide. */
+    public function test_masked_picker_label_exposes_initials_only(): void
+    {
+        $patient = Patient::create([
+            'name' => 'Fatima Rahman',
+            'phone' => '01755555555',
+            'age' => 34,
+            'age_recorded_at' => now(),
+        ]);
+
+        $label = $patient->maskedPickerLabel();
+
+        $this->assertSame('F. R., 34', $label);
+        $this->assertStringNotContainsString('Fatima', $label);
+        $this->assertStringNotContainsString('Rahman', $label);
+    }
 }

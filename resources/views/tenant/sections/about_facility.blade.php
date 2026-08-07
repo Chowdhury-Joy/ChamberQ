@@ -10,11 +10,13 @@
     $trustCopy = $data['trust_copy'] ?? 'Trusted by';
     $trustStrong = $data['trust_strong'] ?? 'patients across the city';
     $gallery = $data['gallery'] ?? [];
-    $trustAvatars = [
-        $data['trust_avatar_1'] ?? 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=80&h=80&q=80',
-        $data['trust_avatar_2'] ?? 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=80&h=80&q=80',
-        $data['trust_avatar_3'] ?? 'https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&w=80&h=80&q=80',
-    ];
+    // Opt-in, not defaulted — see the same note in `hero.blade.php`. Falling
+    // back to stock photos here presented strangers as this clinic's patients.
+    $trustAvatars = array_values(array_filter([
+        $data['trust_avatar_1'] ?? null,
+        $data['trust_avatar_2'] ?? null,
+        $data['trust_avatar_3'] ?? null,
+    ]));
 @endphp
 
 <section class="space-section" id="about" data-reveal-section>
@@ -32,11 +34,13 @@
                     </span>
                 </a>
                 <div class="about-trust">
-                    <div class="about-trust-avs">
-                        @foreach($trustAvatars as $avatar)
-                            <img src="{{ $avatar }}" alt="">
-                        @endforeach
-                    </div>
+                    @if($trustAvatars !== [])
+                        <div class="about-trust-avs">
+                            @foreach($trustAvatars as $avatar)
+                                <img src="{{ $avatar }}" alt="">
+                            @endforeach
+                        </div>
+                    @endif
                     <div class="about-trust-copy">{{ $trustCopy }}<strong>{{ $trustStrong }}</strong></div>
                 </div>
             </div>

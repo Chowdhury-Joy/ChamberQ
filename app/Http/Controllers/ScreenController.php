@@ -11,7 +11,7 @@ class ScreenController extends Controller
     public function show(ScheduleSession $session, $date)
     {
         $liveSession = LiveSession::where('schedule_session_id', $session->id)
-            ->whereDate('session_date', $date)
+            ->where('session_date', $date)
             ->first();
 
         return view('tenant.screen', [
@@ -24,7 +24,7 @@ class ScreenController extends Controller
     public function api(ScheduleSession $session, $date)
     {
         $liveSession = LiveSession::where('schedule_session_id', $session->id)
-            ->whereDate('session_date', $date)
+            ->where('session_date', $date)
             ->first();
 
         if (!$liveSession) {

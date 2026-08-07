@@ -8,6 +8,15 @@ use Illuminate\Http\Request;
 
 class PatientController extends Controller
 {
+    /**
+     * Household members on a phone number, for the public booking wizard.
+     *
+     * Unauthenticated by necessity — the wizard runs before any login. That
+     * makes it a patient-name oracle keyed on a guessable BD mobile, so the
+     * response carries **masked initials only** (`maskedPickerLabel()`), never
+     * the stored name. The booking endpoint resolves the real name from
+     * `patient_id` server-side, so the wizard never needs it.
+     */
     public function lookupByPhone(Request $request, PatientService $patientService)
     {
         $validated = $request->validate([
@@ -23,9 +32,7 @@ class PatientController extends Controller
             'phone' => $phone,
             'patients' => $patients->map(fn ($patient) => [
                 'id' => $patient->id,
-                'name' => $patient->name,
-                'label' => $patient->pickerLabel(),
-                'visit_count' => $patient->visit_count,
+                'label' => $patient->maskedPickerLabel(),
             ]),
         ]);
     }

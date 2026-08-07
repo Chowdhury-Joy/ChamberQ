@@ -49,7 +49,7 @@ class DailyRoster extends Page implements HasTable, HasForms
         return $table
             ->query(
                 Booking::query()
-                    ->whereDate('booking_date', today())
+                    ->where('booking_date', today()->toDateString())
                     ->with(['visitRecord.prescription'])
                     ->orderByRaw("CASE WHEN status = 'in_chamber' THEN 1 WHEN status = 'waiting' THEN 2 WHEN status = 'completed' THEN 3 WHEN status = 'cancelled' THEN 4 ELSE 5 END")
                     ->orderBy('serial_number')
@@ -74,7 +74,21 @@ class DailyRoster extends Page implements HasTable, HasForms
                     ->color('primary')
                     ->visible(fn (Booking $record): bool => auth()->user()?->canOperateQueueControls()
                         && $record->status === 'waiting')
-                    ->action(fn (Booking $record) => app(LiveSessionService::class)->bringBookingToChamber($record)),
+                    ->action(function (Booking $record): void {
+                        // Refused while someone else is mid-consult. Say so —
+                        // silently doing nothing looks like a broken button.
+                        if (app(LiveSessionService::class)->bringBookingToChamber($record)) {
+                            return;
+                        }
+
+                        Notification::make()
+                            ->warning()
+                            ->title(__('Someone is still with the doctor'))
+                            ->body(__('Complete the patient currently in the chamber before calling #:serial in.', [
+                                'serial' => $record->serial_number,
+                            ]))
+                            ->send();
+                    }),
 
                 VisitNotesFormSchema::configureModal(Action::make('complete'))
                     ->label('Mark Completed')

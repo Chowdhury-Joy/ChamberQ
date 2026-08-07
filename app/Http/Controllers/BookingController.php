@@ -7,13 +7,47 @@ use App\Models\Booking;
 use App\Models\Chamber;
 use App\Models\Doctor;
 use App\Models\LabCollectionSlot;
+use App\Models\Patient;
 use App\Models\ScheduleSession;
 use App\Services\BookingService;
 use Illuminate\Http\Request;
+use Illuminate\Validation\ValidationException;
 
 class BookingController extends Controller
 {
-    public function create()
+    /**
+     * Prefill keys the booking wizard understands, mapped to their aliases.
+     *
+     * `name` and `phone` are patient PII and must never travel in a URL — see
+     * `prefill()`. The rest are safe to deep-link.
+     */
+    private const PREFILL_KEYS = [
+        'doctor' => ['doctor', 'doctor_id'],
+        'test' => ['test'],
+        'session' => ['session', 'bookable_id'],
+        'date' => ['date', 'booking_date'],
+        'name' => ['name', 'patient_name'],
+        'phone' => ['phone', 'patient_phone'],
+    ];
+
+    /**
+     * Landing point for the homepage hero form.
+     *
+     * The hero used to GET straight to `/book`, which put the patient's name
+     * and phone number in the address bar — and therefore in browser history,
+     * server access logs, and the `Referer` header of every asset the booking
+     * page loads. It POSTs now; this stashes the values in the session and
+     * redirects, so the wizard receives them with a clean URL (Post/Redirect/
+     * Get, which also means a refresh does not re-submit).
+     */
+    public function prefill(Request $request)
+    {
+        session()->flash('booking_prefill', $this->prefillFrom($request));
+
+        return redirect()->to(tenant_web_url('/book'));
+    }
+
+    public function create(Request $request)
     {
         $chambers = Chamber::all();
         $doctors = Doctor::all();
@@ -21,10 +55,18 @@ class BookingController extends Controller
         $labSlots = LabCollectionSlot::with('chamber')->get();
         $hasLabTests = tenant()->hasFeature('lab_tests');
 
-        $canBookConsultation = $chambers->isNotEmpty()
+        // Billing state is checked here, not only on POST. It gates the same
+        // thing either way, but a patient who fills in a doctor, a session, a
+        // date, their name and their phone before being told booking is closed
+        // has been wasted; the wizard's own empty state says it up front.
+        $acceptsBookings = tenant()?->acceptsBookings() ?? true;
+
+        $canBookConsultation = $acceptsBookings
+            && $chambers->isNotEmpty()
             && $doctors->isNotEmpty()
             && $sessions->isNotEmpty();
-        $canBookLab = $hasLabTests
+        $canBookLab = $acceptsBookings
+            && $hasLabTests
             && $chambers->isNotEmpty()
             && $labSlots->isNotEmpty();
 
@@ -45,7 +87,40 @@ class BookingController extends Controller
             'bookingAvailable' => $canBookConsultation || $canBookLab,
             'canBookConsultation' => $canBookConsultation,
             'canBookLab' => $canBookLab,
+            // Lets the empty state say "call the clinic" rather than the
+            // schedules-not-published copy, which would be a lie here.
+            'bookingClosedForBilling' => ! $acceptsBookings,
+            // Session values (from the hero POST) win over query params, so a
+            // deep link still works but PII never has to ride in the URL.
+            'prefill' => array_merge(
+                $this->prefillFrom($request),
+                (array) session('booking_prefill', []),
+            ),
         ]);
+    }
+
+    /**
+     * Pull the wizard's prefill values out of a request, whichever alias and
+     * whichever method (query string or POST body) they arrived under.
+     *
+     * @return array<string, string>
+     */
+    private function prefillFrom(Request $request): array
+    {
+        $prefill = [];
+
+        foreach (self::PREFILL_KEYS as $key => $aliases) {
+            foreach ($aliases as $alias) {
+                $value = $request->input($alias);
+
+                if (filled($value) && is_string($value)) {
+                    $prefill[$key] = $value;
+                    break;
+                }
+            }
+        }
+
+        return $prefill;
     }
 
     public function store(Request $request, BookingService $bookingService)
@@ -56,10 +131,16 @@ class BookingController extends Controller
             'bookable_type' => 'required|in:session,lab',
             'bookable_id' => 'required|integer',
             'booking_date' => "required|date|after_or_equal:today|before_or_equal:{$maxDate}",
-            'patient_name' => 'required|string|max:255',
+            // Optional only when an existing household member was picked — the
+            // wizard is shown masked initials for those, so it has no real name
+            // to submit and the server reads it off the patient record instead.
+            'patient_name' => ['required_without:patient_id', 'nullable', 'string', 'max:255'],
             // Bangladeshi mobile: optional +88 prefix, then 01[3-9] and 8 digits.
             'patient_phone' => ['required', 'string', 'regex:/^(?:\+?88)?01[3-9]\d{8}$/'],
-            'patient_id' => 'nullable|uuid|exists:patients,id',
+            // Deliberately NOT `exists:patients,id` — same reason as lab tests
+            // below: that rule is not tenant scoped. Resolved against this
+            // tenant AND this phone number a few lines down instead.
+            'patient_id' => ['nullable', 'uuid'],
             // Deliberately NOT `exists:lab_tests,id` — that rule is not tenant
             // scoped and would accept another tenant's test ids. The service
             // resolves them through the tenant scope and rejects the booking if
@@ -78,17 +159,35 @@ class BookingController extends Controller
             ? ScheduleSession::findOrFail($validated['bookable_id'])
             : LabCollectionSlot::findOrFail($validated['bookable_id']);
 
+        $normalizedPhone = $this->normalizeBdPhone($validated['patient_phone']);
+
+        // A supplied patient_id only counts if it belongs to this tenant (global
+        // scope) AND to the phone number being booked with. Anything else is
+        // treated as "nobody picked", which puts the name back in play.
+        $chosenPatient = filled($validated['patient_id'] ?? null)
+            ? Patient::query()
+                ->whereKey($validated['patient_id'])
+                ->where('phone', $normalizedPhone)
+                ->first()
+            : null;
+
+        if (! $chosenPatient && blank($validated['patient_name'] ?? null)) {
+            throw ValidationException::withMessages([
+                'patient_name' => __('Please enter the patient name.'),
+            ]);
+        }
+
         try {
             // Line items are attached inside the service transaction, so a
             // booking can never be persisted without the tests it was made for.
             $booking = $bookingService->createBookingForBookable(
                 $bookable,
                 $validated['booking_date'],
-                $validated['patient_name'],
-                $this->normalizeBdPhone($validated['patient_phone']),
+                (string) ($validated['patient_name'] ?? ''),
+                $normalizedPhone,
                 $validated['lab_tests'] ?? [],
                 true,
-                $validated['patient_id'] ?? null,
+                $chosenPatient?->id,
             );
         } catch (BookingUnavailableException $e) {
             // Only this exception type is safe to echo back to an anonymous

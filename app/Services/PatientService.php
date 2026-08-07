@@ -50,10 +50,11 @@ class PatientService
             $patient = Patient::query()->whereKey($patientId)->where('phone', $phone)->first();
 
             if ($patient) {
-                if ($this->normalizeName($patient->name) !== $this->normalizeName($name)) {
-                    $patient->update(['name' => $name]);
-                }
-
+                // Deliberately NOT renamed from the request. The public wizard
+                // is only ever shown masked initials for an existing patient,
+                // so a submitted name is not that person's real name — writing
+                // it back would overwrite "Fatima Rahman" with "F. R.". Staff
+                // correct spellings in the Patients resource instead.
                 return $patient;
             }
         }

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\DateOnly;
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -37,7 +38,7 @@ class Booking extends Model
     ];
 
     protected $casts = [
-        'booking_date' => 'date',
+        'booking_date' => DateOnly::class,
         'serial_number' => 'integer',
         'cancelled_at' => 'datetime',
         'patient_notified' => 'boolean',
@@ -139,7 +140,7 @@ class Booking extends Model
         }
 
         return LiveSession::where('schedule_session_id', $this->bookable_id)
-            ->whereDate('session_date', $this->booking_date)
+            ->where('session_date', $this->booking_date->toDateString())
             ->first();
     }
 }

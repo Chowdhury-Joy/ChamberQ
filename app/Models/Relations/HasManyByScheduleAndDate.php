@@ -21,9 +21,9 @@ class HasManyByScheduleAndDate extends HasMany
         parent::addConstraints();
 
         if (static::$constraints && $this->parent->getAttribute('session_date') !== null) {
-            $this->query->whereDate(
+            $this->query->where(
                 $this->related->getTable().'.booking_date',
-                $this->parent->session_date
+                $this->dateString($this->parent->session_date)
             );
         }
     }
@@ -42,11 +42,7 @@ class HasManyByScheduleAndDate extends HasMany
         if ($dates !== []) {
             $column = $this->related->qualifyColumn('booking_date');
 
-            $this->query->where(function ($query) use ($dates, $column) {
-                foreach ($dates as $date) {
-                    $query->orWhereDate($column, $date);
-                }
-            });
+            $this->query->whereIn($column, $dates);
         }
     }
 

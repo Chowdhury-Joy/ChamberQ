@@ -12,7 +12,10 @@ class ConditionController extends Controller
     {
         $user = $request->user();
 
-        if (! $user?->canViewConsultScreen()) {
+        // Results are ranked by this practice's own diagnosis history, so the
+        // tenant half of the check matters here too. See
+        // User::belongsToCurrentTenant().
+        if (! $user?->canViewConsultScreen() || ! $user->belongsToCurrentTenant()) {
             abort(403);
         }
 

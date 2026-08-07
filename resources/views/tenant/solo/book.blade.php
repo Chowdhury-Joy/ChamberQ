@@ -154,6 +154,14 @@
         .selection-grid { display: grid; gap: 0.85rem; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 1.5rem; }
         .selection-grid.list-view { grid-template-columns: 1fr; }
         .selection-card {
+            /* Real <button>s so the flow is reachable by keyboard and screen
+               reader — these were <div onclick>, which nothing but a mouse
+               could operate. The first four properties are the button reset
+               that keeps them rendering exactly as the divs did. */
+            display: block;
+            width: 100%;
+            font: inherit;
+            color: inherit;
             border: 1px solid #E0E0E0;
             border-radius: 1rem;
             padding: 1.15rem 1.25rem;
@@ -163,14 +171,24 @@
             background: #FAFAFA;
             text-align: left;
         }
+        .selection-card:focus-visible {
+            outline: 2px solid var(--color-primary);
+            outline-offset: 2px;
+        }
         .selection-card:hover { border-color: #d4d4d4; box-shadow: 0 1px 2px 0 rgba(27, 27, 27, 0.03); }
         .selection-card.selected {
             border-color: var(--color-primary);
             background: color-mix(in srgb, var(--color-primary) 8%, white);
             box-shadow: 0 0 0 1px var(--color-primary);
         }
-        .selection-card h4 { margin: 0 0 0.5rem 0; color: #0f172a; font-size: 1.05rem; font-weight: 600; }
-        .selection-card p { margin: 0; color: #64748b; font-size: 0.9rem; line-height: 1.4; }
+        /* `.sc-title` / `.sc-sub` are spans: the cards are <button>s now, and a
+           heading or paragraph inside a button is invalid and reads badly to a
+           screen reader. The old element selectors are kept alongside so any
+           card still using them cannot silently lose its styling. */
+        .selection-card h4,
+        .selection-card .sc-title { display: block; margin: 0 0 0.5rem 0; color: #0f172a; font-size: 1.05rem; font-weight: 600; }
+        .selection-card p,
+        .selection-card .sc-sub { display: block; margin: 0; color: #64748b; font-size: 0.9rem; line-height: 1.4; }
         .selection-card .price { color: var(--color-primary); font-weight: 600; font-size: 1.1rem; float: right; }
         .selection-card.is-disabled { opacity: 0.55; cursor: not-allowed; pointer-events: none; background: #F2F2F2; }
         .selection-card .seats { margin-top: 0.65rem; font-size: 0.85rem; font-weight: 600; color: var(--color-primary); }

@@ -92,15 +92,19 @@ class BookingService
 
             $duplicateQuery = Booking::where('bookable_type', get_class($lockedBookable))
                 ->where('bookable_id', $lockedBookable->id)
-                ->whereDate('booking_date', $bookingDate)
+                ->where('booking_date', $bookingDate)
                 ->where('status', '!=', 'cancelled')
-                ->where(function ($query) use ($patient, $patientPhone, $patientName) {
+                ->where(function ($query) use ($patient, $patientPhone) {
                     $query->where('patient_id', $patient->id)
-                        ->orWhere(function ($legacy) use ($patientPhone, $patientName) {
+                        // Legacy fallback for pre-backfill rows with no
+                        // patient_id. Matched against the resolved record's
+                        // name, since the request's may be blank when an
+                        // existing household member was picked.
+                        ->orWhere(function ($legacy) use ($patientPhone, $patient) {
                             $legacy->whereNull('patient_id')
                                 ->where('patient_phone', $patientPhone)
                                 ->whereRaw('LOWER(TRIM(patient_name)) = ?', [
-                                    strtolower(trim($patientName)),
+                                    strtolower(trim((string) $patient->name)),
                                 ]);
                         });
                 });
@@ -111,7 +115,7 @@ class BookingService
 
             $maxSerial = Booking::where('bookable_type', get_class($lockedBookable))
                 ->where('bookable_id', $lockedBookable->id)
-                ->whereDate('booking_date', $bookingDate)
+                ->where('booking_date', $bookingDate)
                 ->max('serial_number');
 
             $nextSerial = ($maxSerial ?? 0) + 1;
@@ -121,7 +125,11 @@ class BookingService
                 'bookable_id' => $lockedBookable->id,
                 'booking_date' => $bookingDate,
                 'patient_id' => $patient->id,
-                'patient_name' => $patientName,
+                // The resolved record's name, not the request's. When an
+                // existing household member was picked, the public wizard only
+                // ever saw masked initials — denormalising those onto the
+                // booking would put "F. R." on the ticket and in the SMS.
+                'patient_name' => $patient->name,
                 'patient_phone' => $patientPhone,
                 'serial_number' => $nextSerial,
                 'status' => 'waiting',
@@ -166,8 +174,12 @@ class BookingService
 
     private function isDateBlocked(Model $bookable, string $bookingDate): bool
     {
+        if ($this->sessionAlreadyEndedToday($bookable, $bookingDate)) {
+            return true;
+        }
+
         if ($bookable instanceof ScheduleSession) {
-            return SlotBlock::whereDate('date', $bookingDate)
+            return SlotBlock::where('date', $bookingDate)
                 ->where(function ($query) use ($bookable) {
                     $query->whereNull('chamber_id')->whereNull('doctor_id')
                         ->orWhere(function ($q) use ($bookable) {
@@ -179,7 +191,7 @@ class BookingService
         }
 
         if ($bookable instanceof LabCollectionSlot) {
-            return SlotBlock::whereDate('date', $bookingDate)
+            return SlotBlock::where('date', $bookingDate)
                 ->where(function ($query) use ($bookable) {
                     $query->whereNull('chamber_id')->whereNull('doctor_id')
                         ->orWhere(function ($q) use ($bookable) {
@@ -192,9 +204,28 @@ class BookingService
         return false;
     }
 
+    /**
+     * A session or lab window that already ended earlier today must not still
+     * be offered — nothing but day-of-week and capacity were ever checked, so
+     * a patient could book (and get a confirmation SMS for) a slot that
+     * finished hours ago.
+     */
+    private function sessionAlreadyEndedToday(Model $bookable, string $bookingDate): bool
+    {
+        if (blank($bookable->end_time)) {
+            return false;
+        }
+
+        if (! Carbon::parse($bookingDate)->isToday()) {
+            return false;
+        }
+
+        return Carbon::parse($bookingDate.' '.$bookable->end_time)->isPast();
+    }
+
     private function bookedCount(Model $bookable, string $bookingDate, string $capMode): int
     {
-        $query = Booking::whereDate('booking_date', $bookingDate)
+        $query = Booking::where('booking_date', $bookingDate)
             ->where('status', '!=', 'cancelled');
 
         if ($bookable instanceof ScheduleSession && $capMode === 'per_doctor_chamber') {

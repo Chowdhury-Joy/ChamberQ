@@ -21,7 +21,7 @@ class TodayAppointmentsWidget extends BaseWidget
         return $table
             ->query(
                 Booking::query()
-                    ->whereDate('booking_date', Carbon::today())
+                    ->where('booking_date', Carbon::today()->toDateString())
                     ->latest()
             )
             ->columns([

@@ -21,16 +21,25 @@
     $today = now()->toDateString();
     $maxDate = now()->addDays(60)->toDateString();
 
-    $backedAvatars = [
-        $data['backed_avatar_1'] ?? 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=80&h=80&q=80',
-        $data['backed_avatar_2'] ?? 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=80&h=80&q=80',
-        $data['backed_avatar_3'] ?? 'https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&w=80&h=80&q=80',
-    ];
-    $ratingAvatars = [
-        $data['rating_avatar_1'] ?? 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&h=80&q=80',
-        $data['rating_avatar_2'] ?? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&h=80&q=80',
-        $data['rating_avatar_3'] ?? 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=80&h=80&q=80',
-    ];
+    /*
+     * Avatars are opt-in, not defaulted.
+     *
+     * These used to fall back to six hardcoded Unsplash photos. On a live
+     * clinic site that presents photographs of real, unrelated people as "our
+     * specialists" and "our patients" — a claim the clinic cannot stand behind,
+     * hotlinked from a third party on every patient visit. A clinic that has
+     * not uploaded photos now gets the initials treatment instead.
+     */
+    $backedAvatars = array_values(array_filter([
+        $data['backed_avatar_1'] ?? null,
+        $data['backed_avatar_2'] ?? null,
+        $data['backed_avatar_3'] ?? null,
+    ]));
+    $ratingAvatars = array_values(array_filter([
+        $data['rating_avatar_1'] ?? null,
+        $data['rating_avatar_2'] ?? null,
+        $data['rating_avatar_3'] ?? null,
+    ]));
 @endphp
 
 <section class="hero space-inline" data-reveal-section>
@@ -38,11 +47,13 @@
     <div class="layout-container grid-hero">
         <div class="hero-copy">
             <div class="backed" data-reveal-block data-reveal-kind="fade">
-                <div class="backed-avs">
-                    @foreach($backedAvatars as $avatar)
-                        <img src="{{ $avatar }}" alt="">
-                    @endforeach
-                </div>
+                @if($backedAvatars !== [])
+                    <div class="backed-avs">
+                        @foreach($backedAvatars as $avatar)
+                            <img src="{{ $avatar }}" alt="">
+                        @endforeach
+                    </div>
+                @endif
                 <span>{{ $backedLead }} <strong>{{ $backedStrong }}</strong></span>
             </div>
 
@@ -52,18 +63,24 @@
 
             <div class="rating-row" data-reveal-block data-reveal-kind="fade">
                 <div class="rating-score">{{ $ratingScore }}</div>
-                <div class="rating-avs">
-                    @foreach($ratingAvatars as $avatar)
-                        <img src="{{ $avatar }}" alt="">
-                    @endforeach
-                    <span class="rating-plus">+</span>
-                </div>
+                @if($ratingAvatars !== [])
+                    <div class="rating-avs">
+                        @foreach($ratingAvatars as $avatar)
+                            <img src="{{ $avatar }}" alt="">
+                        @endforeach
+                        <span class="rating-plus">+</span>
+                    </div>
+                @endif
                 <div class="rating-copy">{{ $ratingCopy }}</div>
             </div>
         </div>
 
         @if($showHeroForm)
-            <form class="book-card space-card hero-media" id="book" method="get" action="{{ tenant_web_url('/book') }}" data-reveal-block data-reveal-kind="fade">
+            {{-- POST, not GET: a GET here put the patient's name and phone in
+                 the address bar, browser history and every access log on the
+                 way. The controller flashes them to the session and redirects. --}}
+            <form class="book-card space-card hero-media" id="book" method="post" action="{{ tenant_web_url('/book') }}" data-reveal-block data-reveal-kind="fade">
+                @csrf
                 <h2>{{ $ctaText }}</h2>
                 <div class="field">
                     <label for="hero-patient-name">{{ __('Full Name') }}*</label>

@@ -25,8 +25,12 @@ class LiveSessionService
     public function startSession(ScheduleSession $scheduleSession): LiveSession
     {
         return DB::transaction(function () use ($scheduleSession) {
-            $today = Carbon::today();
-            
+            // toDateString(), not the Carbon: these attributes are the WHERE
+            // clause as well as the insert payload, and a Carbon binds as
+            // 'Y-m-d H:i:s' — which never matches a date-only column, so the
+            // lookup misses and the insert trips the unique index.
+            $today = Carbon::today()->toDateString();
+
             $liveSession = LiveSession::firstOrCreate([
                 'tenant_id' => tenant('id'),
                 'schedule_session_id' => $scheduleSession->id,
@@ -236,8 +240,15 @@ class LiveSessionService
     /**
      * Roster shortcut: move a specific waiting patient into the chamber and
      * sync live-session pointers (Daily Roster must not bypass this).
+     *
+     * Refuses while someone else is already `in_chamber`, matching
+     * `callSpecificPatient()` — a consult in progress is never interrupted.
+     * Without this the roster could silently take the doctor's current patient
+     * off the outdoor screen and off their own ticket mid-consultation.
+     *
+     * @return bool False when another patient is mid-consult and nothing moved.
      */
-    public function bringBookingToChamber(Booking $booking): void
+    public function bringBookingToChamber(Booking $booking): bool
     {
         if ($booking->bookable_type !== ScheduleSession::class) {
             $booking->update([
@@ -245,15 +256,16 @@ class LiveSessionService
                 'in_chamber_at' => now(),
             ]);
 
-            return;
+            return true;
         }
 
-        DB::transaction(function () use ($booking) {
+        return DB::transaction(function () use ($booking) {
             $now = now();
             $liveSession = LiveSession::firstOrCreate([
                 'tenant_id' => tenant('id'),
                 'schedule_session_id' => $booking->bookable_id,
-                'session_date' => $booking->booking_date,
+                // See startSession(): must be a date string, not a Carbon.
+                'session_date' => $booking->booking_date->toDateString(),
             ], [
                 'status' => 'active',
                 'started_at' => $now,
@@ -261,10 +273,26 @@ class LiveSessionService
 
             $liveSession = $this->lockSession($liveSession);
 
+            $current = $liveSession->currentBooking;
+
+            if ($current && $current->id !== $booking->id && $current->status === 'in_chamber') {
+                return false;
+            }
+
             if (in_array($liveSession->status, ['scheduled', 'delayed'], true)) {
                 $liveSession->update([
                     'status' => 'active',
                     'started_at' => $liveSession->started_at ?? $now,
+                ]);
+            }
+
+            // Whoever was merely *called* goes back to waiting with no skip
+            // strike — being jumped is not their fault (same rule as
+            // callSpecificPatient()).
+            if ($current && $current->id !== $booking->id && $current->status === 'called') {
+                $current->update([
+                    'status' => 'waiting',
+                    'called_at' => null,
                 ]);
             }
 
@@ -278,6 +306,8 @@ class LiveSessionService
                 'called_at' => $booking->called_at ?? $now,
                 'in_chamber_at' => $now,
             ]);
+
+            return true;
         });
     }
 
@@ -322,7 +352,12 @@ class LiveSessionService
             $booking = $liveSession->currentBooking;
             if ($booking) {
                 $skipCount = $booking->skip_count + 1;
-                
+
+                // Two skips, then out. `> 2` looks off by one but is not:
+                // $skipCount is the count *after* this tap, so a patient on 2
+                // strikes becomes 3 here and is marked no-show — which is what
+                // the button already promised ("No response — mark no-show"
+                // once skip_count >= 2 in live-queue-control.blade.php).
                 if ($skipCount > 2) {
                     // Terminal state
                     $booking->update([
@@ -347,21 +382,56 @@ class LiveSessionService
     {
         $liveSession = $booking->liveSession();
         if (!$liveSession) return;
-        
-        $current = $liveSession->currentBooking;
-        $currentSerial = $current ? $current->serial_number : $booking->serial_number;
 
-        $booking->update([
-            'status' => 'skipped', // Using skipped so it gets picked up by retry logic
-            'skip_count' => 0, // Reset so they get 2 more chances
-            'retry_queue_position' => $currentSerial + 2,
-        ]);
+        // Same lock/transaction as every other queue mutation: this reads the
+        // current booking's serial and writes a retry position derived from it,
+        // which is exactly the field advanceQueue() is choosing from.
+        DB::transaction(function () use ($liveSession, $booking) {
+            $liveSession = $this->lockSession($liveSession);
+
+            $current = $liveSession->currentBooking;
+            $currentSerial = $current ? $current->serial_number : $booking->serial_number;
+
+            $booking->update([
+                'status' => 'skipped', // Using skipped so it gets picked up by retry logic
+                'skip_count' => 0, // Reset so they get 2 more chances
+                'retry_queue_position' => $currentSerial + 2,
+            ]);
+        });
     }
 
+    /**
+     * Bookings that ending the session right now would cancel.
+     *
+     * Read by the confirmation modal so the queue runner is told how many
+     * people they are about to turn away, by name, before they commit.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, Booking>
+     */
+    public function bookingsEndSessionWouldCancel(LiveSession $liveSession)
+    {
+        return $liveSession->bookings()
+            ->whereNotIn('status', ['completed', 'cancelled', 'no_show', 'in_chamber'])
+            ->orderBy('serial_number')
+            ->get();
+    }
+
+    /**
+     * @return \Illuminate\Database\Eloquent\Collection<int, Booking> The bookings this cancelled,
+     *         so the caller can offer the patients a notification. Cancelling
+     *         someone's appointment without telling them is the whole failure
+     *         this return value exists to prevent — see the slot-block flow,
+     *         which has had a WhatsApp notify list since vacation mode shipped.
+     */
     public function endSession(LiveSession $liveSession, string $reason = 'Session ended')
     {
-        DB::transaction(function () use ($liveSession, $reason) {
+        return DB::transaction(function () use ($liveSession, $reason) {
             $liveSession = $this->lockSession($liveSession);
+
+            // Captured before the update: once they are `cancelled` the same
+            // query no longer matches them.
+            $toCancel = $this->bookingsEndSessionWouldCancel($liveSession);
+
             // Fatima is already with the doctor — do not cancel mid-consult.
             // Mark her completed; cancel everyone still waiting / called / skipped.
             $liveSession->bookings()
@@ -385,15 +455,21 @@ class LiveSessionService
                 'current_booking_id' => null,
                 'current_called_at' => null,
             ]);
+
+            return $toCancel;
         });
     }
 
     public function markDelay(LiveSession $liveSession, int $minutes)
     {
-        $liveSession->update([
-            'status' => 'delayed',
-            'delay_minutes' => $minutes,
-        ]);
+        DB::transaction(function () use ($liveSession, $minutes) {
+            $liveSession = $this->lockSession($liveSession);
+
+            $liveSession->update([
+                'status' => 'delayed',
+                'delay_minutes' => $minutes,
+            ]);
+        });
     }
 
     public function markAbsent(LiveSession $liveSession, string $reason = 'Doctor unavailable')
@@ -419,19 +495,31 @@ class LiveSessionService
 
     public function pauseSession(LiveSession $liveSession, string $reason, int $estimatedMinutes)
     {
-        $liveSession->update([
-            'status' => 'paused',
-            'paused_at' => now(),
-            'pause_reason' => $reason,
-            'estimated_pause_minutes' => $estimatedMinutes,
-        ]);
+        DB::transaction(function () use ($liveSession, $reason, $estimatedMinutes) {
+            $liveSession = $this->lockSession($liveSession);
+
+            $liveSession->update([
+                'status' => 'paused',
+                'paused_at' => now(),
+                'pause_reason' => $reason,
+                'estimated_pause_minutes' => $estimatedMinutes,
+            ]);
+        });
     }
 
     public function resumeSession(LiveSession $liveSession)
     {
-        if ($liveSession->paused_at) {
-            $actualPauseMinutes = (int) $liveSession->paused_at->diffInMinutes(now());
-            
+        DB::transaction(function () use ($liveSession) {
+            $liveSession = $this->lockSession($liveSession);
+
+            // A paused session with no `paused_at` used to fall through this
+            // method silently, leaving Resume as a button that does nothing and
+            // a queue nobody can restart. Only the elapsed-time accounting
+            // needs the timestamp; coming back to `active` does not.
+            $actualPauseMinutes = $liveSession->paused_at
+                ? (int) $liveSession->paused_at->diffInMinutes(now())
+                : 0;
+
             $liveSession->update([
                 'status' => 'active',
                 'total_pause_minutes' => $liveSession->total_pause_minutes + $actualPauseMinutes,
@@ -439,7 +527,7 @@ class LiveSessionService
                 'pause_reason' => null,
                 'estimated_pause_minutes' => 0,
             ]);
-        }
+        });
     }
 
     public function estimatedTimeForBooking(Booking $booking)

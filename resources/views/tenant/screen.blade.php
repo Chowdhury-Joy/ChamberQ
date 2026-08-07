@@ -270,7 +270,7 @@
                     audio.currentTime = 0;
                     audio.muted = false;
                 } catch (e) {
-                    console.log('Audio unlock failed', e);
+                    logAudio('chime unlock failed', e);
                 }
             }
 
@@ -286,7 +286,7 @@
                     announceAudio.removeAttribute('src');
                     announceAudio.load();
                 } catch (e) {
-                    console.log('Announce unlock failed', e);
+                    logAudio('announce unlock failed', e);
                 }
             }
 
@@ -294,6 +294,18 @@
             overlay.classList.add('hidden');
             toggle.classList.remove('hidden');
             updateToggleLabel();
+        }
+
+        /*
+         * Audio diagnostics for a silent waiting-room TV — the most common
+         * support call for this screen, and impossible to diagnose without
+         * knowing whether playback was blocked, muted, or the clip is missing.
+         * Off unless someone adds ?debug=1 to the screen URL, so a permanently
+         * mounted display is not logging to a console nobody reads.
+         */
+        const audioDebug = new URLSearchParams(window.location.search).has('debug');
+        function logAudio(...args) {
+            if (audioDebug) console.log('[screen audio]', ...args);
         }
 
         function updateToggleLabel() {
@@ -304,7 +316,7 @@
         function playChime() {
             if (!soundUnlocked || soundMuted || !audio) return;
             audio.currentTime = 0;
-            audio.play().catch(e => console.log('Audio play blocked by browser', e));
+            audio.play().catch(e => logAudio('chime blocked by browser', e));
         }
 
         const announceBaseUrl = @json(rtrim(asset('audio/announce'), '/'));
@@ -337,7 +349,7 @@
                 announceAudio.addEventListener('ended', onEnded);
                 announceAudio.addEventListener('error', onError);
                 announceAudio.play().catch(function (e) {
-                    console.log('Announce play blocked', e);
+                    logAudio('announce blocked', e);
                     cleanup();
                     resolve(false);
                 });

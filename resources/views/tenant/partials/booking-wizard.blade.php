@@ -1,9 +1,41 @@
 {{-- Shared booking wizard markup + JS. Shells: tenant.book / tenant.solo.book --}}
+@php
+    /*
+     * Only the fields the wizard's JS actually reads. Serialising the whole
+     * Eloquent models put tenant_id, slot_cap, timestamps and full nested
+     * doctor/chamber records into the page source for every patient — internal
+     * capacity data, and dead weight on the slowest connection we serve.
+     */
+    $sessionsPayload = ($sessions ?? collect())->map(fn ($s) => [
+        'id' => (string) $s->id,
+        'chamber_id' => (string) $s->chamber_id,
+        'doctor_id' => (string) $s->doctor_id,
+        'day_of_week' => (int) $s->day_of_week,
+        'session_name' => $s->session_name,
+        'start_time' => $s->start_time,
+        'end_time' => $s->end_time,
+        'doctor' => ['name' => $s->doctor?->name],
+        'chamber' => ['name' => $s->chamber?->name],
+    ])->values();
+
+    $labSlotsPayload = ($labSlots ?? collect())->map(fn ($s) => [
+        'id' => (string) $s->id,
+        'chamber_id' => (string) $s->chamber_id,
+        'day_of_week' => (int) $s->day_of_week,
+        'start_time' => $s->start_time,
+        'end_time' => $s->end_time,
+        'chamber' => $s->chamber ? ['name' => $s->chamber->name] : null,
+    ])->values();
+@endphp
             @if(! $bookingAvailable)
                 <div class="booking-header">
                     <h2>{{ __('Booking unavailable') }}</h2>
                     <p class="text-muted" style="margin-top: 1rem; line-height: 1.6;">
-                        {{ __('This clinic has not published schedules yet. Please contact the clinic and try again later.') }}
+                        @if($bookingClosedForBilling ?? false)
+                            {{ __('Online booking is temporarily unavailable. Please call the clinic to book your appointment.') }}
+                        @else
+                            {{ __('This clinic has not published schedules yet. Please contact the clinic and try again later.') }}
+                        @endif
                     </p>
                     @if(filled($tenant->contact_phone))
                         <p style="margin-top: 1.5rem;">
@@ -33,16 +65,16 @@
                     <h3>{{ __('What would you like to book?') }}</h3>
                     <div class="selection-grid">
                         @if($canBookConsultation)
-                        <div class="selection-card" onclick="selectType('session', this)">
-                            <h4>{{ __('Doctor Consultation') }}</h4>
-                            <p>{{ __('Book a visit with one of our specialists.') }}</p>
-                        </div>
+                        <button type="button" class="selection-card" onclick="selectType('session', this)">
+                            <span class="sc-title">{{ __('Doctor Consultation') }}</span>
+                            <span class="sc-sub">{{ __('Book a visit with one of our specialists.') }}</span>
+                        </button>
                         @endif
                         @if($hasLabTests && $canBookLab)
-                        <div class="selection-card" onclick="selectType('lab', this)">
-                            <h4>{{ __('Lab Tests') }}</h4>
-                            <p>{{ __('Book pathology and imaging tests.') }}</p>
-                        </div>
+                        <button type="button" class="selection-card" onclick="selectType('lab', this)">
+                            <span class="sc-title">{{ __('Lab Tests') }}</span>
+                            <span class="sc-sub">{{ __('Book pathology and imaging tests.') }}</span>
+                        </button>
                         @endif
                     </div>
                 </div>
@@ -52,10 +84,10 @@
                     <h3>{{ __('Select a Location') }}</h3>
                     <div class="selection-grid" id="chamber-grid">
                         @foreach($chambers as $chamber)
-                        <div class="selection-card" onclick="selectChamber('{{ $chamber->id }}', this)">
-                            <h4>{{ $chamber->name }}</h4>
-                            <p>{{ $chamber->address }}</p>
-                        </div>
+                        <button type="button" class="selection-card" onclick="selectChamber('{{ $chamber->id }}', this)">
+                            <span class="sc-title">{{ $chamber->name }}</span>
+                            <span class="sc-sub">{{ $chamber->address }}</span>
+                        </button>
                         @endforeach
                     </div>
                     <div class="btn-group">
@@ -68,10 +100,10 @@
                     <h3>{{ __('Select a Doctor') }}</h3>
                     <div class="selection-grid" id="doctor-grid">
                         @foreach($doctors as $doctor)
-                        <div class="selection-card" onclick="selectDoctor('{{ $doctor->id }}', this)">
-                            <h4>{{ $doctor->name }}</h4>
-                            <p>{{ $doctor->specialty }}</p>
-                        </div>
+                        <button type="button" class="selection-card" onclick="selectDoctor('{{ $doctor->id }}', this)">
+                            <span class="sc-title">{{ $doctor->name }}</span>
+                            <span class="sc-sub">{{ $doctor->specialty }}</span>
+                        </button>
                         @endforeach
                     </div>
                     <div class="btn-group">
@@ -134,6 +166,7 @@
                     <div class="form-group">
                         <label class="form-label" for="patient_name">{{ __('Patient Name') }}</label>
                         <input type="text" name="patient_name" id="patient_name" class="form-control" autocomplete="name" required>
+                        <small class="text-muted" id="patientNameHint" style="display:none;margin-top:0.5rem"></small>
                     </div>
 
                     <div class="form-group">
@@ -188,6 +221,7 @@
             confirmLabel: @json(__('Confirm Booking')),
             bookingLabel: @json(__('Booking…')),
             basePath: @json(rtrim(tenant_web_url(''), '/')),
+            prefill: @json($prefill ?? []),
             phoneInvalid: @json(__('Please enter a valid Bangladeshi mobile number, for example 01712345678.')),
             localeTag: @json(app()->getLocale() === 'bn' ? 'bn-BD' : 'en-GB'),
         };
@@ -223,12 +257,13 @@
             stepIdentity: @json(__('Your details')),
             whoIsThisFor: @json(__('Who is this appointment for?')),
             someoneNew: @json(__('Someone new')),
+            usingRecordOnFile: @json(__('We already have this patient on file — no need to type the name again.')),
         };
         
         let selectedPatientId = null;
         let patientLookupTimer = null;
-        const sessionsData = @json($sessions);
-        const labSlotsData = @json($labSlots);
+        const sessionsData = @json($sessionsPayload);
+        const labSlotsData = @json($labSlotsPayload);
         const dayLabels = @json(array_values(\App\Support\DayOfWeek::options()));
 
         let state = {
@@ -322,6 +357,24 @@
                 next.setDate(next.getDate() + 1);
             }
             return next;
+        }
+
+        // Same rule the server enforces: a session/window whose end_time has
+        // already passed today is not offered as "today" — default to next week
+        // instead of defaulting patients onto a slot that already finished.
+        function nextAvailableDate(dayOfWeek, endTime, fromDate = null) {
+            const next = nextDateForDow(dayOfWeek, fromDate);
+            if (!endTime || toLocalYmd(next) !== toLocalYmd(localToday())) {
+                return next;
+            }
+            const [h, m] = String(endTime).split(':').map(Number);
+            const end = new Date();
+            end.setHours(h || 0, m || 0, 0, 0);
+            if (new Date() < end) {
+                return next;
+            }
+            const tomorrow = new Date(next.getFullYear(), next.getMonth(), next.getDate() + 1);
+            return nextDateForDow(dayOfWeek, tomorrow);
         }
 
         function isValidBdPhone(value) {
@@ -424,7 +477,7 @@
             max.setDate(max.getDate() + 60);
             dateInput.max = toLocalYmd(max);
             
-            const nextValid = nextDateForDow(state.dayOfWeek, today);
+            const nextValid = nextAvailableDate(state.dayOfWeek, state.endTime, today);
             const formatted = nextValid.toLocaleDateString(config.localeTag, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
             document.getElementById('date-helper').innerText = i18n.nextAvailable.replace(':date', formatted);
             dateInput.value = toLocalYmd(nextValid);
@@ -487,8 +540,7 @@
 
             if (!isValidBdPhone(phone)) {
                 pickerGroup.classList.add('hidden');
-                selectedPatientId = null;
-                document.getElementById('patient_id').value = '';
+                selectPatient(null, '', null);
                 return;
             }
 
@@ -500,20 +552,21 @@
 
                 if (!response.ok || !data.patients || data.patients.length === 0) {
                     pickerGroup.classList.add('hidden');
-                    selectedPatientId = null;
-                    document.getElementById('patient_id').value = '';
+                    selectPatient(null, '', null);
                     return;
                 }
 
                 pickerOptions.innerHTML = '';
+                // `label` is masked initials ("F. R., 34") — the endpoint is
+                // public, so it never sends the real name. Picking someone
+                // sends only their id; the server reads the name off the record.
                 data.patients.forEach((patient) => {
                     const btn = document.createElement('button');
                     btn.type = 'button';
                     btn.className = 'patient-picker-btn';
                     btn.textContent = patient.label;
                     btn.dataset.patientId = patient.id;
-                    btn.dataset.patientName = patient.name;
-                    btn.onclick = () => selectPatient(patient.id, patient.name, btn);
+                    btn.onclick = () => selectPatient(patient.id, patient.label, btn);
                     pickerOptions.appendChild(btn);
                 });
 
@@ -530,16 +583,32 @@
             }
         }
 
-        function selectPatient(patientId, patientName, clickedBtn) {
+        function selectPatient(patientId, patientLabel, clickedBtn) {
             selectedPatientId = patientId;
             document.getElementById('patient_id').value = patientId || '';
             document.querySelectorAll('.patient-picker-btn').forEach((btn) => btn.classList.remove('selected'));
             if (clickedBtn) clickedBtn.classList.add('selected');
 
             const nameInput = document.getElementById('patient_name');
-            if (patientId && patientName) {
-                nameInput.value = patientName;
+            const nameHint = document.getElementById('patientNameHint');
+
+            if (patientId) {
+                // We only know this person's initials, so the name field is
+                // stood down rather than filled with a mask. Disabled inputs
+                // are not submitted, and the server takes the name from the id.
+                nameInput.value = '';
+                nameInput.disabled = true;
+                nameInput.required = false;
+                nameInput.placeholder = patientLabel || '';
+                nameHint.textContent = i18n.usingRecordOnFile;
+                nameHint.style.display = 'block';
+                return;
             }
+
+            nameInput.disabled = false;
+            nameInput.required = true;
+            nameInput.placeholder = '';
+            nameHint.style.display = 'none';
         }
 
         function updateReviewSummary() {
@@ -704,7 +773,7 @@
                 // Group by next occurrence date so we can batch availability
                 const byDate = {};
                 filtered.forEach(s => {
-                    const ymd = toLocalYmd(nextDateForDow(s.day_of_week));
+                    const ymd = toLocalYmd(nextAvailableDate(s.day_of_week, s.end_time));
                     if (!byDate[ymd]) byDate[ymd] = [];
                     byDate[ymd].push(s);
                 });
@@ -718,20 +787,23 @@
                 } catch (e) {
                     itemsById = {};
                 }
-                
+
                 filtered.forEach(s => {
                     const tStart = formatTime(s.start_time);
                     const tEnd = formatTime(s.end_time);
                     const day = dayLabels[s.day_of_week] || '';
-                    const nextYmd = toLocalYmd(nextDateForDow(s.day_of_week));
+                    const nextYmd = toLocalYmd(nextAvailableDate(s.day_of_week, s.end_time));
                     const info = itemsById[String(s.id)];
                     const seats = seatsLabel(info);
                     const disabled = info && (info.blocked || info.remaining <= 0 || info.missing);
 
-                    const card = document.createElement('div');
+                    const card = document.createElement('button');
+                    card.type = 'button';
                     card.className = 'selection-card' + (disabled ? ' is-disabled' : '');
                     card.dataset.id = String(s.id);
-                    if (!disabled) {
+                    if (disabled) {
+                        card.disabled = true;
+                    } else {
                         card.addEventListener('click', () => selectBookable(String(s.id), s.day_of_week, {
                             sessionName: s.session_name,
                             startTime: s.start_time,
@@ -741,14 +813,16 @@
                         }));
                     }
 
-                    const heading = document.createElement('h4');
+                    const heading = document.createElement('span');
+                    heading.className = 'sc-title';
                     heading.textContent = s.session_name ?? '';
 
-                    const meta = document.createElement('p');
+                    const meta = document.createElement('span');
+                    meta.className = 'sc-sub';
                     meta.textContent = `${day} • ${tStart} - ${tEnd}`;
 
-                    const detail = document.createElement('p');
-                    detail.className = 'text-muted';
+                    const detail = document.createElement('span');
+                    detail.className = 'sc-sub text-muted';
                     detail.style.cssText = 'font-size:0.8rem; margin-top:0.5rem;';
                     detail.textContent = i18n.doctorChamber
                         .replace(':doctor', s.doctor?.name ?? '')
@@ -756,7 +830,7 @@
 
                     const seatsEl = document.createElement('div');
                     seatsEl.className = 'seats ' + (seats.className || '');
-                    const nextLabel = nextDateForDow(s.day_of_week).toLocaleDateString(config.localeTag, { day: 'numeric', month: 'short' });
+                    const nextLabel = nextAvailableDate(s.day_of_week, s.end_time).toLocaleDateString(config.localeTag, { day: 'numeric', month: 'short' });
                     seatsEl.textContent = seats.text
                         ? `${seats.text} · ${i18n.nextDay.replace(':date', nextLabel)}`
                         : i18n.nextDay.replace(':date', nextLabel);
@@ -787,7 +861,7 @@
 
                 const byDate = {};
                 filtered.forEach(s => {
-                    const ymd = toLocalYmd(nextDateForDow(s.day_of_week));
+                    const ymd = toLocalYmd(nextAvailableDate(s.day_of_week, s.end_time));
                     if (!byDate[ymd]) byDate[ymd] = [];
                     byDate[ymd].push(s);
                 });
@@ -810,10 +884,13 @@
                     const seats = seatsLabel(info);
                     const disabled = info && (info.blocked || info.remaining <= 0 || info.missing);
 
-                    const card = document.createElement('div');
+                    const card = document.createElement('button');
+                    card.type = 'button';
                     card.className = 'selection-card' + (disabled ? ' is-disabled' : '');
                     card.dataset.id = String(s.id);
-                    if (!disabled) {
+                    if (disabled) {
+                        card.disabled = true;
+                    } else {
                         card.addEventListener('click', () => selectBookable(String(s.id), s.day_of_week, {
                             sessionName: null,
                             startTime: s.start_time,
@@ -823,15 +900,17 @@
                         }));
                     }
 
-                    const heading = document.createElement('h4');
+                    const heading = document.createElement('span');
+                    heading.className = 'sc-title';
                     heading.textContent = `${dayLabels[s.day_of_week] || ''}`;
 
-                    const meta = document.createElement('p');
+                    const meta = document.createElement('span');
+                    meta.className = 'sc-sub';
                     meta.textContent = `${tStart} - ${tEnd} • ${chamberName}`;
 
                     const seatsEl = document.createElement('div');
                     seatsEl.className = 'seats ' + (seats.className || '');
-                    const nextLabel = nextDateForDow(s.day_of_week).toLocaleDateString(config.localeTag, { day: 'numeric', month: 'short' });
+                    const nextLabel = nextAvailableDate(s.day_of_week, s.end_time).toLocaleDateString(config.localeTag, { day: 'numeric', month: 'short' });
                     seatsEl.textContent = seats.text
                         ? `${seats.text} · ${i18n.nextDay.replace(':date', nextLabel)}`
                         : i18n.nextDay.replace(':date', nextLabel);
@@ -898,11 +977,14 @@
             formData.append('bookable_type', state.type);
             formData.append('bookable_id', state.bookableId);
             formData.append('booking_date', document.getElementById('booking_date').value);
-            formData.append('patient_name', document.getElementById('patient_name').value);
             formData.append('patient_phone', phone);
             const patientId = document.getElementById('patient_id').value;
             if (patientId) {
+                // Existing household member: the id is the identity. We only
+                // ever saw masked initials, so there is no name to send.
                 formData.append('patient_id', patientId);
+            } else {
+                formData.append('patient_name', document.getElementById('patient_name').value);
             }
             if (state.type === 'lab') {
                 document.querySelectorAll('input[name="lab_tests[]"]:checked').forEach(cb => {
@@ -957,14 +1039,17 @@
             }
         });
 
-        // Deep link: ?doctor=ID skips doctor pick; ?test=ID opens lab and pre-checks that test
-        const params = new URLSearchParams(window.location.search);
-        const doctorParam = params.get('doctor') || params.get('doctor_id');
-        const testParam = params.get('test');
-        const sessionParam = params.get('session') || params.get('bookable_id');
-        state.prefilledDate = params.get('date') || params.get('booking_date');
-        state.prefilledPhone = params.get('phone') || params.get('patient_phone');
-        state.prefilledName = params.get('name') || params.get('patient_name');
+        // Prefill is resolved server-side (BookingController::prefillFrom) from
+        // either the query string — deep links like ?doctor=ID / ?test=ID — or
+        // the session, where the homepage hero POST stashes the patient's name
+        // and phone so they never appear in the URL.
+        const prefill = config.prefill || {};
+        const doctorParam = prefill.doctor;
+        const testParam = prefill.test;
+        const sessionParam = prefill.session;
+        state.prefilledDate = prefill.date || null;
+        state.prefilledPhone = prefill.phone || null;
+        state.prefilledName = prefill.name || null;
 
         if (sessionParam) {
             const session = sessionsData.find(s => String(s.id) === String(sessionParam));

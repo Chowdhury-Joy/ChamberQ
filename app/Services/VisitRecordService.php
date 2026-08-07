@@ -203,7 +203,7 @@ class VisitRecordService
     public function completedBookingsWithoutNotesToday(?LiveSession $session = null): Collection
     {
         $query = Booking::query()
-            ->whereDate('booking_date', today())
+            ->where('booking_date', today()->toDateString())
             ->where('status', 'completed')
             ->with(['patient', 'visitRecord'])
             ->orderBy('serial_number');

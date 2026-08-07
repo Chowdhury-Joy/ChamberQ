@@ -43,8 +43,8 @@ class OperationalReportService
     public function countsBetween(CarbonInterface $from, CarbonInterface $to): array
     {
         $rows = Booking::query()
-            ->whereDate('booking_date', '>=', $from->toDateString())
-            ->whereDate('booking_date', '<=', $to->toDateString())
+            ->where('booking_date', '>=', $from->toDateString())
+            ->where('booking_date', '<=', $to->toDateString())
             ->selectRaw('status, COUNT(*) as aggregate')
             ->groupBy('status')
             ->pluck('aggregate', 'status');
@@ -108,8 +108,8 @@ class OperationalReportService
         $toDay = $this->inClinicTz($to)->startOfDay();
 
         $rows = Booking::query()
-            ->whereDate('booking_date', '>=', $fromDay->toDateString())
-            ->whereDate('booking_date', '<=', $toDay->toDateString())
+            ->where('booking_date', '>=', $fromDay->toDateString())
+            ->where('booking_date', '<=', $toDay->toDateString())
             ->selectRaw('booking_date, status, COUNT(*) as aggregate')
             ->groupBy('booking_date', 'status')
             ->get();

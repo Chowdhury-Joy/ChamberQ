@@ -100,7 +100,7 @@ class SmsService
             $booking->bookable->loadMissing(['doctor']);
             $doctor = $booking->bookable->doctor?->name;
             $sessionName = $booking->bookable->session_name;
-            $session = trim(($doctor ? $doctor.' · ' : '').($sessionName ?? ''));
+            $session = trim(($doctor ? $doctor.' - ' : '').($sessionName ?? ''));
         }
 
         $ticket = $this->ticketUrl($booking);
@@ -109,7 +109,7 @@ class SmsService
         $name = $booking->patient_name;
         $parts = array_filter([
             $clinic.':',
-            $name.' — serial '.$booking->serial_number,
+            $name.' - serial '.$booking->serial_number,
             $date !== '' ? 'on '.$date : null,
             $session !== '' ? '('.$session.')' : null,
             'Ticket: '.$ticket,

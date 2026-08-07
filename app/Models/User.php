@@ -135,6 +135,24 @@ class User extends Authenticatable implements FilamentUser, CanResetPasswordCont
         return in_array($this->role, [self::ROLE_DOCTOR, self::ROLE_STAFF], true);
     }
 
+    /**
+     * Is this login actually a member of the tenant currently being served?
+     *
+     * The capability helpers below answer "what may this role do", not "at
+     * which practice" — `canAccessPanel()` supplies the second half for
+     * Filament pages. Routes registered in `routes/tenant.php` have no panel
+     * guard, and all panels share one host and therefore one session cookie,
+     * so a doctor signed in to practice A stays authenticated while requesting
+     * `/{practiceB}/…`. Any route that serves tenant-owned clinical data must
+     * check this as well as the role.
+     */
+    public function belongsToCurrentTenant(): bool
+    {
+        return tenancy()->initialized
+            && $this->tenant_id !== null
+            && $this->tenant_id === tenant('id');
+    }
+
     /** Auto-following consult screen — clinical view for doctors only. */
     public function canViewConsultScreen(): bool
     {

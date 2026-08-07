@@ -16,6 +16,7 @@ use App\Http\Middleware\EnsureTenantAcceptsBookings;
 use App\Http\Middleware\Localization;
 use App\Http\Middleware\SetPathTenantUrlDefaults;
 use App\Support\TenancyUrl;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 use Stancl\Tenancy\Middleware\InitializeTenancyByPath;
@@ -37,15 +38,30 @@ use Stancl\Tenancy\Middleware\PreventAccessFromCentralDomains;
 $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
     $routeName = static fn (string $name): string => $routeNamePrefix.$name;
 
-    Route::get('/lang/{locale}', function ($locale) {
-        if (in_array($locale, ['en', 'bn'])) {
+    // Kept as a GET link (the switcher is an <a> in several shells, including
+    // locked solo views) — the only state it writes is the display language.
+    // `back()` is not used: it trusts the Referer header, so a page on another
+    // origin linking here would bounce the visitor straight back off the
+    // clinic's domain, which is exactly the shape a phishing link wants.
+    Route::get('/lang/{locale}', function (Request $request, $locale) {
+        if (in_array($locale, ['en', 'bn'], true)) {
             session()->put('locale', $locale);
         }
 
-        return back();
+        $referer = (string) $request->headers->get('referer');
+        $sameHost = $referer !== ''
+            && parse_url($referer, PHP_URL_HOST) === $request->getHost();
+
+        return redirect()->to($sameHost ? $referer : tenant_web_url('/'));
     });
 
     Route::get('/book', [BookingController::class, 'create']);
+
+    // Homepage hero form target. POST, not GET, so the patient's name and
+    // phone number never land in the URL / history / access logs; it flashes
+    // them to the session and redirects to the wizard.
+    Route::post('/book', [BookingController::class, 'prefill'])
+        ->middleware(['throttle:20,1']);
 
     Route::post('/api/bookings', [BookingController::class, 'store'])
         ->middleware(['throttle:10,1', EnsureTenantAcceptsBookings::class]);
@@ -53,8 +69,11 @@ $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
     Route::get('/api/bookings/availability', [BookingController::class, 'availability'])
         ->middleware(['throttle:60,1']);
 
+    // Unauthenticated patient-name oracle keyed on a guessable BD mobile —
+    // throttled hard on purpose. A real patient types their number once or
+    // twice; 60/min only ever served a scraper.
     Route::get('/api/patients/by-phone', [PatientController::class, 'lookupByPhone'])
-        ->middleware(['throttle:60,1']);
+        ->middleware(['throttle:10,1']);
 
     Route::get('/api/conditions/search', [ConditionController::class, 'search'])
         ->middleware(['auth', 'throttle:120,1']);

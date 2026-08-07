@@ -88,7 +88,15 @@ class LiveSessionEndCleanupTest extends TestCase
             'current_called_at' => now(),
         ]);
 
-        app(LiveSessionService::class)->endSession($liveSession);
+        $cancelled = app(LiveSessionService::class)->endSession($liveSession);
+
+        // The people just turned away are handed back so staff can be offered
+        // a WhatsApp link for each — cancelling silently is the failure here.
+        $this->assertEqualsCanonicalizing(
+            [$waiting->id, $called->id],
+            $cancelled->pluck('id')->all(),
+        );
+        $this->assertNotContains($inChamber->id, $cancelled->pluck('id')->all());
 
         $liveSession->refresh();
         $completed->refresh();

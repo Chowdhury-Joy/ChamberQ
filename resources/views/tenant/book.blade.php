@@ -94,6 +94,14 @@
         .selection-grid { display: grid; gap: 0.85rem; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 1.5rem; }
         .selection-grid.list-view { grid-template-columns: 1fr; }
         .selection-card {
+            /* Real <button>s so the flow is reachable by keyboard and screen
+               reader — these were <div onclick>, which nothing but a mouse
+               could operate. The first four properties are the button reset
+               that keeps them rendering exactly as the divs did. */
+            display: block;
+            width: 100%;
+            font: inherit;
+            color: inherit;
             border: 1px solid var(--line);
             border-radius: 16px;
             padding: 1.15rem 1.25rem;
@@ -103,14 +111,24 @@
             background: var(--bg);
             text-align: left;
         }
+        .selection-card:focus-visible {
+            outline: 2px solid var(--brand);
+            outline-offset: 2px;
+        }
         .selection-card:hover { border-color: color-mix(in srgb, var(--ink) 25%, var(--line)); }
         .selection-card.selected {
             border-color: var(--brand);
             background: color-mix(in srgb, var(--brand) 8%, white);
             box-shadow: 0 0 0 1px var(--brand);
         }
-        .selection-card h4 { margin: 0 0 0.5rem 0; color: var(--ink); font-size: 1.05rem; font-weight: 600; }
-        .selection-card p { margin: 0; color: var(--muted); font-size: 0.9rem; line-height: 1.4; }
+        /* `.sc-title` / `.sc-sub` are spans: the cards are <button>s now, and a
+           heading or paragraph inside a button is invalid and reads badly to a
+           screen reader. The old element selectors are kept alongside so any
+           card still using them cannot silently lose its styling. */
+        .selection-card h4,
+        .selection-card .sc-title { display: block; margin: 0 0 0.5rem 0; color: var(--ink); font-size: 1.05rem; font-weight: 600; }
+        .selection-card p,
+        .selection-card .sc-sub { display: block; margin: 0; color: var(--muted); font-size: 0.9rem; line-height: 1.4; }
         .selection-card .price { color: var(--ink); font-weight: 600; font-size: 1.1rem; float: right; }
         .selection-card.is-disabled { opacity: 0.55; cursor: not-allowed; pointer-events: none; background: color-mix(in srgb, var(--ink) 6%, var(--bg)); }
         .selection-card .seats { margin-top: 0.65rem; font-size: 0.85rem; font-weight: 600; color: var(--ink); }

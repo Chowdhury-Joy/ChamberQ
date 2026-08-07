@@ -85,6 +85,115 @@ class ClinicalMediaPrivacyTest extends TestCase
         tenancy()->end();
     }
 
+    /**
+     * All panels share one host and therefore one session cookie, so a doctor
+     * signed in at one practice stays authenticated while requesting another
+     * practice's tenant routes. Role alone is not authorisation here.
+     */
+    public function test_a_doctor_from_another_practice_cannot_read_clinical_media(): void
+    {
+        [$ownTenant, $ownDoctor, $visitRecord] = $this->seedPracticeWithVisitRecord('clinic-a');
+        [, $outsideDoctor] = $this->seedPracticeWithVisitRecord('clinic-b');
+
+        // The practice's own doctor is fine.
+        $this->actingAs($ownDoctor)
+            ->get("http://clinic-a.localhost/visit-records/{$visitRecord->id}/photo")
+            ->assertOk();
+
+        // A doctor of clinic-b holding the same URL must not be.
+        $this->actingAs($outsideDoctor)
+            ->get("http://clinic-a.localhost/visit-records/{$visitRecord->id}/photo")
+            ->assertForbidden();
+
+        $this->actingAs($outsideDoctor)
+            ->get("http://clinic-a.localhost/visit-records/{$visitRecord->id}/voice")
+            ->assertForbidden();
+    }
+
+    public function test_a_doctor_from_another_practice_cannot_print_a_prescription(): void
+    {
+        [, $ownDoctor, $visitRecord] = $this->seedPracticeWithVisitRecord('print-a');
+        [, $outsideDoctor] = $this->seedPracticeWithVisitRecord('print-b');
+
+        tenancy()->initialize(Tenant::find('print-a'));
+        $prescription = \App\Models\Prescription::create([
+            'visit_record_id' => $visitRecord->id,
+            'patient_id' => $visitRecord->patient_id,
+            'prescribed_by' => $ownDoctor->id,
+        ]);
+        tenancy()->end();
+
+        $this->actingAs($ownDoctor)
+            ->get("http://print-a.localhost/prescriptions/{$prescription->id}/print")
+            ->assertOk();
+
+        $this->actingAs($outsideDoctor)
+            ->get("http://print-a.localhost/prescriptions/{$prescription->id}/print")
+            ->assertForbidden();
+    }
+
+    /**
+     * @return array{0: Tenant, 1: \App\Models\User, 2: \App\Models\VisitRecord}
+     */
+    private function seedPracticeWithVisitRecord(string $id): array
+    {
+        $tenant = Tenant::create(['id' => $id, 'plan_tier' => 'solo']);
+        \App\Models\Domain::create(['domain' => $id.'.localhost', 'tenant_id' => $id]);
+
+        tenancy()->initialize($tenant);
+
+        $doctorUser = \App\Models\User::create([
+            'name' => 'Dr '.$id,
+            'email' => 'doctor@'.$id.'.loc',
+            'password' => \Illuminate\Support\Facades\Hash::make('secret'),
+            'role' => \App\Models\User::ROLE_DOCTOR,
+            'tenant_id' => $id,
+        ]);
+
+        $chamber = \App\Models\Chamber::create(['name' => 'Main']);
+        $doctor = \App\Models\Doctor::create(['name' => 'Dr '.$id]);
+        $session = \App\Models\ScheduleSession::create([
+            'chamber_id' => $chamber->id,
+            'doctor_id' => $doctor->id,
+            'day_of_week' => \Carbon\Carbon::today()->dayOfWeek,
+            'session_name' => 'Morning',
+            'start_time' => '09:00',
+            'end_time' => '23:59',
+            'slot_cap' => 10,
+        ]);
+
+        $patient = \App\Models\Patient::create(['name' => 'Patient '.$id, 'phone' => '01712345678']);
+
+        $booking = \App\Models\Booking::create([
+            'bookable_type' => \App\Models\ScheduleSession::class,
+            'bookable_id' => $session->id,
+            'booking_date' => \Carbon\Carbon::today()->toDateString(),
+            'patient_id' => $patient->id,
+            'patient_name' => $patient->name,
+            'patient_phone' => $patient->phone,
+            'serial_number' => 1,
+            'status' => 'completed',
+        ]);
+
+        $photoPath = 'visit-photos/'.$id.'/slip.jpg';
+        $voicePath = 'visit-audio/'.$id.'/note.webm';
+        Storage::disk('local')->put($photoPath, 'prescription-photo');
+        Storage::disk('local')->put($voicePath, 'consultation-audio');
+
+        $visitRecord = \App\Models\VisitRecord::create([
+            'booking_id' => $booking->id,
+            'patient_id' => $patient->id,
+            'recorded_by' => $doctorUser->id,
+            'photo_path' => $photoPath,
+            'voice_path' => $voicePath,
+            'recorded_at' => now(),
+        ]);
+
+        tenancy()->end();
+
+        return [$tenant, $doctorUser, $visitRecord];
+    }
+
     public function test_service_exposes_no_public_url_accessor(): void
     {
         // A URL accessor would recreate the unauthenticated path the private

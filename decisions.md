@@ -916,3 +916,26 @@
   <action>Ported clinic shell + section blades to HTML markup/structure; kept Clireo pink accents; nested stats inside `doctor_grid`; dropped separate locations/stat_band from the demo page order; reseeded `demo` as CBPH (copy, photos, doctors, navy theme); hero right = live GET form into `/book`. Solo shells untouched.</action>
   <reason>Pixel/structure fidelity to the approved reference is the acceptance bar for clinic; a form on the hero is the one product delta that turns the static preview into a bookable ChamberQ page.</reason>
 </decision>
+
+## 2026-08-08T01:14:33+0600
+
+<decision>
+  <category>Business_Logic</category>
+  <context>`/api/patients/by-phone` powers the wizard's "Who is this appointment for?" household picker. It must stay unauthenticated — it runs before any login — which made it a patient-name oracle: any valid BD mobile returned real names and visit counts at 60/min. Four mitigations were weighed with the owner: mask the labels, throttle only, require a name match first, or OTP-verify the phone.</context>
+  <action>Chose masked labels plus a hard throttle. The endpoint returns `Patient::maskedPickerLabel()` — initials + age, e.g. `F. R., 34` — and no name field at all, at 10 req/min. Picking someone submits only their `patient_id`; `BookingController` resolves it against this tenant AND this phone, and `BookingService` writes `$patient->name` (never the request's) onto the booking. `PatientService::resolveForBooking()` no longer renames a patient resolved by id. Staff-side pickers (Daily Roster, Live Queue walk-in) keep full names via `pickerLabel()`, since those callers are authenticated.</action>
+  <reason>A household recognises its own members from initials and an age; a scraper gets nothing worth having. OTP was rejected as it burns a prepaid SMS credit per lookup and adds a step to the conversion path for a pay-at-chamber v1; name-match-first would have removed most of the picker's value. The server-side name resolution is what makes masking safe — without it the mask would have been written onto tickets and SMS.</reason>
+</decision>
+
+<decision>
+  <category>UI/UX</category>
+  <context>Bangla shipped at 149 of 593 strings. The booking wizard and ticket were nearly complete, but the patient portal was 15 of 18 missing — a patient could book and get a ticket in Bangla, then hit English the moment they checked their appointments. The admin panel is the bulk of the remaining ~450.</context>
+  <action>Translated patient-facing surfaces only: the portal (both clinic and solo shells), the 6 remaining wizard strings, and the shared nav/footer keys — 22 new entries, taking `lang/bn.json` to 171. `PatientFacingBanglaTest` now fails if any string in the wizard, ticket-body or either portal lacks a Bangla entry. The staff/admin panel is deliberately left in English and tracked as a separate task.</action>
+  <reason>Bangla dropping out mid-journey is worse than a consistently English admin panel: patients are the ones who cannot choose, while staff are trained users on a tool they use daily. Machine-translating ~450 admin strings — including clinical terminology in prescribing workflows — would need native review before it could ship, so it is its own piece of work. The generated Bangla in this pass should still get a native speaker's read before production.</reason>
+</decision>
+
+<decision>
+  <category>Code</category>
+  <context>The `/lang/{locale}` switcher is a GET link that writes to the session, and used `back()`, which trusts the `Referer` header — so a page on another origin could bounce a visitor straight off the clinic's domain. Converting it to a POST form would have meant editing the locked solo homepage shells.</context>
+  <action>Kept it a GET link and left all markup alone; replaced `back()` with an explicit same-host check that falls back to the tenant home. The CSRF-shaped aspect (a GET that changes state) is accepted: the only state it writes is display language.</action>
+  <reason>The open redirect was the part with real phishing value and it was fixable in one route with no markup change. Converting five shells to POST forms to defend a language toggle would have required unlocking the patient homepage for a change with no user-visible benefit — disproportionate under the prototype scope rule.</reason>
+</decision>

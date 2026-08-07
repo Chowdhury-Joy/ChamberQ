@@ -480,3 +480,84 @@
   <root_cause>Clireo shells linked CSS/JS via `asset()`, which resolves to `APP_URL` (`http://localhost` with no port). The browser loaded the page from `:8765` but requested styles from port 80, so `clinic-clireo.css` never applied. The duplicate labels are the `.fx-btn` hover pattern — two `<span>`s in each link — with no CSS to hide the second.</root_cause>
   <prevention_rule>Static files under `public/` that are not tenant-specific must use `public_asset()` (root-relative `/css/...`) in clinic patient shells, not `asset()`. Solo survived longer because it still loaded Tailwind from a CDN absolute URL.</prevention_rule>
 </bug>
+
+## 2026-08-08T00:18:18+0600
+
+<bug>
+  <category>Business_Logic</category>
+  <symptom>A patient could book a doctor's session, or a lab collection window, that had already finished earlier the same day — booking date validation only checked "today or later," never the session's own `end_time`. The confirmation SMS still went out, and the wizard's date field defaulted straight onto the already-finished slot.</symptom>
+  <root_cause>`BookingService::availabilitySnapshot()` (via `isDateBlocked()`) checked slot blocks, day-of-week and capacity, but nothing compared `now()` to the bookable's `end_time` when the chosen date was today. The wizard's client-side `nextDateForDow()` had the same gap, so the UI actively steered patients onto the dead slot before the server ever saw the request.</symptom>
+  <prevention_rule>Any availability check for a same-day bookable must compare the current time against the bookable's `end_time`, not just its day-of-week — both server-side (`BookingService::sessionAlreadyEndedToday()`) and client-side (`nextAvailableDate()` in the booking wizard), so the two never disagree about what "today" can still be booked.</prevention_rule>
+</bug>
+
+<bug>
+  <category>Business_Logic</category>
+  <symptom>Every booking confirmation SMS debited exactly 1 prepaid credit, but the gateway actually billed 3 — clinics' SMS wallets emptied roughly 3x faster than the balance implied.</symptom>
+  <root_cause>`SmsService::confirmationBody()` carried the comment "Keep ASCII/English so one credit = one GSM segment for v1," but the template itself used an em dash (`—`) and a middle dot (`·`), neither in the GSM 03.38 alphabet. Any non-GSM character forces the whole SMS into UCS-2 encoding, where a segment is 70 characters instead of 160 — a body naming the clinic, patient, serial, date, doctor/session and a ticket URL runs long enough to span 3 UCS-2 segments, while `debitOneCredit()` always takes exactly one.</root_cause>
+  <prevention_rule>SMS body templates must use only ASCII separators (plain hyphen `-`, not `—` or `·`) so the comment's own stated invariant — one credit per GSM segment — actually holds. A regression test (`SmsConfirmationTest::test_confirmation_body_stays_pure_ascii_so_one_credit_is_one_gsm_segment`) asserts the rendered body round-trips through `mb_convert_encoding(..., 'ASCII', 'UTF-8')` unchanged.</prevention_rule>
+</bug>
+
+<bug>
+  <category>Code</category>
+  <symptom>The composite indexes added specifically for "the booking hot path" (`bookings_roster_index`, `bookings_bookable_date_index`, `slot_blocks_tenant_date_index`) were unusable in production: every query on that path — capacity checks, serial allocation, duplicate-booking checks, the queue status endpoint, Live Queue Control's 3-second poll — used `whereDate('booking_date', …)`, which wraps the column in a SQL `DATE()` function and prevents a B-tree index lookup on MySQL/Postgres. SQLite hid this completely since it ignores column types for comparison, so the regression was invisible locally.</symptom>
+  <root_cause>26 call sites used `whereDate()` against `booking_date` / `session_date` / `slot_blocks.date` instead of a plain `where()` equality, even though all three columns are already date-cast. Separately, converting them exposed a second, real cross-driver bug: Eloquent's built-in `'date'` cast reads back a start-of-day Carbon, but writes through the model's generic datetime format (`Y-m-d H:i:s`) on save — real DATE columns (MySQL/Postgres) silently coerce that to date-only on INSERT, but SQLite has no such coercion and stores the trailing `00:00:00` literally, so a plain string-equality `where()` against `'Y-m-d'` stopped matching on SQLite specifically.</root_cause>
+  <prevention_rule>Date-only columns must use a cast that also controls the value written to the database, not just the value read back — see `App\Casts\DateOnly`, now applied to `Booking::booking_date`, `LiveSession::session_date`, and `SlotBlock::date`. Never use `whereDate()` on a column that already has (or should have) an index built for equality lookups; use plain `where()` and keep the column genuinely date-only via the cast.</prevention_rule>
+</bug>
+
+## 2026-08-08T01:14:33+0600
+
+<bug>
+  <category>Business_Logic</category>
+  <symptom>`/api/patients/by-phone` returned every patient's real name and visit count for any valid Bangladeshi mobile, with no authentication and a 60/min limit. Anyone could walk the number range and rebuild a clinic's patient list with names and attendance frequency.</symptom>
+  <root_cause>The endpoint has to be public — the booking wizard calls it before anyone logs in — and it was built to return `pickerLabel()` (full name + age) because the wizard used the name to fill its own name field. Being unauthenticated was a deliberate, necessary choice; returning the full name was not reconsidered alongside it.</root_cause>
+  <prevention_rule>An unauthenticated endpoint keyed on a guessable identifier is an oracle for whatever it returns — decide what it may reveal *because* it is public, not because a caller happens to want it. This one now returns `maskedPickerLabel()` (initials + age) and no name at all, throttled to 10/min, and the booking endpoint resolves the real name from `patient_id` server-side. Any new public lookup gets the same treatment.</prevention_rule>
+</bug>
+
+<bug>
+  <category>Code</category>
+  <symptom>A doctor signed in at one practice could read another practice's prescription photos, consultation voice notes and printed prescriptions by requesting that tenant's URL — `/{otherTenant}/visit-records/{uuid}/photo`, `/prescriptions/{uuid}/print`.</symptom>
+  <root_cause>`VisitMediaController`, `PrescriptionController`, `MedicineController` and `ConditionController` checked only the capability (`canViewVisitNotes()` etc.), which is a pure role test — `$this->role === 'doctor'`. The tenant half of authorisation came from Filament's `canAccessPanel()`, which these raw `routes/tenant.php` routes never pass through, and all panels share one host and therefore one session cookie. Route-model binding scoped the *record* to the tenant; nothing scoped the *user*. Only UUID primary keys kept it from being enumerable.</root_cause>
+  <prevention_rule>Capability helpers on `User` answer "what may this role do", never "at which practice". Any route outside a Filament panel that serves tenant-owned data must also call `User::belongsToCurrentTenant()`. Covered by `ClinicalMediaPrivacyTest::test_a_doctor_from_another_practice_cannot_read_clinical_media` and `..._cannot_print_a_prescription`, which assert the practice's own doctor still gets 200 so the guard cannot be "fixed" by denying everyone.</prevention_rule>
+</bug>
+
+<bug>
+  <category>Business_Logic</category>
+  <symptom>Ending a live session early cancelled every patient still in the queue and told nobody. The confirmation modal said only "All remaining patients will be cancelled" — not how many, or who — and the first those patients heard of it was arriving at a closed chamber.</symptom>
+  <root_cause>`LiveSessionService::endSession()` returned void, so the page had nothing to notify anyone with. Vacation mode (slot blocks) had had a per-patient WhatsApp notify list since it shipped; the same duty on the end-session path was simply never wired up, and the count was never surfaced in the confirmation.</root_cause>
+  <prevention_rule>Any code path that cancels a patient's appointment must (1) state the count and the names before it commits, and (2) return the cancelled bookings so the caller can offer the WhatsApp hand-off — the shared `filament.tenant-admin.slot-block-notify` partial now takes an optional per-booking `$messages` override for exactly this. Cancelling silently is never acceptable, whatever triggers it.</prevention_rule>
+</bug>
+
+<bug>
+  <category>UI/UX</category>
+  <symptom>The booking wizard could not be operated by keyboard or screen reader at all. A patient could tab to the date, name and phone inputs but could not select a chamber, doctor, session or booking type — the flow was a dead end.</symptom>
+  <root_cause>Every selection card was a `<div onclick="…">` with no `tabindex`, no `role` and no key handler, so only a mouse could activate it. The JS-built session and lab cards were `document.createElement('div')` for the same reason.</root_cause>
+  <prevention_rule>Anything a user activates is a `<button type="button">` (or a link), never a `<div onclick>` — native elements are focusable, keyboard-activatable and announced correctly for free. Note the content model: block elements such as `<h4>`/`<p>` inside a button are invalid and read badly, so the cards use `.sc-title` / `.sc-sub` spans, with the old element selectors kept in both shells' CSS so nothing can silently lose styling.</prevention_rule>
+</bug>
+
+<bug>
+  <category>UI/UX</category>
+  <symptom>A patient of a past-due / suspended / read-only practice could pick a doctor, a session and a date and type their name and phone number, and was only told booking was closed after tapping Confirm.</symptom>
+  <root_cause>`EnsureTenantAcceptsBookings` was applied to `POST /api/bookings` only. `GET /book` never consulted `acceptsBookings()`, so it rendered the full wizard for a tenant that could not accept the booking.</root_cause>
+  <prevention_rule>When a gate blocks a submission, the page that collects the submission must check the same gate on render and say so up front. `BookingController::create()` now folds `acceptsBookings()` into `$canBookConsultation` / `$canBookLab` and passes `bookingClosedForBilling` so the existing empty state gives the honest reason ("call the clinic") instead of the schedules-not-published copy.</prevention_rule>
+</bug>
+
+<bug>
+  <category>Code</category>
+  <symptom>The clinic homepage hero form submitted the patient's name and phone number by GET, putting them in the address bar — and therefore in browser history, web-server access logs, and the `Referer` header of every asset the booking page then loaded.</symptom>
+  <root_cause>The hero was ported from a static HTML reference whose booking card was a mock; making it real meant pointing it at `/book`, and `method="get"` was the path of least resistance because the wizard already read its prefill from `URLSearchParams`.</root_cause>
+  <prevention_rule>Patient identifiers never travel in a URL. The hero POSTs to `BookingController::prefill()`, which flashes the values to the session and redirects (Post/Redirect/Get — a refresh does not re-submit either), and the wizard now reads prefill from a server-rendered `config.prefill` instead of the query string. Deep links that carry no PII (`?doctor=`, `?test=`, `?session=`) still work, resolved server-side by `prefillFrom()`.</prevention_rule>
+</bug>
+
+<bug>
+  <category>Code</category>
+  <symptom>Daily Roster's "Call to Chamber" could take the doctor off a patient who was mid-consultation, knocking them off the outdoor screen and their own ticket. Four other queue mutations (`reinstatePatient`, `markDelay`, `pauseSession`, `resumeSession`) wrote without the row lock every sibling mutation uses. Separately, a paused session whose `paused_at` was null could never be resumed — the button silently did nothing.</symptom>
+  <root_cause>`callSpecificPatient()` had the "never interrupt a consult" guard; `bringBookingToChamber()`, added later for the roster, did not, and returned void so the UI could not report a refusal either. The unlocked mutations predate the locking convention. `resumeSession()` wrapped its whole body in `if ($liveSession->paused_at)`, conflating the elapsed-time accounting (which needs the timestamp) with returning to `active` (which does not).</root_cause>
+  <prevention_rule>Every queue mutation goes through `DB::transaction` + `lockSession()`, no exceptions. A guard that protects a patient mid-consult belongs on every path that can move the current booking, not just the one it was written for — `bringBookingToChamber()` now returns bool and Daily Roster surfaces the refusal as a warning. A recovery action must never be gated entirely on optional state; compute what needs it, and always perform the recovery.</prevention_rule>
+</bug>
+
+<bug>
+  <category>Code</category>
+  <symptom>After `App\Casts\DateOnly` made date-only storage genuinely `Y-m-d`, `LiveSession::firstOrCreate()` in `startSession()` and `bringBookingToChamber()` began missing existing rows and tripping the unique index on `(tenant_id, schedule_session_id, session_date)`.</symptom>
+  <root_cause>Those calls passed a Carbon instance as the `session_date` attribute. `firstOrCreate()` uses that array as the WHERE clause as well as the insert payload, and a Carbon binds as `'Y-m-d H:i:s'` — which had matched only because the column previously stored a `00:00:00` time component too. Latent all along; the cast exposed it.</root_cause>
+  <prevention_rule>Pass date-only columns as `->toDateString()`, never a Carbon, anywhere the value becomes a query binding (`where`, `firstOrCreate`, `updateOrCreate`). A model cast controls what is written, not what is bound in a WHERE.</prevention_rule>
+</bug>

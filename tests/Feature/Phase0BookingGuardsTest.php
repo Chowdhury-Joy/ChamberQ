@@ -111,4 +111,66 @@ class Phase0BookingGuardsTest extends TestCase
             ->assertOk()
             ->assertSee('Variant Patient');
     }
+
+    public function test_booking_rejects_a_session_that_already_ended_today(): void
+    {
+        // Fixed mid-day "now" — a session ending an hour ago cannot wrap past
+        // midnight and flip past/future depending on when the suite happens to run.
+        Carbon::setTestNow(Carbon::parse('2026-07-28 11:30:00'));
+
+        tenancy()->initialize($this->tenant);
+        $chamber = Chamber::first();
+        $doctor = Doctor::first();
+        $endedSession = ScheduleSession::create([
+            'chamber_id' => $chamber->id,
+            'doctor_id' => $doctor->id,
+            'day_of_week' => Carbon::now()->dayOfWeek,
+            'session_name' => 'Already finished',
+            'start_time' => '08:00',
+            'end_time' => '10:30',
+            'slot_cap' => 10,
+        ]);
+        tenancy()->end();
+
+        $this->postJson('http://phase0.localhost/api/bookings', [
+            'bookable_type' => 'session',
+            'bookable_id' => $endedSession->id,
+            'booking_date' => Carbon::now()->toDateString(),
+            'patient_name' => 'Too Late Patient',
+            'patient_phone' => '01712345678',
+        ])->assertStatus(422)->assertJson(['success' => false, 'code' => 'blocked']);
+
+        $this->assertDatabaseMissing('bookings', ['patient_name' => 'Too Late Patient']);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_booking_allows_a_session_still_running_today(): void
+    {
+        Carbon::setTestNow(Carbon::parse('2026-07-28 11:30:00'));
+
+        tenancy()->initialize($this->tenant);
+        $chamber = Chamber::first();
+        $doctor = Doctor::first();
+        $runningSession = ScheduleSession::create([
+            'chamber_id' => $chamber->id,
+            'doctor_id' => $doctor->id,
+            'day_of_week' => Carbon::now()->dayOfWeek,
+            'session_name' => 'Still open',
+            'start_time' => '10:00',
+            'end_time' => '13:00',
+            'slot_cap' => 10,
+        ]);
+        tenancy()->end();
+
+        $this->postJson('http://phase0.localhost/api/bookings', [
+            'bookable_type' => 'session',
+            'bookable_id' => $runningSession->id,
+            'booking_date' => Carbon::now()->toDateString(),
+            'patient_name' => 'On Time Patient',
+            'patient_phone' => '01712345678',
+        ])->assertOk()->assertJson(['success' => true]);
+
+        Carbon::setTestNow();
+    }
 }

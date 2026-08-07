@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\DateOnly;
 use App\Models\Concerns\BelongsToTenant;
 use App\Services\SlotBlockService;
 use Illuminate\Database\Eloquent\Model;
@@ -18,7 +19,7 @@ class SlotBlock extends Model
     ];
 
     protected $casts = [
-        'date' => 'date',
+        'date' => DateOnly::class,
     ];
 
     protected static function booted(): void

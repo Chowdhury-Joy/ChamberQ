@@ -12,7 +12,10 @@ class PrescriptionController extends Controller
     {
         $user = $request->user();
 
-        if (! $user?->canViewVisitNotes()) {
+        // Role AND practice — this route has no Filament panel guard, and the
+        // session cookie is shared across every panel on the host. See
+        // User::belongsToCurrentTenant().
+        if (! $user?->canViewVisitNotes() || ! $user->belongsToCurrentTenant()) {
             abort(403);
         }
 

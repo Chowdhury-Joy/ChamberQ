@@ -18,6 +18,12 @@
 /public/storage
 /storage/*.key
 /storage/pail
+# Per-tenant storage roots. stancl/tenancy suffixes storage_path() with
+# `tenant` + the tenant id (config/tenancy.php `suffix_base`), so every tenant —
+# including every one a test creates — gets a directory here holding that
+# practice's voice notes and prescription photos. Patient clinical records never
+# belong in git, even synthetic ones.
+/storage/tenant*
 /vendor
 Homestead.json
 Homestead.yaml

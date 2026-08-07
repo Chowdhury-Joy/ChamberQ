@@ -27,7 +27,7 @@ class SlotBlockService
     public function affectedBookingsQuery(SlotBlock $block): Builder
     {
         $query = Booking::query()
-            ->whereDate('booking_date', $block->date)
+            ->where('booking_date', $block->date->toDateString())
             ->whereNotIn('status', ['cancelled', 'completed']);
 
         // A block with neither chamber nor doctor closes the whole tenant.

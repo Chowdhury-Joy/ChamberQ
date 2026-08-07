@@ -52,10 +52,18 @@ class LiveQueueControl extends Page implements HasActions, HasTable
 
     public $selectedSessionId = null;
 
+    /**
+     * Bookings the last "End session" cancelled, so the WhatsApp hand-off
+     * survives the re-render. Public so Livewire keeps it across requests.
+     *
+     * @var list<string>
+     */
+    public array $cancelledByEndSessionIds = [];
+
     public function mount()
     {
         // Prefer the most recently started live session for today.
-        $activeLiveSession = LiveSession::whereDate('session_date', Carbon::today())
+        $activeLiveSession = LiveSession::where('session_date', Carbon::today()->toDateString())
             ->whereIn('status', ['active', 'paused', 'delayed'])
             ->orderByDesc('started_at')
             ->orderByDesc('id')
@@ -91,6 +99,10 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                 ->color('gray')
                 ->button()
                 ->visible(fn () => $this->selectedSessionId !== null),
+
+            // Stands alone, not inside the menu: these patients are already
+            // cancelled and still expecting to be seen today.
+            $this->notifyCancelledAction(),
 
             \Filament\Actions\Action::make('newWalkIn')
                 ->label(__('New Walk-In'))
@@ -184,7 +196,23 @@ class LiveQueueControl extends Page implements HasActions, HasTable
             ->outlined()
             ->icon('heroicon-s-flag')
             ->requiresConfirmation()
-            ->modalDescription('Are you sure you want to completely end this session? All remaining patients will be cancelled.')
+            // Name the cost before they commit. "All remaining patients will be
+            // cancelled" does not tell a queue runner whether that is nobody or
+            // nine people still sitting in the waiting room.
+            ->modalDescription(function (): string {
+                $pending = $this->bookingsEndSessionWouldCancel();
+
+                if ($pending->isEmpty()) {
+                    return __('Nobody is still waiting, so ending the session will not cancel anyone.');
+                }
+
+                return __('This cancels :count patient(s) who are still in the queue: :serials. You will get WhatsApp links to tell them.', [
+                    'count' => $pending->count(),
+                    'serials' => $pending
+                        ->map(fn (Booking $booking) => '#'.$booking->serial_number.' '.$booking->patient_name)
+                        ->implode(', '),
+                ]);
+            })
             ->modalSubmitActionLabel(__('End session'))
             ->action(function () {
                 if (!$this->activeLiveSession) return;
@@ -194,8 +222,24 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                         $this->activeLiveSession,
                     );
                 }
-                app(LiveSessionService::class)->endSession($this->activeLiveSession);
-                if ($catchUpCount > 0 && auth()->user()?->canRecordVisitNotes()) {
+
+                $cancelled = app(LiveSessionService::class)->endSession($this->activeLiveSession);
+
+                // Held on the component so "Tell cancelled patients" stays
+                // available after the page re-renders. These people are
+                // expecting to be seen today; the button is the only thing
+                // standing between them and a wasted trip.
+                $this->cancelledByEndSessionIds = $cancelled->pluck('id')->all();
+                $this->forgetQueueState();
+
+                if ($cancelled->isNotEmpty()) {
+                    Notification::make()
+                        ->title(__('Session ended — :count patient(s) cancelled', ['count' => $cancelled->count()]))
+                        ->body(__('Use "Tell cancelled patients" to send each of them a WhatsApp message.'))
+                        ->warning()
+                        ->persistent()
+                        ->send();
+                } elseif ($catchUpCount > 0 && auth()->user()?->canRecordVisitNotes()) {
                     Notification::make()
                         ->title(__('Session ended'))
                         ->body(__(':count patients today without notes — open Consult Screen to fill in while the evening is fresh.', [
@@ -207,8 +251,66 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                 } else {
                     Notification::make()->title('Session Ended')->success()->send();
                 }
+
+                if ($cancelled->isNotEmpty() && $catchUpCount > 0 && auth()->user()?->canRecordVisitNotes()) {
+                    Notification::make()
+                        ->title(__(':count patients today without notes', ['count' => $catchUpCount]))
+                        ->body(__('Open Consult Screen to fill in while the evening is fresh.'))
+                        ->warning()
+                        ->duration(12000)
+                        ->send();
+                }
             })
             ->visible(fn () => $this->activeLiveSession && in_array($this->activeLiveSession->status, ['active', 'paused']));
+    }
+
+    /**
+     * Patients ending the session right now would turn away.
+     *
+     * @return \Illuminate\Support\Collection<int, Booking>
+     */
+    public function bookingsEndSessionWouldCancel()
+    {
+        if (! $this->activeLiveSession) {
+            return collect();
+        }
+
+        return app(LiveSessionService::class)
+            ->bookingsEndSessionWouldCancel($this->activeLiveSession);
+    }
+
+    /**
+     * WhatsApp hand-off for the patients the last "End session" cancelled.
+     *
+     * Mirrors vacation mode: nothing is sent automatically, staff tap one link
+     * per patient. Without this, ending a session early silently binned
+     * everyone still waiting and the first they heard of it was arriving.
+     */
+    public function notifyCancelledAction(): Action
+    {
+        return Action::make('notifyCancelled')
+            ->label(__('Tell cancelled patients'))
+            ->icon('heroicon-o-chat-bubble-left-right')
+            ->color('warning')
+            ->modalHeading(__('Let these patients know'))
+            ->modalSubmitAction(false)
+            ->modalCancelActionLabel(__('Done'))
+            ->modalContent(function (): \Illuminate\Contracts\View\View {
+                $bookings = Booking::whereIn('id', $this->cancelledByEndSessionIds)
+                    ->orderBy('serial_number')
+                    ->get();
+
+                return view('filament.tenant-admin.slot-block-notify', [
+                    'bookings' => $bookings,
+                    'messages' => $bookings->mapWithKeys(fn (Booking $booking) => [
+                        $booking->id => __("Hello :name, sorry — today's session ended before your serial :serial. Your appointment has been cancelled. Please contact us to rebook.", [
+                            'name' => $booking->patient_name,
+                            'serial' => $booking->serial_number,
+                        ]),
+                    ])->all(),
+                ]);
+            })
+            ->visible(fn (): bool => $this->cancelledByEndSessionIds !== []);
     }
 
     public function getSessionsProperty()
@@ -242,7 +344,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
         if (!$this->selectedSessionId) return null;
 
         return LiveSession::where('schedule_session_id', $this->selectedSessionId)
-            ->whereDate('session_date', Carbon::today())
+            ->where('session_date', Carbon::today()->toDateString())
             ->with(['currentBooking.visitRecord.prescription.items'])
             ->first();
     }
@@ -253,7 +355,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
 
         return Booking::where('bookable_type', ScheduleSession::class)
             ->where('bookable_id', $this->selectedSessionId)
-            ->whereDate('booking_date', Carbon::today())
+            ->where('booking_date', Carbon::today()->toDateString())
             ->orderBy('serial_number')
             ->get();
     }
@@ -298,7 +400,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                     ->when($this->selectedSessionId, function ($query) {
                         $query->where('bookable_type', ScheduleSession::class)
                               ->where('bookable_id', $this->selectedSessionId)
-                              ->whereDate('booking_date', Carbon::today());
+                              ->where('booking_date', Carbon::today()->toDateString());
                     }, function ($query) {
                         $query->whereRaw('1 = 0');
                     })

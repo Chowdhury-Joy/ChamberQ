@@ -20,7 +20,7 @@ class TenantStatsOverview extends BaseWidget
         $tenant = tenant();
         $today = Carbon::today()->toDateString();
         
-        $todayBookingsCount = Booking::whereDate('booking_date', $today)->count();
+        $todayBookingsCount = Booking::where('booking_date', $today)->count();
         $totalBookingsCount = Booking::count();
         $doctorsCount = Doctor::count();
         $chambersCount = ScheduleSession::query()->distinct()->count('chamber_id');

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\DateOnly;
 use App\Models\Concerns\BelongsToTenant;
 use App\Models\Relations\HasManyByScheduleAndDate;
 use Illuminate\Database\Eloquent\Model;
@@ -27,7 +28,7 @@ class LiveSession extends Model
     ];
 
     protected $casts = [
-        'session_date' => 'date',
+        'session_date' => DateOnly::class,
         'current_called_at' => 'datetime',
         'paused_at' => 'datetime',
         'started_at' => 'datetime',

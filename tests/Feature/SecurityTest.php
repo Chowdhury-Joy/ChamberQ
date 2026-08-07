@@ -110,8 +110,12 @@ class SecurityTest extends TestCase
         ]);
         tenancy()->end();
 
-        // The public site stays viewable.
-        $this->get('http://beta.localhost/book')->assertOk();
+        // The public site stays viewable — but it says so up front rather than
+        // letting the patient fill the whole wizard and fail at Confirm.
+        $this->get('http://beta.localhost/book')
+            ->assertOk()
+            ->assertSee('Booking unavailable')
+            ->assertSee('Please call the clinic to book your appointment.');
 
         // New bookings are refused.
         $this->postJson('http://beta.localhost/api/bookings', [
@@ -139,7 +143,9 @@ class SecurityTest extends TestCase
         ]);
         tenancy()->end();
 
-        $this->get('http://beta.localhost/book')->assertOk();
+        $this->get('http://beta.localhost/book')
+            ->assertOk()
+            ->assertSee('Booking unavailable');
 
         $this->postJson('http://beta.localhost/api/bookings', [
             'bookable_type' => 'session',

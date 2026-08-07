@@ -67,7 +67,7 @@ class ConsultScreen extends Page implements HasActions
     public function getRunningLiveSessionProperty(): ?LiveSession
     {
         return LiveSession::query()
-            ->whereDate('session_date', Carbon::today())
+            ->where('session_date', Carbon::today()->toDateString())
             ->whereIn('status', ['active', 'paused'])
             ->orderByDesc('started_at')
             ->orderByDesc('id')

@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-07T16:34:50+0600
+Last Updated: 2026-08-08T01:14:33+0600
 
 ## Full Site Map
 
@@ -37,6 +37,7 @@ When a doctor connects their own domain (e.g. `drkarim.com`), routes live at the
 |-------|---------|--------|
 | `/{slug?}` | Branded website pages from WebPage builder (home = empty slug) | public |
 | `/book` | Online serial booking wizard | public |
+| `POST /book` | Homepage hero form target — flashes name/phone to session, redirects to the wizard so patient details never enter the URL | public (throttled) |
 | `/bookings/{booking}` | Patient ticket (UUID) | public |
 | `/portal` | Phone lookup | public (throttled) |
 | `/screen/{session}/{date}` | Outdoor waiting-room display | public (throttled) |
@@ -50,14 +51,14 @@ Available under both platform path (`/{slug}/api/…`) and custom domain (`/api/
 | Route | Purpose | Access |
 |-------|---------|--------|
 | `GET /api/bookings/availability` | Session/lab availability for wizard | public (throttled) |
-| `GET /api/patients/by-phone` | Household members on a phone (booking picker) | public (throttled) |
-| `GET /api/conditions/search` | Coded condition autocomplete for doctor diagnosis picker | doctor auth (throttled) |
+| `GET /api/patients/by-phone` | Household members on a phone (booking picker) — returns **masked initials + age only**, never names | public (throttled 10/min) |
+| `GET /api/conditions/search` | Coded condition autocomplete for doctor diagnosis picker | doctor auth, same tenant (throttled) |
 | `POST /api/bookings` | Create booking | public (throttled; blocked if billing closed) |
 | `GET /api/queue/{booking}` | Ticket queue poll by booking UUID | public (throttled) |
 | `GET /api/screen/{session}/{date}` | Screen poll payload | public (throttled) |
 
 ### Tenant doctor-only routes (auth)
-Available under both platform path and custom domain. Requires doctor role (`canViewVisitNotes`).
+Available under both platform path and custom domain. Requires doctor role (`canViewVisitNotes`) **and** membership of the tenant being served (`User::belongsToCurrentTenant()`) — panels share one session cookie across every tenant on the host, so the role check alone is not authorisation here.
 
 | Route | Purpose | Access |
 |-------|---------|--------|
@@ -89,7 +90,7 @@ The one patient-facing route that shows prescription content. Deliberately outsi
 
 ### Patient → book serial → ticket
 1. Open `/{slug}/` or custom domain home — see doctor brand + Book CTA. On clinic-tier sites the Book Appointment CTA now also sits in the header nav (desktop) and the mobile drawer, per the Clireo design port; solo keeps its locked layout.
-2. Book flow — pick session/date, enter phone; if the number is known, choose **Who is this appointment for?** inline (or enter a new person).
+2. Book flow — pick session/date (selections are keyboard-operable buttons; a session whose end time has already passed today is not offered), enter phone; if the number is known, choose **Who is this appointment for?** inline — options show masked initials (`F. R., 34`), and picking one stands the name field down because the server resolves the real name from the id. On a clinic site the homepage hero form can start this flow, POSTing name/phone so they stay out of the URL.
 3. Submit → ticket at `…/bookings/{uuid}`. Goal: proof of serial; share via WhatsApp/copy, or Print / Save as PDF for a paper or file copy.
 4. Optional: PWA install scoped to tenant path or custom domain.
 

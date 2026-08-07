@@ -127,6 +127,66 @@ class LiveSessionQueueLockTest extends TestCase
         $this->assertSame($first->id, $this->liveSession->current_booking_id);
     }
 
+    /**
+     * The roster's "Call to Chamber" must obey the same rule as the queue's
+     * "Call now": a consult already in progress is never interrupted.
+     */
+    public function test_roster_cannot_pull_a_patient_in_while_someone_is_mid_consult(): void
+    {
+        $inChamber = $this->makeWaitingBooking('Patient One', 1);
+        $waiting = $this->makeWaitingBooking('Patient Two', 2);
+
+        $this->service->callNextPatient($this->liveSession);
+        $this->service->patientArrived($this->liveSession);
+
+        $this->assertSame('in_chamber', $inChamber->fresh()->status);
+
+        $moved = $this->service->bringBookingToChamber($waiting);
+
+        $this->assertFalse($moved, 'Roster took the doctor off a patient mid-consult.');
+        $this->liveSession->refresh();
+        $this->assertSame($inChamber->id, $this->liveSession->current_booking_id);
+        $this->assertSame('in_chamber', $inChamber->fresh()->status);
+        $this->assertSame('waiting', $waiting->fresh()->status);
+    }
+
+    public function test_roster_may_pull_a_patient_in_when_the_room_is_free(): void
+    {
+        $called = $this->makeWaitingBooking('Patient One', 1);
+        $waiting = $this->makeWaitingBooking('Patient Two', 2);
+
+        // Called but not yet arrived — the room is free, so this is allowed and
+        // the jumped patient keeps their place with no skip strike.
+        $this->service->callNextPatient($this->liveSession);
+        $this->assertSame('called', $called->fresh()->status);
+
+        $moved = $this->service->bringBookingToChamber($waiting);
+
+        $this->assertTrue($moved);
+        $this->liveSession->refresh();
+        $this->assertSame($waiting->id, $this->liveSession->current_booking_id);
+        $this->assertSame('in_chamber', $waiting->fresh()->status);
+        $this->assertSame('waiting', $called->fresh()->status);
+        $this->assertSame(0, $called->fresh()->skip_count);
+    }
+
+    public function test_resume_recovers_a_paused_session_with_no_paused_at(): void
+    {
+        // A paused row missing its timestamp used to make Resume a no-op, which
+        // left the queue permanently stuck with no way back from the UI.
+        $this->liveSession->update([
+            'status' => 'paused',
+            'paused_at' => null,
+            'pause_reason' => 'Prayer break',
+        ]);
+
+        $this->service->resumeSession($this->liveSession);
+
+        $this->liveSession->refresh();
+        $this->assertSame('active', $this->liveSession->status);
+        $this->assertNull($this->liveSession->pause_reason);
+    }
+
     private function makeWaitingBooking(string $name, int $serial): Booking
     {
         return Booking::create([

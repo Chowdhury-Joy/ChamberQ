@@ -204,7 +204,7 @@ class OperationalReports extends Page implements HasTable
                     }])
                     ->when(
                         $this->period === 'day',
-                        fn ($query) => $query->whereDate('booking_date', $anchor->toDateString()),
+                        fn ($query) => $query->where('booking_date', $anchor->toDateString()),
                         fn ($query) => $query->whereRaw('1 = 0'),
                     )
                     ->orderBy('serial_number')

@@ -125,6 +125,46 @@ class BookingHappyPathTest extends TestCase
             ->assertSee((string) $this->session->doctor_id, false);
     }
 
+    public function test_deep_link_doctor_reaches_the_wizard_as_server_side_prefill(): void
+    {
+        $this->get('http://happy-path.localhost/book?doctor='.$this->session->doctor_id)
+            ->assertOk()
+            ->assertSee('prefill: {"doctor":"'.$this->session->doctor_id.'"}', false);
+    }
+
+    /**
+     * The homepage hero form must not put the patient's phone number in the
+     * URL — that lands it in browser history and every access log in the path.
+     */
+    public function test_hero_form_post_keeps_patient_details_out_of_the_url(): void
+    {
+        $response = $this->post('http://happy-path.localhost/book', [
+            'name' => 'Fatima Rahman',
+            'phone' => '01712345678',
+            'doctor' => (string) $this->session->doctor_id,
+            'session' => (string) $this->session->id,
+            'date' => $this->monday,
+        ]);
+
+        $response->assertRedirect();
+        $redirectedTo = $response->headers->get('Location');
+
+        $this->assertStringNotContainsString('01712345678', $redirectedTo);
+        $this->assertStringNotContainsString('Fatima', $redirectedTo);
+        $this->assertStringNotContainsString('?', (string) $redirectedTo);
+
+        // …but the wizard still receives them, via the flashed session payload.
+        $this->followingRedirects()
+            ->post('http://happy-path.localhost/book', [
+                'name' => 'Fatima Rahman',
+                'phone' => '01712345678',
+                'session' => (string) $this->session->id,
+            ])
+            ->assertOk()
+            ->assertSee('Fatima Rahman', false)
+            ->assertSee('01712345678', false);
+    }
+
     public function test_legacy_per_day_cap_mode_aliases_to_per_doctor_chamber(): void
     {
         tenancy()->initialize($this->tenant);

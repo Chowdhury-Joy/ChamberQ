@@ -130,6 +130,26 @@ class SmsConfirmationTest extends TestCase
         $this->assertStringContainsString('gateway down', (string) $message->error);
     }
 
+    public function test_confirmation_body_stays_pure_ascii_so_one_credit_is_one_gsm_segment(): void
+    {
+        // The template's own separators must never force UCS-2 encoding — a
+        // non-GSM character (an em dash, a middle dot, …) turns a ~150-char
+        // body into 3 SMS segments while debitOneCredit() still takes exactly
+        // one, silently under-billing every confirmation sent.
+        tenancy()->initialize($this->tenant);
+        $booking = app(BookingService::class)->createBookingForBookable(
+            $this->session,
+            $this->monday,
+            'Fatima',
+            '01712345681',
+            sendSms: false,
+        );
+        $body = app(SmsService::class)->confirmationBody($booking);
+        tenancy()->end();
+
+        $this->assertSame($body, mb_convert_encoding($body, 'ASCII', 'UTF-8'));
+    }
+
     public function test_top_up_increases_balance(): void
     {
         app(SmsService::class)->topUp($this->tenant, 200);
