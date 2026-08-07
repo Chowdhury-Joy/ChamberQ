@@ -21,6 +21,15 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('tenant_id')->references('id')->on('tenants')->cascadeOnDelete();
+
+            // Declared here, not in a later migration: `booking_lab_test` forms
+            // a composite FK against (tenant_id, id), and MySQL requires the
+            // referenced unique key to already exist when that FK is created
+            // ("6125 Missing unique key for constraint"). SQLite does not check,
+            // so adding it later appeared to work right up until the first
+            // MySQL install.
+            $table->unique(['tenant_id', 'id']);
+
             // Note: because bookable_id references an integer ID on either schedule_sessions or lab_collections,
             // we do a composite unique constraint here.
             $table->unique(['tenant_id', 'bookable_type', 'bookable_id', 'booking_date', 'serial_number'], 'bookings_serial_unique');

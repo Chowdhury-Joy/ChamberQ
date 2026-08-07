@@ -561,3 +561,26 @@
   <root_cause>Those calls passed a Carbon instance as the `session_date` attribute. `firstOrCreate()` uses that array as the WHERE clause as well as the insert payload, and a Carbon binds as `'Y-m-d H:i:s'` — which had matched only because the column previously stored a `00:00:00` time component too. Latent all along; the cast exposed it.</root_cause>
   <prevention_rule>Pass date-only columns as `->toDateString()`, never a Carbon, anywhere the value becomes a query binding (`where`, `firstOrCreate`, `updateOrCreate`). A model cast controls what is written, not what is bound in a WHERE.</prevention_rule>
 </bug>
+
+## 2026-08-08T01:46:24+0600
+
+<bug>
+  <category>Code</category>
+  <symptom>The application could not be installed on MySQL at all. `php artisan migrate` failed on the very first migration with "SQLSTATE[HY000] 1824 Failed to open the referenced table 'tenants'".</symptom>
+  <root_cause>`0001_01_01_000000_create_users_table` declares a foreign key to `tenants`, but the tenants table was published by stancl/tenancy as `2019_09_15_000010` — which sorts *after* it. SQLite does not resolve foreign-key targets at CREATE time, so the whole schema appeared healthy for months; MySQL/InnoDB rejects an FK to a table that does not exist yet.</root_cause>
+  <prevention_rule>`tenants` is the root of the schema — nineteen tables reference it — so it is now `0000_01_01_000000_create_tenants_table`, ahead of Laravel's own `0001_…` migrations, with a comment saying why it must not be renumbered. More generally: migration order is a real constraint that SQLite cannot check for you, which is what the new `phpunit-mysql` CI job exists to catch.</prevention_rule>
+</bug>
+
+<bug>
+  <category>Code</category>
+  <symptom>On MySQL, `create_booking_lab_test_table` failed with "6125 Failed to add the foreign key constraint. Missing unique key for constraint … in the referenced table 'bookings'".</symptom>
+  <root_cause>`booking_lab_test` forms a composite FK against `bookings (tenant_id, id)`, but that unique key was added by `2026_07_25_175000_add_indexes_to_bookings_and_slot_blocks` — which runs an hour later in migration order. MySQL requires the referenced unique key to exist when the FK is created; SQLite never checks, so the gap was invisible.</root_cause>
+  <prevention_rule>A unique key that exists so other tables can form a composite foreign key belongs in the referenced table's own create migration, not a later index pass. Moved into `create_bookings_table` with a comment; the later migration keeps only the genuine performance indexes.</prevention_rule>
+</bug>
+
+<bug>
+  <category>Business_Logic</category>
+  <symptom>On MySQL, `add_cancellation_tracking_to_bookings_table` failed with "1830 Column 'tenant_id' cannot be NOT NULL: needed in a foreign key constraint SET NULL".</symptom>
+  <root_cause>The migration declared a composite FK `(tenant_id, slot_block_id)` → `slot_blocks (tenant_id, id)` with `nullOnDelete()`. `ON DELETE SET NULL` applies to *every* column in the key, so deleting a slot block would have nulled the booking's own `tenant_id` and severed it from its practice. MySQL refuses because `tenant_id` is NOT NULL — it was protecting the data. SQLite accepted the definition silently, so a genuinely wrong constraint sat in the schema unnoticed.</root_cause>
+  <prevention_rule>`nullOnDelete()` on a composite foreign key nulls the whole key, so it is only ever correct when every column in it is expendable. A tenancy key never is. Reduced to a single-column FK on `slot_block_id` → `slot_blocks(id)`, which is what the feature actually meant ("forget which block cancelled this booking"); cross-tenant references are already prevented by the global scope and a globally unique PK.</prevention_rule>
+</bug>

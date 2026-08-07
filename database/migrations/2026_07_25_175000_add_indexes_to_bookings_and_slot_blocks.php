@@ -9,9 +9,10 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('bookings', function (Blueprint $table) {
-            // Every other tenant-owned table carries this; bookings was missing
-            // it, so nothing could form a composite foreign key back to it.
-            $table->unique(['tenant_id', 'id']);
+            // The (tenant_id, id) unique key that composite foreign keys need
+            // was moved into the create-bookings migration — `booking_lab_test`
+            // references it and runs before this file, which MySQL rejects.
+            // Do not re-add it here.
 
             // Daily roster: tenant + today + status ordering.
             $table->index(['tenant_id', 'booking_date', 'status'], 'bookings_roster_index');
@@ -29,7 +30,6 @@ return new class extends Migration
     public function down(): void
     {
         Schema::table('bookings', function (Blueprint $table) {
-            $table->dropUnique(['tenant_id', 'id']);
             $table->dropIndex('bookings_roster_index');
             $table->dropIndex('bookings_bookable_date_index');
         });

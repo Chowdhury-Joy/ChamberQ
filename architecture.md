@@ -1,5 +1,5 @@
 # Architecture Overview
-Last Updated: 2026-08-08T01:14:33+0600
+Last Updated: 2026-08-08T01:46:24+0600
 
 ## Overview
 ChamberQ (product formerly "Doctor Gemini") is a multi-tenant SaaS for Bangladesh solo doctors and clinics. Each tenant gets a branded patient website, online serial booking, a live waiting-room queue (outdoor screen + staff control), a patient ticket/portal, and a Filament admin panel. Patients book a serial and pay at the chamber — there is no payment gateway. Online pre-payment is later-stage only: do not suggest or build it unless the owner explicitly asks. Sales CTAs on the central marketing site use WhatsApp (`wa.me`). SMS booking confirmations use a prepaid credit wallet topped up by Super Admin. Marketer partners earn commissions on setup and monthly subscription fees (manual bKash billing); Super Admin confirms doctor payments and marketer payouts.
@@ -28,7 +28,14 @@ Local URLs:
 - Platform tenant (path tenancy): `http://localhost/solo/` (book at `/solo/book`, admin at `/solo/admin`)
 - Custom domain tenant (optional): `http://solo.localhost/` and `http://solo.localhost/admin` (dev; production = doctor's own domain at root paths)
 
-Tests: `php artisan test` (also CI via `.github/workflows/tests.yml`).
+Tests: `php artisan test` (SQLite in-memory). To run the suite against the production database engine:
+
+```bash
+mysql -u root -e "CREATE DATABASE soldoc_mysql_test CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+DB_CONNECTION=mysql DB_DATABASE=soldoc_mysql_test DB_USERNAME=root DB_PASSWORD= php artisan test
+```
+
+Shell environment variables override both `.env` and the `<env>` entries in `phpunit.xml`, so no config edit is needed. CI (`.github/workflows/tests.yml`) runs both engines on every pull request.
 
 Scheduled tasks: `commissions:generate-monthly` runs on the 7th of each month (pending monthly commission rows for referred active tenants).
 
@@ -40,7 +47,7 @@ Scheduled tasks: `commissions:generate-monthly` runs on the 7th of each month (p
 - Blade views for patient site, booking wizard, ticket, portal, waiting-room screen
 - Vite ^7 + Tailwind CSS ^4 (front-end build)
 - PHPUnit ^11 for feature tests
-- SQLite locally; MySQL/Postgres intended for production
+- SQLite locally and in CI; **MySQL in production — validated 2026-08-08**, and CI now runs the whole suite against MySQL 8.4 as well (`phpunit-mysql` job). SQLite alone had hidden three unrunnable migrations: it does not resolve foreign-key targets at CREATE time, has no `ONLY_FULL_GROUP_BY`, accepts a datetime in a date column, and serialises every write so row locks are never contended
 - SMS: `log` driver (default) or `http` JSON POST gateway; prepaid wallet on `tenants.sms_balance`
 
 ## Folder Structure
@@ -66,7 +73,7 @@ Scheduled tasks: `commissions:generate-monthly` runs on the 7th of each month (p
 - `app/Policies` — authorization for chambers, doctors, labs, etc., gated by plan features and roles; each defines `deleteAny()` because Filament authorizes bulk deletes with it rather than `delete()`
 - `app/Providers/Filament` — SuperAdminPanelProvider, MarketerPanelProvider, TenantAdminPanelProvider (both path `/admin`, domain-scoped)
 - `config/` — `tenancy.php`, `marketing.php`, `sms.php`, app/mail/etc.
-- `database/migrations`, `database/seeders` — schema + demo solo tenant
+- `database/migrations`, `database/seeders` — schema + demo solo tenant. **`tenants` is `0000_01_01_000000`**, deliberately ahead of Laravel's own `0001_…` migrations: it is the root of the schema (nineteen tables declare a foreign key to it, including `users`), and MySQL refuses an FK to a table that does not exist yet. Do not renumber it. Likewise, a unique key that exists so another table can form a composite FK belongs in the referenced table's create migration — `bookings (tenant_id, id)` is declared there, not in the later index pass
 - `resources/views` — `marketing/`, `tenant/solo/`, shared booking/screen blades, Filament custom pages/widgets
 - `resources/views/components` — shared Blade components (`<x-card-grid>`)
 - `routes/web.php` — central domain routes (marketing home + referral capture middleware)

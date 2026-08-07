@@ -7,7 +7,7 @@ on:
 
 jobs:
   phpunit:
-    name: PHPUnit
+    name: PHPUnit (sqlite)
     runs-on: ubuntu-latest
 
     steps:
@@ -30,6 +30,93 @@ jobs:
           php artisan key:generate
 
       - name: Run tests
+        run: php artisan test
+
+  # Production runs MySQL; local dev and the job above run SQLite. SQLite does
+  # not resolve foreign-key targets at CREATE time, has no ONLY_FULL_GROUP_BY,
+  # accepts a datetime in a date column, and serialises every write so row
+  # locks are never contended. Three migrations were unrunnable on MySQL for
+  # months because nothing here ever tried. This job is what stops that
+  # happening again — do not remove it to make CI faster.
+  phpunit-mysql:
+    name: PHPUnit (mysql)
+    runs-on: ubuntu-latest
+
+    services:
+      mysql:
+        image: mysql:8.4
+        env:
+          MYSQL_ALLOW_EMPTY_PASSWORD: 'yes'
+          MYSQL_DATABASE: soldoc_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_mysql, mysqli, bcmath, gd, intl
+          coverage: none
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+      - name: Prepare Laravel
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Assert MySQL is running with the strict default sql_mode
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: soldoc_test
+          DB_USERNAME: root
+          DB_PASSWORD: ''
+        run: |
+          mysql -h 127.0.0.1 -u root -e "SELECT VERSION(), @@sql_mode;"
+
+      # Migrations are run as their own step so a schema failure is reported as
+      # a schema failure, not buried in a wall of red tests.
+      - name: Run migrations on MySQL
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: soldoc_test
+          DB_USERNAME: root
+          DB_PASSWORD: ''
+        run: php artisan migrate:fresh --seed --no-interaction
+
+      - name: Assert down migrations are reversible
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: soldoc_test
+          DB_USERNAME: root
+          DB_PASSWORD: ''
+        run: |
+          php artisan migrate:reset --no-interaction
+          php artisan migrate --no-interaction
+
+      - name: Run tests
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: soldoc_test
+          DB_USERNAME: root
+          DB_PASSWORD: ''
         run: php artisan test
 
   architecture-sync:

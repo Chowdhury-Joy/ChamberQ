@@ -939,3 +939,19 @@
   <action>Kept it a GET link and left all markup alone; replaced `back()` with an explicit same-host check that falls back to the tenant home. The CSRF-shaped aspect (a GET that changes state) is accepted: the only state it writes is display language.</action>
   <reason>The open redirect was the part with real phishing value and it was fixable in one route with no markup change. Converting five shells to POST forms to defend a language toggle would have required unlocking the patient homepage for a change with no user-visible benefit — disproportionate under the prototype scope rule.</reason>
 </decision>
+
+## 2026-08-08T01:46:24+0600
+
+<decision>
+  <category>Code</category>
+  <context>The app targets MySQL in production but had only ever been run on SQLite (local dev, CI, and the whole test suite). Asked how far off production readiness we were, the honest answer was "unknown, because the app has never touched its production database". A validation pass proved the point immediately: it could not be installed on MySQL at all — three migrations were unrunnable.</context>
+  <action>Fixed the three schema defects (see `bug_history.md` 2026-08-08T01:46:24) rather than working around them: `tenants` renumbered to `0000_…` so it precedes every table that references it; the `bookings (tenant_id, id)` unique key moved into that table's create migration; the `(tenant_id, slot_block_id)` composite SET NULL foreign key reduced to a single column. Then validated the engine properly — migrations up and fully reversible, seeders, both test suites, every `ONLY_FULL_GROUP_BY` reporting path, utf8mb4 Bangla + emoji round-trip, `EXPLAIN` proof that the earlier `whereDate` → `where` change reaches the index, and an eight-process race on the last remaining seat. Added a `phpunit-mysql` CI job so both engines run on every pull request.</action>
+  <reason>Renaming a migration is normally a footgun, but there is no production deployment yet and the alternative — a schema that cannot be created on the target database — is worse. Fixing the ordering gives one identical schema on every engine, which is the point; the alternative of adding MySQL-only constraints later would have left test and production schemas diverging in exactly the area under test. The CI job matters more than any individual fix: these three bugs survived for months purely because nothing ever ran the migrations on MySQL, and without the job the next one would too.</reason>
+</decision>
+
+<decision>
+  <category>Code</category>
+  <context>`doctors.user_id` still has no foreign key. The migration comment says SQLite cannot add one to an existing table, which is true — but MySQL can, and the column is now verified as the only unenforced reference in a schema with 52 foreign keys.</context>
+  <action>Left it unenforced, deliberately, rather than adding a MySQL-only constraint. Integrity is maintained in application code by `User::booted()`'s `deleting` hook, which nulls `doctors.user_id` when a login is removed.</action>
+  <reason>Adding the FK only where the driver supports it would make the production schema differ from the schema every test runs against — reintroducing precisely the blind spot this pass existed to remove. Worth revisiting if the project ever drops SQLite for testing; until then, one schema everywhere is the more valuable property.</reason>
+</decision>
