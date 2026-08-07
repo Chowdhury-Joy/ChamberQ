@@ -7,6 +7,7 @@ use App\Filament\SuperAdmin\Resources\Tenants\Pages\CreateTenant;
 use App\Filament\SuperAdmin\Resources\Tenants\Pages\EditTenant;
 use App\Filament\TenantAdmin\Resources\Chambers\ChamberResource;
 use App\Filament\TenantAdmin\Resources\Doctors\DoctorResource;
+use App\Filament\TenantAdmin\Resources\Doctors\Pages\CreateDoctor;
 use App\Filament\TenantAdmin\Resources\SlotBlocks\Pages\CreateSlotBlock;
 use App\Filament\TenantAdmin\Resources\Users\Pages\CreateUser;
 use App\Models\Booking;
@@ -211,6 +212,68 @@ class AdminPanelGuardrailsTest extends TestCase
     }
 
     // ------------------------------------------------------------ uniqueness
+
+    public function test_a_doctor_can_be_paired_with_a_login_account(): void
+    {
+        $tenant = Tenant::create(['id' => 'clinic', 'plan_tier' => 'clinic']);
+        tenancy()->initialize($tenant);
+
+        $login = User::create([
+            'name' => 'Dr Dentist',
+            'email' => 'dentist@chamber.test',
+            'password' => Hash::make('password'),
+            'role' => User::ROLE_DOCTOR,
+            'tenant_id' => $tenant->id,
+        ]);
+
+        $this->tenantAdmin($tenant);
+
+        Livewire::test(CreateDoctor::class)
+            ->fillForm([
+                'name' => 'Dr Dentist',
+                'user_id' => $login->id,
+                'practice_type' => Doctor::PRACTICE_DENTIST,
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame($login->id, Doctor::query()->where('name', 'Dr Dentist')->value('user_id'));
+
+        tenancy()->end();
+    }
+
+    public function test_pairing_one_login_with_two_doctors_is_a_validation_error(): void
+    {
+        $tenant = Tenant::create(['id' => 'clinic', 'plan_tier' => 'clinic']);
+        tenancy()->initialize($tenant);
+
+        $login = User::create([
+            'name' => 'Dr Taken',
+            'email' => 'taken@chamber.test',
+            'password' => Hash::make('password'),
+            'role' => User::ROLE_DOCTOR,
+            'tenant_id' => $tenant->id,
+        ]);
+
+        Doctor::create(['name' => 'Dr Taken', 'user_id' => $login->id]);
+
+        $this->tenantAdmin($tenant);
+
+        // Without the rule this hits the unique index as a 500, and a mis-paired
+        // profile would put the wrong doctor's name on a prescription.
+        Livewire::test(CreateDoctor::class)
+            ->fillForm([
+                'name' => 'Dr Impostor',
+                'user_id' => $login->id,
+                'practice_type' => Doctor::PRACTICE_GENERAL,
+            ])
+            ->call('create')
+            ->assertHasFormErrors(['user_id']);
+
+        $this->assertSame(1, Doctor::query()->count());
+
+        tenancy()->end();
+    }
 
     public function test_duplicate_staff_email_is_a_validation_error_not_a_database_crash(): void
     {

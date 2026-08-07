@@ -18,10 +18,26 @@ class MedicineService
 
     public const MAX_RESULTS = 20;
 
+    /**
+     * Whose practice type the medicine list should follow.
+     *
+     * A session booking wins — a doctor covering someone else's session
+     * prescribes as that session. Otherwise (My medicines, bare search, a lab
+     * slot) use the signed-in doctor's own profile, then the single doctor of
+     * a solo practice. Staff on a lab booking still resolve to null in a
+     * clinic, which fails prescription entry closed.
+     */
     public function resolvePrescribingDoctor(?Booking $booking = null): ?Doctor
     {
         if ($booking?->bookable instanceof ScheduleSession) {
             return $booking->bookable->doctor;
+        }
+
+        /** @var User|null $user */
+        $user = auth()->user();
+
+        if ($user?->isDoctor() && $user->doctorProfile) {
+            return $user->doctorProfile;
         }
 
         $tenant = tenant();

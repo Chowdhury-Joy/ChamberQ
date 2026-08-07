@@ -207,6 +207,102 @@ class MedicinePickerTest extends TestCase
         $this->assertFalse($flat->contains('GPONLY'));
     }
 
+    public function test_clinic_doctor_without_booking_gets_their_own_practice_type(): void
+    {
+        $clinic = Tenant::create(['id' => 'medicine-clinic', 'plan_tier' => 'clinic']);
+        Domain::create(['domain' => 'medicine-clinic.localhost', 'tenant_id' => $clinic->id]);
+
+        tenancy()->initialize($clinic);
+
+        Medicine::create([
+            'brand_name' => 'ORALDYNE',
+            'generic_name' => 'Chlorhexidine',
+            'default_strength' => '0.12%',
+            'form' => 'mouthwash',
+            'aliases' => ['oraldyne'],
+            'category' => 'Dental',
+            'practice_types' => [Doctor::PRACTICE_DENTIST],
+        ]);
+
+        $dentistLogin = User::create([
+            'name' => 'Dr Dentist',
+            'email' => 'dentist@clinic.test',
+            'password' => Hash::make('secret'),
+            'role' => User::ROLE_DOCTOR,
+            'tenant_id' => $clinic->id,
+        ]);
+
+        // A second doctor exists, so the solo "there is only one" shortcut
+        // cannot be what resolves this.
+        Doctor::create(['name' => 'Dr GP', 'practice_type' => Doctor::PRACTICE_GENERAL]);
+        $dentistProfile = Doctor::create([
+            'name' => 'Dr Dentist',
+            'user_id' => $dentistLogin->id,
+            'practice_type' => Doctor::PRACTICE_DENTIST,
+        ]);
+
+        $this->actingAs($dentistLogin);
+
+        $resolved = app(MedicineService::class)->resolvePrescribingDoctor();
+
+        $this->assertNotNull($resolved);
+        $this->assertSame($dentistProfile->id, $resolved->id);
+
+        $options = app(MedicineService::class)->groupedSelectOptions($dentistLogin);
+
+        $this->assertArrayHasKey('Dental', $options);
+        $this->assertArrayHasKey('ORALDYNE', $options['Dental']);
+    }
+
+    public function test_clinic_doctor_without_a_paired_login_resolves_to_null(): void
+    {
+        $clinic = Tenant::create(['id' => 'medicine-clinic-unpaired', 'plan_tier' => 'clinic']);
+        Domain::create(['domain' => 'medicine-clinic-unpaired.localhost', 'tenant_id' => $clinic->id]);
+
+        tenancy()->initialize($clinic);
+
+        $login = User::create([
+            'name' => 'Dr Unpaired',
+            'email' => 'unpaired@clinic.test',
+            'password' => Hash::make('secret'),
+            'role' => User::ROLE_DOCTOR,
+            'tenant_id' => $clinic->id,
+        ]);
+
+        Doctor::create(['name' => 'Dr One', 'practice_type' => Doctor::PRACTICE_DENTIST]);
+        Doctor::create(['name' => 'Dr Two', 'practice_type' => Doctor::PRACTICE_GENERAL]);
+
+        $this->actingAs($login);
+
+        $this->assertNull(app(MedicineService::class)->resolvePrescribingDoctor());
+    }
+
+    public function test_solo_still_resolves_its_single_doctor_without_pairing(): void
+    {
+        tenancy()->initialize($this->tenant);
+
+        $solo = Doctor::create(['name' => 'Dr Solo', 'practice_type' => Doctor::PRACTICE_DERMATOLOGIST]);
+
+        $this->actingAs($this->doctor);
+
+        $this->assertSame($solo->id, app(MedicineService::class)->resolvePrescribingDoctor()?->id);
+    }
+
+    public function test_deleting_a_login_clears_the_doctor_pairing(): void
+    {
+        tenancy()->initialize($this->tenant);
+
+        $profile = Doctor::create([
+            'name' => 'Dr Picker',
+            'user_id' => $this->doctor->id,
+            'practice_type' => Doctor::PRACTICE_GENERAL,
+        ]);
+
+        $this->doctor->delete();
+
+        $this->assertNull($profile->fresh()->user_id);
+    }
+
     public function test_display_label_includes_generic_for_dropdown_search(): void
     {
         tenancy()->initialize($this->tenant);

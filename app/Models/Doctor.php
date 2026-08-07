@@ -11,6 +11,7 @@ class Doctor extends Model
     
     protected $fillable = [
         'name',
+        'user_id',
         'practice_type',
         'staff_may_enter_prescriptions',
         'qualifications',
@@ -32,6 +33,17 @@ class Doctor extends Model
     public const PRACTICE_CARDIOLOGIST = 'cardiologist';
 
     public const PRACTICE_DERMATOLOGIST = 'dermatologist';
+
+    /**
+     * The login this doctor signs in with, when one has been matched.
+     *
+     * Optional: a practice may list a visiting doctor who never logs in, and
+     * a clinic admin may not have paired accounts to profiles yet.
+     */
+    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
 
     /** @return array<string, string> */
     public static function practiceTypeOptions(): array

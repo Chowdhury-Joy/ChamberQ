@@ -76,6 +76,26 @@ class User extends Authenticatable implements FilamentUser, CanResetPasswordCont
         ];
     }
 
+    /**
+     * Deleting a login must not leave a doctor profile pointing at a gone
+     * account — there is no FK to do it, because SQLite cannot add one.
+     */
+    protected static function booted(): void
+    {
+        static::deleting(function (self $user): void {
+            Doctor::query()->where('user_id', $user->id)->update(['user_id' => null]);
+        });
+    }
+
+    /**
+     * The prescribing profile this login belongs to, if an admin has paired
+     * them. Null for admins, staff, and unpaired doctor accounts.
+     */
+    public function doctorProfile(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(Doctor::class);
+    }
+
     public function isAdmin(): bool
     {
         return $this->role === self::ROLE_ADMIN;
