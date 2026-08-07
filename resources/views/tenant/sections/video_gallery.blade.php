@@ -1,17 +1,23 @@
 @php
+    /*
+     * Video cards in the Clireo blog-card shape. Thumbnail resolution is
+     * unchanged: explicit thumbnail, else the YouTube still, else a generic
+     * clinic image.
+     */
     $heading = $data['heading'] ?? __('From our clinic');
     $videos = array_slice($data['videos'] ?? [], 0, 10);
 @endphp
 
-<section class="solo-section w-full bg-white">
-    <div class="mx-auto max-w-[1280px] px-3 sm:px-10">
-        @if(filled($heading))
-            <h2 class="font-display text-3xl tracking-tight text-slate-900 sm:text-4xl lg:text-[2.75rem]">
-                {{ $heading }}
-            </h2>
-        @endif
+<section class="space-section" id="videos" data-reveal-section>
+    <div class="layout-container">
+        <div class="stack-header">
+            <div class="eyebrow" data-reveal-block data-reveal-kind="fade">{{ __('Watch') }}</div>
+            @if(filled($heading))
+                <h2 class="fx-heading" data-fx-words data-reveal-block data-reveal-kind="heading">{{ $heading }}</h2>
+            @endif
+        </div>
 
-        <x-card-grid :count="count($videos)" class="mt-8 gap-5 sm:gap-6 lg:mt-12">
+        <div class="blog-grid grid-cards" data-card-count="{{ count($videos) }}" data-reveal-block data-reveal-kind="stagger">
             @foreach($videos as $video)
                 @php
                     $url = \App\Support\SafeUrl::href($video['video_url'] ?? '', '');
@@ -27,24 +33,27 @@
                     if ($thumbnail === '') {
                         $thumbnail = 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?auto=format&fit=crop&w=600&q=80';
                     }
+
+                    $title = $video['title'] ?? __('Video');
                 @endphp
 
-                <article class="flex flex-col overflow-hidden rounded-2xl border" style="background-color: #FAFAFA; border-color: #E0E0E0;">
-                    <div class="relative aspect-video overflow-hidden bg-slate-900 group">
-                        <img src="{{ $thumbnail }}" alt="{{ $video['title'] ?? 'Video' }}" class="h-full w-full object-cover opacity-90 transition-opacity group-hover:opacity-75">
-                        @if($url !== '')
-                        <a href="{{ $url }}" target="_blank" rel="noopener noreferrer" class="absolute inset-0 flex items-center justify-center">
-                            <div class="flex h-14 w-14 items-center justify-center rounded-full text-white shadow-lg transition-transform group-hover:scale-110" style="background-color: var(--color-primary);">
-                                <svg class="ml-1 h-6 w-6 fill-current" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
-                            </div>
-                        </a>
-                        @endif
-                    </div>
-                    <div class="p-4">
-                        <h3 class="text-base font-semibold text-slate-900 line-clamp-2">{{ $video['title'] ?? __('Video') }}</h3>
-                    </div>
-                </article>
+                @if($url !== '')
+                    <a class="blog-card video-card" href="{{ $url }}" target="_blank" rel="noopener noreferrer">
+                        <span class="video-thumb">
+                            <img src="{{ $thumbnail }}" alt="{{ $title }}">
+                            <span class="video-play" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                            </span>
+                        </span>
+                        <span class="body"><h3>{{ $title }}</h3></span>
+                    </a>
+                @else
+                    <article class="blog-card video-card">
+                        <span class="video-thumb"><img src="{{ $thumbnail }}" alt="{{ $title }}"></span>
+                        <span class="body"><h3>{{ $title }}</h3></span>
+                    </article>
+                @endif
             @endforeach
-        </x-card-grid>
+        </div>
     </div>
 </section>

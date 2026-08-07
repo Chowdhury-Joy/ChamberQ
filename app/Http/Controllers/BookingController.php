@@ -200,7 +200,9 @@ class BookingController extends Controller
             }
         }
 
-        return view('tenant.portal.index', [
+        // Per-tier view, same split as index() and show(): the clinic portal
+        // follows the Clireo design, solo keeps its own locked look.
+        return view(tenant()?->isSoloDoctor() ? 'tenant.solo.portal.index' : 'tenant.portal.index', [
             'bookings' => $bookings,
             'phone' => $phone,
             'error' => $error,

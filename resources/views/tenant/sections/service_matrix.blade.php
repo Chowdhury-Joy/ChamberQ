@@ -1,48 +1,56 @@
-<section id="services" class="solo-section w-full bg-white">
-    <div class="mx-auto max-w-[1280px] px-3 sm:px-10">
-        @if(!empty($data['heading']))
-            <div class="mx-auto mb-8 max-w-2xl text-center sm:mb-10">
-                <h2 class="font-display text-3xl tracking-tight text-slate-900 sm:text-4xl lg:text-[2.75rem]">
-                    {{ $data['heading'] }}
-                </h2>
-                @if(!empty($data['description']))
-                    <p class="mt-3 text-sm leading-relaxed text-slate-600 sm:text-base lg:text-lg">{{ $data['description'] }}</p>
-                @endif
+@php
+    /*
+     * 1:1 from public/previews/clireo-homepage.html #treatments.
+     */
+    $heading = $data['heading'] ?? 'Expert Physiotherapy For Every Recovery Need';
+    $footerText = $data['footer_text'] ?? 'Explore evidence-based rehabilitation programs tailored to every recovery goal.';
+    $viewAllText = preg_replace('/\s*[→➜➔]\s*$/u', '', (string) ($data['view_all_text'] ?? 'View all services')) ?: 'View all services';
+    $viewAllLink = tenant_safe_href($data['view_all_link'] ?? '/book', '/book');
+    $items = $data['items'] ?? [];
+    $bookHref = tenant_safe_href(null, '/book');
+@endphp
+
+<section class="space-section" id="treatments" data-reveal-section>
+    <div class="layout-container">
+        <div class="treat-head">
+            <div class="stack-header">
+                <div class="eyebrow" data-reveal-block data-reveal-kind="fade">{{ __('Our services') }}</div>
+                <h2 class="fx-heading" data-fx-words data-reveal-block data-reveal-kind="heading">{{ $heading }}</h2>
             </div>
-        @endif
+            <a class="btn-pink sm btn-on-dark" href="{{ $viewAllLink }}" @if(str_starts_with($viewAllLink, 'http')) target="_blank" rel="noopener noreferrer" @endif data-reveal-block data-reveal-kind="fade">
+                <span>{{ $viewAllText }}</span>
+            </a>
+        </div>
 
-        @php $items = $data['items'] ?? []; @endphp
-
-        @if(count($items) < 8)
-            <x-card-grid :count="count($items)" class="gap-5 sm:gap-6">
+        <div class="treat-stage" data-reveal-block data-reveal-kind="fade">
+            <div class="treat-scroller" data-treat-scroll>
                 @foreach($items as $item)
-                    <article class="rounded-2xl border p-5 sm:p-6" style="background-color: #FAFAFA; border-color: #E0E0E0;">
-                        <div class="mb-4 flex h-10 w-10 items-center justify-center rounded-full" style="background-color: color-mix(in srgb, var(--color-primary) 14%, white); color: var(--color-primary);">
-                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                    <a class="treat-card" href="{{ $bookHref }}">
+                        <div class="media">
+                            @if(!empty($item['image_url']))
+                                <img class="cover" src="{{ $item['image_url'] }}" alt="{{ $item['title'] ?? '' }}">
+                            @endif
                         </div>
-                        <h3 class="font-display text-2xl text-slate-900 sm:text-[1.75rem]">{{ $item['title'] }}</h3>
-                        <p class="mt-2 text-sm leading-relaxed text-slate-600 sm:text-[0.95rem]">{{ $item['description'] ?? '' }}</p>
-                    </article>
+                        <div class="body">
+                            @if(!empty($item['icon_url']))
+                                <span class="icon"><img src="{{ $item['icon_url'] }}" alt=""></span>
+                            @endif
+                            <h3>{{ $item['title'] ?? '' }}</h3>
+                            @if(!empty($item['description']))
+                                <p>{{ $item['description'] }}</p>
+                            @endif
+                        </div>
+                    </a>
                 @endforeach
-            </x-card-grid>
-        @else
-            <div class="rounded-2xl border bg-white p-6 sm:p-8" style="border-color: #E0E0E0;">
-                <ul class="divide-y divide-slate-100">
-                    @foreach($items as $item)
-                        <li class="flex flex-col justify-between gap-4 py-4 first:pt-0 last:pb-0 sm:flex-row sm:items-center">
-                            <div>
-                                <h3 class="text-base font-semibold text-slate-900 sm:text-lg">{{ $item['title'] }}</h3>
-                                @if(!empty($item['description']))
-                                    <p class="mt-1 text-sm text-slate-500">{{ $item['description'] }}</p>
-                                @endif
-                            </div>
-                            <a href="{{ tenant_web_url('/book') }}" class="solo-cta-outline shrink-0 text-sm">
-                                {{ __('Book Service') }}
-                            </a>
-                        </li>
-                    @endforeach
-                </ul>
             </div>
-        @endif
+        </div>
+
+        <div class="treat-nav" data-reveal-block data-reveal-kind="fade">
+            <p>{{ $footerText }}</p>
+            <div class="treat-arrows">
+                <button class="arrow-btn" type="button" data-treat-prev aria-label="{{ __('Previous') }}">←</button>
+                <button class="arrow-btn" type="button" data-treat-next aria-label="{{ __('Next') }}">→</button>
+            </div>
+        </div>
     </div>
 </section>

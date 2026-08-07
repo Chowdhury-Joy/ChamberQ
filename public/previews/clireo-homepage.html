@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- Clinic-tier homepage design reference (approved 2026-08-06). Canonical path: public/previews/clireo-homepage.html. Live tenant/webpage.blade.php not yet migrated. Solo homepage blades are locked separately. -->
+<!-- Clinic-tier homepage design reference (approved 2026-08-06). Canonical path: public/previews/clireo-homepage.html. Live clinic shell: resources/views/tenant/webpage.blade.php (+ sections). Solo homepage blades are locked separately. -->
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -285,29 +285,38 @@
       display: inline-flex;
       align-items: center;
       gap: 0.85rem;
-      background: var(--white);
-      color: var(--navy-deep);
+      background-color: var(--navy);
+      background-image: linear-gradient(var(--white), var(--white));
+      background-repeat: no-repeat;
+      background-position: left center;
+      background-size: 0% 100%;
+      color: var(--white);
       font-weight: 500;
       font-size: 0.95rem;
       padding: 0.35rem 0.35rem 0.35rem 1.35rem;
-      border-radius: 16px;
+      border-radius: 999px;
       box-shadow:
-        rgba(26, 40, 120, 0.06) 0 0.6px 0.6px -1.25px,
-        rgba(26, 40, 120, 0.05) 0 2.3px 2.3px -2.5px,
-        rgba(26, 40, 120, 0.02) 0 10px 10px -3.75px;
-      transition: transform 0.25s var(--ease);
+        rgba(26, 40, 120, 0.18) 0 8px 22px -10px,
+        rgba(26, 40, 120, 0.08) 0 2px 6px -2px;
+      transition: color 0.4s var(--ease), background-size 0.45s var(--ease), transform 0.25s var(--ease);
     }
-    .btn-about:hover { transform: translateY(-2px); }
+    .btn-about:hover {
+      color: var(--navy-deep);
+      background-size: 100% 100%;
+      transform: translateY(-2px);
+    }
     .btn-about .arrow {
       width: 2.35rem;
       height: 2.35rem;
       border-radius: 12px;
-      background: var(--navy);
-      color: var(--white);
+      background: var(--white);
+      color: var(--navy);
       display: grid;
       place-items: center;
       flex-shrink: 0;
+      transition: background-color 0.4s var(--ease), color 0.4s var(--ease);
     }
+    .btn-about:hover .arrow { background: var(--navy); color: var(--white); }
     .btn-about .arrow svg { width: 0.95rem; height: 0.95rem; }
 
     .about-trust {
@@ -371,41 +380,45 @@
     }
     .about-feature {
       background: var(--white);
-      border-radius: 16px;
-      padding: 1.85rem 1.75rem;
+      border-radius: 24px;
+      padding: 2.35rem 2.1rem;
       box-shadow:
-        rgba(26, 40, 120, 0.04) 0 0.6px 0.6px -1.25px,
-        rgba(26, 40, 120, 0.04) 0 2.3px 2.3px -2.5px,
-        rgba(26, 40, 120, 0.02) 0 10px 10px -3.75px;
+        0 1px 2px rgba(26, 40, 120, 0.04),
+        0 8px 24px rgba(26, 40, 120, 0.06),
+        0 20px 48px rgba(26, 40, 120, 0.04);
       text-align: left;
       scroll-snap-align: start;
       min-width: 0;
+      border: 1px solid rgba(26, 40, 120, 0.04);
     }
     .about-feature .icon {
-      width: 3.1rem;
-      height: 3.1rem;
-      margin-bottom: 1.15rem;
+      width: 2.85rem;
+      height: 2.85rem;
+      margin-bottom: 1.5rem;
       display: grid;
-      place-items: center;
+      place-items: start center;
+      color: var(--pink);
     }
     .about-feature .icon img {
       width: 100%;
       height: 100%;
       object-fit: contain;
+      filter: invert(62%) sepia(64%) saturate(1800%) hue-rotate(292deg) brightness(103%) contrast(96%);
     }
     .about-feature h3 {
-      margin: 0 0 0.55rem;
-      font-size: 1.625rem;
-      font-weight: 400;
-      letter-spacing: -0.035em;
-      line-height: 1.2;
+      margin: 0 0 0.75rem;
+      font-size: clamp(1.2rem, 1rem + 0.6vw, 1.4rem);
+      font-weight: 600;
+      letter-spacing: -0.03em;
+      line-height: 1.25;
       color: var(--navy);
     }
     .about-feature p {
       margin: 0;
       color: var(--muted);
       font-size: 0.95rem;
-      line-height: 1.55;
+      line-height: 1.6;
+      font-weight: 400;
     }
 
     /* Section reveal — top-to-bottom by visual position on scroll-in */
@@ -661,17 +674,19 @@
       position: absolute;
       inset: 0;
       overflow: hidden;
-      -webkit-mask-image: linear-gradient(
-        0deg,
-        rgba(0, 0, 0, 0.22) 0%,
-        rgba(0, 0, 0, 0.92) 42%,
-        #000 52%
-      );
-      mask-image: linear-gradient(
-        0deg,
-        rgba(0, 0, 0, 0.22) 0%,
-        rgba(0, 0, 0, 0.92) 42%,
-        #000 52%
+    }
+    .treat-card .media::after {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      background: linear-gradient(
+        180deg,
+        rgba(14, 25, 84, 0.12) 0%,
+        rgba(14, 25, 84, 0.28) 32%,
+        rgba(14, 25, 84, 0.72) 68%,
+        rgba(14, 25, 84, 0.94) 100%
       );
     }
     .treat-card .media img.cover {
@@ -1227,16 +1242,37 @@
         </div>
       </div>
 
-        <div class="book-card book-cta-card space-card hero-media" id="book" data-reveal-block data-reveal-kind="fade">
+        <form class="book-card space-card hero-media" id="book" method="get" action="/book" data-reveal-block data-reveal-kind="fade">
         <h2>Book appointment</h2>
-        <p class="book-cta-lead">Choose your physiotherapist, session, and visit time in our booking wizard. You'll receive a serial ticket when you're done.</p>
-        <ul class="book-cta-points">
-          <li>Pick location and doctor</li>
-          <li>Select your session</li>
-          <li>Get your queue ticket instantly</li>
-        </ul>
-        <a class="btn-pink fx-btn" href="/book"><span class="fx-btn-track"><span>Start booking</span><span aria-hidden="true">Start booking</span></span></a>
-      </div>
+        <div class="field">
+          <label for="name">Full Name*</label>
+          <input id="name" name="name" required placeholder="Rahim Ahmed" autocomplete="name">
+        </div>
+        <div class="field">
+          <label>Phone &amp; Doctor*</label>
+          <div class="field-row">
+            <input id="phone" name="phone" type="tel" required placeholder="017XXXXXXXX" aria-label="Phone" inputmode="numeric" autocomplete="tel">
+            <select id="doctor" name="doctor" required aria-label="Select doctor">
+              <option value="" disabled selected>Select doctor</option>
+              <option value="1">Dr. Antar Das</option>
+              <option value="2">Batia Nahar Ahsan</option>
+              <option value="3">Dr. Mohammad Golam Eazdani</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label>Date &amp; Session*</label>
+          <div class="field-row">
+            <input type="date" name="date" aria-label="Date" required>
+            <select name="session" required aria-label="Select session">
+              <option value="" disabled selected>Select session</option>
+              <option value="morning">Morning · 9:00 AM–12:00 PM</option>
+              <option value="evening">Evening · 3:00 PM–8:00 PM</option>
+            </select>
+          </div>
+        </div>
+        <button class="btn-pink fx-btn" type="submit"><span class="fx-btn-track"><span>Book appointment</span><span aria-hidden="true">Book appointment</span></span></button>
+      </form>
     </div>
   </section>
 

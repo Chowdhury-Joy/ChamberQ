@@ -439,3 +439,44 @@
   <root_cause>The grouped static `Select` search only matches option labels and values. After switching from API search to `groupedSelectOptions()`, labels were brand + strength only (`OMEE 20 mg`) with no generic text, so generic queries never matched.</root_cause>
   <prevention_rule>Any catalogue medicine shown in a searchable Filament static select must include searchable generic text in `displayLabel()` (or use `getSearchResultsUsing()`), and add a regression test on `displayLabel()` when changing picker wiring.</prevention_rule>
 </bug>
+
+## 2026-08-07T16:16:01+0600
+
+<bug>
+  <category>Business_Logic</category>
+  <symptom>On a clinic tenant, a specialist's medicine list fell back to the general-physician catalogue everywhere there was no booking in context — **My medicines** and bare `GET /api/medicines/search`. A dentist or dermatologist could not find their own brands in the picker and had to type them as free text. Solo tenants were unaffected, so it did not show in solo testing.</symptom>
+  <root_cause>`doctors` rows and doctor `users` rows had no link between them, so `MedicineService::resolvePrescribingDoctor()` could not identify the signed-in doctor. Its only fallback was `Doctor::first()` behind an `isSoloDoctor()` check — correct for one-doctor practices, unavailable to clinics, which fell through to `null` and then to `PRACTICE_GENERAL`.</root_cause>
+  <prevention_rule>Any tier-gated branch (`isSoloDoctor()` / `isClinic()` / `hasFeature()`) that supplies a *value* rather than toggling a feature must have a defined answer for the other tier, and a test that runs on that other tier. Solo-only shortcuts that quietly degrade clinic behaviour are the failure mode — assert the clinic path explicitly.</prevention_rule>
+</bug>
+
+## 2026-08-07T17:15:48+0600
+
+<bug>
+  <category>Code</category>
+  <symptom>While adding a no-JS guard to the clinic homepage, the whole page below the headline went invisible: hero lead, booking card and every revealed block stayed at opacity 0 even after the motion script had added `.is-in`.</symptom>
+  <root_cause>The guard class was added to the hiding rule only — `html.has-js [data-reveal-section] [data-reveal-block][data-reveal-kind="fade"]` (specificity 0,4,1) — while its counterpart `[…][data-reveal-kind="fade"].is-in` stayed at (0,4,0). Adding a guard to one half of a hide/show pair silently inverted which rule won, and the failure mode is a blank page, not a visual glitch.</root_cause>
+  <prevention_rule>When adding a qualifier (`html.has-js`, a theme class, a feature wrapper) to a rule whose "before" state hides content, add the same qualifier to every rule that reverses it, in the same edit — and verify the end state in a browser, not by reading the cascade.</prevention_rule>
+</bug>
+
+## 2026-08-07T17:54:55+0600
+
+<bug>
+  <category>Code</category>
+  <symptom>After the clinic page shell was replaced (port phase 1), the `image_carousel` section stopped working: slides stacked on top of each other and the arrows and dots did nothing.</symptom>
+  <root_cause>The old shell loaded Alpine from a CDN and `image_carousel` was the only section that used it (`x-data`, `x-show`, `@click`). The new shell dropped Alpine, and nothing failed loudly — `x-show` simply never ran, so every absolutely-positioned slide stayed rendered.</root_cause>
+  <prevention_rule>When replacing a page shell, grep the views it includes for every library the old shell provided (`x-data`, `wire:`, `data-` hooks, global helpers) before removing a `<script>` tag. A section that depends on a missing library fails silently in the browser, not at build or test time.</prevention_rule>
+</bug>
+
+<bug>
+  <category>UI/UX</category>
+  <symptom>Restyling the shared section blades for the clinic tier also changed the **locked** solo homepage: the solo shell renders Clireo markup for any block type it does not override, and it does not load the clinic stylesheet, so those sections would have appeared unstyled to solo patients.</symptom>
+  <root_cause>`tenant/solo/webpage.blade.php` resolves each block as `tenant.solo.sections.{type}` if it exists, else `tenant.sections.{type}`. Solo overrode only 6 of the 18 types, so the other 12 were shared files — a fact the "solo homepage is locked" rule did not make visible from the clinic side.</root_cause>
+  <prevention_rule>Before editing anything under `resources/views/tenant/sections/`, check whether the solo shell falls through to it. Shared-by-fallback views are inside the patient-homepage lock; give solo a pinned copy first, then change the clinic file.</prevention_rule>
+</bug>
+
+<bug>
+  <category>UI/UX</category>
+  <symptom>Clinic homepage at `localhost:8765/demo/` rendered as unstyled HTML: Times New Roman, blue underlined links, and duplicated nav labels ("HomeHome", "Book AppointmentBook Appointment").</symptom>
+  <root_cause>Clireo shells linked CSS/JS via `asset()`, which resolves to `APP_URL` (`http://localhost` with no port). The browser loaded the page from `:8765` but requested styles from port 80, so `clinic-clireo.css` never applied. The duplicate labels are the `.fx-btn` hover pattern — two `<span>`s in each link — with no CSS to hide the second.</root_cause>
+  <prevention_rule>Static files under `public/` that are not tenant-specific must use `public_asset()` (root-relative `/css/...`) in clinic patient shells, not `asset()`. Solo survived longer because it still loaded Tailwind from a CDN absolute URL.</prevention_rule>
+</bug>

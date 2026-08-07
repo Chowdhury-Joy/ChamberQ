@@ -115,6 +115,10 @@ class WebPageResource extends Resource
                                     ->default('Care that respects your time')
                                     ->columnSpan(2),
                                 Forms\Components\Textarea::make('subheadline')->default('Book a serial online and follow the live queue from your phone — pay at the chamber.')->columnSpan(2),
+                                Forms\Components\TextInput::make('backed_lead')->label('Backed-by lead')->placeholder('Backed by')->default('Backed by'),
+                                Forms\Components\TextInput::make('backed_strong')->label('Backed-by emphasis')->placeholder('8+ Physiotherapists'),
+                                Forms\Components\TextInput::make('rating_score')->label('Hero rating score')->placeholder('4.9*'),
+                                Forms\Components\TextInput::make('rating_copy')->label('Hero rating copy')->placeholder('Patients trust our care!'),
                                 Forms\Components\TextInput::make('credentials')->label('Credentials (solo hero)')->placeholder('MBBS, FCPS (Medicine)'),
                                 Forms\Components\TextInput::make('role_location')->label('Role & Location (solo hero)')->placeholder('Consultant Physician, Dhanmondi'),
                                 Forms\Components\TextInput::make('cta_text')->default('Book Appointment'),
@@ -168,12 +172,18 @@ class WebPageResource extends Resource
                             ->label('Services & Specialties Matrix')
                             ->schema([
                                 Forms\Components\TextInput::make('heading')->default('Our Clinical Services'),
-                                Forms\Components\TextInput::make('description')->default('Comprehensive healthcare solutions tailored to your needs.'),
+                                Forms\Components\TextInput::make('footer_text')
+                                    ->label('Carousel footer caption')
+                                    ->default('Explore our services and book the one you need online.')
+                                    ->columnSpanFull(),
+                                Forms\Components\TextInput::make('view_all_text')->label('Header CTA label')->default('View all services →'),
+                                Forms\Components\TextInput::make('view_all_link')->label('Header CTA link')->default('/book'),
                                 Forms\Components\Repeater::make('items')
                                     ->columns(2)
                                     ->schema([
                                         Forms\Components\TextInput::make('title')->required(),
-                                        Forms\Components\TextInput::make('icon')->placeholder('stethoscope, heart, activity'),
+                                        Forms\Components\TextInput::make('image_url')->label('Card image URL')->columnSpan(2),
+                                        Forms\Components\TextInput::make('icon_url')->label('Icon image URL (optional)'),
                                         Forms\Components\TextInput::make('description')->columnSpan(2),
                                     ])
                                     ->default([
@@ -188,8 +198,29 @@ class WebPageResource extends Resource
                             ->label('Doctor Directory (Clinic Only)')
                             ->columns(2)
                             ->schema([
-                                Forms\Components\TextInput::make('heading')->default('Meet Our Specialists'),
-                                Forms\Components\TextInput::make('subheadline')->default('Experienced and compassionate physicians dedicated to your health.'),
+                                Forms\Components\TextInput::make('eyebrow')->default('Our physiotherapists'),
+                                Forms\Components\TextInput::make('heading')->default('Meet The Experts Behind Your Recovery')->columnSpanFull(),
+                                Forms\Components\Repeater::make('cards')
+                                    ->label('Featured cards (optional — overrides live doctor list)')
+                                    ->columnSpanFull()
+                                    ->columns(2)
+                                    ->schema([
+                                        Forms\Components\TextInput::make('name')->required(),
+                                        Forms\Components\TextInput::make('specialty')->label('Title / specialty'),
+                                        Forms\Components\TextInput::make('image_url')->label('Photo URL')->columnSpanFull(),
+                                    ]),
+                                Forms\Components\TextInput::make('stats_heading')
+                                    ->label('Stats band heading')
+                                    ->placeholder('Trusted Physiotherapy Centre In Panchlaish, Chattogram')
+                                    ->columnSpanFull(),
+                                Forms\Components\Repeater::make('stats')
+                                    ->label('Stats band (shown under doctor cards)')
+                                    ->columnSpanFull()
+                                    ->columns(2)
+                                    ->schema([
+                                        Forms\Components\TextInput::make('value')->required()->placeholder('8'),
+                                        Forms\Components\TextInput::make('label')->required()->placeholder('+ Expert Physiotherapists'),
+                                    ]),
                             ]),
 
                         // 6. Interactive Appointment Wizard
@@ -334,12 +365,16 @@ class WebPageResource extends Resource
                         Forms\Components\Builder\Block::make('testimonials')
                             ->label('Patient Testimonials')
                             ->schema([
-                                Forms\Components\TextInput::make('heading')->default('What My Patients Say'),
+                                Forms\Components\TextInput::make('eyebrow')->default('Recovery stories'),
+                                Forms\Components\TextInput::make('heading')->default('What our patients say'),
+                                Forms\Components\TextInput::make('promo_text')->label('Footer promo link label')->default('Follow us for health tips →'),
+                                Forms\Components\TextInput::make('promo_link')->label('Footer promo URL')->placeholder('https://facebook.com/...'),
                                 Forms\Components\Repeater::make('items')
                                     ->schema([
                                         Forms\Components\Textarea::make('quote')->required()->columnSpanFull(),
                                         Forms\Components\TextInput::make('name')->required(),
                                         Forms\Components\TextInput::make('label')->default('Verified Patient'),
+                                        Forms\Components\TextInput::make('photo_url')->label('Avatar image URL'),
                                     ])
                                     ->default([
                                         [
@@ -355,6 +390,10 @@ class WebPageResource extends Resource
                             ->label('Frequently Asked Questions')
                             ->schema([
                                 Forms\Components\TextInput::make('heading')->default('Frequently Asked Questions'),
+                                Forms\Components\TextInput::make('promo_image_url')->label('Side panel image URL')->columnSpanFull(),
+                                Forms\Components\TextInput::make('promo_heading')->label('Side panel heading')->default('Need care? Book an appointment'),
+                                Forms\Components\TextInput::make('promo_cta_text')->label('Side panel CTA label')->default('Get in touch'),
+                                Forms\Components\TextInput::make('promo_cta_link')->label('Side panel CTA link')->default('/book'),
                                 Forms\Components\Repeater::make('faqs')
                                     ->columns(2)
                                     ->schema([
@@ -374,12 +413,17 @@ class WebPageResource extends Resource
                             ->schema([
                                 Forms\Components\TextInput::make('heading')->default('About Our Practice & Facilities')->columnSpan(2),
                                 Forms\Components\Textarea::make('mission_statement')->default('Dedicated to providing world-class medical treatment with compassion, innovation, and integrity.')->columnSpan(2),
+                                Forms\Components\TextInput::make('cta_text')->default('More about us'),
+                                Forms\Components\TextInput::make('cta_link')->default('/book'),
+                                Forms\Components\TextInput::make('trust_copy')->label('Trust line lead')->default('Trusted by'),
+                                Forms\Components\TextInput::make('trust_strong')->label('Trust line emphasis')->default('patients across the city'),
                                 Forms\Components\Repeater::make('gallery')
                                     ->columns(2)
                                     ->columnSpan(2)
                                     ->schema([
                                         Forms\Components\TextInput::make('title')->required(),
-                                        Forms\Components\TextInput::make('image_url')->required(),
+                                        Forms\Components\TextInput::make('image_url')->label('Icon / image URL')->required(),
+                                        Forms\Components\Textarea::make('description')->columnSpan(2),
                                     ]),
                             ]),
 
@@ -406,10 +450,13 @@ class WebPageResource extends Resource
                             ->label('Health Insights & Articles')
                             ->schema([
                                 Forms\Components\TextInput::make('heading')->default('Latest Health Insights & Articles'),
+                                Forms\Components\TextInput::make('view_all_text')->label('Header CTA label')->default('View all posts →'),
+                                Forms\Components\TextInput::make('view_all_link')->label('Header CTA link')->placeholder('https://...'),
                                 Forms\Components\Repeater::make('articles')
                                     ->columns(2)
                                     ->schema([
-                                        Forms\Components\TextInput::make('title')->required(),
+                                        Forms\Components\TextInput::make('title')->required()->columnSpanFull(),
+                                        Forms\Components\TextInput::make('meta')->label('Meta line')->placeholder('Jan 12, 2026 · Stroke Care'),
                                         Forms\Components\TextInput::make('image_url'),
                                         Forms\Components\TextInput::make('link'),
                                         Forms\Components\Textarea::make('excerpt')->columnSpan(2),
@@ -425,6 +472,8 @@ class WebPageResource extends Resource
                                 Forms\Components\TextInput::make('subheadline')->default('Our team is ready to provide immediate medical attention.')->columnSpan(2),
                                 Forms\Components\TextInput::make('cta_text')->default('Book Your Appointment Now'),
                                 Forms\Components\TextInput::make('cta_link')->default('/book'),
+                                Forms\Components\TextInput::make('trust_phone')->label('Trust line phone')->placeholder('01630-078675'),
+                                Forms\Components\TextInput::make('trust_address')->label('Trust line address')->placeholder('553 O.R. Nizam Road, GEC, Panchlaish'),
                             ]),
 
                         // 16. Privacy & Policy Text Block (Clinic Only - Technical HTML)

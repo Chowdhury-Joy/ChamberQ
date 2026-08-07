@@ -1,68 +1,132 @@
 @php
+    /*
+     * 1:1 from public/previews/clireo-homepage.html hero.
+     * Only difference: right side is a real GET form into /book.
+     */
+    use App\Support\DayOfWeek;
+
     $tenant = $tenant ?? tenant();
-    $brand = $tenant?->displayName() ?? '';
-    $image = $data['image_url'] ?? 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=1800&q=80';
-    $headline = $data['headline'] ?? __('Expert care for your health');
-    $subheadline = $data['subheadline'] ?? __('Book a serial online and follow the live queue from your phone.');
-    $ctaText = $data['cta_text'] ?? __('Book Appointment');
-    $ctaLink = tenant_safe_href($data['cta_link'] ?? '/book', '/book');
-    $secondaryText = $data['secondary_cta_text'] ?? null;
-    $secondaryLink = tenant_safe_href($data['secondary_cta_link'] ?? '', '');
-    $emergency = $data['emergency_phone'] ?? null;
+    $headline = $data['headline'] ?? 'Where every recovery matters';
+    $subheadline = $data['subheadline'] ?? 'Specialized physiotherapy and rehabilitation — stroke recovery, chronic pain, paralysis, sports injuries, and neuromuscular care.';
+    $ctaText = $data['cta_text'] ?? 'Book appointment';
+    $backedLead = $data['backed_lead'] ?? 'Backed by';
+    $backedStrong = $data['backed_strong'] ?? '8+ specialists';
+    $ratingScore = $data['rating_score'] ?? '4.9*';
+    $ratingCopy = $data['rating_copy'] ?? 'Patients trust our recovery-focused care!';
+    $image = $data['image_url'] ?? null;
+
+    $doctorList = ($doctors ?? collect())->values();
+    $sessionList = ($sessions ?? collect())->values();
+    $showHeroForm = ($bookingAvailable ?? false) && $doctorList->isNotEmpty() && $sessionList->isNotEmpty();
+    $today = now()->toDateString();
+    $maxDate = now()->addDays(60)->toDateString();
+
+    $backedAvatars = [
+        $data['backed_avatar_1'] ?? 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=80&h=80&q=80',
+        $data['backed_avatar_2'] ?? 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=80&h=80&q=80',
+        $data['backed_avatar_3'] ?? 'https://images.unsplash.com/photo-1594824476967-48c8b964273f?auto=format&fit=crop&w=80&h=80&q=80',
+    ];
+    $ratingAvatars = [
+        $data['rating_avatar_1'] ?? 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=80&h=80&q=80',
+        $data['rating_avatar_2'] ?? 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=80&h=80&q=80',
+        $data['rating_avatar_3'] ?? 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?auto=format&fit=crop&w=80&h=80&q=80',
+    ];
 @endphp
 
-<section class="solo-section-hero relative isolate min-h-[70vh] overflow-hidden bg-slate-800 sm:min-h-[78vh] lg:min-h-[82vh]" aria-label="{{ __('Introduction') }}">
-    <img
-        src="{{ $image }}"
-        alt=""
-        class="absolute inset-0 -z-20 h-full w-full object-cover"
-    >
-    <div class="absolute inset-0 -z-10 bg-gradient-to-r from-slate-900/75 via-slate-900/45 to-slate-900/20"></div>
-    <div class="absolute inset-0 -z-10 bg-gradient-to-t from-slate-900/55 via-transparent to-slate-900/15"></div>
+<section class="hero space-inline" data-reveal-section>
+    <div class="hero-bg" @if(filled($image)) style="background-image: linear-gradient(90deg, color-mix(in srgb, var(--ink-deep) 92%, transparent) 0%, color-mix(in srgb, var(--ink) 72%, transparent) 42%, color-mix(in srgb, var(--ink) 15%, transparent) 100%), url('{{ $image }}');" @endif aria-hidden="true"></div>
+    <div class="layout-container grid-hero">
+        <div class="hero-copy">
+            <div class="backed" data-reveal-block data-reveal-kind="fade">
+                <div class="backed-avs">
+                    @foreach($backedAvatars as $avatar)
+                        <img src="{{ $avatar }}" alt="">
+                    @endforeach
+                </div>
+                <span>{{ $backedLead }} <strong>{{ $backedStrong }}</strong></span>
+            </div>
 
-    <div class="mx-auto flex min-h-[70vh] max-w-[1280px] flex-col justify-end px-3 pb-12 pt-28 sm:min-h-[78vh] sm:px-10 sm:pb-16 sm:pt-32 lg:min-h-[82vh] lg:pb-20">
-        <div class="solo-fade-up max-w-2xl" style="color:#fff;">
-            @if(filled($brand))
-                <p class="mb-3 text-xs font-semibold uppercase tracking-[0.14em] sm:mb-4 sm:text-sm" style="color:rgba(255,255,255,0.8);">
-                    {{ $brand }}
-                </p>
-            @endif
+            <h1 class="hero-title fx-heading" data-fx-words data-reveal-block data-reveal-kind="heading" aria-label="{{ $headline }}">{{ $headline }}</h1>
 
-            <h1 class="font-display text-4xl leading-[1.05] tracking-tight sm:text-5xl lg:text-[4.25rem] lg:leading-[1.02]" style="color:#fff;">
-                {{ $headline }}
-            </h1>
+            <p class="hero-lead" data-reveal-block data-reveal-kind="fade">{{ $subheadline }}</p>
 
-            @if(filled($subheadline))
-                <p class="mt-4 max-w-xl text-base leading-relaxed sm:mt-5 sm:text-lg" style="color:rgba(255,255,255,0.9);">
-                    {{ $subheadline }}
-                </p>
-            @endif
-
-            <div class="solo-fade-up-delay mt-8 flex flex-wrap items-center gap-3 sm:mt-10">
-                <a href="{{ $ctaLink }}" class="solo-cta">
-                    <span>{{ $ctaText }}</span>
-                    <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 17L17 7M17 7H7M17 7v10"/>
-                    </svg>
-                </a>
-                @if(filled($secondaryText) && filled($secondaryLink))
-                    <a
-                        href="{{ $secondaryLink }}"
-                        class="inline-flex items-center justify-center rounded-full border border-white/45 bg-white/10 px-8 py-4 text-[0.95rem] font-semibold text-white backdrop-blur transition hover:bg-white/20"
-                    >
-                        {{ $secondaryText }}
-                    </a>
-                @endif
+            <div class="rating-row" data-reveal-block data-reveal-kind="fade">
+                <div class="rating-score">{{ $ratingScore }}</div>
+                <div class="rating-avs">
+                    @foreach($ratingAvatars as $avatar)
+                        <img src="{{ $avatar }}" alt="">
+                    @endforeach
+                    <span class="rating-plus">+</span>
+                </div>
+                <div class="rating-copy">{{ $ratingCopy }}</div>
             </div>
         </div>
+
+        @if($showHeroForm)
+            <form class="book-card space-card hero-media" id="book" method="get" action="{{ tenant_web_url('/book') }}" data-reveal-block data-reveal-kind="fade">
+                <h2>{{ $ctaText }}</h2>
+                <div class="field">
+                    <label for="hero-patient-name">{{ __('Full Name') }}*</label>
+                    <input id="hero-patient-name" name="name" type="text" required autocomplete="name" placeholder="Rahim Ahmed">
+                </div>
+                <div class="field">
+                    <label>{{ __('Phone') }} &amp; {{ __('Doctor') }}*</label>
+                    <div class="field-row">
+                        <input id="hero-phone" name="phone" type="tel" required inputmode="numeric" autocomplete="tel" placeholder="017XXXXXXXX" aria-label="{{ __('Phone') }}">
+                        <select id="hero-doctor" name="doctor" required aria-label="{{ __('Select doctor') }}">
+                            @if($doctorList->count() > 1)
+                                <option value="" disabled selected>{{ __('Select doctor') }}</option>
+                            @endif
+                            @foreach($doctorList as $doctor)
+                                <option value="{{ $doctor->id }}" @selected($doctorList->count() === 1)>{{ $doctor->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <div class="field">
+                    <label>{{ __('Date') }} &amp; {{ __('Session') }}*</label>
+                    <div class="field-row">
+                        <input id="hero-date" name="date" type="date" required min="{{ $today }}" max="{{ $maxDate }}" aria-label="{{ __('Date') }}">
+                        <select id="hero-session" name="session" required aria-label="{{ __('Select session') }}">
+                            <option value="" disabled selected>{{ __('Select session') }}</option>
+                            @foreach($sessionList as $session)
+                                @php
+                                    $start = \Carbon\Carbon::parse($session->start_time)->format('g:i A');
+                                    $end = \Carbon\Carbon::parse($session->end_time)->format('g:i A');
+                                    $day = DayOfWeek::label($session->day_of_week);
+                                @endphp
+                                <option value="{{ $session->id }}" data-doctor="{{ $session->doctor_id }}">
+                                    {{ $session->session_name }} · {{ $day }} {{ $start }}–{{ $end }}
+                                </option>
+                            @endforeach
+                        </select>
+                    </div>
+                </div>
+                <button class="btn-pink" type="submit">
+                    <span>{{ $ctaText }}</span>
+                </button>
+            </form>
+            <script>
+                (function () {
+                    const doctorSelect = document.getElementById('hero-doctor');
+                    const sessionSelect = document.getElementById('hero-session');
+                    if (!doctorSelect || !sessionSelect) return;
+                    const options = [...sessionSelect.options].filter((o) => o.value !== '');
+                    function syncSessions() {
+                        const doctorId = doctorSelect.value;
+                        let firstVisible = null;
+                        options.forEach((option) => {
+                            const match = !doctorId || option.dataset.doctor === doctorId;
+                            option.hidden = !match;
+                            option.disabled = !match;
+                            if (match && !firstVisible) firstVisible = option;
+                        });
+                        sessionSelect.value = firstVisible ? firstVisible.value : '';
+                    }
+                    doctorSelect.addEventListener('change', syncSessions);
+                    syncSessions();
+                })();
+            </script>
+        @endif
     </div>
 </section>
-
-@if(filled($emergency))
-    <div class="border-b border-slate-100 bg-white">
-        <div class="mx-auto flex max-w-[1280px] flex-wrap items-center gap-x-3 gap-y-1 px-3 py-3 text-sm text-slate-600 sm:px-10 sm:text-[0.95rem]">
-            <span>{{ __('Emergency hotline') }}:</span>
-            <a href="tel:{{ preg_replace('/\s+/', '', $emergency) }}" class="font-semibold text-slate-900 hover:text-brand">{{ $emergency }}</a>
-        </div>
-    </div>
-@endif

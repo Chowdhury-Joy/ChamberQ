@@ -1,15 +1,21 @@
-<section class="w-full py-12 md:py-16 bg-sky-950 text-white relative overflow-hidden">
-    <div class="max-w-[1320px] mx-auto px-4 md:px-6 xl:px-8 relative z-10 text-center">
-        <h2 class="text-2xl sm:text-4xl font-extrabold tracking-tight mb-4">
-            {{ $data['heading'] ?? 'Book Your Appointment Online in 60 Seconds' }}
-        </h2>
-        <p class="text-sky-200 text-base sm:text-lg max-w-xl mx-auto mb-8">
-            {{ $data['subheadline'] ?? 'Select specialty, doctor, date and pick your preferred time slot.' }}
-        </p>
+@php
+    /*
+     * Entry point into the real /book wizard. Uses the dark `.stats-band`
+     * panel rather than the full-bleed `.final-cta`, so a page carrying both
+     * this block and `cta_banner` does not show the same band twice.
+     */
+    $heading = $data['heading'] ?? __('Book your appointment online in 60 seconds');
+    $subheadline = $data['subheadline'] ?? __('Choose your doctor, date and time — you get a serial ticket at the end.');
+@endphp
 
-        <a href="{{ tenant_web_url('/book') }}" class="inline-flex items-center gap-2 px-8 py-4 rounded-full bg-sky-400 text-slate-950 font-bold text-base hover:bg-sky-300 shadow-xl transition-all">
-            <span>Start Booking Wizard</span>
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7l5 5m0 0l-5 5m5-5H6"/></svg>
-        </a>
+<section class="space-section" data-reveal-section>
+    <div class="layout-container">
+        <div class="stats-band book-band space-card" data-reveal-block data-reveal-kind="fade">
+            <h3>{{ $heading }}</h3>
+            @if(filled($subheadline))
+                <p class="book-band-lead">{{ $subheadline }}</p>
+            @endif
+            <a class="btn-accent sm" href="{{ tenant_safe_href(null, '/book') }}"><span>{{ __('Start Booking') }}</span></a>
+        </div>
     </div>
 </section>

@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Chamber;
 use App\Models\Doctor;
+use App\Models\ScheduleSession;
 use App\Models\WebPage;
 use Illuminate\Http\Request;
 
@@ -29,10 +31,22 @@ class WebPageController extends Controller
             ? 'tenant.solo.webpage'
             : 'tenant.webpage';
 
+        $doctors = Doctor::orderBy('name')->get();
+        $sessions = tenant()?->isSoloDoctor()
+            ? collect()
+            : ScheduleSession::with(['doctor', 'chamber'])->orderBy('session_name')->get();
+
+        $bookingAvailable = ! tenant()?->isSoloDoctor()
+            && Chamber::exists()
+            && $doctors->isNotEmpty()
+            && $sessions->isNotEmpty();
+
         return view($view, [
             'page' => $page,
-            // Loaded here rather than queried from inside the template.
-            'doctors' => Doctor::orderBy('name')->get(),
+            // Loaded here rather than queried from inside section blades.
+            'doctors' => $doctors,
+            'sessions' => $sessions,
+            'bookingAvailable' => $bookingAvailable,
         ]);
     }
 }

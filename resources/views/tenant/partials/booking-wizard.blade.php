@@ -245,6 +245,9 @@
             endTime: null,
             doctorName: null,
             chamberName: null,
+            prefilledDate: null,
+            prefilledPhone: null,
+            prefilledName: null,
         };
 
         let flow = [];
@@ -286,7 +289,9 @@
                 @endif
             }
             
-            flow.push('step-session');
+            if (!state.bookableId) {
+                flow.push('step-session');
+            }
             
             if (state.type === 'lab') {
                 flow.push('step-lab-tests');
@@ -423,6 +428,10 @@
             const formatted = nextValid.toLocaleDateString(config.localeTag, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
             document.getElementById('date-helper').innerText = i18n.nextAvailable.replace(':date', formatted);
             dateInput.value = toLocalYmd(nextValid);
+
+            if (state.prefilledDate && state.prefilledDate >= dateInput.min && state.prefilledDate <= dateInput.max) {
+                dateInput.value = state.prefilledDate;
+            }
             
             dateInput.onchange = () => {
                 validateDate();
@@ -452,6 +461,13 @@
             phoneInput.onblur = () => schedulePatientLookup(true);
             dateError.style.display = 'none';
             phoneError.style.display = 'none';
+            if (state.prefilledPhone) {
+                phoneInput.value = state.prefilledPhone;
+                if (isValidBdPhone(state.prefilledPhone)) schedulePatientLookup(true);
+            }
+            if (state.prefilledName) {
+                document.getElementById('patient_name').value = state.prefilledName;
+            }
             submitBtn.disabled = false;
             submitBtn.textContent = config.confirmLabel;
             updateReviewSummary();
@@ -945,6 +961,27 @@
         const params = new URLSearchParams(window.location.search);
         const doctorParam = params.get('doctor') || params.get('doctor_id');
         const testParam = params.get('test');
+        const sessionParam = params.get('session') || params.get('bookable_id');
+        state.prefilledDate = params.get('date') || params.get('booking_date');
+        state.prefilledPhone = params.get('phone') || params.get('patient_phone');
+        state.prefilledName = params.get('name') || params.get('patient_name');
+
+        if (sessionParam) {
+            const session = sessionsData.find(s => String(s.id) === String(sessionParam));
+            if (session) {
+                state.type = 'session';
+                state.typeLocked = true;
+                state.doctorId = String(session.doctor_id);
+                state.chamberId = String(session.chamber_id);
+                state.bookableId = String(session.id);
+                state.dayOfWeek = session.day_of_week;
+                state.sessionName = session.session_name;
+                state.startTime = session.start_time;
+                state.endTime = session.end_time;
+                state.doctorName = session.doctor?.name;
+                state.chamberName = session.chamber?.name;
+            }
+        }
         if (doctorParam && config.doctorIds.includes(String(doctorParam))) {
             state.type = 'session';
             state.typeLocked = true;
@@ -962,6 +999,14 @@
         }
 
         rebuildFlow();
+
+        if (state.bookableId && state.prefilledPhone) {
+            const identityIdx = flow.indexOf('step-identity');
+            if (identityIdx >= 0) {
+                currentStepIndex = identityIdx;
+            }
+        }
+
         showStep();
 
         if (state.preselectedTestId) {

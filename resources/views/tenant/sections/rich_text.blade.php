@@ -1,6 +1,12 @@
-<section class="w-full bg-white py-10 sm:py-14 lg:py-16">
-    <div class="mx-auto max-w-[1320px] px-4 sm:px-6 lg:px-8">
-        <div class="mx-auto max-w-2xl text-center text-slate-800 sm:max-w-3xl [&_h1]:mb-3 [&_h1]:text-2xl [&_h1]:font-bold [&_h1]:tracking-tight [&_h1]:text-slate-900 sm:[&_h1]:mb-4 sm:[&_h1]:text-3xl lg:[&_h1]:text-4xl [&_h2]:mb-3 [&_h2]:text-2xl [&_h2]:font-bold [&_h2]:tracking-tight [&_h2]:text-slate-900 sm:[&_h2]:mb-4 sm:[&_h2]:text-3xl lg:[&_h2]:text-4xl [&_h3]:mb-2 [&_h3]:text-xl [&_h3]:font-semibold [&_h3]:text-slate-900 sm:[&_h3]:text-2xl [&_p]:mb-4 [&_p]:text-base [&_p]:leading-relaxed [&_p]:text-slate-600 sm:[&_p]:text-lg [&_ul]:mb-4 [&_ul]:list-disc [&_ul]:space-y-2 [&_ul]:pl-5 [&_ul]:text-left [&_ul]:text-slate-600 [&_a]:font-semibold [&_a]:underline-offset-2 hover:[&_a]:underline">
+{{--
+    Policy / long-form copy. Still sanitised through HtmlSanitizer — the block
+    accepts raw HTML from an admin, so the restyle must not become a route to
+    unescaped markup. Typography now comes from `.rich-text` rather than a wall
+    of Tailwind arbitrary-variant classes.
+--}}
+<section class="space-section" data-reveal-section>
+    <div class="layout-container">
+        <div class="rich-text" data-reveal-block data-reveal-kind="fade">
             {!! \App\Support\HtmlSanitizer::clean($data['content'] ?? '') !!}
         </div>
     </div>

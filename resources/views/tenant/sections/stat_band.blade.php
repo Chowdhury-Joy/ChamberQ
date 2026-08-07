@@ -1,14 +1,55 @@
 @if(tenant()?->isClinic())
-<section class="w-full py-12 bg-sky-900 text-white">
-    <div class="max-w-[1320px] mx-auto px-4 md:px-6 xl:px-8">
-        <x-card-grid :count="count($data['stats'] ?? [])" class="gap-6 text-center">
-            @foreach($data['stats'] ?? [] as $stat)
-                <div class="space-y-1">
-                    <p class="text-3xl sm:text-4xl font-extrabold text-sky-300 tracking-tight">{{ $stat['value'] }}</p>
-                    <p class="text-xs sm:text-sm font-medium text-sky-100 uppercase tracking-wider">{{ $stat['label'] }}</p>
-                </div>
-            @endforeach
-        </x-card-grid>
+@php
+    /*
+     * Clireo stats band with count-up numbers. The counter script overwrites
+     * the element's text with a bare integer, which constrains what may be
+     * animated:
+     *
+     *  - "99%" and "15+" animate — digits, with the suffix kept outside the
+     *    counted span so it survives.
+     *  - "50,000+" does not. The script would land on "50000+", losing the
+     *    separator the clinic typed.
+     *  - "24/7" does not. It would print "24".
+     *
+     * The span's own text is the true value, so a stat reads correctly before
+     * the animation starts and stays correct if the script never runs — the
+     * reference hardcodes a "0" there, which would show a patient "0%".
+     */
+    $stats = collect($data['stats'] ?? [])->map(function (array $stat): array {
+        $value = trim((string) ($stat['value'] ?? ''));
+        $countable = null;
+        $suffix = '';
+
+        if (preg_match('/^(\d+)(\D*)$/', $value, $m) && (int) $m[1] > 0) {
+            $countable = (int) $m[1];
+            $suffix = $m[2];
+        }
+
+        return [
+            'value' => $value,
+            'countable' => $countable,
+            'suffix' => $suffix,
+            'label' => $stat['label'] ?? '',
+        ];
+    });
+@endphp
+
+<section class="space-section" data-reveal-section>
+    <div class="layout-container">
+        <div class="stats-band space-card" data-reveal-block data-reveal-kind="fade">
+            <div class="grid-stats">
+                @foreach($stats as $stat)
+                    <div class="stat">
+                        @if($stat['countable'] !== null)
+                            <div class="num"><span data-count="{{ $stat['countable'] }}">{{ $stat['countable'] }}</span>{{ $stat['suffix'] }}</div>
+                        @else
+                            <div class="num">{{ $stat['value'] }}</div>
+                        @endif
+                        <div class="lbl">{{ $stat['label'] }}</div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
     </div>
 </section>
 @endif

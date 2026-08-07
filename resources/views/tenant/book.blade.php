@@ -1,14 +1,25 @@
 @php
+    /*
+     * Clinic booking shell, Clireo design.
+     *
+     * The wizard itself is `tenant.partials.booking-wizard`, shared with solo.
+     * Its markup is NOT touched here — it uses semantic class names only
+     * (`.step`, `.selection-card`, `.btn-group`…) which each shell styles, so
+     * the clinic can be restyled without any risk to the solo booking flow.
+     * Every rule below keeps the layout, sizing and sticky-footer behaviour of
+     * the previous design; only colour and type were re-pointed at the Clireo
+     * tokens. This is the conversion path — do not "tidy" its structure.
+     */
     $tenant = tenant();
     $brand = $tenant->displayName();
     $hasLabTests = $tenant->hasFeature('lab_tests');
     $hasMultipleDoctors = $tenant->hasFeature('multiple_doctors');
     $hasMultipleChambers = $tenant->hasFeature('multiple_chambers');
-    $themeColor = $tenant->theme_color ?: '#30A9E5';
+    $themeColor = $tenant->theme_color ?: \App\Models\Tenant::DEFAULT_THEME_COLOR;
     $locale = app()->getLocale();
 @endphp
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', $locale) }}" class="h-full" style="color-scheme: light;">
+<html lang="{{ str_replace('_', '-', $locale) }}" style="color-scheme: light;">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -18,87 +29,17 @@
     <link rel="manifest" href="{{ tenant_web_url('/manifest.webmanifest') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="icon" href="{{ $tenant->faviconHref() }}">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="{{ public_asset('css/getwebfield-spacing.css') }}">
+    <link rel="stylesheet" href="{{ public_asset('css/clinic-clireo.css') }}">
     <style>
-        :root {
-            --color-primary: {{ $themeColor }};
-            --color-primary-hover: #1f8fc4;
-            --font-family-base: 'DM Sans', system-ui, sans-serif;
-            --font-family-display: 'Instrument Serif', Georgia, serif;
-            --bg-base: #ffffff;
-            --bg-surface: #ffffff;
-            color-scheme: light;
-        }
+        :root { --brand: {{ $themeColor }}; }
         html { color-scheme: light only; }
-        body {
-            margin: 0;
-            font-family: var(--font-family-base);
-            background: #ffffff;
-            color: #0f172a;
-            -webkit-font-smoothing: antialiased;
-        }
-        .font-display { font-family: var(--font-family-display); }
-        .text-brand { color: var(--color-primary); }
-        .solo-cta {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            border-radius: 9999px;
-            background: var(--color-primary);
-            color: #fff;
-            font-weight: 600;
-            font-size: 0.95rem;
-            padding: 16px 32px;
-            transition: opacity 0.15s ease, transform 0.15s ease;
-            border: none;
-            cursor: pointer;
-            text-decoration: none;
-            font-family: inherit;
-        }
-        .solo-cta:hover { opacity: 0.92; color: #fff; }
-        .solo-cta:disabled { opacity: 0.45; cursor: not-allowed; }
-        .solo-cta-outline {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 9999px;
-            border: 1.5px solid color-mix(in srgb, var(--color-primary) 55%, white);
-            color: var(--color-primary);
-            background: color-mix(in srgb, var(--color-primary) 6%, white);
-            font-weight: 600;
-            font-size: 0.95rem;
-            padding: 8px 32px;
-            transition: background 0.15s ease;
-            text-decoration: none;
-            font-family: inherit;
-            cursor: pointer;
-        }
-        .solo-cta-outline:hover { background: color-mix(in srgb, var(--color-primary) 12%, white); }
-        .solo-cta-muted {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 9999px;
-            border: 1.5px solid #E0E0E0;
-            background: #FAFAFA;
-            color: #475569;
-            font-weight: 600;
-            font-size: 0.95rem;
-            padding: 16px 32px;
-            transition: background 0.15s ease;
-            border-style: solid;
-            cursor: pointer;
-            text-decoration: none;
-            font-family: inherit;
-        }
-        .solo-cta-muted:hover { background: #F2F2F2; }
+        body { background: var(--bg); }
 
         main.section {
-            max-width: 1280px;
+            max-width: var(--layout-max-width);
             margin: 0 auto;
             padding: 1.5rem 0.75rem 3rem;
         }
@@ -109,11 +50,11 @@
         .booking-container {
             max-width: 720px;
             margin: 0 auto;
-            background: #ffffff;
+            background: var(--white);
             padding: 1.5rem 1.25rem;
-            border-radius: 1rem;
-            border: 1px solid #E0E0E0;
-            box-shadow: 0 1px 2px 0 rgba(27, 27, 27, 0.03), 0 0 0 1px rgba(27, 27, 27, 0.03);
+            border-radius: 20px;
+            border: 1px solid var(--line);
+            box-shadow: 0 24px 60px color-mix(in srgb, var(--ink-deep) 10%, transparent);
             position: relative;
         }
         @media (min-width: 640px) {
@@ -125,70 +66,69 @@
             .booking-header { margin-bottom: 2rem; }
         }
         .booking-header h2 {
-            font-family: var(--font-family-display);
-            font-size: 2rem;
+            font-size: clamp(1.75rem, 1.1rem + 1.8vw, 2.5rem);
             font-weight: 400;
-            letter-spacing: -0.02em;
-            color: #0f172a;
+            letter-spacing: -0.045em;
+            line-height: 1.1;
+            color: var(--ink);
             margin: 0;
-        }
-        @media (min-width: 640px) {
-            .booking-header h2 { font-size: 2.5rem; }
         }
 
         .step { display: none; animation: slideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         .step.active { display: block; }
         .step h3 {
-            font-family: var(--font-family-display);
             font-size: 1.5rem;
             font-weight: 400;
+            letter-spacing: -0.035em;
             margin: 0 0 1.25rem;
-            color: #0f172a;
+            color: var(--ink);
         }
         @keyframes slideIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
 
-        .alert { padding: 1rem; border-radius: 0.75rem; margin-bottom: 1.5rem; display: none; }
+        /* Errors keep their own red — a brand-tinted failure state is not a
+           failure state. */
+        .alert { padding: 1rem; border-radius: 12px; margin-bottom: 1.5rem; display: none; }
         .alert-error { background: #fef2f2; color: #991b1b; border: 1px solid #f87171; display: block; }
         .field-error { color: #dc2626; font-size: 0.85rem; margin-top: 0.35rem; display: block; }
 
         .selection-grid { display: grid; gap: 0.85rem; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 1.5rem; }
         .selection-grid.list-view { grid-template-columns: 1fr; }
         .selection-card {
-            border: 1px solid #E0E0E0;
-            border-radius: 1rem;
+            border: 1px solid var(--line);
+            border-radius: 16px;
             padding: 1.15rem 1.25rem;
             min-height: 48px;
             cursor: pointer;
             transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
-            background: #FAFAFA;
+            background: var(--bg);
             text-align: left;
         }
-        .selection-card:hover { border-color: #d4d4d4; box-shadow: 0 1px 2px 0 rgba(27, 27, 27, 0.03); }
+        .selection-card:hover { border-color: color-mix(in srgb, var(--ink) 25%, var(--line)); }
         .selection-card.selected {
-            border-color: var(--color-primary);
-            background: color-mix(in srgb, var(--color-primary) 8%, white);
-            box-shadow: 0 0 0 1px var(--color-primary);
+            border-color: var(--brand);
+            background: color-mix(in srgb, var(--brand) 8%, white);
+            box-shadow: 0 0 0 1px var(--brand);
         }
-        .selection-card h4 { margin: 0 0 0.5rem 0; color: #0f172a; font-size: 1.05rem; font-weight: 600; }
-        .selection-card p { margin: 0; color: #64748b; font-size: 0.9rem; line-height: 1.4; }
-        .selection-card .price { color: var(--color-primary); font-weight: 600; font-size: 1.1rem; float: right; }
-        .selection-card.is-disabled { opacity: 0.55; cursor: not-allowed; pointer-events: none; background: #F2F2F2; }
-        .selection-card .seats { margin-top: 0.65rem; font-size: 0.85rem; font-weight: 600; color: var(--color-primary); }
+        .selection-card h4 { margin: 0 0 0.5rem 0; color: var(--ink); font-size: 1.05rem; font-weight: 600; }
+        .selection-card p { margin: 0; color: var(--muted); font-size: 0.9rem; line-height: 1.4; }
+        .selection-card .price { color: var(--ink); font-weight: 600; font-size: 1.1rem; float: right; }
+        .selection-card.is-disabled { opacity: 0.55; cursor: not-allowed; pointer-events: none; background: color-mix(in srgb, var(--ink) 6%, var(--bg)); }
+        .selection-card .seats { margin-top: 0.65rem; font-size: 0.85rem; font-weight: 600; color: var(--ink); }
         .selection-card .seats.is-full { color: #b91c1c; }
         .selection-card .seats.is-closed { color: #92400e; }
 
         .booking-review {
-            background: #FAFAFA;
-            border: 1px solid #E0E0E0;
-            border-radius: 1rem;
+            background: var(--bg);
+            border: 1px solid var(--line);
+            border-radius: 16px;
             padding: 1rem 1.15rem;
             margin: 0 0 1.5rem;
             font-size: 0.95rem;
             line-height: 1.5;
-            color: #334155;
+            color: var(--muted);
         }
-        .booking-review strong { color: #0f172a; }
-        .booking-review .seats-line { margin-top: 0.35rem; font-weight: 600; color: var(--color-primary); }
+        .booking-review strong { color: var(--ink); }
+        .booking-review .seats-line { margin-top: 0.35rem; font-weight: 600; color: var(--ink); }
         .booking-review .seats-line.is-full, .booking-review .seats-line.is-closed { color: #b91c1c; }
 
         .btn-group {
@@ -197,7 +137,7 @@
             align-items: center;
             gap: 0.75rem;
             margin-top: 2rem;
-            border-top: 1px solid #E6E6E6;
+            border-top: 1px solid var(--line);
             padding-top: 1.5rem;
             flex-wrap: wrap;
         }
@@ -215,23 +155,20 @@
             border: none;
         }
         .btn-primary {
-            border-radius: 9999px;
-            background: var(--color-primary);
-            color: #fff !important;
-            padding: 16px 32px;
-            transition: opacity 0.15s ease;
+            /* Arrow-pill machine comes from clinic-clireo.css (.btn.btn-primary). */
+            min-height: 0;
+            padding: 0.35rem 0.35rem 0.35rem 1.25rem;
         }
-        .btn-primary:hover { opacity: 0.92; }
-        .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; }
+        .btn-primary:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
         .btn-back {
-            border-radius: 9999px;
-            border: 1.5px solid #E0E0E0;
-            background: #FAFAFA;
-            color: #475569;
+            border-radius: 40px;
+            border: 1px solid color-mix(in srgb, var(--ink) 25%, transparent);
+            background: var(--white);
+            color: var(--ink);
             padding: 16px 32px;
             transition: background 0.15s ease;
         }
-        .btn-back:hover { background: #F2F2F2; }
+        .btn-back:hover { background: var(--bg); }
 
         /* Phones: keep Back/Continue reachable without scrolling to the end of
            a long step. Sticky (not fixed) so the bar settles inline on short
@@ -243,8 +180,8 @@
                 z-index: 20;
                 margin: 1.75rem -1.25rem 0;
                 padding: 0.85rem 1.25rem calc(0.85rem + env(safe-area-inset-bottom));
-                background: #ffffff;
-                box-shadow: 0 -8px 18px -14px rgba(15, 23, 42, 0.5);
+                background: var(--white);
+                box-shadow: 0 -8px 18px -14px color-mix(in srgb, var(--ink-deep) 50%, transparent);
                 flex-wrap: nowrap;
             }
             .btn-group .btn { padding-left: 1.25rem; padding-right: 1.25rem; }
@@ -253,10 +190,10 @@
         }
 
         .progress-bar { display: flex; justify-content: center; gap: 0.5rem; margin-bottom: 0.65rem; }
-        .progress-dot { width: 8px; height: 8px; border-radius: 50%; background: #E0E0E0; transition: all 0.3s; }
-        .progress-dot.active { background: var(--color-primary); transform: scale(1.3); }
-        .progress-dot.completed { background: #94a3b8; }
-        .step-label { margin: 0; font-size: 0.9rem; font-weight: 600; color: #64748b; }
+        .progress-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--line); transition: all 0.3s; }
+        .progress-dot.active { background: var(--brand); transform: scale(1.3); }
+        .progress-dot.completed { background: color-mix(in srgb, var(--ink) 45%, var(--line)); }
+        .step-label { margin: 0; font-size: 0.9rem; font-weight: 600; color: var(--muted); }
 
         .lab-total {
             font-size: 1.25rem;
@@ -264,8 +201,8 @@
             text-align: right;
             margin-top: 1rem;
             padding-top: 1rem;
-            border-top: 2px dashed #E6E6E6;
-            color: #0f172a;
+            border-top: 2px dashed var(--line);
+            color: var(--ink);
         }
         .lab-test-error { display: none; color: #dc2626; font-size: 0.9rem; margin-top: 0.75rem; }
         .hidden { display: none !important; }
@@ -275,87 +212,75 @@
             width: 100%;
             text-align: left;
             padding: 0.85rem 1rem;
-            border-radius: 0.75rem;
-            border: 1px solid #E0E0E0;
-            background: #ffffff;
-            color: #0f172a;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            background: var(--white);
+            color: var(--ink);
             font-family: inherit;
             font-size: 1rem;
             cursor: pointer;
         }
-        .patient-picker-btn:hover { border-color: #d4d4d4; }
+        .patient-picker-btn:hover { border-color: color-mix(in srgb, var(--ink) 25%, var(--line)); }
         .patient-picker-btn.selected {
-            border-color: var(--color-primary);
-            background: color-mix(in srgb, var(--color-primary) 8%, white);
+            border-color: var(--brand);
+            background: color-mix(in srgb, var(--brand) 8%, white);
             font-weight: 600;
         }
-        .patient-picker-btn-new { font-style: italic; color: #64748b; }
+        .patient-picker-btn-new { font-style: italic; color: var(--muted); }
 
         .form-group { margin-bottom: 1.5rem; }
-        .form-label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: #0f172a; }
+        .form-label { display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--ink-deep); font-size: 0.8rem; }
         .form-control {
             width: 100%;
             padding: 0.85rem 1rem;
-            border-radius: 0.75rem;
-            border: 1px solid #E0E0E0;
-            background: #ffffff;
-            color: #0f172a;
+            border-radius: 10px;
+            border: 1px solid var(--line);
+            background: #fafbfc;
+            color: var(--ink-deep);
             font-family: inherit;
             font-size: 1rem;
             box-sizing: border-box;
         }
         .form-control:focus {
             outline: none;
-            border-color: var(--color-primary);
-            box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
+            border-color: var(--ink);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 18%, transparent);
         }
-        .text-muted { color: #64748b; }
-
-        .locale-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-        .locale-chip a { color: #94a3b8; text-decoration: none; }
-        .locale-chip a.is-active, .locale-chip a:hover { color: var(--color-primary); }
-        .locale-chip span { color: #cbd5e1; }
+        .text-muted { color: var(--muted); }
     </style>
+    <script>document.documentElement.classList.add('has-js');</script>
 </head>
-<body class="min-h-full flex flex-col bg-white text-slate-900 antialiased">
-    <header class="sticky top-0 z-50 border-b border-slate-100 bg-white/95 backdrop-blur">
-        <div class="mx-auto flex h-[68px] max-w-[1280px] items-center justify-between gap-4 px-3 sm:h-[95px] sm:px-10">
-            <a href="{{ tenant_web_url('/') }}" class="min-w-0 truncate font-display text-xl tracking-tight text-slate-900 sm:text-[1.65rem]">
+<body>
+    <header class="nav">
+        <div class="nav-inner">
+            <a class="logo" href="{{ tenant_web_url('/') }}" aria-label="{{ $brand }}">
                 @if($tenant->logo_url)
-                    <img src="{{ $tenant->logo_url }}" alt="{{ $brand }}" class="h-9 w-auto sm:h-11">
+                    <img class="logo-img" src="{{ $tenant->logo_url }}" alt="{{ $brand }}">
                 @else
                     {{ $brand }}
                 @endif
             </a>
 
-            <nav class="hidden items-center gap-6 text-base font-medium text-slate-800 md:flex" aria-label="{{ __('Main') }}">
-                <div class="locale-chip" aria-label="{{ __('Language') }}">
-                    <a href="{{ tenant_web_url('/lang/en') }}" class="{{ $locale === 'en' ? 'is-active' : '' }}">EN</a>
+            <nav class="nav-links" aria-label="{{ __('Main') }}">
+                <a href="{{ tenant_web_url('/') }}">{{ __('Home') }}</a>
+                <a href="{{ tenant_web_url('/portal') }}">{{ __('Patient’s Portal') }}</a>
+                <span class="nav-lang" aria-label="{{ __('Language') }}">
+                    <a href="{{ tenant_web_url('/lang/en') }}" @class(['is-active' => $locale === 'en'])>EN</a>
                     <span aria-hidden="true">|</span>
-                    <a href="{{ tenant_web_url('/lang/bn') }}" class="{{ $locale === 'bn' ? 'is-active' : '' }}">BN</a>
-                </div>
-                <a href="{{ tenant_web_url('/') }}" class="transition hover:text-brand">{{ __('Home') }}</a>
-                <a href="{{ tenant_web_url('/portal') }}" class="solo-cta-outline">{{ __('Patient’s Portal') }}</a>
+                    <a href="{{ tenant_web_url('/lang/bn') }}" @class(['is-active' => $locale === 'bn'])>BN</a>
+                </span>
             </nav>
 
-            <div class="flex items-center gap-2 md:hidden">
-                <div class="locale-chip" aria-label="{{ __('Language') }}">
-                    <a href="{{ tenant_web_url('/lang/en') }}" class="{{ $locale === 'en' ? 'is-active' : '' }}">EN</a>
-                    <span aria-hidden="true">|</span>
-                    <a href="{{ tenant_web_url('/lang/bn') }}" class="{{ $locale === 'bn' ? 'is-active' : '' }}">BN</a>
-                </div>
-                <a href="{{ tenant_web_url('/portal') }}" class="solo-cta-outline text-sm">{{ __('Patient’s Portal') }}</a>
-            </div>
+            {{-- No burger here: the booking page has two links, and a drawer
+                 between a patient and the wizard is friction, not navigation. --}}
+            <a class="btn-contact btn-contact--always" href="{{ tenant_web_url('/portal') }}">
+                <span class="nav-cta-full">{{ __('Patient’s Portal') }}</span>
+                <span class="nav-cta-short">{{ __('Portal') }}</span>
+            </a>
         </div>
     </header>
 
-    <main class="section flex-1 w-full">
+    <main class="section">
         <div class="booking-container">
             @include('tenant.partials.booking-wizard')
         </div>

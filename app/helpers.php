@@ -2,6 +2,18 @@
 
 use App\Support\TenancyUrl;
 
+if (! function_exists('public_asset')) {
+    /**
+     * Root-relative URL for a file under public/. Unlike asset(), this does not
+     * bake in APP_URL, so clinic CSS/JS still load when `php artisan serve` runs
+     * on a non-default port while APP_URL is http://localhost.
+     */
+    function public_asset(string $path): string
+    {
+        return '/' . ltrim($path, '/');
+    }
+}
+
 if (! function_exists('tenant_web_url')) {
     function tenant_web_url(string $path = '/'): string
     {

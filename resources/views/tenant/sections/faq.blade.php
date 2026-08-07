@@ -1,32 +1,41 @@
 @php
-    $heading = $data['heading'] ?? __('Frequently Asked Questions');
+    /*
+     * 1:1 from public/previews/clireo-homepage.html .faq.
+     */
+    $heading = $data['heading'] ?? 'Frequently Questions';
     $faqs = $data['faqs'] ?? [];
+    $promoImage = $data['promo_image_url'] ?? 'https://images.pexels.com/photos/8460127/pexels-photo-8460127.jpeg?auto=compress&cs=tinysrgb&w=900&h=1200&fit=crop';
+    $promoHeading = $data['promo_heading'] ?? 'Need physiotherapy? Book an appointment';
+    $promoCtaText = $data['promo_cta_text'] ?? 'Get in touch';
+    $promoCtaLink = tenant_safe_href($data['promo_cta_link'] ?? '/book', '/book');
 @endphp
 
-<section class="solo-section w-full bg-white">
-    <div class="mx-auto grid max-w-[1280px] gap-8 px-3 sm:px-10 lg:grid-cols-[minmax(0,0.4fr)_minmax(0,0.6fr)] lg:gap-12">
-        <h2 class="font-display text-3xl leading-[1.1] tracking-tight text-slate-900 sm:text-4xl lg:text-[2.75rem]">
-            {{ $heading }}
-        </h2>
+<section class="space-section faq" data-reveal-section>
+    <div class="layout-container">
+        <div class="stack-header">
+            <div class="eyebrow" data-reveal-block data-reveal-kind="fade">{{ __('FAQs') }}</div>
+            <h2 class="fx-heading" data-fx-words data-reveal-block data-reveal-kind="heading">{{ $heading }}</h2>
+        </div>
 
-        <div class="space-y-3">
-            @foreach($faqs as $index => $faq)
-                <details class="group rounded-2xl border border-slate-200/80 bg-slate-50/80 open:bg-slate-50 [&_summary::-webkit-details-marker]:none" @if($index === 0) open @endif>
-                    <summary class="flex cursor-pointer items-start justify-between gap-4 px-4 py-4 text-left sm:px-5">
-                        <span class="text-xs font-semibold uppercase tracking-[0.06em] text-slate-800 sm:text-sm">
-                            {{ $faq['question'] ?? '' }}
-                        </span>
-                        <svg class="mt-0.5 h-5 w-5 shrink-0 text-slate-500 transition group-open:rotate-180" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                        </svg>
-                    </summary>
-                    <div class="px-4 pb-4 sm:px-5">
-                        <p class="border-t border-slate-200/70 pt-3 text-sm leading-relaxed text-slate-600">
-                            {{ $faq['answer'] ?? '' }}
-                        </p>
-                    </div>
-                </details>
-            @endforeach
+        <div class="faq-layout">
+            <aside class="faq-promo" data-reveal-block data-reveal-kind="fade">
+                <img src="{{ $promoImage }}" alt="">
+                <div class="overlay">
+                    <h3>{{ $promoHeading }}</h3>
+                    <a class="btn-pink sm" href="{{ $promoCtaLink }}">
+                        <span>{{ $promoCtaText }}</span>
+                    </a>
+                </div>
+            </aside>
+
+            <div class="faq-list stack-list" data-reveal-block data-reveal-kind="fade">
+                @foreach($faqs as $index => $faq)
+                    <details class="faq-item" @if($index === 0) open @endif>
+                        <summary>{{ $faq['question'] ?? '' }}</summary>
+                        <div class="ans">{{ $faq['answer'] ?? '' }}</div>
+                    </details>
+                @endforeach
+            </div>
         </div>
     </div>
 </section>

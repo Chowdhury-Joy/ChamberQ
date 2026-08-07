@@ -826,3 +826,93 @@
   <action>Deferred speech-to-text entirely. Removed the transcription service, its config, the `POST /api/visit-media/transcribe` route and controller method, the `visit-notes-draft` Livewire listener, `VisitNotesFormSchema::mergeDraftIntoState()` and the `_machine_filled` state key, the recorder blade's transcription branch, and the `voice_transcription` tier flag. All of it is stashed unloaded under `docs/deferred/voice-transcription/` with a restore guide. **Plain voice notes are explicitly kept** — record, store, play back — per the 2026-08-06 decision that recording is the primary capture for doctors who will not type. `visit_records.voice_transcript` stays as the manual optional field it originally was, relabelled "Voice note summary" so it no longer implies a machine draft.</action>
   <reason>No free option covers the whole pipeline: speech-to-text has free-ish paths (browser Web Speech API, self-hosted Whisper, Groq free tier) but turning a transcript into structured medicine rows needs an LLM, and none of the free ones are reliable enough. Cost was never the real blocker — accuracy was. Doctors dictate mixed Bangla-English with Bangladeshi brand names, close to a worst case for Whisper, and a misheard drug name on a document printed under a BM&DC number is a patient-safety failure, not a UX annoyance. Stashing rather than deleting keeps the working pipeline recoverable when models handle Bangla-English medical dictation well enough to trust. This supersedes the STT opt-in added on 2026-08-07T13:0x ("optional STT auto-fills blank fields when tenant `voice_transcription` is enabled") and returns the product to the 2026-08-06 "no speech-to-text integration" position.</reason>
 </decision>
+
+## 2026-08-07T16:16:01+0600
+
+<decision>
+  <category>Business_Logic</category>
+  <context>Reviewing whether the clinic tier had kept pace with the solo-tier V2 work turned up a structural gap: a doctor's **login** (`users.role = doctor`) and their **prescribing profile** (`doctors` row, which carries `practice_type`, qualifications and BM&DC number) were unrelated records with nothing joining them. Anything that needed to know "which doctor is this?" outside a booking therefore had to guess, and `MedicineService::resolvePrescribingDoctor()` could only guess for a solo practice (`Doctor::first()` — there is only one). A clinic fell through to `null`, and the medicine list silently defaulted to the general-physician catalogue. A dermatologist at an 8-doctor clinic opening **My medicines** was not offered her own dermatology brands; the same doctor at a solo practice was.</context>
+  <action>Added nullable `doctors.user_id`, unique per tenant, with a **Login account** select on the Doctors form (tenant-scoped `unique` rule, so one account cannot claim two profiles) and a `User::doctorProfile` relation. `resolvePrescribingDoctor()` gained one step in the middle: booking's session doctor → **signed-in doctor's own paired profile** → solo's single doctor → `null`. The migration backfills the pairing **only** where a tenant has exactly one doctor profile and exactly one doctor login; multi-doctor clinics are left blank. No foreign key — SQLite cannot add one to an existing table — so a `deleting` hook on `User` clears the link instead. Pairing stays optional.</action>
+  <reason>The booking still wins when there is one, because a doctor covering a colleague's session should prescribe as that session, not as themselves. Backfilling only the unambiguous case is the point of the whole change: guessing a pairing in a multi-doctor clinic would eventually put one doctor's name and registration number on another's printed prescription, which is worse than the papercut being fixed. Pairing is optional because a practice may list a visiting doctor who never logs in. `null` remains a meaningful answer — `User::canEnterPrescriptionFor()` reads it as deny, so staff paper-prescription entry keeps failing closed rather than opening up.</reason>
+</decision>
+
+## 2026-08-07T16:34:50+0600
+
+<decision>
+  <category>UI/UX</category>
+  <context>The clinic tier had fallen behind solo: the solo homepage got the V2 design pass and is now locked, while clinic still rendered the older interim shell. The Clireo/CBPH reference was approved as the clinic design direction on 2026-08-06 but had never been applied to the live site — it existed only as a static mock at `public/previews/clireo-homepage.html`. The owner asked for a **full port, all sections**, with colours **driven by each tenant's `theme_color`** rather than the reference's fixed navy/pink.</context>
+  <action>Phased port. Phase 1 (this task): extracted the reference's `<style>` and `<script>` into `public/css/clinic-clireo.css` and `public/js/clinic-clireo.js`, then rewrote `:root` so every colour derives from one `--brand` — `--ink` / `--ink-deep` (text and dark surfaces) as `color-mix()` of brand into near-black, `--accent` / `--accent-2` (the old pink role) as light tints of brand, `--muted` / `--line` / `--bg` mixed from those; the 11 hardcoded navy `rgba()` shadows and overlays became `color-mix(… , transparent)` of the same tokens. `tenant/webpage.blade.php` was rewritten as the Clireo shell and is the single place `--brand` is set. Phases 2–4 (not done): the 8 sections the reference covers, the 9 it does not, then the clinic book/ticket/portal shells. The Tailwind CDN stays in the shell until the last section blade is converted.</action>
+  <reason>Deriving from one `--brand` keeps the reference's layout, type scale, spacing and motion — which is what was approved — while letting each clinic look like itself, which is what the owner chose over a fixed palette. Tokens rather than literals because a hardcoded hex is a tenant whose branding silently stops applying, and the failure is invisible in testing on one tenant. Porting the stylesheet wholesale (rather than re-deriving styles section by section) means phases 2–4 wire markup to classes that already exist and are already tenant-coloured. Keeping the Tailwind CDN during the port is deliberate: dropping it at phase 1 would have collapsed all 18 un-ported sections, so a clinic homepage shows mixed-era styling until the port finishes — an accepted, temporary state, recorded here so it is not mistaken for a bug.</reason>
+</decision>
+
+## 2026-08-07T17:15:48+0600
+
+<decision>
+  <category>UI/UX</category>
+  <context>Phase 2 of the clinic homepage port. The Clireo reference leans on photography it hardcodes — a portrait per physiotherapist, a treatment photo per service card, a patient headshot beside every review, and an abstract icon per feature. None of the tenant web-page blocks store any of that: `doctors` has no image column, `service_matrix` items are title + description, and `testimonials` items are quote + name + label. The hero's right column in the reference is a working booking form, which we also already have as the `/book` wizard.</context>
+  <action>Ported all 8 mapped sections, substituting for the missing data rather than filling it with stock imagery: `.doc-card--initial` shows the doctor's initial on a brand-tinted panel, `.treat-card--textonly` drops the media box and keeps the copy, `.review-person` shows name and label with no avatar, and `.about-feature` uses the clinic's own uploaded gallery photo where the reference had an icon. The hero card is a summary that links into `/book`, not a second booking form. `testimonials` now has one `.review-scroller` for every width instead of separate mobile and desktop markup holding two copies of each quote. Per-service booking survived the loss of the 8-or-more list layout: every treatment card is itself a link to `/book`.</action>
+  <reason>A stock face beside a named consultant, or a stranger's photo above a real patient's quote, misrepresents the clinic to patients choosing who to see — worse than an honest initial or a plain card. Duplicating the booking form in the hero would create a second source of truth for availability and serial numbers, which is how double-booked serials happen. Keeping every service card a link preserves the per-service CTA that the old list layout provided, so the restyle costs no conversion path.</reason>
+</decision>
+
+## 2026-08-07T17:54:55+0600
+
+<decision>
+  <category>UI/UX</category>
+  <context>Phase 3 of the clinic homepage port covered the nine blocks the Clireo reference never had. Two things surfaced while doing it. First, `image_carousel` was the one section built on Alpine, and the new clinic shell does not load Alpine — phase 1 had silently broken it (slides stacked, arrows dead). Second, and more seriously, the solo shell resolves each block as "solo override if one exists, else `tenant.sections.*`", so nine of the twelve blades being rewritten were also rendering on the **locked** solo homepage.</context>
+  <action>Ported all nine into the reference's language, inventing only where it had no counterpart (`.marquee` for trust badges, `.why-card` grids for journey/conditions/locations, `.book-band` for the wizard entry, `.slider` for the carousel, `.rich-text` for policy copy). `image_carousel` was rebuilt as a scroll-snap track that works with no JS at all, with arrows, dots and autoplay added by `clinic-clireo.js` as an enhancement; autoplay stops permanently at the first interaction. `stat_band` animates only values that are plain integers with an optional suffix, and the counted span's own text is the real value rather than the reference's hardcoded "0". Copied the 12 pre-port shared blades into `resources/views/tenant/solo/sections/` so solo renders exactly what it rendered before, and `tenant/sections/` became clinic-only.</action>
+  <reason>The solo copies are the important part: the patient-homepage lock is meaningless if a clinic-side restyle can reach solo through a view-resolution fallback, and the failure would have been invisible in clinic testing. Pinning costs 12 duplicated files and buys a boundary that matches how the lock is actually written. On the carousel, scroll-snap-first means the section degrades to a swipeable strip rather than to nothing, which is what the Alpine version did once its library was gone. On the stats, an animated counter that prints "50000+" or "24" is worse than no animation: those numbers are claims a clinic makes about itself.</reason>
+</decision>
+
+## 2026-08-07T19:38:58+0600
+
+<decision>
+  <category>UI/UX</category>
+  <context>Phase 4 of the clinic Clireo port: the book, ticket, and portal pages. These three shells were still on the interim solo language (DM Sans + Instrument Serif, Tailwind CDN, pill `.solo-cta` nav). The booking wizard and ticket body are shared with solo (`tenant.partials.booking-wizard`, `tenant.partials.ticket-body`) and carry real booking/queue logic — touching their markup risks the locked solo flow. The clinic homepage had finished phases 1–3 but still loaded the Tailwind CDN as a safety net; with all 18 section blades ported, that dependency could finally go.</context>
+  <action>Restyled the three clinic shells only: same Clireo head/nav as `tenant/webpage.blade.php`, with per-shell `<style>` blocks that re-tokenize the shared partials' semantic classes (`.step`, `.selection-card`, `.ticket-card`, `.serial`, `.btn`, …) onto `--brand` / `--ink` / `--accent`. Did not edit the partials. On the ticket shell, aliased `--color-primary` and `--radius-md` because `ticket-body` has a few inline `var(--color-primary)` references. Portal was a full rewrite (no shared partial underneath). Added `.btn-contact--always` to `clinic-clireo.css` because book/ticket/portal have no mobile drawer — without it the nav CTA would be hidden below 900px. Removed the Tailwind CDN and `card-grid.css` from the clinic homepage; clinic card rows use `.grid-cards` from `getwebfield-spacing.css`. Solo shells unchanged and still on Tailwind.</action>
+  <reason>Shell-only restyling keeps one wizard and one ticket implementation for both tiers — the alternative (forking the partials) doubles every booking bug fix. Re-tokenizing in the shell is the same pattern the booking wizard already used before the port (each tier styled `.selection-card` differently). Aliasing `--color-primary` on the ticket page is cheaper than editing a shared partial for one clinic colour swap. Dropping Tailwind from the clinic homepage is only safe once every blade it renders is Clireo-native; doing it at phase 1 would have collapsed unported sections. Keeping Tailwind on solo is deliberate: the locked solo homepage is not part of this port.</reason>
+</decision>
+
+## 2026-08-07T20:10:01+0600
+
+<decision>
+  <category>CRO</category>
+  <context>Sales leave-behind PDF for Pain Point / Feature / Solution was decided earlier (2026-08-07T00:39:08) as Doctor-Gemini-Problem-Feature-Solution.pdf but never landed in the repo — only an orphan copy sat in Downloads/slides after the ChamberQ rename removed docs/slides/.</context>
+  <action>Checked in `docs/slides/ChamberQ-Painpoint-Feature-Solution.pdf` generated from `docs/slides/build-painpoint-feature-solution.py` (reportlab). Columns are Pain Point / Feature / Solution (15 rows). Copy refreshed for current product: voice note + paper photo + optional staff medicine entry; clinical diagnosis/voice stay doctor-only. Footer pricing matches `config/marketing.php` defaults (Solo Tk 5,000 / 2,000; Clinic Tk 25,000 / 7,500). Also restored the two ChamberQ pitch decks and their build scripts into `docs/slides/` from the same Downloads folder so the three leave-behinds live together again.</action>
+  <reason>A doctor keeping one page after a WhatsApp or chamber meeting needs the current product name and accurate access rules — the Downloads orphan still said staff can never open a prescription, which is wrong once a doctor turns on staff paper entry. Regenerating from a script (not hand-editing the PDF) keeps pricing and feature rows rebuildable when the product moves again.</reason>
+</decision>
+
+## 2026-08-07T20:48:02+0600
+
+<decision>
+  <category>CRO</category>
+  <context>Owner asked for a second Pain Point / Feature / Solution leave-behind limited to the top 7 rows, with no Clinic mention — for Solo sales conversations where the full 15-row page (including multi-doctor, labs, Clinic pricing) is too much.</context>
+  <action>Added `docs/slides/ChamberQ-Painpoint-Feature-Solution-Solo-Top7.pdf` from `build-painpoint-feature-solution-solo-top7.py`. Same palette and columns as the full page; seven Solo-relevant rows (booking, live queue, outdoor screen, patient records, prescriptions, voice/paper/staff notes, doctor-only clinical data). No Clinic tier, labs, multi-doctor, or Clinic pricing — footer is Solo only (Tk 5,000 / 2,000).</action>
+  <reason>A Solo pitch meeting needs a short desk leave-behind; Clinic features on the same page dilute the story and invite “do I need Clinic?” distraction before the doctor has bought Solo.</reason>
+</decision>
+
+## 2026-08-07T20:52:50+0600
+
+<decision>
+  <category>CRO</category>
+  <context>Owner clarified the Solo Top-7 leave-behind must make the doctor feel pumped enough to *want* to pay setup in the meeting — desire, not a payment form or hard ask.</context>
+  <action>Rewrote `ChamberQ-Painpoint-Feature-Solution-Solo-Top7.pdf`: headline “Imagine tomorrow’s chamber”; columns “What’s wearing you down / What fixes it / How tomorrow feels” with visceral pain and emotional-outcome solutions; navy close band “Say yes in this meeting — your page can be live tomorrow” with Solo price callout (Tk 5,000 / 2,000) and soft line that setup is done-with-you. No Clinic. No bKash form.</action>
+  <reason>A feature table informs; a felt before/after plus a clear “yes today → live tomorrow” close creates urgency without contradicting pay-at-chamber for patients or the white-glove setup story. Hard payment instructions belong with the salesperson’s bKash number, not printed on a leave-behind that may be forwarded.</reason>
+</decision>
+
+## 2026-08-07T20:55:58+0600
+
+<decision>
+  <category>CRO</category>
+  <context>Owner clarified “top 7” means the seven highest-desire Solo features for a sales close — not the first seven rows of the full 15-row product map.</context>
+  <action>Rebuilt Solo Top-7 PDF around sales-priority features: (1) online serial booking, (2) live queue + ticket, (3) outdoor screen with voice, (4) branded patient website, (5) patient record + Consult Screen, (6) digital prescriptions, (7) multi-chamber up to 5. Dropped privacy/voice/household/vacation from this page (they stay on the full map). Kept pumped headline/close; still no Clinic/labs.</action>
+  <reason>Website and multi-chamber are core Solo buying reasons in Bangladesh (doctors sit at several OPDs; many have no bookable site) and outperform mid-list ops features for “want to pay today” energy. The full page remains the complete feature map.</reason>
+</decision>
+
+## 2026-08-07T21:35:22+0600
+
+<decision>
+  <category>UI/UX</category>
+  <context>Owner rejected colour-only clinic tweaks and demanded the approved Clireo HTML (`public/previews/clireo-homepage.html`) converted into the live clinic homepage, with only the hero right side changed to a real booking form.</context>
+  <action>Ported clinic shell + section blades to HTML markup/structure; kept Clireo pink accents; nested stats inside `doctor_grid`; dropped separate locations/stat_band from the demo page order; reseeded `demo` as CBPH (copy, photos, doctors, navy theme); hero right = live GET form into `/book`. Solo shells untouched.</action>
+  <reason>Pixel/structure fidelity to the approved reference is the acceptance bar for clinic; a form on the hero is the one product delta that turns the static preview into a bookable ChamberQ page.</reason>
+</decision>

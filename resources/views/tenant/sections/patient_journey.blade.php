@@ -1,22 +1,26 @@
-<section class="w-full py-12 md:py-16 bg-white">
-    <div class="max-w-[1320px] mx-auto px-4 md:px-6 xl:px-8">
-        @if(!empty($data['heading']))
-            <h2 class="text-2xl sm:text-3xl font-bold text-center text-slate-900 mb-10 tracking-tight">
-                {{ $data['heading'] }}
-            </h2>
+@php
+    /* Numbered steps as Clireo feature cards. */
+    $heading = $data['heading'] ?? null;
+    $steps = $data['steps'] ?? [];
+@endphp
+
+<section class="space-section" id="journey" data-reveal-section>
+    <div class="layout-container">
+        @if(filled($heading))
+            <div class="stack-header is-center" style="text-align:center">
+                <div class="eyebrow" style="justify-content:center" data-reveal-block data-reveal-kind="fade">{{ __('How it works') }}</div>
+                <h2 class="fx-heading" data-fx-words data-reveal-block data-reveal-kind="heading">{{ $heading }}</h2>
+            </div>
         @endif
 
-        @php $steps = $data['steps'] ?? []; @endphp
-        <x-card-grid :count="count($steps)" class="gap-6 sm:gap-8">
+        <div class="why-grid grid-cards" data-card-count="{{ count($steps) }}" data-reveal-block data-reveal-kind="stagger">
             @foreach($steps as $step)
-                <div class="relative bg-slate-50 rounded-2xl p-6 border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow">
-                    <div class="w-12 h-12 rounded-xl bg-sky-500 text-white font-bold text-lg flex items-center justify-center mb-4 shadow-md shadow-sky-500/20">
-                        {{ $step['step_number'] ?? '0' . ($loop->index + 1) }}
-                    </div>
-                    <h3 class="text-lg font-bold text-slate-900 mb-2">{{ $step['title'] ?? '' }}</h3>
-                    <p class="text-sm text-slate-600 leading-relaxed">{{ $step['description'] ?? '' }}</p>
-                </div>
+                <article class="why-card">
+                    <div class="why-step">{{ $step['step_number'] ?? str_pad((string) ($loop->index + 1), 2, '0', STR_PAD_LEFT) }}</div>
+                    <h3>{{ $step['title'] ?? '' }}</h3>
+                    <p>{{ $step['description'] ?? '' }}</p>
+                </article>
             @endforeach
-        </x-card-grid>
+        </div>
     </div>
 </section>

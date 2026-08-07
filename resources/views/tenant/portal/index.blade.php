@@ -1,11 +1,17 @@
 @php
+    /*
+     * Clinic patient portal, Clireo design.
+     *
+     * Unlike book/ticket this page owns all of its markup — there is no shared
+     * partial underneath — so it is a full port, with no Tailwind CDN.
+     */
     $tenant = tenant();
     $brand = $tenant->displayName();
     $themeColor = $tenant->theme_color ?: \App\Models\Tenant::DEFAULT_THEME_COLOR;
     $locale = app()->getLocale();
 @endphp
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', $locale) }}" class="h-full" style="color-scheme: light;">
+<html lang="{{ str_replace('_', '-', $locale) }}" style="color-scheme: light;">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,193 +21,253 @@
     <link rel="manifest" href="{{ tenant_web_url('/manifest.webmanifest') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Golos+Text:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="icon" href="{{ $tenant->faviconHref() }}">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="/css/theme.css">
+    <link rel="stylesheet" href="{{ public_asset('css/getwebfield-spacing.css') }}">
+    <link rel="stylesheet" href="{{ public_asset('css/clinic-clireo.css') }}">
     <style>
-        :root {
-            --color-primary: {{ $themeColor }};
-            --color-primary-hover: #1d4ed8;
-            --font-family-base: 'DM Sans', system-ui, sans-serif;
-            --font-family-display: 'Instrument Serif', Georgia, serif;
-            color-scheme: light;
-        }
+        :root { --brand: {{ $themeColor }}; }
         html { color-scheme: light only; }
-        body {
+        body { background: var(--bg); display: flex; flex-direction: column; min-height: 100vh; }
+        main { flex: 1 0 auto; }
+
+        .portal-lookup {
+            max-width: 680px;
+            margin: 0 auto var(--space-lg);
+            background: var(--white);
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            padding: 1.75rem 1.25rem;
+            box-shadow: 0 24px 60px color-mix(in srgb, var(--ink-deep) 10%, transparent);
+        }
+        @media (min-width: 640px) {
+            .portal-lookup { padding: 2.5rem; }
+        }
+        .portal-lookup h1 {
             margin: 0;
-            font-family: var(--font-family-base);
-            background: #ffffff;
-            color: #0f172a;
-            -webkit-font-smoothing: antialiased;
+            text-align: center;
+            font-size: clamp(1.9rem, 1.2rem + 2vw, 2.75rem);
+            font-weight: 400;
+            letter-spacing: -0.045em;
+            line-height: 1.1;
+            color: var(--ink);
         }
-        .font-display { font-family: var(--font-family-display); }
-        .text-brand { color: var(--color-primary); }
-        .solo-cta {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-            border-radius: 9999px;
-            background: var(--color-primary);
-            color: #fff;
-            font-weight: 600;
+        .portal-lead {
+            max-width: 30rem;
+            margin: 0.85rem auto 0;
+            text-align: center;
             font-size: 0.95rem;
-            padding: 16px 32px;
-            transition: opacity 0.15s ease;
-            border: none;
-            cursor: pointer;
-            text-decoration: none;
-            font-family: inherit;
+            color: var(--muted);
         }
-        .solo-cta:hover { opacity: 0.92; color: #fff; }
-        .solo-cta-outline {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 9999px;
-            border: 1.5px solid color-mix(in srgb, var(--color-primary) 55%, white);
-            color: var(--color-primary);
-            background: color-mix(in srgb, var(--color-primary) 6%, white);
-            font-weight: 600;
-            font-size: 0.95rem;
-            padding: 8px 32px;
-            transition: background 0.15s ease;
-            text-decoration: none;
-            font-family: inherit;
+
+        .portal-form { display: flex; flex-direction: column; gap: 0.75rem; margin-top: 2rem; }
+        @media (min-width: 640px) {
+            .portal-form { flex-direction: row; }
         }
-        .solo-cta-outline:hover { background: color-mix(in srgb, var(--color-primary) 12%, white); }
-        .locale-chip {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.35rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-        .locale-chip a { color: #94a3b8; text-decoration: none; }
-        .locale-chip a.is-active, .locale-chip a:hover { color: var(--color-primary); }
-        .locale-chip span { color: #cbd5e1; }
         .form-control {
             width: 100%;
-            padding: 0.85rem 1rem;
-            border-radius: 9999px;
-            border: 1px solid #E0E0E0;
-            background: #ffffff;
-            color: #0f172a;
+            padding: 0.9rem 1.15rem;
+            border-radius: 40px;
+            border: 1px solid var(--line);
+            background: #fafbfc;
+            color: var(--ink-deep);
             font-family: inherit;
             font-size: 1rem;
             box-sizing: border-box;
         }
         .form-control:focus {
             outline: none;
-            border-color: var(--color-primary);
-            box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
+            border-color: var(--ink);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 18%, transparent);
         }
+        .portal-form .form-control { flex: 1; }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            min-height: 48px;
+            font-weight: 600;
+            font-size: 0.95rem;
+            font-family: inherit;
+            cursor: pointer;
+            text-decoration: none;
+            border: none;
+            white-space: nowrap;
+        }
+        .btn-primary {
+            /* Arrow-pill machine comes from clinic-clireo.css (.btn.btn-primary). */
+            min-height: 0;
+            padding: 0.35rem 0.35rem 0.35rem 1.25rem;
+        }
+        .btn-ghost {
+            border-radius: 40px;
+            border: 1px solid color-mix(in srgb, var(--ink) 25%, transparent);
+            background: var(--white);
+            color: var(--ink);
+            padding: 12px 26px;
+            transition: background 0.15s ease;
+        }
+        .btn-ghost:hover { background: var(--bg); }
+
+        .portal-error { margin: 1rem 0 0; text-align: center; font-size: 0.9rem; color: #dc2626; }
+
+        .portal-results { max-width: 900px; margin: 0 auto; }
+        .portal-results h2 {
+            margin: 0 0 1.5rem;
+            font-size: clamp(1.5rem, 1rem + 1.5vw, 2rem);
+            font-weight: 400;
+            letter-spacing: -0.04em;
+            color: var(--ink);
+        }
+        .portal-empty {
+            background: var(--white);
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            padding: 2.5rem 1.5rem;
+            text-align: center;
+        }
+        .portal-empty p { margin: 0 0 1.25rem; color: var(--muted); font-size: 0.95rem; }
+
+        .portal-list { display: grid; gap: 1rem; }
+        .portal-card {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            background: var(--white);
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            padding: 1.25rem;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        .portal-card:hover {
+            border-color: color-mix(in srgb, var(--brand) 30%, var(--line));
+            box-shadow: 0 18px 40px color-mix(in srgb, var(--ink-deep) 8%, transparent);
+        }
+        @media (min-width: 640px) {
+            .portal-card { flex-direction: row; align-items: center; justify-content: space-between; padding: 1.5rem; }
+        }
+        .portal-card-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-bottom: 0.5rem; }
+        .portal-chip {
+            border-radius: 40px;
+            padding: 0.2rem 0.7rem;
+            font-size: 0.75rem;
+            font-weight: 700;
+            background: color-mix(in srgb, var(--brand) 12%, var(--white));
+            color: var(--ink-deep);
+        }
+        .portal-date { font-size: 0.78rem; color: var(--muted); }
+        .portal-card h3 { margin: 0; font-size: 1.05rem; font-weight: 600; color: var(--ink-deep); }
+        .portal-phone { margin: 0.35rem 0 0; font-size: 0.82rem; color: var(--muted); }
+
+        /* The homepage footer is a four-column block and earns .space-section.
+           Here it is one line, so it gets the inline padding without the tall
+           section rhythm above and below it. */
+        .footer {
+            border-top: 1px solid var(--line);
+            padding: 1.5rem var(--space-section-x);
+        }
+        .footer-bottom { padding-top: 0; }
+
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
     </style>
+    <script>document.documentElement.classList.add('has-js');</script>
 </head>
-<body class="min-h-full flex flex-col bg-white text-slate-900 antialiased">
-    <header class="sticky top-0 z-50 border-b border-slate-100 bg-white/95 backdrop-blur">
-        <div class="mx-auto flex h-[68px] max-w-[1280px] items-center justify-between gap-4 px-3 sm:h-[95px] sm:px-10">
-            <a href="{{ tenant_web_url('/') }}" class="min-w-0 truncate font-display text-xl tracking-tight text-slate-900 sm:text-[1.65rem]">
+<body>
+    <header class="nav">
+        <div class="nav-inner">
+            <a class="logo" href="{{ tenant_web_url('/') }}" aria-label="{{ $brand }}">
                 @if($tenant->logo_url)
-                    <img src="{{ $tenant->logo_url }}" alt="{{ $brand }}" class="h-9 w-auto sm:h-11">
+                    <img class="logo-img" src="{{ $tenant->logo_url }}" alt="{{ $brand }}">
                 @else
                     {{ $brand }}
                 @endif
             </a>
 
-            <nav class="hidden items-center gap-6 text-base font-medium text-slate-800 md:flex" aria-label="{{ __('Main') }}">
-                <div class="locale-chip" aria-label="{{ __('Language') }}">
-                    <a href="{{ tenant_web_url('/lang/en') }}" class="{{ $locale === 'en' ? 'is-active' : '' }}">EN</a>
+            <nav class="nav-links" aria-label="{{ __('Main') }}">
+                <a href="{{ tenant_web_url('/') }}">{{ __('Home') }}</a>
+                <span class="nav-lang" aria-label="{{ __('Language') }}">
+                    <a href="{{ tenant_web_url('/lang/en') }}" @class(['is-active' => $locale === 'en'])>EN</a>
                     <span aria-hidden="true">|</span>
-                    <a href="{{ tenant_web_url('/lang/bn') }}" class="{{ $locale === 'bn' ? 'is-active' : '' }}">BN</a>
-                </div>
-                <a href="{{ tenant_web_url('/') }}" class="transition hover:text-brand">{{ __('Home') }}</a>
-                <a href="{{ tenant_web_url('/book') }}" class="solo-cta">{{ __('Book Appointment') }}</a>
+                    <a href="{{ tenant_web_url('/lang/bn') }}" @class(['is-active' => $locale === 'bn'])>BN</a>
+                </span>
             </nav>
 
-            <div class="flex items-center gap-2 md:hidden">
-                <div class="locale-chip" aria-label="{{ __('Language') }}">
-                    <a href="{{ tenant_web_url('/lang/en') }}" class="{{ $locale === 'en' ? 'is-active' : '' }}">EN</a>
-                    <span aria-hidden="true">|</span>
-                    <a href="{{ tenant_web_url('/lang/bn') }}" class="{{ $locale === 'bn' ? 'is-active' : '' }}">BN</a>
-                </div>
-                <a href="{{ tenant_web_url('/book') }}" class="solo-cta text-sm !px-5 !py-2">{{ __('Book') }}</a>
-            </div>
+            <a class="btn-contact btn-contact--always" href="{{ tenant_web_url('/book') }}">
+                <span class="nav-cta-full">{{ __('Book Appointment') }}</span>
+                <span class="nav-cta-short">{{ __('Book') }}</span>
+            </a>
         </div>
     </header>
 
-    <main class="mx-auto w-full max-w-[1280px] flex-1 px-3 py-10 sm:px-10 sm:py-14">
-        <div class="mx-auto mb-10 max-w-2xl rounded-2xl border p-6 sm:p-10" style="background-color: #FAFAFA; border-color: #E0E0E0;">
-            <h1 class="font-display text-center text-3xl tracking-tight text-slate-900 sm:text-4xl">
-                {{ __('Patient Access Portal') }}
-            </h1>
-            <p class="mx-auto mt-3 max-w-md text-center text-sm leading-relaxed text-slate-600">
-                {{ __('Enter your mobile phone number to look up your appointments, queue tickets, and lab test status.') }}
-            </p>
+    <main class="space-section">
+        <div class="layout-container">
+            <div class="portal-lookup">
+                <h1>{{ __('Patient Access Portal') }}</h1>
+                <p class="portal-lead">
+                    {{ __('Enter your mobile phone number to look up your appointments, queue tickets, and lab test status.') }}
+                </p>
 
-            <form action="{{ tenant_web_url('/portal') }}" method="GET" class="mt-8 flex flex-col gap-3 sm:flex-row">
-                <label for="portal-phone" class="sr-only">{{ __('Mobile phone number') }}</label>
-                <input
-                    id="portal-phone"
-                    type="tel"
-                    name="phone"
-                    value="{{ $phone ?? '' }}"
-                    placeholder="017XXXXXXXX"
-                    required
-                    inputmode="numeric"
-                    autocomplete="tel"
-                    class="form-control flex-1"
-                >
-                <button type="submit" class="solo-cta shrink-0">
-                    {{ __('Search Appointments') }}
-                </button>
-            </form>
-            @if(! empty($error))
-                <p class="mt-4 text-center text-sm text-red-600" role="alert">{{ $error }}</p>
-            @endif
-        </div>
+                <form class="portal-form" action="{{ tenant_web_url('/portal') }}" method="GET">
+                    <label class="sr-only" for="portal-phone">{{ __('Mobile phone number') }}</label>
+                    <input
+                        id="portal-phone"
+                        class="form-control"
+                        type="tel"
+                        name="phone"
+                        value="{{ $phone ?? '' }}"
+                        placeholder="017XXXXXXXX"
+                        required
+                        inputmode="numeric"
+                        autocomplete="tel"
+                    >
+                    <button class="btn btn-primary" type="submit">{{ __('Search Appointments') }}</button>
+                </form>
 
-        @if(filled($phone) && empty($error))
-            <div class="mx-auto max-w-4xl">
-                <h2 class="font-display text-2xl text-slate-900 sm:text-3xl">
-                    {{ __('Search Results for') }} “{{ $phone }}”
-                </h2>
-
-                @if($bookings->isEmpty())
-                    <div class="mt-6 rounded-2xl border bg-white p-8 text-center" style="border-color: #E0E0E0;">
-                        <p class="text-sm text-slate-500">{{ __('No appointment records found for this phone number.') }}</p>
-                        <a href="{{ tenant_web_url('/book') }}" class="solo-cta-outline mt-4 inline-flex">{{ __('Book a new appointment') }}</a>
-                    </div>
-                @else
-                    <div class="mt-6 space-y-4">
-                        @foreach($bookings as $booking)
-                            <div class="flex flex-col justify-between gap-4 rounded-2xl border p-5 sm:flex-row sm:items-center sm:p-6" style="background-color: #FAFAFA; border-color: #E0E0E0;">
-                                <div>
-                                    <div class="mb-1 flex flex-wrap items-center gap-2">
-                                        <span class="rounded-full px-2.5 py-0.5 text-xs font-bold" style="background-color: color-mix(in srgb, var(--color-primary) 14%, white); color: var(--color-primary);">
-                                            {{ __('Ticket') }} #{{ $booking->serial_number ?? $booking->id }}
-                                        </span>
-                                        <span class="text-xs text-slate-400">
-                                            {{ $booking->created_at ? $booking->created_at->format('M d, Y') : '' }}
-                                        </span>
-                                    </div>
-                                    <h3 class="text-base font-semibold text-slate-900">{{ $booking->patient_name }}</h3>
-                                    <p class="mt-1 text-xs text-slate-500">{{ __('Phone') }}: {{ $booking->patient_phone }}</p>
-                                </div>
-                                <a href="{{ tenant_web_route('bookings.show', $booking) }}" target="_blank" rel="noopener noreferrer" class="solo-cta-outline text-sm">
-                                    {{ __('View Digital Ticket') }}
-                                </a>
-                            </div>
-                        @endforeach
-                    </div>
+                @if(! empty($error))
+                    <p class="portal-error" role="alert">{{ $error }}</p>
                 @endif
             </div>
-        @endif
+
+            @if(filled($phone) && empty($error))
+                <div class="portal-results">
+                    <h2>{{ __('Search Results for') }} “{{ $phone }}”</h2>
+
+                    @if($bookings->isEmpty())
+                        <div class="portal-empty">
+                            <p>{{ __('No appointment records found for this phone number.') }}</p>
+                            <a class="btn btn-ghost" href="{{ tenant_web_url('/book') }}">{{ __('Book a new appointment') }}</a>
+                        </div>
+                    @else
+                        <div class="portal-list">
+                            @foreach($bookings as $booking)
+                                <div class="portal-card">
+                                    <div>
+                                        <div class="portal-card-meta">
+                                            <span class="portal-chip">{{ __('Ticket') }} #{{ $booking->serial_number ?? $booking->id }}</span>
+                                            <span class="portal-date">{{ $booking->created_at?->format('M d, Y') }}</span>
+                                        </div>
+                                        <h3>{{ $booking->patient_name }}</h3>
+                                        <p class="portal-phone">{{ __('Phone') }}: {{ $booking->patient_phone }}</p>
+                                    </div>
+                                    <a class="btn btn-ghost" href="{{ tenant_web_route('bookings.show', $booking) }}" target="_blank" rel="noopener noreferrer">
+                                        {{ __('View Digital Ticket') }}
+                                    </a>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+                </div>
+            @endif
+        </div>
     </main>
 
-    <footer class="mt-auto border-t border-slate-100 bg-white py-8 text-center text-sm text-slate-500">
-        <p>&copy; {{ date('Y') }} {{ $brand }}. {{ __('Patient Access Portal') }}.</p>
+    <footer class="footer">
+        <div class="layout-container footer-bottom">
+            <span>&copy; {{ date('Y') }} {{ $brand }}. {{ __('All rights reserved.') }}</span>
+            <span>{{ __('Powered by ChamberQ') }}</span>
+        </div>
     </footer>
 </body>
 </html>

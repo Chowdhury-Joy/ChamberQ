@@ -1,16 +1,31 @@
-<section class="w-full py-12 md:py-16 bg-sky-50 border-y border-sky-100">
-    <div class="max-w-[1320px] mx-auto px-4 md:px-6 xl:px-8 text-center">
-        <h2 class="text-2xl sm:text-3xl font-extrabold text-slate-900 mb-3 tracking-tight">
-            {{ $data['headline'] ?? 'Need Same-Day Care? Book Online in 60 Seconds' }}
-        </h2>
-        @if(!empty($data['subheadline']))
-            <p class="text-sm sm:text-base text-slate-600 max-w-xl mx-auto mb-6">
-                {{ $data['subheadline'] }}
-            </p>
+@php
+    /*
+     * 1:1 from public/previews/clireo-homepage.html .final-cta.
+     */
+    $headline = $data['headline'] ?? 'Prioritize Your Recovery Today';
+    $subheadline = $data['subheadline'] ?? 'Take the first step toward better mobility with expert care tailored to your needs.';
+    $ctaText = $data['cta_text'] ?? 'Book an appointment';
+    $ctaLink = tenant_safe_href($data['cta_link'] ?? '/book', '/book');
+    $trustPhone = $data['trust_phone'] ?? ($tenant?->contact_phone);
+    $trustAddress = $data['trust_address'] ?? null;
+@endphp
+
+<section class="final-cta space-section" data-reveal-section>
+    <div class="final-cta-bg" aria-hidden="true"></div>
+    <div class="layout-container">
+        <h2 class="fx-heading" data-fx-words data-reveal-block data-reveal-kind="heading">{{ $headline }}</h2>
+        @if(filled($subheadline))
+            <p data-reveal-block data-reveal-kind="fade">{{ $subheadline }}</p>
         @endif
-        <a href="{{ tenant_safe_href($data['cta_link'] ?? '/book', '/book') }}" class="btn btn-primary inline-flex items-center gap-2 shadow-lg shadow-sky-500/25">
-            <span>{{ $data['cta_text'] ?? 'Book Appointment Now' }}</span>
-            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+        <a class="btn-pink sm" href="{{ $ctaLink }}" data-reveal-block data-reveal-kind="fade">
+            <span>{{ $ctaText }}</span>
         </a>
+        @if(filled($trustPhone) || filled($trustAddress))
+            <div class="trust-mini" data-reveal-block data-reveal-kind="fade">
+                @if(filled($trustPhone))<strong>{{ $trustPhone }}</strong>@endif
+                @if(filled($trustPhone) && filled($trustAddress)) · @endif
+                @if(filled($trustAddress)){{ $trustAddress }}@endif
+            </div>
+        @endif
     </div>
 </section>

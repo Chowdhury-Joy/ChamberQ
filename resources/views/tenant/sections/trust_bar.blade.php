@@ -1,14 +1,29 @@
-<section class="w-full bg-slate-50 border-y border-slate-200/60 py-4">
-    <div class="max-w-[1320px] mx-auto px-4 md:px-6 xl:px-8">
-        <div class="flex flex-wrap items-center justify-center gap-3 sm:gap-6 text-xs sm:text-sm font-medium text-slate-700">
-            @foreach($data['badges'] ?? [] as $index => $badge)
-                @if($index > 0)
-                    <span class="text-sky-600 font-bold select-none text-base" aria-hidden="true">🏥</span>
-                @endif
-                <span class="inline-flex items-center gap-1.5 whitespace-nowrap">
-                    {{ $badge['text_badge'] ?? '' }}
-                </span>
-            @endforeach
+@php
+    /*
+     * Clireo marquee band. The reference marks the whole thing aria-hidden
+     * because its words are decorative; these badges are real claims about the
+     * practice, so the first group stays readable to screen readers and only
+     * the duplicate — which exists to make the scroll loop seamless — is hidden.
+     */
+    $badges = collect($data['badges'] ?? [])
+        ->map(fn ($badge) => trim((string) ($badge['text_badge'] ?? '')))
+        ->filter()
+        ->values();
+@endphp
+
+@if($badges->isNotEmpty())
+    <div class="marquee">
+        <div class="marquee-track">
+            <div class="marquee-group">
+                @foreach($badges as $badge)
+                    <span>{{ $badge }}</span><i aria-hidden="true"></i>
+                @endforeach
+            </div>
+            <div class="marquee-group" aria-hidden="true">
+                @foreach($badges as $badge)
+                    <span>{{ $badge }}</span><i></i>
+                @endforeach
+            </div>
         </div>
     </div>
-</section>
+@endif

@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-07T15:39:46+0600
+Last Updated: 2026-08-07T16:34:50+0600
 
 ## Full Site Map
 
@@ -88,7 +88,7 @@ The one patient-facing route that shows prescription content. Deliberately outsi
 4. When doctor pays setup/monthly, Super Admin confirms payment → marketer sees owed commission → Super Admin marks payout paid.
 
 ### Patient → book serial → ticket
-1. Open `/{slug}/` or custom domain home — see doctor brand + Book CTA.
+1. Open `/{slug}/` or custom domain home — see doctor brand + Book CTA. On clinic-tier sites the Book Appointment CTA now also sits in the header nav (desktop) and the mobile drawer, per the Clireo design port; solo keeps its locked layout.
 2. Book flow — pick session/date, enter phone; if the number is known, choose **Who is this appointment for?** inline (or enter a new person).
 3. Submit → ticket at `…/bookings/{uuid}`. Goal: proof of serial; share via WhatsApp/copy, or Print / Save as PDF for a paper or file copy.
 4. Optional: PWA install scoped to tenant path or custom domain.
@@ -148,7 +148,14 @@ The one patient-facing route that shows prescription content. Deliberately outsi
 - **Trigger:** Doctor wants to fix default dose/frequency/duration or hide a brand from their picker.
 - **Steps:** Tenant admin → **My medicines** (Operations group) → edit defaults, hide from search, or add a manual entry.
 - **Data/systems touched:** `medicine_usages` only — never the shared `medicines` catalogue.
+- **Note:** There is no booking on this page, so the catalogue offered follows the doctor's own `practice_type` — which requires their login to be paired with their Doctors record (below). An unpaired clinic account sees the general-physician list.
 - **Success:** Next prescription search ranks and prefills from the doctor's corrected defaults.
+
+### Pair a doctor with their login (admin — clinics)
+- **Trigger:** A clinic adds a doctor, or an existing clinic has doctors whose accounts were never matched to their Doctors record (the 2026-08-07 migration only auto-paired tenants with exactly one doctor and one doctor login).
+- **Steps:** Tenant admin → **Doctors** → the doctor's row → **Login account** → pick their user account → Save. One account per doctor; picking one already used gives a validation error.
+- **Data/systems touched:** `doctors.user_id`.
+- **Success:** That doctor's **My medicines** page and medicine search show their own practice type's catalogue instead of the general-physician list. Prescriptions written inside a consult were already correct (they resolve from the booking's session) and are unchanged.
 
 ### Content update (staff)
 - **Trigger:** Doctor wants copy/photo change.

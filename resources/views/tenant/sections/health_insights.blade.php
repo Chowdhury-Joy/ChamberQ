@@ -1,36 +1,42 @@
-<section class="w-full py-12 md:py-16 bg-white">
-    <div class="max-w-[1320px] mx-auto px-4 md:px-6 xl:px-8">
-        @if(!empty($data['heading']))
-            <h2 class="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight text-center mb-10">
-                {{ $data['heading'] }}
-            </h2>
-        @endif
+@php
+    /*
+     * 1:1 from public/previews/clireo-homepage.html #blog.
+     */
+    $heading = $data['heading'] ?? 'Latest Physiotherapy Tips & Insights';
+    $viewAllText = preg_replace('/\s*[→➜➔]\s*$/u', '', (string) ($data['view_all_text'] ?? 'View all posts')) ?: 'View all posts';
+    $viewAllLink = \App\Support\SafeUrl::href($data['view_all_link'] ?? '', '');
+    $articles = $data['articles'] ?? [];
+@endphp
 
-        <x-card-grid :count="count($data['articles'] ?? [])" class="gap-6">
-            @foreach($data['articles'] ?? [] as $article)
-                <div class="bg-slate-50 rounded-2xl overflow-hidden border border-slate-200/80 shadow-sm flex flex-col justify-between">
-                    <div>
-                        @if(!empty($article['image_url']))
-                            <img src="{{ $article['image_url'] }}" alt="{{ $article['title'] }}" class="w-full h-44 object-cover">
-                        @endif
-                        <div class="p-5">
-                            <h3 class="text-base font-bold text-slate-900 mb-2">{{ $article['title'] }}</h3>
-                            @if(!empty($article['excerpt']))
-                                <p class="text-xs text-slate-600 leading-relaxed line-clamp-3">{{ $article['excerpt'] }}</p>
-                            @endif
-                        </div>
-                    </div>
-                    @php $articleLink = \App\Support\SafeUrl::href($article['link'] ?? '', ''); @endphp
-                    @if($articleLink !== '')
-                        <div class="px-5 pb-5 pt-0">
-                            <a href="{{ $articleLink }}" class="text-xs font-bold text-sky-600 hover:text-sky-700 inline-flex items-center gap-1">
-                                <span>Read Full Article</span>
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/></svg>
-                            </a>
-                        </div>
+<section class="space-section" id="blog" data-reveal-section>
+    <div class="layout-container">
+        <div class="treat-head">
+            <div class="stack-header">
+                <div class="eyebrow" data-reveal-block data-reveal-kind="fade">{{ __('Health tips') }}</div>
+                <h2 class="fx-heading" data-fx-words data-reveal-block data-reveal-kind="heading">{{ $heading }}</h2>
+            </div>
+            @if($viewAllLink !== '')
+                <a class="btn-pink sm" href="{{ $viewAllLink }}" target="_blank" rel="noopener noreferrer" data-reveal-block data-reveal-kind="fade">
+                    <span>{{ $viewAllText }}</span>
+                </a>
+            @endif
+        </div>
+
+        <div class="blog-grid grid-cards" data-card-count="{{ count($articles) }}" data-reveal-block data-reveal-kind="fade">
+            @foreach($articles as $article)
+                @php $articleLink = \App\Support\SafeUrl::href($article['link'] ?? '', '#'); @endphp
+                <a class="blog-card" href="{{ $articleLink }}" @if($articleLink !== '#' && str_starts_with($articleLink, 'http')) target="_blank" rel="noopener noreferrer" @endif>
+                    @if(!empty($article['image_url']))
+                        <img src="{{ $article['image_url'] }}" alt="{{ $article['title'] ?? '' }}">
                     @endif
-                </div>
+                    <div class="body">
+                        @if(!empty($article['meta']))
+                            <div class="blog-meta">{{ $article['meta'] }}</div>
+                        @endif
+                        <h3>{{ $article['title'] ?? '' }}</h3>
+                    </div>
+                </a>
             @endforeach
-        </x-card-grid>
+        </div>
     </div>
 </section>
