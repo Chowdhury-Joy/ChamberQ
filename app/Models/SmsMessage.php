@@ -18,7 +18,15 @@ class SmsMessage extends Model
 
     public const STATUS_SKIPPED_DISABLED = 'skipped_disabled';
 
+    public const STATUS_SKIPPED_PREF_OFF = 'skipped_pref_off';
+
     public const PURPOSE_BOOKING_CONFIRMATION = 'booking_confirmation';
+
+    public const PURPOSE_DOCTOR_LATE = 'doctor_late';
+
+    public const PURPOSE_CANCELLATION = 'cancellation';
+
+    public const PURPOSE_PRESCRIPTION = 'prescription';
 
     protected $fillable = [
         'tenant_id',

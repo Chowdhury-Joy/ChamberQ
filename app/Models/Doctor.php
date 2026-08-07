@@ -16,10 +16,12 @@ class Doctor extends Model
         'staff_may_enter_prescriptions',
         'qualifications',
         'registration_number',
+        'notify_channels',
     ];
 
     protected $casts = [
         'staff_may_enter_prescriptions' => 'boolean',
+        'notify_channels' => 'array',
     ];
 
     public const PRACTICE_GENERAL = 'general_physician';
@@ -33,6 +35,47 @@ class Doctor extends Model
     public const PRACTICE_CARDIOLOGIST = 'cardiologist';
 
     public const PRACTICE_DERMATOLOGIST = 'dermatologist';
+
+    public const NOTIFY_BOOKING_CONFIRMATION = 'booking_confirmation';
+
+    public const NOTIFY_DOCTOR_LATE = 'doctor_late';
+
+    public const NOTIFY_CANCELLATION = 'cancellation';
+
+    public const NOTIFY_PRESCRIPTION = 'prescription';
+
+    /**
+     * Defaults match today's product behaviour so existing clinics keep the
+     * same outbound mix until a doctor edits them.
+     *
+     * @return array<string, array{sms: bool, whatsapp: bool}>
+     */
+    public static function defaultNotifyChannels(): array
+    {
+        return [
+            self::NOTIFY_BOOKING_CONFIRMATION => ['sms' => true, 'whatsapp' => false],
+            self::NOTIFY_DOCTOR_LATE => ['sms' => false, 'whatsapp' => false],
+            self::NOTIFY_CANCELLATION => ['sms' => false, 'whatsapp' => true],
+            self::NOTIFY_PRESCRIPTION => ['sms' => false, 'whatsapp' => true],
+        ];
+    }
+
+    /**
+     * Doctor for a booking's schedule session, or the practice's first doctor
+     * when the bookable has no doctor (e.g. lab-only rows).
+     */
+    public static function resolveForBooking(Booking $booking): ?self
+    {
+        if ($booking->bookable_type === ScheduleSession::class) {
+            $booking->loadMissing('bookable.doctor');
+
+            if ($booking->bookable?->doctor) {
+                return $booking->bookable->doctor;
+            }
+        }
+
+        return static::query()->orderBy('id')->first();
+    }
 
     /**
      * The login this doctor signs in with, when one has been matched.
@@ -73,5 +116,35 @@ class Doctor extends Model
     public function allowsStaffPrescriptionEntry(): bool
     {
         return (bool) $this->staff_may_enter_prescriptions;
+    }
+
+    /**
+     * @return array<string, array{sms: bool, whatsapp: bool}>
+     */
+    public function notifyChannels(): array
+    {
+        $stored = is_array($this->notify_channels) ? $this->notify_channels : [];
+        $defaults = self::defaultNotifyChannels();
+        $merged = [];
+
+        foreach ($defaults as $stage => $channels) {
+            $row = $stored[$stage] ?? [];
+            $merged[$stage] = [
+                'sms' => array_key_exists('sms', $row) ? (bool) $row['sms'] : $channels['sms'],
+                'whatsapp' => array_key_exists('whatsapp', $row) ? (bool) $row['whatsapp'] : $channels['whatsapp'],
+            ];
+        }
+
+        return $merged;
+    }
+
+    public function wantsSms(string $stage): bool
+    {
+        return (bool) ($this->notifyChannels()[$stage]['sms'] ?? false);
+    }
+
+    public function wantsWhatsapp(string $stage): bool
+    {
+        return (bool) ($this->notifyChannels()[$stage]['whatsapp'] ?? false);
     }
 }

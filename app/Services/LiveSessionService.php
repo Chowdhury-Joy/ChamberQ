@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Booking;
+use App\Models\Doctor;
 use App\Models\LiveSession;
 use App\Models\ScheduleSession;
 use App\Models\Tenant;
@@ -460,6 +461,13 @@ class LiveSessionService
         });
     }
 
+    /**
+     * Mark the session delayed, then auto-SMS waiting patients when that
+     * doctor's "doctor late — SMS" preference is on.
+     *
+     * @return \Illuminate\Support\Collection<int, Booking> Bookings still in
+     *         the queue (for optional WhatsApp hand-off on the control panel).
+     */
     public function markDelay(LiveSession $liveSession, int $minutes)
     {
         DB::transaction(function () use ($liveSession, $minutes) {
@@ -470,6 +478,26 @@ class LiveSessionService
                 'delay_minutes' => $minutes,
             ]);
         });
+
+        $liveSession->refresh();
+        $liveSession->loadMissing('scheduleSession.doctor');
+
+        $bookings = $liveSession->bookings()
+            ->whereIn('status', ['waiting', 'called', 'skipped'])
+            ->orderBy('serial_number')
+            ->get();
+
+        $doctor = $liveSession->scheduleSession?->doctor;
+
+        if ($doctor?->wantsSms(Doctor::NOTIFY_DOCTOR_LATE)) {
+            $sms = app(SmsService::class);
+
+            foreach ($bookings as $booking) {
+                $sms->sendDoctorLateNotices($booking, $minutes);
+            }
+        }
+
+        return $bookings;
     }
 
     public function markAbsent(LiveSession $liveSession, string $reason = 'Doctor unavailable')

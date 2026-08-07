@@ -4,7 +4,9 @@ namespace App\Services;
 
 use App\Contracts\SmsGateway;
 use App\Models\Booking;
+use App\Models\Doctor;
 use App\Models\Domain;
+use App\Models\Prescription;
 use App\Models\ScheduleSession;
 use App\Models\SmsMessage;
 use App\Models\Tenant;
@@ -21,46 +23,103 @@ class SmsService
     /**
      * Debit one prepaid credit and send a booking confirmation SMS.
      *
-     * Booking always stays created — empty wallet or gateway failure only
-     * affects the SMS row (and refunds the credit on hard send failure).
+     * Booking always stays created — empty wallet, prefs off, or gateway
+     * failure only affects the SMS row (and refunds the credit on hard send failure).
      */
     public function sendBookingConfirmation(Booking $booking): ?SmsMessage
     {
-        if (! config('sms.enabled')) {
-            return $this->record($booking, SmsMessage::STATUS_SKIPPED_DISABLED, body: $this->confirmationBody($booking));
-        }
+        $doctor = Doctor::resolveForBooking($booking);
 
-        $to = $this->internationalPhone($booking->patient_phone);
-        $body = $this->confirmationBody($booking);
-
-        $debited = $this->debitOneCredit((string) $booking->tenant_id);
-
-        if (! $debited) {
-            return $this->record($booking, SmsMessage::STATUS_SKIPPED_NO_BALANCE, $to, $body);
-        }
-
-        try {
-            $this->gateway->send($to, $body);
-
-            return $this->record($booking, SmsMessage::STATUS_SENT, $to, $body, credits: 1);
-        } catch (Throwable $e) {
-            $this->refundOneCredit((string) $booking->tenant_id);
-
-            Log::warning('sms.booking_confirmation_failed', [
-                'booking_id' => $booking->id,
-                'tenant_id' => $booking->tenant_id,
-                'error' => $e->getMessage(),
-            ]);
-
+        if ($doctor && ! $doctor->wantsSms(Doctor::NOTIFY_BOOKING_CONFIRMATION)) {
             return $this->record(
                 $booking,
-                SmsMessage::STATUS_FAILED,
-                $to,
-                $body,
-                credits: 0,
-                error: $e->getMessage(),
+                SmsMessage::STATUS_SKIPPED_PREF_OFF,
+                body: $this->confirmationBody($booking),
+                purpose: SmsMessage::PURPOSE_BOOKING_CONFIRMATION,
             );
         }
+
+        return $this->send(
+            $booking,
+            $this->confirmationBody($booking),
+            SmsMessage::PURPOSE_BOOKING_CONFIRMATION,
+            'sms.booking_confirmation_failed',
+        );
+    }
+
+    /**
+     * Auto-SMS waiting patients when staff mark a session delayed.
+     *
+     * @return Collection<int, SmsMessage>
+     */
+    public function sendDoctorLateNotices(Booking $booking, int $delayMinutes): ?SmsMessage
+    {
+        $doctor = Doctor::resolveForBooking($booking);
+
+        if ($doctor && ! $doctor->wantsSms(Doctor::NOTIFY_DOCTOR_LATE)) {
+            return $this->record(
+                $booking,
+                SmsMessage::STATUS_SKIPPED_PREF_OFF,
+                body: $this->doctorLateBody($booking, $delayMinutes),
+                purpose: SmsMessage::PURPOSE_DOCTOR_LATE,
+            );
+        }
+
+        return $this->send(
+            $booking,
+            $this->doctorLateBody($booking, $delayMinutes),
+            SmsMessage::PURPOSE_DOCTOR_LATE,
+            'sms.doctor_late_failed',
+        );
+    }
+
+    /**
+     * Staff-tapped cancellation SMS (vacation block or end-session).
+     */
+    public function sendCancellationNotice(Booking $booking, ?string $body = null): ?SmsMessage
+    {
+        $doctor = Doctor::resolveForBooking($booking);
+
+        if ($doctor && ! $doctor->wantsSms(Doctor::NOTIFY_CANCELLATION)) {
+            return $this->record(
+                $booking,
+                SmsMessage::STATUS_SKIPPED_PREF_OFF,
+                body: $body ?? $this->cancellationBody($booking),
+                purpose: SmsMessage::PURPOSE_CANCELLATION,
+            );
+        }
+
+        return $this->send(
+            $booking,
+            $body ?? $this->cancellationBody($booking),
+            SmsMessage::PURPOSE_CANCELLATION,
+            'sms.cancellation_failed',
+        );
+    }
+
+    /**
+     * Staff-tapped prescription share SMS (48h signed link in the body).
+     */
+    public function sendPrescriptionNotice(Booking $booking, Prescription $prescription): ?SmsMessage
+    {
+        $doctor = Doctor::resolveForBooking($booking);
+        $body = $this->prescriptionBody($booking, $prescription);
+
+        if ($doctor && ! $doctor->wantsSms(Doctor::NOTIFY_PRESCRIPTION)) {
+            return $this->record(
+                $booking,
+                SmsMessage::STATUS_SKIPPED_PREF_OFF,
+                body: $body,
+                purpose: SmsMessage::PURPOSE_PRESCRIPTION,
+            );
+        }
+
+        return $this->send(
+            $booking,
+            $body,
+            SmsMessage::PURPOSE_PRESCRIPTION,
+            'sms.prescription_failed',
+        );
     }
 
     public function topUp(Tenant $tenant, int $credits): void
@@ -118,6 +177,46 @@ class SmsService
         return implode(' ', $parts);
     }
 
+    public function doctorLateBody(Booking $booking, int $delayMinutes): string
+    {
+        $clinic = Tenant::find($booking->tenant_id)?->displayName() ?? 'Clinic';
+        $ticket = $this->ticketUrl($booking);
+
+        return implode(' ', array_filter([
+            $clinic.':',
+            'Doctor is delayed by '.$delayMinutes.' minutes.',
+            $booking->patient_name.' - serial '.$booking->serial_number,
+            'Ticket: '.$ticket,
+        ]));
+    }
+
+    public function cancellationBody(Booking $booking): string
+    {
+        $clinic = Tenant::find($booking->tenant_id)?->displayName() ?? 'Clinic';
+        $date = $booking->booking_date?->format('j M Y') ?? '';
+
+        return implode(' ', array_filter([
+            $clinic.':',
+            $booking->patient_name.' - serial '.$booking->serial_number,
+            $date !== '' ? 'on '.$date : null,
+            'has been cancelled. Please contact us to rebook.',
+        ]));
+    }
+
+    public function prescriptionBody(Booking $booking, Prescription $prescription): string
+    {
+        $clinic = Tenant::find($booking->tenant_id)?->displayName() ?? 'Clinic';
+        $date = $booking->booking_date?->format('j M Y') ?? '';
+        $link = $prescription->shareUrl();
+
+        return implode(' ', array_filter([
+            $clinic.':',
+            'Prescription for '.$booking->patient_name,
+            $date !== '' ? 'from '.$date : null,
+            '- view: '.$link,
+        ]));
+    }
+
     public function internationalPhone(string $phone): string
     {
         $digits = preg_replace('/\D/', '', $phone) ?? '';
@@ -151,6 +250,49 @@ class SmsService
         return $base.'/'.$booking->tenant_id.'/bookings/'.$booking->id;
     }
 
+    private function send(
+        Booking $booking,
+        string $body,
+        string $purpose,
+        string $failLogEvent,
+    ): SmsMessage {
+        if (! config('sms.enabled')) {
+            return $this->record($booking, SmsMessage::STATUS_SKIPPED_DISABLED, body: $body, purpose: $purpose);
+        }
+
+        $to = $this->internationalPhone((string) $booking->patient_phone);
+        $debited = $this->debitOneCredit((string) $booking->tenant_id);
+
+        if (! $debited) {
+            return $this->record($booking, SmsMessage::STATUS_SKIPPED_NO_BALANCE, $to, $body, purpose: $purpose);
+        }
+
+        try {
+            $this->gateway->send($to, $body);
+
+            return $this->record($booking, SmsMessage::STATUS_SENT, $to, $body, credits: 1, purpose: $purpose);
+        } catch (Throwable $e) {
+            $this->refundOneCredit((string) $booking->tenant_id);
+
+            Log::warning($failLogEvent, [
+                'booking_id' => $booking->id,
+                'tenant_id' => $booking->tenant_id,
+                'purpose' => $purpose,
+                'error' => $e->getMessage(),
+            ]);
+
+            return $this->record(
+                $booking,
+                SmsMessage::STATUS_FAILED,
+                $to,
+                $body,
+                credits: 0,
+                error: $e->getMessage(),
+                purpose: $purpose,
+            );
+        }
+    }
+
     private function record(
         Booking $booking,
         string $status,
@@ -158,13 +300,14 @@ class SmsService
         ?string $body = null,
         int $credits = 0,
         ?string $error = null,
+        string $purpose = SmsMessage::PURPOSE_BOOKING_CONFIRMATION,
     ): SmsMessage {
         return SmsMessage::withoutGlobalScopes()->create([
             'tenant_id' => $booking->tenant_id,
             'booking_id' => $booking->id,
-            'to' => $to ?? $this->internationalPhone($booking->patient_phone),
+            'to' => $to ?? $this->internationalPhone((string) $booking->patient_phone),
             'body' => $body ?? '',
-            'purpose' => SmsMessage::PURPOSE_BOOKING_CONFIRMATION,
+            'purpose' => $purpose,
             'status' => $status,
             'credits' => $credits,
             'error' => $error,

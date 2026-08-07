@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\ConditionController;
+use App\Http\Controllers\NotifySmsController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PrescriptionController;
 use App\Http\Controllers\PrescriptionShareController;
@@ -91,6 +92,16 @@ $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
     Route::get('/prescriptions/{prescription}/share', [PrescriptionShareController::class, 'show'])
         ->middleware(['signed', 'throttle:30,1'])
         ->name($routeName('prescriptions.share'));
+
+    // Staff-tapped SMS for cancel / prescription — gated by each doctor's
+    // notify_channels prefs inside SmsService. Auth + tenant membership required.
+    Route::post('/api/bookings/{booking}/sms/cancellation', [NotifySmsController::class, 'cancellation'])
+        ->middleware(['auth', 'throttle:30,1'])
+        ->name($routeName('bookings.sms.cancellation'));
+
+    Route::post('/api/prescriptions/{prescription}/sms', [NotifySmsController::class, 'prescription'])
+        ->middleware(['auth', 'throttle:30,1'])
+        ->name($routeName('prescriptions.sms'));
 
     Route::post('/api/visit-media/upload-voice', [VisitMediaController::class, 'uploadVoice'])
         ->middleware(['auth', 'throttle:30,1']);

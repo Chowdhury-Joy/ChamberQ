@@ -955,3 +955,12 @@
   <action>Left it unenforced, deliberately, rather than adding a MySQL-only constraint. Integrity is maintained in application code by `User::booted()`'s `deleting` hook, which nulls `doctors.user_id` when a login is removed.</action>
   <reason>Adding the FK only where the driver supports it would make the production schema differ from the schema every test runs against — reintroducing precisely the blind spot this pass existed to remove. Worth revisiting if the project ever drops SQLite for testing; until then, one schema everywhere is the more valuable property.</reason>
 </decision>
+
+## 2026-08-08T01:58:08+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Different doctors want different mixes of SMS vs WhatsApp for booking confirmation, doctor-late, cancellation, and prescription hand-off; a single tenant-wide rule forced one chamber policy on everyone.</context>
+ <action>Per-doctor `notify_channels` JSON on `doctors` (four stages × SMS/WhatsApp toggles). Defaults match prior behaviour (booking SMS on; cancel + prescription WhatsApp on; late off). WhatsApp stays human-tapped `wa.me` only. SMS uses the prepaid wallet: auto for booking + Mark Late when that stage SMS is on; staff-tapped Send SMS for cancel + prescription via `NotifySmsController`. Empty wallet or prefs off never fail the booking/queue action.</action>
+ <reason>Lets Dr A prefer SMS for delays while Dr B keeps WhatsApp for prescriptions without burning credits on stages a doctor did not opt into, and without requiring WhatsApp Business API.</reason>
+</decision>

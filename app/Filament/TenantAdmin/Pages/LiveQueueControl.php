@@ -60,6 +60,16 @@ class LiveQueueControl extends Page implements HasActions, HasTable
      */
     public array $cancelledByEndSessionIds = [];
 
+    /**
+     * Waiting bookings after the last "Mark Late", for optional WhatsApp
+     * hand-off when that doctor's doctor_late WhatsApp preference is on.
+     *
+     * @var list<string>
+     */
+    public array $delayedNotifyBookingIds = [];
+
+    /** Minutes from the last Mark Late, used in WhatsApp copy. */
+    public int $delayedNotifyMinutes = 0;
     public function mount()
     {
         // Prefer the most recently started live session for today.
@@ -103,6 +113,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
             // Stands alone, not inside the menu: these patients are already
             // cancelled and still expecting to be seen today.
             $this->notifyCancelledAction(),
+            $this->notifyDelayedAction(),
 
             \Filament\Actions\Action::make('newWalkIn')
                 ->label(__('New Walk-In'))
@@ -302,6 +313,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
 
                 return view('filament.tenant-admin.slot-block-notify', [
                     'bookings' => $bookings,
+                    'stage' => \App\Models\Doctor::NOTIFY_CANCELLATION,
                     'messages' => $bookings->mapWithKeys(fn (Booking $booking) => [
                         $booking->id => __("Hello :name, sorry — today's session ended before your serial :serial. Your appointment has been cancelled. Please contact us to rebook.", [
                             'name' => $booking->patient_name,
@@ -311,6 +323,39 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                 ]);
             })
             ->visible(fn (): bool => $this->cancelledByEndSessionIds !== []);
+    }
+
+    /**
+     * WhatsApp hand-off after Mark Late when the doctor enabled late WhatsApp.
+     */
+    public function notifyDelayedAction(): Action
+    {
+        return Action::make('notifyDelayed')
+            ->label(__('Tell waiting patients'))
+            ->icon('heroicon-o-chat-bubble-left-right')
+            ->color('warning')
+            ->modalHeading(__('Doctor is running late'))
+            ->modalSubmitAction(false)
+            ->modalCancelActionLabel(__('Done'))
+            ->modalContent(function (): \Illuminate\Contracts\View\View {
+                $bookings = Booking::whereIn('id', $this->delayedNotifyBookingIds)
+                    ->orderBy('serial_number')
+                    ->get();
+                $minutes = $this->delayedNotifyMinutes;
+
+                return view('filament.tenant-admin.slot-block-notify', [
+                    'bookings' => $bookings,
+                    'stage' => \App\Models\Doctor::NOTIFY_DOCTOR_LATE,
+                    'messages' => $bookings->mapWithKeys(fn (Booking $booking) => [
+                        $booking->id => __('Hello :name, the doctor is running :minutes minutes late. Your serial is :serial.', [
+                            'name' => $booking->patient_name,
+                            'minutes' => $minutes,
+                            'serial' => $booking->serial_number,
+                        ]),
+                    ])->all(),
+                ]);
+            })
+            ->visible(fn (): bool => $this->delayedNotifyBookingIds !== []);
     }
 
     public function getSessionsProperty()
@@ -753,7 +798,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
             ])
             ->action(function (array $data) {
                 if (!$this->selectedSessionId) return;
-                $scheduleSession = ScheduleSession::findOrFail($this->selectedSessionId);
+                $scheduleSession = ScheduleSession::with('doctor')->findOrFail($this->selectedSessionId);
                 
                 // create or update live session
                 $liveSession = LiveSession::firstOrCreate([
@@ -764,7 +809,13 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                     'status' => 'delayed',
                 ]);
                 
-                app(LiveSessionService::class)->markDelay($liveSession, $data['delay_minutes']);
+                $bookings = app(LiveSessionService::class)->markDelay($liveSession, $data['delay_minutes']);
+
+                $this->delayedNotifyMinutes = (int) $data['delay_minutes'];
+                $doctor = $scheduleSession->doctor;
+                $this->delayedNotifyBookingIds = ($doctor?->wantsWhatsapp(\App\Models\Doctor::NOTIFY_DOCTOR_LATE) ?? false)
+                    ? $bookings->pluck('id')->all()
+                    : [];
                 
                 Notification::make()->title('Session Delayed')->success()->send();
             })

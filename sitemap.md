@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-08T01:14:33+0600
+Last Updated: 2026-08-08T01:58:08+0600
 
 ## Full Site Map
 
@@ -56,6 +56,8 @@ Available under both platform path (`/{slug}/api/…`) and custom domain (`/api/
 | `POST /api/bookings` | Create booking | public (throttled; blocked if billing closed) |
 | `GET /api/queue/{booking}` | Ticket queue poll by booking UUID | public (throttled) |
 | `GET /api/screen/{session}/{date}` | Screen poll payload | public (throttled) |
+| `POST /api/bookings/{booking}/sms/cancellation` | Staff-tapped cancellation SMS (prepaid; gated by doctor `cancellation` SMS pref) | auth, same tenant (ops/queue/visit-notes), throttled |
+| `POST /api/prescriptions/{prescription}/sms` | Staff-tapped prescription-link SMS (prepaid; gated by doctor `prescription` SMS pref) | auth, same tenant (ops/queue/visit-notes), throttled |
 
 ### Tenant doctor-only routes (auth)
 Available under both platform path and custom domain. Requires doctor role (`canViewVisitNotes`) **and** membership of the tenant being served (`User::belongsToCurrentTenant()`) — panels share one session cookie across every tenant on the host, so the role check alone is not authorisation here.
@@ -73,7 +75,7 @@ The one patient-facing route that shows prescription content. Deliberately outsi
 
 | Route | Purpose | Access |
 |-------|---------|--------|
-| `GET /prescriptions/{prescription}/share` | The patient's own copy of **one** prescription — medicines, that prescription's advice/follow-up, prescriber name + registration, patient name, date. No diagnosis, no other visit, no chamber contact, no link onward into the record. Doctor sends it via a human-tapped `wa.me` link. | public, **signed URL, expires 48h**, throttled |
+| `GET /prescriptions/{prescription}/share` | The patient's own copy of **one** prescription — medicines, that prescription's advice/follow-up, prescriber name + registration, patient name, date. No diagnosis, no other visit, no chamber contact, no link onward into the record. Doctor/staff send it via WhatsApp and/or SMS per that doctor's `prescription` notify prefs. | public, **signed URL, expires 48h**, throttled |
 
 ## Customer Journeys
 

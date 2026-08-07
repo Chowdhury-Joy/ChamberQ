@@ -1,25 +1,80 @@
 {{--
-    Cancellation notification list — shared by vacation mode (slot blocks) and
-    by ending a live session early.
+    Cancellation / delay notification list — shared by vacation mode (slot
+    blocks), ending a live session early, and Mark Late WhatsApp hand-off.
 
-    v1 has no WhatsApp API integration by design: these are links a member of
-    staff taps, one per patient, so nothing is sent without a human deciding to
-    send it.
+    v1 has no WhatsApp API integration by design: WhatsApp links are tapped by
+    staff. SMS uses the prepaid wallet via a staff tap (or auto for delay).
 
     @param \Illuminate\Support\Collection $bookings
     @param array<string, string> $messages  Optional per-booking override text,
            keyed by booking id. Defaults to Booking::whatsappLink()'s
            clinic-closed wording.
+    @param string $stage  Doctor::NOTIFY_* stage for channel prefs
+           (default: cancellation).
 --}}
-@php($messages = $messages ?? [])
-<div class="space-y-3">
+@php
+    use App\Models\Doctor;
+
+    $messages = $messages ?? [];
+    $stage = $stage ?? Doctor::NOTIFY_CANCELLATION;
+    $smsRouteName = $stage === Doctor::NOTIFY_DOCTOR_LATE
+        ? null // delay SMS is automatic; this list is WhatsApp-only for late
+        : 'bookings.sms.cancellation';
+@endphp
+<div class="space-y-3" x-data="{
+    sending: {},
+    done: {},
+    error: {},
+    async sendSms(bookingId, url, message) {
+        this.sending[bookingId] = true;
+        this.error[bookingId] = null;
+        try {
+            const res = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content
+                        || document.querySelector('input[name=_token]')?.value
+                        || '',
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify(message ? { message } : {}),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (! res.ok) {
+                this.error[bookingId] = data.message || @js(__('Could not send SMS'));
+            } else if (data.status === 'sent') {
+                this.done[bookingId] = true;
+            } else if (data.status === 'skipped_no_balance') {
+                this.error[bookingId] = @js(__('No SMS credits left'));
+            } else if (data.status === 'skipped_pref_off') {
+                this.error[bookingId] = @js(__('SMS is off for this doctor'));
+            } else if (data.status === 'skipped_disabled') {
+                this.error[bookingId] = @js(__('SMS is disabled'));
+            } else {
+                this.error[bookingId] = data.status || @js(__('Could not send SMS'));
+            }
+        } catch (e) {
+            this.error[bookingId] = @js(__('Could not send SMS'));
+        } finally {
+            this.sending[bookingId] = false;
+        }
+    }
+}">
     <p class="text-sm text-gray-600 dark:text-gray-400">
-        {{ __('These bookings were cancelled. Tap each patient to open WhatsApp with a prepared message.') }}
+        {{ __('These patients need a message. Use WhatsApp and/or SMS according to each doctor\'s notification settings.') }}
     </p>
 
     <ul class="divide-y divide-gray-200 dark:divide-white/10">
         @foreach ($bookings as $booking)
-            <li class="flex items-center justify-between gap-3 py-2">
+            @php
+                $doctor = Doctor::resolveForBooking($booking);
+                $showWa = $doctor?->wantsWhatsapp($stage) ?? ($stage === Doctor::NOTIFY_CANCELLATION);
+                $showSms = $smsRouteName && ($doctor?->wantsSms($stage) ?? false);
+                $waMessage = $messages[$booking->id] ?? null;
+            @endphp
+            <li class="flex flex-wrap items-center justify-between gap-3 py-2">
                 <div class="min-w-0">
                     <p class="truncate font-medium text-gray-950 dark:text-white">
                         #{{ $booking->serial_number }} — {{ $booking->patient_name }}
@@ -27,16 +82,48 @@
                     <p class="truncate text-sm text-gray-500 dark:text-gray-400">
                         {{ $booking->patient_phone }}
                     </p>
+                    <p
+                        class="mt-1 text-xs text-danger-600 dark:text-danger-400"
+                        x-show="error['{{ $booking->id }}']"
+                        x-text="error['{{ $booking->id }}']"
+                        x-cloak
+                    ></p>
                 </div>
 
-                <a
-                    href="{{ $booking->whatsappLink($messages[$booking->id] ?? null) }}"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    class="shrink-0 rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-500"
-                >
-                    {{ __('WhatsApp') }}
-                </a>
+                <div class="flex shrink-0 flex-wrap items-center gap-2">
+                    @if ($showWa && filled($booking->patient_phone))
+                        <a
+                            href="{{ $booking->whatsappLink($waMessage) }}"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="rounded-lg bg-primary-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-primary-500"
+                        >
+                            {{ __('WhatsApp') }}
+                        </a>
+                    @endif
+
+                    @if ($showSms && filled($booking->patient_phone))
+                        <button
+                            type="button"
+                            class="rounded-lg bg-warning-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-warning-500 disabled:opacity-50"
+                            x-bind:disabled="sending['{{ $booking->id }}'] || done['{{ $booking->id }}']"
+                            x-on:click="sendSms(
+                                @js($booking->id),
+                                @js(tenant_web_route('bookings.sms.cancellation', $booking)),
+                                @js($waMessage)
+                            )"
+                        >
+                            <span x-show="! done['{{ $booking->id }}']" x-text="sending['{{ $booking->id }}'] ? @js(__('Sending…')) : @js(__('Send SMS'))"></span>
+                            <span x-show="done['{{ $booking->id }}']" x-cloak>{{ __('Sent') }}</span>
+                        </button>
+                    @endif
+
+                    @if (! $showWa && ! $showSms)
+                        <span class="text-sm text-gray-500 dark:text-gray-400">
+                            {{ __('No channel on for this doctor') }}
+                        </span>
+                    @endif
+                </div>
             </li>
         @endforeach
     </ul>

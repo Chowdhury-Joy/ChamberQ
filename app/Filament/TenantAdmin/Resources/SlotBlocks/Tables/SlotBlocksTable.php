@@ -52,7 +52,10 @@ class SlotBlocksTable
                     ->modalCancelActionLabel(__('Close'))
                     ->modalContent(fn (SlotBlock $record): View => view(
                         'filament.tenant-admin.slot-block-notify',
-                        ['bookings' => $record->cancelledBookings()->orderBy('serial_number')->get()]
+                        [
+                            'bookings' => $record->cancelledBookings()->orderBy('serial_number')->get(),
+                            'stage' => \App\Models\Doctor::NOTIFY_CANCELLATION,
+                        ]
                     )),
                 EditAction::make(),
             ])

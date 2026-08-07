@@ -7,6 +7,7 @@ use App\Models\User;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
+use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Schema;
 use Illuminate\Validation\Rules\Unique;
 
@@ -59,6 +60,42 @@ class DoctorForm
                 TextInput::make('registration_number')
                     ->label(__('BM&DC registration number'))
                     ->maxLength(80),
+                Fieldset::make(__('Patient notifications'))
+                    ->columns(2)
+                    ->schema([
+                        Toggle::make('notify_channels.'.Doctor::NOTIFY_BOOKING_CONFIRMATION.'.sms')
+                            ->label(__('Booking confirmation — SMS'))
+                            ->helperText(__('Automatic text after a patient books. Uses 1 prepaid credit.'))
+                            ->default(true),
+                        Toggle::make('notify_channels.'.Doctor::NOTIFY_BOOKING_CONFIRMATION.'.whatsapp')
+                            ->label(__('Booking confirmation — WhatsApp'))
+                            ->helperText(__('Reserved for staff re-send; patients already share their ticket. Off by default.'))
+                            ->default(false),
+                        Toggle::make('notify_channels.'.Doctor::NOTIFY_DOCTOR_LATE.'.sms')
+                            ->label(__('Doctor late — SMS'))
+                            ->helperText(__('Automatic text to waiting patients when staff mark delay. 1 credit each.'))
+                            ->default(false),
+                        Toggle::make('notify_channels.'.Doctor::NOTIFY_DOCTOR_LATE.'.whatsapp')
+                            ->label(__('Doctor late — WhatsApp'))
+                            ->helperText(__('Shows tap-to-send WhatsApp links after Mark Late. Free; staff must tap.'))
+                            ->default(false),
+                        Toggle::make('notify_channels.'.Doctor::NOTIFY_CANCELLATION.'.sms')
+                            ->label(__('Cancellation — SMS'))
+                            ->helperText(__('Staff tap Send SMS per patient (vacation / end session). 1 credit each.'))
+                            ->default(false),
+                        Toggle::make('notify_channels.'.Doctor::NOTIFY_CANCELLATION.'.whatsapp')
+                            ->label(__('Cancellation — WhatsApp'))
+                            ->helperText(__('Shows tap-to-send WhatsApp links. Free; staff must tap.'))
+                            ->default(true),
+                        Toggle::make('notify_channels.'.Doctor::NOTIFY_PRESCRIPTION.'.sms')
+                            ->label(__('Prescription — SMS'))
+                            ->helperText(__('Staff tap Send SMS with the 48h prescription link. 1 credit.'))
+                            ->default(false),
+                        Toggle::make('notify_channels.'.Doctor::NOTIFY_PRESCRIPTION.'.whatsapp')
+                            ->label(__('Prescription — WhatsApp'))
+                            ->helperText(__('Shows Send via WhatsApp after the visit. Free; staff must tap.'))
+                            ->default(true),
+                    ]),
             ]);
     }
 }
