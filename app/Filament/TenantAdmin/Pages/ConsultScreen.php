@@ -289,13 +289,17 @@ class ConsultScreen extends Page implements HasActions
      */
     public function writePrescriptionAction(): Action
     {
-        $hasNotes = (bool) $this->currentVisitRecord;
+        // "Edit" only once medicines exist — advice/diagnosis alone is notes,
+        // not yet a prescription, and calling it one before any medicine is
+        // added overstates what has actually been written.
+        $hasPrescription = (bool) $this->currentVisitRecord?->prescription?->items->isNotEmpty();
+        $label = $hasPrescription ? __('Edit prescription') : __('Write prescription');
 
         return Action::make('writePrescription')
-            ->label($hasNotes ? __('Edit prescription') : __('Write prescription'))
+            ->label($label)
             ->icon('heroicon-o-pencil-square')
             ->color('primary')
-            ->modalHeading($hasNotes ? __('Edit prescription') : __('Write prescription'))
+            ->modalHeading($label)
             ->modalDescription(__('Saved without ending the visit — you can reopen and change this until you tap Complete visit.'))
             ->modalSubmitActionLabel(__('Save'))
             ->form(VisitNotesFormSchema::components())

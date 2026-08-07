@@ -18,6 +18,13 @@ use Filament\Schemas\Components\View;
 class VisitNotesFormSchema
 {
     /**
+     * `->fillForm()` on an action replaces the schema's normal default-value
+     * hydration, so any component relying on `->default()` (only the disabled
+     * hint field, today) goes blank unless its value is included explicitly.
+     */
+    private const VISIT_NOTES_HINT = 'All fields are optional — leave blank to complete without notes.';
+
+    /**
      * Load a saved visit back into this form's shape, so a doctor can reopen
      * what they wrote mid-consult and add to it instead of starting blank.
      *
@@ -29,10 +36,11 @@ class VisitNotesFormSchema
     public static function stateFromRecord(?\App\Models\VisitRecord $record): array
     {
         if (! $record) {
-            return [];
+            return ['_visit_notes_hint' => __(self::VISIT_NOTES_HINT)];
         }
 
         return [
+            '_visit_notes_hint' => __(self::VISIT_NOTES_HINT),
             'condition_id' => $record->condition_id,
             'diagnosis_free_text' => $record->diagnosis_uncoded,
             'advice' => $record->advice,
@@ -64,8 +72,8 @@ class VisitNotesFormSchema
     {
         return [
             TextInput::make('_visit_notes_hint')
-                ->label('')
-                ->default(__('All fields are optional — leave blank to complete without notes.'))
+                ->hiddenLabel()
+                ->default(__(self::VISIT_NOTES_HINT))
                 ->disabled()
                 ->dehydrated(false)
                 ->columnSpanFull(),

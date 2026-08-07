@@ -261,20 +261,40 @@
             {{-- Patient is in the room: this is where the doctor writes, not the
                  header's "Complete visit" button, which reads as "I am finished". --}}
             @if ($canWriteNotes && $booking->status === 'in_chamber')
-                @php $written = $this->currentVisitRecord; @endphp
+                @php
+                    $written = $this->currentVisitRecord;
+                    // A prescription means medicines exist — advice or a
+                    // diagnosis alone is notes, not something to "edit" as if
+                    // a script had already been written.
+                    $hasPrescription = (bool) $written?->prescription?->items->isNotEmpty();
+                @endphp
                 <x-filament::section>
                     <div class="cs-write-row">
                         <div class="cs-write-summary">
                             @if ($written)
-                                <div class="cs-write-title">{{ __('Prescription so far') }}</div>
+                                <div class="cs-write-title">
+                                    {{ $hasPrescription ? __('Prescription so far') : __('Notes so far — no medicines yet') }}
+                                </div>
                                 <div class="cs-write-detail">
                                     @if ($written->diagnosisLabel())
                                         <span class="cs-write-chip">{{ $written->diagnosisLabel() }}</span>
                                     @endif
-                                    @if ($written->prescription?->items->isNotEmpty())
+                                    @if ($hasPrescription)
                                         <span class="cs-write-chip">
                                             {{ trans_choice(':count medicine|:count medicines', $written->prescription->items->count(), ['count' => $written->prescription->items->count()]) }}
                                         </span>
+                                    @endif
+                                    @if (filled($written->advice))
+                                        <span class="cs-write-chip">{{ __('Advice') }}</span>
+                                    @endif
+                                    @if (filled($written->tests_advised))
+                                        <span class="cs-write-chip">{{ __('Tests advised') }}</span>
+                                    @endif
+                                    @if (filled($written->reports_seen))
+                                        <span class="cs-write-chip">{{ __('Reports seen') }}</span>
+                                    @endif
+                                    @if ($written->follow_up_date)
+                                        <span class="cs-write-chip">{{ __('Follow-up set') }}</span>
                                     @endif
                                     @if (filled($written->voice_path))
                                         <span class="cs-write-chip">{{ __('Voice note') }}</span>
@@ -296,7 +316,7 @@
                             icon="heroicon-m-pencil-square"
                             wire:click="mountAction('writePrescription')"
                         >
-                            {{ $written ? __('Edit prescription') : __('Write prescription') }}
+                            {{ $hasPrescription ? __('Edit prescription') : __('Write prescription') }}
                         </x-filament::button>
                     </div>
                 </x-filament::section>

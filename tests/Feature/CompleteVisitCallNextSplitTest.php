@@ -289,6 +289,40 @@ class CompleteVisitCallNextSplitTest extends TestCase
         $this->assertSame('SERGEL', Prescription::query()->first()?->items->first()?->medicine_name);
     }
 
+    /**
+     * `->fillForm()` replaces Filament's normal default-value hydration, so the
+     * disabled instructional field (which relies on `->default()`) went blank
+     * the first time this action opened for a patient with nothing written yet.
+     */
+    public function test_write_prescription_form_shows_its_instructional_hint(): void
+    {
+        $this->actingAsDoctorOnPanel();
+
+        Livewire::test(ConsultScreen::class)
+            ->mountAction('writePrescription')
+            ->assertSchemaStateSet([
+                '_visit_notes_hint' => 'All fields are optional — leave blank to complete without notes.',
+            ]);
+    }
+
+    /**
+     * Saving advice with no medicines is notes, not a prescription — the card
+     * must not claim there is one to "edit" until a medicine actually exists.
+     */
+    public function test_advice_alone_is_labelled_as_notes_not_a_prescription(): void
+    {
+        $this->actingAsDoctorOnPanel();
+
+        Livewire::test(ConsultScreen::class)
+            ->callAction('writePrescription', data: ['advice' => 'Drink more water'])
+            ->assertSee('Notes so far')
+            ->assertSee('Write prescription')
+            ->assertDontSee('Edit prescription')
+            ->assertDontSee('Prescription so far');
+
+        $this->assertSame(0, Prescription::query()->count());
+    }
+
     public function test_screen_can_warn_when_nobody_has_been_called_yet(): void
     {
         $this->actingAsDoctorOnPanel();
