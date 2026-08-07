@@ -11,6 +11,7 @@ trait ConfiguresTenantAdminPanel
     protected function configureTenantAdminPanel(Panel $panel): Panel
     {
         return $panel
+            ->brandName('ChamberQ')
             ->login()
             ->passwordReset()
             ->colors([

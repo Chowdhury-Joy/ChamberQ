@@ -1,16 +1,16 @@
-# SoloDoc — Client Guide
+# ChamberQ — Client Guide
 
-**For:** Doctors and clinics using (or considering) SoloDoc  
-**Product:** SoloDoc  
+**For:** Doctors and clinics using (or considering) ChamberQ  
+**Product:** ChamberQ  
 **Last updated:** 2026-08-03  
 
 This guide explains what you get, how your patients use it, how your chamber day runs, and what it costs — in plain language. No technical background needed.
 
 ---
 
-## 1. What SoloDoc is
+## 1. What ChamberQ is
 
-SoloDoc is your **digital front desk** for chamber practice.
+ChamberQ is your **digital front desk** for chamber practice.
 
 It gives you:
 1. A **branded webpage** for your patients (your name, photo, services, FAQs, etc.)
@@ -78,7 +78,7 @@ Subscription is usually paid by **bKash or bank** (we confirm payment with you).
 Imagine a patient named Rafi who wants to see you next Tuesday.
 
 1. **Opens your page**  
-   Example: `doctorgemini.com/yourname` (or your own domain later, if you add one).
+   Example: `chamberq.com/yourname` (or your own domain later, if you add one).
 
 2. **Taps Book**  
    Chooses the day and the session (for example “Evening chamber, 5–8 pm”).
@@ -151,7 +151,7 @@ You do **not** need to “code” anything. If you want a copy or photo change, 
 
 We set this up **with you over WhatsApp**. Typical handoff includes:
 
-- Your public page live (platform link like `doctorgemini.com/yourname`)
+- Your public page live (platform link like `chamberq.com/yourname`)
 - Booking working for your sessions
 - Admin login for you (and staff accounts if needed)
 - Queue / screen ready to use on chamber days
@@ -213,7 +213,7 @@ Many doctors see fewer “what’s my serial?” calls once patients have a tick
 
 ## 11. How to get started / get help
 
-1. Message us on **WhatsApp** from the SoloDoc website (or the number our team shared with you).
+1. Message us on **WhatsApp** from the ChamberQ website (or the number our team shared with you).
 2. Tell us if you’re a **solo doctor** or a **clinic**.
 3. Share your chamber days, locations, and who will run the front desk.
 4. We create your page, set sessions, and walk you through the first live day.
@@ -226,7 +226,7 @@ If you already have an account and need help:
 
 ## 12. One-page summary (share with your staff)
 
-**SoloDoc helps our chamber:**
+**ChamberQ helps our chamber:**
 - Patients book serials on their phone
 - They pay at the desk (not online)
 - Ticket shows their place; can share on WhatsApp
@@ -240,4 +240,4 @@ If you already have an account and need help:
 
 ---
 
-*This guide reflects the current SoloDoc product for Bangladesh solo doctors and clinics. If something on your live page differs slightly (custom branding, Bangla add-on, clinic labs), your onboarding chat is the final source for your account.*
+*This guide reflects the current ChamberQ product for Bangladesh solo doctors and clinics. If something on your live page differs slightly (custom branding, Bangla add-on, clinic labs), your onboarding chat is the final source for your account.*

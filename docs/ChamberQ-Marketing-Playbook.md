@@ -1,7 +1,7 @@
-# SoloDoc — Marketing & Sales Playbook
+# ChamberQ — Marketing & Sales Playbook
 
-**Audience:** Marketing team, sales partners (marketers), anyone pitching SoloDoc  
-**Product:** SoloDoc  
+**Audience:** Marketing team, sales partners (marketers), anyone pitching ChamberQ  
+**Product:** ChamberQ  
 **Last updated:** 2026-08-03  
 
 Use this as your one source of truth when talking to doctors, writing ads, or training new partners. Keep language simple. Sell the **calmer chamber**, not the software.
@@ -10,7 +10,7 @@ Use this as your one source of truth when talking to doctors, writing ads, or tr
 
 ## 1. What we sell (in one breath)
 
-SoloDoc gives a Bangladesh doctor (or clinic) a **branded patient website**, **online serial booking**, a **live waiting-room queue**, and a **simple staff panel** — so patients wait less, phones interrupt less, and the chamber feels organized.
+ChamberQ gives a Bangladesh doctor (or clinic) a **branded patient website**, **online serial booking**, a **live waiting-room queue**, and a **simple staff panel** — so patients wait less, phones interrupt less, and the chamber feels organized.
 
 **Patients do not pay online.** They book a serial, then pay at the chamber — same as today. That matches how chambers already work and removes payment friction.
 
@@ -26,7 +26,7 @@ SoloDoc gives a Bangladesh doctor (or clinic) a **branded patient website**, **o
 - Scramble at the chamber door
 - Weak word of mouth
 
-**After (with SoloDoc):**
+**After (with ChamberQ):**
 - Serials booked online
 - Waits closer to ~15 minutes when the system is used well
 - Calm live queue at the room
@@ -101,7 +101,7 @@ Think of a busy bakery that used to shout numbers and leave people standing for 
 1. Doctor lands on the marketing site (or your referral link).
 2. They tap **WhatsApp** — that is the only primary CTA. No self-signup form.
 3. You (or central sales) qualify Solo vs Clinic, answer FAQs, collect chamber details.
-4. **Super Admin** creates their tenant (URL like `doctorgemini.com/drkarim`), attaches your referral / discount if any, and hands over admin login.
+4. **Super Admin** creates their tenant (URL like `chamberq.com/drkarim`), attaches your referral / discount if any, and hands over admin login.
 5. We set up branding, sessions, and go live together.
 6. Doctor pays setup → then monthly. Super Admin confirms payments in the system.
 
@@ -226,7 +226,7 @@ Ask / confirm:
 - [ ] Typical session times / seats per session
 - [ ] Who will run the queue day-to-day (doctor / staff)?
 - [ ] Do they want SMS confirmations? (explain prepaid packs)
-- [ ] Prefer platform URL (`doctorgemini.com/name`) or later custom domain?
+- [ ] Prefer platform URL (`chamberq.com/name`) or later custom domain?
 - [ ] Any partner referral / discount code?
 
 Hand off to Super Admin / onboarding with those notes.
@@ -249,7 +249,7 @@ If they only have a pretty website but never run the queue, the wait-time promis
 
 ## 13. Quick reference card (print / pin)
 
-**Product:** SoloDoc  
+**Product:** ChamberQ  
 **Primary CTA:** WhatsApp  
 **Solo:** ৳12,000 setup + ৳2,000/mo · 1 doctor · up to 5 locations  
 **Clinic:** ৳25,000 setup + ৳7,500/mo · multi-doctor + labs  

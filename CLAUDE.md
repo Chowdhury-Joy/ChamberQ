@@ -1,4 +1,4 @@
-# Project instructions — SolDoc (Doctor Gemini)
+# Project instructions — SolDoc (ChamberQ)
 
 The operating protocol for this repo is the machine-wide one in `~/AGENTS.md`, symlinked into this repo root as `AGENTS.md`. It is imported below; follow it in full.
 

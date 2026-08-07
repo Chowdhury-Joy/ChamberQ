@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to Doctor Gemini are documented here.
+All notable changes to ChamberQ are documented here.
 
 Format roughly follows [Keep a Changelog](https://keepachangelog.com/).
 Solo-doctor v1 work lives on branch `Solo-Doc-V1`.

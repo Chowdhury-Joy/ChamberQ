@@ -22,9 +22,9 @@
         return '৳'.number_format($amount);
     };
 
-    $soloWa = $wa('Hi — I\'m a solo doctor interested in Doctor Gemini (Solo plan).'.$refSuffix);
-    $clinicWa = $wa('Hi — I\'m interested in Doctor Gemini for our clinic (Clinic plan).'.$refSuffix);
-    $generalWa = $wa('Hi — I\'m a solo doctor and want to know how Doctor Gemini can help my chamber.'.$refSuffix);
+    $soloWa = $wa('Hi — I\'m a solo doctor interested in ChamberQ (Solo plan).'.$refSuffix);
+    $clinicWa = $wa('Hi — I\'m interested in ChamberQ for our clinic (Clinic plan).'.$refSuffix);
+    $generalWa = $wa('Hi — I\'m a solo doctor and want to know how ChamberQ can help my chamber.'.$refSuffix);
 @endphp
 <!DOCTYPE html>
 <html lang="en">
@@ -33,7 +33,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="color-scheme" content="light only">
     <meta name="theme-color" content="#ffffff">
-    <meta name="description" content="Doctor Gemini gives solo doctors a calmer chamber with online serials, live queues, and less waiting for every patient.">
+    <meta name="description" content="ChamberQ gives solo doctors a calmer chamber with online serials, live queues, and less waiting for every patient.">
     <title>{{ $product }} — Give patients their time back</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

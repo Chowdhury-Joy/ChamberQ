@@ -1,4 +1,4 @@
-# Doctor Gemini
+# ChamberQ
 
 Multi-tenant SaaS for Bangladesh solo doctors and clinics: branded patient site, online serial booking, live waiting-room queue, and Filament admin.
 

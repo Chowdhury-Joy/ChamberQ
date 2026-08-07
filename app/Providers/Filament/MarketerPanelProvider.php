@@ -25,6 +25,7 @@ class MarketerPanelProvider extends PanelProvider
         return $panel
             ->id('marketer')
             ->path('partner')
+            ->brandName('ChamberQ')
             ->login()
             ->passwordReset()
             ->domains(config('tenancy.central_domains') ?? [])

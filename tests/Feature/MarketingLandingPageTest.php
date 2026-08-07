@@ -11,7 +11,7 @@ class MarketingLandingPageTest extends TestCase
         $response = $this->get('http://localhost/');
 
         $response->assertOk();
-        $response->assertSee('Doctor Gemini', escape: false);
+        $response->assertSee('ChamberQ', escape: false);
         $response->assertSee('Give patients their', escape: false);
         $response->assertSee('time back.', escape: false);
         $response->assertSee('Made for independent doctors', escape: false);

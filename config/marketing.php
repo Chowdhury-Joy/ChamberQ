@@ -2,7 +2,7 @@
 
 return [
 
-    'product_name' => env('MARKETING_PRODUCT_NAME', 'Doctor Gemini'),
+    'product_name' => env('MARKETING_PRODUCT_NAME', 'ChamberQ'),
 
     /*
     |--------------------------------------------------------------------------
