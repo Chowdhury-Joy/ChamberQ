@@ -359,3 +359,40 @@
   <root_cause>The `public` disk was chosen by analogy with existing uploads (logos, call-audio chimes) without distinguishing branding assets from patient clinical records. Random UUID filenames made the exposure non-enumerable, which masked it: the files were unguessable, so the missing access control never produced a visible failure. No test asserted that clinical media was unreachable over HTTP, only that the controller enforced roles.</root_cause>
   <prevention_rule>Patient clinical data — notes, prescriptions, voice, photos — is never written to the `public` disk or anywhere under the web root; it goes to a private disk and is streamed through an authenticated controller, and the service must expose no URL accessor. Unguessable filenames are never treated as access control. Any new clinical media path must be covered by a test asserting it is not fetchable over HTTP, not merely that a role check exists somewhere.</prevention_rule>
 </bug>
+
+## 2026-08-07T01:50:29+0600
+
+<bug>
+  <category>UI/UX</category>
+  <symptom>On Live Queue Control the patient the chamber was announcing right then was listed *below* cancelled and completed bookings in the queue table, so the row staff most needed was the hardest to find.</symptom>
+  <root_cause>The table's ordering `CASE` in `LiveQueueControl::table()` enumerated only `in_chamber`, `waiting`, `completed` and `cancelled`. Every other status — including `called`, the status of the current patient for the entire window between the announcement and their arrival, plus `skipped` and `no_show` — fell through to the `ELSE 5` bucket at the bottom of the list.</root_cause>
+  <prevention_rule>An ordering `CASE` over a status column must enumerate every value the column can hold, with the `ELSE` bucket reserved for genuinely unknown values — never used as a catch-all for statuses that simply were not thought about. When adding a status to a model, grep for `CASE status` / `orderByRaw` and place it explicitly.</prevention_rule>
+</bug>
+
+<bug>
+  <category>UI/UX</category>
+  <symptom>The "Finish / End Session" header action rendered as a pale pink block with red text in dark mode, ignoring the theme entirely.</symptom>
+  <root_cause>The action carried `extraAttributes(['style' => 'background-color: #fef2f2 !important; ...'])` — literal light-mode hex values with `!important`, applied unconditionally, on top of Filament's own `danger` colour treatment which already handled both themes.</root_cause>
+  <prevention_rule>Never hardcode hex colours in `extraAttributes`/inline styles on Filament components. Use the component's `color()` API; if a bespoke colour is genuinely needed, define it in CSS with a `.dark` counterpart rather than inline.</prevention_rule>
+</bug>
+
+<bug>
+  <category>Code</category>
+  <symptom>Two silent failures around call announcements. (1) When the browser blocked the announcement audio (its normal behaviour until the tab has been interacted with), the failure was swallowed into `console.log` — staff believed the chamber was announcing when it was mute. (2) Skipping a patient advanced the queue to the next serial without playing any announcement at all, because `skipPatient()` never called `dispatchCallAnnounce()` even though the underlying `LiveSessionService::skipPatient()` calls `advanceQueue()`.</symptom>
+  <root_cause>(1) `play().catch()` logged and returned, with no UI surface for the blocked state. (2) `dispatchCallAnnounce()` was wired into `startSession`, `nextPatient` and `completeAndCallNextAction` but was missed on the fourth path that also advances the queue.</root_cause>
+  <prevention_rule>A rejected `HTMLMediaElement.play()` must set visible state offering the user a one-tap unlock, never just log. And every Livewire method whose service call can advance `live_sessions.current_booking_id` must call `dispatchCallAnnounce()` — when adding such a path, check it against the full set of callers of `advanceQueue()`.</prevention_rule>
+</bug>
+
+<bug>
+  <category>Code</category>
+  <symptom>Completed and called patients kept a stale "Retry After #N" value in the queue table long after their retry slot had been used.</symptom>
+  <root_cause>`LiveSessionService::setAsCurrent()` set `status` and `called_at` but left `retry_queue_position` populated when the booking being called was a skipped patient picked up by the retry query, so the column (whose visibility test only checked `whereNotNull('retry_queue_position')`) kept rendering it.</root_cause>
+  <prevention_rule>Clear a queue-position/scheduling hint at the moment it is consumed, in the same write that consumes it — do not rely on the display layer filtering stale values out by status.</prevention_rule>
+</bug>
+
+<bug>
+  <category>UI/UX</category>
+  <symptom>The three `x-filament::callout` blocks added during the Live Queue Control rework rendered their heading and icon but no body text at all.</symptom>
+  <root_cause>Filament v4's `callout` component template renders only the `heading`, `description`, `footer` and `controls` slots — it never outputs `$slot`. Content passed as the component's default slot is silently discarded, with no error.</root_cause>
+  <prevention_rule>Body text for `x-filament::callout` goes in `<x-slot name="description">`, never the default slot. More generally: when a Filament Blade component renders nothing for content you passed, read its template in `vendor/filament/support/resources/views/components/` before assuming the data is wrong — several of these components ignore `$slot` entirely.</prevention_rule>
+</bug>

@@ -1,198 +1,427 @@
 <x-filament-panels::page>
-    <div class="space-y-6">
-        
-        {{-- Session Selector & Header Actions --}}
-        <div style="margin-bottom: 24px;">
-            <x-filament::section>
-                @if($this->sessions->isEmpty())
-                    <div class="py-8 text-center">
-                        <div class="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                            No sessions scheduled for today
-                        </div>
-                        <p class="text-sm text-gray-500 dark:text-gray-400 mb-6 max-w-md mx-auto">
-                            Live Queue only lists sessions that run on {{ now()->translatedFormat('l') }}. Add or edit a schedule that includes today, then return here.
-                        </p>
-                        @if(auth()->user()?->canManageOps())
-                            <x-filament::button
-                                href="{{ \App\Filament\TenantAdmin\Resources\ScheduleSessions\ScheduleSessionResource::getUrl('index') }}"
-                                tag="a"
-                                color="primary"
-                                icon="heroicon-m-calendar-days"
-                            >
-                                Manage schedules
-                            </x-filament::button>
-                        @endif
-                    </div>
-                @else
-                <div class="flex flex-col md:flex-row md:items-end justify-between gap-4">
-                    <div class="flex-1 max-w-xl">
-                        <label class="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-2">
-                            Select Session for Today ({{ now()->translatedFormat('l, j F Y') }})
+    {{--
+        This panel has no custom Filament theme build, so the only CSS that
+        reaches the browser is Filament's own bundle — it does NOT contain
+        general Tailwind utilities (`grid-cols-3`, `gap-6`, `text-sm`, `w-full`
+        and friends are all absent from public/css/filament/filament/app.css).
+        Every layout rule this page needs therefore lives here as real CSS.
+        Dark mode is class-based (`.dark` on <html>).
+    --}}
+    <style>
+        [x-cloak] { display: none !important; }
+
+        .lqc-stack { display: flex; flex-direction: column; gap: 1.5rem; }
+        .lqc-stack-sm { display: flex; flex-direction: column; gap: 0.75rem; }
+        .lqc-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1.5rem; align-items: start; }
+        @media (min-width: 900px) { .lqc-grid { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); } }
+        @media (min-width: 1280px) { .lqc-grid { grid-template-columns: minmax(0, 22rem) minmax(0, 1fr); } }
+        @media (min-width: 900px) { .lqc-side { position: sticky; top: 1rem; } }
+
+        .lqc-row { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 1rem; }
+        .lqc-field { flex: 1 1 18rem; max-width: 36rem; }
+        .lqc-label { display: block; font-size: 0.875rem; font-weight: 500; margin-bottom: 0.5rem; color: rgb(63 63 70); }
+        .dark .lqc-label { color: rgb(212 212 216); }
+
+        .lqc-muted { font-size: 0.875rem; color: rgb(113 113 122); }
+        .lqc-xs { font-size: 0.75rem; color: rgb(113 113 122); }
+        .dark .lqc-muted, .dark .lqc-xs { color: rgb(161 161 170); }
+        .lqc-eyebrow { font-size: 0.75rem; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; color: rgb(113 113 122); }
+        .dark .lqc-eyebrow { color: rgb(161 161 170); }
+
+        /* Buttons that are the main thing to press fill their card. */
+        .lqc-actions { display: flex; flex-direction: column; gap: 0.5rem; }
+        .lqc-actions .fi-btn { width: 100%; justify-content: center; }
+        .lqc-btn-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+
+        .lqc-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: rgb(228 228 231); border: 1px solid rgb(228 228 231); border-radius: 0.75rem; overflow: hidden; }
+        @media (min-width: 900px) { .lqc-stats { grid-template-columns: repeat(var(--lqc-stat-count, 4), minmax(0, 1fr)); } }
+        .dark .lqc-stats { background: rgb(63 63 70); border-color: rgb(63 63 70); }
+        .lqc-stat { background: rgb(255 255 255); padding: 0.75rem 1rem; }
+        .dark .lqc-stat { background: rgb(24 24 27); }
+        .lqc-stat-value { font-size: 1.5rem; font-weight: 700; line-height: 1.2; color: rgb(24 24 27); font-variant-numeric: tabular-nums; }
+        .dark .lqc-stat-value { color: rgb(244 244 245); }
+
+        .lqc-callbox { padding: 1.25rem; border: 1px solid rgb(228 228 231); border-radius: 0.75rem; background: rgb(250 250 250); display: flex; flex-direction: column; gap: 0.75rem; }
+        .dark .lqc-callbox { border-color: rgb(39 39 42); background: rgb(24 24 27); }
+        .lqc-callbox-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
+
+        .lqc-serial { font-size: 3.25rem; line-height: 1; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: rgb(24 24 27); }
+        .dark .lqc-serial { color: rgb(244 244 245); }
+        .lqc-name { font-size: 1.125rem; font-weight: 600; color: rgb(39 39 42); }
+        .dark .lqc-name { color: rgb(228 228 231); }
+        .lqc-elapsed { font-variant-numeric: tabular-nums; font-weight: 600; }
+        .lqc-elapsed-over { color: rgb(185 28 28); }
+        .dark .lqc-elapsed-over { color: rgb(248 113 113); }
+
+        .lqc-dot { display: inline-block; position: relative; width: 0.5rem; height: 0.5rem; margin-inline-end: 0.375rem; }
+        .lqc-dot span { position: absolute; inset: 0; border-radius: 9999px; background: currentColor; }
+        .lqc-dot span:first-child { animation: lqc-ping 1.4s cubic-bezier(0, 0, 0.2, 1) infinite; }
+        @keyframes lqc-ping { 75%, 100% { transform: scale(2.2); opacity: 0; } }
+        @media (prefers-reduced-motion: reduce) { .lqc-dot span:first-child { animation: none; } }
+
+        /* The row the chamber is announcing right now must be findable at a glance. */
+        .fi-ta-row-called > td { background-color: rgb(254 252 232) !important; }
+        .fi-ta-row-called > td:first-child { box-shadow: inset 3px 0 0 rgb(234 179 8); }
+        .dark .fi-ta-row-called > td { background-color: rgb(66 44 8) !important; }
+        .fi-ta-row-in-chamber > td { background-color: rgb(240 253 244) !important; }
+        .fi-ta-row-in-chamber > td:first-child { box-shadow: inset 3px 0 0 rgb(34 197 94); }
+        .dark .fi-ta-row-in-chamber > td { background-color: rgb(12 46 27) !important; }
+
+        .lqc-empty { padding: 2rem 0; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 0.75rem; }
+        .lqc-empty-title { font-size: 1.125rem; font-weight: 600; color: rgb(24 24 27); }
+        .dark .lqc-empty-title { color: rgb(244 244 245); }
+        .lqc-empty p { max-width: 28rem; margin: 0; }
+
+        .lqc-cards { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.75rem; }
+        @media (min-width: 768px) { .lqc-cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+        .lqc-session-card { display: block; width: 100%; text-align: start; padding: 1rem; border: 1px solid rgb(228 228 231); border-radius: 0.75rem; background: rgb(255 255 255); font-weight: 500; color: rgb(24 24 27); cursor: pointer; transition: border-color .15s, background-color .15s; }
+        .lqc-session-card:hover { border-color: rgb(161 161 170); background: rgb(250 250 250); }
+        .dark .lqc-session-card { border-color: rgb(63 63 70); background: rgb(24 24 27); color: rgb(244 244 245); }
+        .dark .lqc-session-card:hover { border-color: rgb(113 113 122); background: rgb(39 39 42); }
+    </style>
+
+    <div class="lqc-stack">
+
+        {{-- Session picker --}}
+        <x-filament::section>
+            @if($this->sessions->isEmpty())
+                <div class="lqc-empty">
+                    <div class="lqc-empty-title">No sessions scheduled for today</div>
+                    <p class="lqc-muted">
+                        Live Queue only lists sessions that run on {{ now()->translatedFormat('l') }}. Add or edit a schedule that includes today, then return here.
+                    </p>
+                    @if(auth()->user()?->canManageOps())
+                        <x-filament::button
+                            href="{{ \App\Filament\TenantAdmin\Resources\ScheduleSessions\ScheduleSessionResource::getUrl('index') }}"
+                            tag="a"
+                            color="primary"
+                            icon="heroicon-m-calendar-days"
+                        >
+                            Manage schedules
+                        </x-filament::button>
+                    @endif
+                </div>
+            @else
+                <div class="lqc-row">
+                    <div class="lqc-field">
+                        <label for="lqc-session" class="lqc-label">
+                            Session for today ({{ now()->translatedFormat('l, j F Y') }})
                         </label>
-                        <select wire:model.live="selectedSessionId" class="w-full rounded-lg border-gray-300 dark:border-gray-600 dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm focus:border-primary-500 focus:ring-primary-500">
-                            <option value="">-- Choose a Session --</option>
-                            @foreach($this->sessions as $id => $label)
-                                <option value="{{ $id }}">{{ $label }}</option>
-                            @endforeach
-                        </select>
+                        <x-filament::input.wrapper>
+                            <x-filament::input.select wire:model.live="selectedSessionId" id="lqc-session">
+                                <option value="">Choose a session…</option>
+                                @foreach($this->sessions as $id => $label)
+                                    <option value="{{ $id }}" @selected($this->selectedSessionId == $id)>{{ $label }}</option>
+                                @endforeach
+                            </x-filament::input.select>
+                        </x-filament::input.wrapper>
                     </div>
 
                     @if($this->selectedSessionId && app()->isLocal())
-                        <div>
-                            <x-filament::button wire:click="addMockPatients" color="gray" icon="heroicon-m-user-plus">
-                                + Add Sample Patients
-                            </x-filament::button>
-                        </div>
+                        <x-filament::button wire:click="addMockPatients" color="gray" size="sm" icon="heroicon-m-user-plus">
+                            Add sample patients
+                        </x-filament::button>
                     @endif
                 </div>
-                @endif
-            </x-filament::section>
-        </div>
+            @endif
+        </x-filament::section>
 
         @if($this->selectedSessionId)
             @php
                 $liveSession = $this->activeLiveSession;
                 $bookings = $this->bookings;
-                $currentBookingId = $liveSession?->current_booking_id;
                 $status = $liveSession?->status ?? 'scheduled';
+                $current = $liveSession?->currentBooking;
+                $stats = $this->queueStats;
+                $nextWaiting = $bookings->whereIn('status', ['waiting', 'skipped'])->sortBy('serial_number')->first();
+                $statCount = 3 + ($stats['finishes_at'] ? 1 : 0) + ($stats['no_show'] > 0 ? 1 : 0);
             @endphp
 
-            {{-- Main Control Grid --}}
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6" style="gap: 24px;">
-                
-                {{-- Left Column: Session Controls & Currently Serving --}}
-                <div class="lg:col-span-1 space-y-6" style="display: flex; flex-direction: column; gap: 24px;">
-                    
-                    {{-- Status & Quick Control Card --}}
+            {{-- "How many are left and when do we finish" — asked all session long. --}}
+            @if(in_array($status, ['active', 'paused'], true))
+                <div class="lqc-stats" style="--lqc-stat-count: {{ $statCount }};">
+                    <div class="lqc-stat">
+                        <div class="lqc-eyebrow">Waiting</div>
+                        <div class="lqc-stat-value">{{ $stats['waiting'] }}</div>
+                    </div>
+                    <div class="lqc-stat">
+                        <div class="lqc-eyebrow">Seen</div>
+                        <div class="lqc-stat-value">{{ $stats['done'] }}</div>
+                    </div>
+                    @if($stats['no_show'] > 0)
+                        <div class="lqc-stat">
+                            <div class="lqc-eyebrow">No-show</div>
+                            <div class="lqc-stat-value">{{ $stats['no_show'] }}</div>
+                        </div>
+                    @endif
+                    <div class="lqc-stat">
+                        <div class="lqc-eyebrow">Avg consult</div>
+                        <div class="lqc-stat-value">{{ $stats['avg_minutes'] }}m</div>
+                        <div class="lqc-xs">{{ $stats['avg_is_observed'] ? 'measured today' : 'from schedule' }}</div>
+                    </div>
+                    @if($stats['finishes_at'])
+                        <div class="lqc-stat">
+                            <div class="lqc-eyebrow">Finishes about</div>
+                            <div class="lqc-stat-value">{{ $stats['finishes_at']->format('g:i a') }}</div>
+                            <div class="lqc-xs">at today's pace</div>
+                        </div>
+                    @endif
+                </div>
+            @endif
+
+            <div class="lqc-grid">
+
+                {{-- Controls & current call --}}
+                <div class="lqc-stack lqc-side">
                     <x-filament::section>
-                        <x-slot name="heading">
-                            Session Status
-                        </x-slot>
+                        <x-slot name="heading">Session status</x-slot>
                         <x-slot name="headerEnd">
                             @if($status === 'scheduled')
-                                <x-filament::badge color="gray">Scheduled</x-filament::badge>
+                                <x-filament::badge color="gray">Not started</x-filament::badge>
                             @elseif($status === 'delayed')
-                                <x-filament::badge color="warning">Delayed ({{ $liveSession->delay_minutes }}m)</x-filament::badge>
+                                <x-filament::badge color="warning">Delayed {{ $liveSession->delay_minutes }}m</x-filament::badge>
                             @elseif($status === 'active')
-                                <x-filament::badge color="success">● Live Active</x-filament::badge>
+                                <x-filament::badge color="success">
+                                    <span class="lqc-dot"><span></span><span></span></span>Live
+                                </x-filament::badge>
                             @elseif($status === 'paused')
-                                <x-filament::badge color="gray">Paused</x-filament::badge>
+                                <x-filament::badge color="warning" icon="heroicon-m-pause">Paused</x-filament::badge>
                             @elseif($status === 'completed')
-                                <x-filament::badge color="info">Completed</x-filament::badge>
+                                <x-filament::badge color="info">Finished</x-filament::badge>
                             @elseif($status === 'cancelled')
                                 <x-filament::badge color="danger">Cancelled</x-filament::badge>
                             @endif
                         </x-slot>
 
-                        <div class="space-y-4">
-                            @if(in_array($status, ['scheduled', 'delayed']))
-                                <x-filament::button wire:click="startSession" color="success" icon="heroicon-m-play" size="lg" class="w-full">
-                                    Start Live Session
-                                </x-filament::button>
+                        <div class="lqc-stack-sm">
+                            @if(in_array($status, ['scheduled', 'delayed'], true))
+                                @if($status === 'delayed')
+                                    {{-- x-filament::callout renders `description`/`footer` only —
+                                         a default slot is silently dropped. --}}
+                                    <x-filament::callout color="warning" icon="heroicon-m-clock">
+                                        <x-slot name="description">
+                                            Patients have been told the doctor is running {{ $liveSession->delay_minutes }} minutes late. Starting now clears that notice.
+                                        </x-slot>
+                                    </x-filament::callout>
+                                @endif
+                                <div class="lqc-actions">
+                                    <x-filament::button wire:click="startSession" color="success" icon="heroicon-m-play" size="lg">
+                                        Start live session
+                                    </x-filament::button>
+                                </div>
+                                <p class="lqc-muted">
+                                    {{ $bookings->whereIn('status', ['waiting', 'skipped'])->count() }} patients booked. Starting calls the first serial straight away.
+                                </p>
+                            @endif
+
+                            @if($status === 'paused')
+                                <x-filament::callout color="warning" icon="heroicon-m-pause" heading="{{ $liveSession->pause_reason ?: 'Session paused' }}">
+                                    <x-slot name="description">
+                                        @if($liveSession->pauseEndsAt())
+                                            Expected back around {{ $liveSession->pauseEndsAt()->format('g:i a') }} ({{ $liveSession->estimated_pause_minutes }} minute break).
+                                        @else
+                                            No end time was estimated for this break.
+                                        @endif
+                                        @if($stats['waiting'] > 0)
+                                            {{ $stats['waiting'] }} patients are still waiting.
+                                        @endif
+                                    </x-slot>
+                                </x-filament::callout>
+                                <div class="lqc-actions">
+                                    <x-filament::button wire:click="mountAction('resumeSession')" color="success" icon="heroicon-m-play" size="lg">
+                                        Resume session
+                                    </x-filament::button>
+                                </div>
+                            @endif
+
+                            @if(in_array($status, ['completed', 'cancelled'], true))
+                                <p class="lqc-muted">
+                                    @if($status === 'cancelled')
+                                        This session was cancelled{{ $liveSession->cancellation_reason ? ' — '.$liveSession->cancellation_reason : '' }}. All active bookings were cancelled.
+                                    @else
+                                        Session finished{{ $liveSession->completed_at ? ' at '.$liveSession->completed_at->format('g:i a') : '' }}. {{ $bookings->where('status', 'completed')->count() }} patients seen.
+                                    @endif
+                                </p>
                             @endif
 
                             @if($status === 'active')
-                                {{-- Current call / serving box --}}
-                                <div class="p-6 bg-gray-50 dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800">
-                                    <div class="text-sm text-gray-500 dark:text-gray-400 mb-4">
-                                        @if($liveSession->currentBooking?->status === 'in_chamber')
-                                            Currently serving
-                                        @elseif($liveSession->currentBooking?->status === 'called')
-                                            Currently calling
-                                        @else
-                                            No active call
-                                        @endif
-                                    </div>
-                                    
-                                    @if($liveSession->currentBooking)
-                                        <div class="text-xl font-semibold text-gray-900 dark:text-gray-100 mb-4">
-                                            #{{ $liveSession->currentBooking->serial_number }}
-                                        </div>
-                                        
-                                        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;">
-                                            {{-- Patient Info & Badge --}}
-                                            <div style="display: flex; align-items: center; gap: 1rem;">
-                                                <div class="text-lg font-medium text-gray-900 dark:text-gray-100">
-                                                    {{ $liveSession->currentBooking->patient_name }}
-                                                </div>
-                                                @if($liveSession->currentBooking->status === 'called')
-                                                    <x-filament::badge color="warning" icon="heroicon-m-bell-alert">
-                                                        Called — Waiting for Patient
-                                                    </x-filament::badge>
-                                                @elseif($liveSession->currentBooking->status === 'in_chamber')
-                                                    <x-filament::badge color="success" icon="heroicon-m-check-circle">
-                                                        Inside Doctor Chamber
-                                                    </x-filament::badge>
-                                                @endif
-                                            </div>
-
-                                            {{-- Action Buttons --}}
-                                            <div style="display: flex; align-items: center; gap: 0.75rem;">
-                                                @if($liveSession->currentBooking->status === 'called')
-                                                    <x-filament::button wire:click="patientArrived" color="success" icon="heroicon-m-check">
-                                                        Patient arrived
-                                                    </x-filament::button>
-                                                    
-                                                    @if($liveSession->isCallTimedOut())
-                                                        <x-filament::button wire:click="skipPatient" color="danger" icon="heroicon-m-forward">
-                                                            Timeout
-                                                        </x-filament::button>
+                                <div class="lqc-callbox">
+                                    @if($current)
+                                        <div class="lqc-callbox-head">
+                                            <div>
+                                                <div class="lqc-eyebrow">
+                                                    @if($current->status === 'in_chamber')
+                                                        Now serving
+                                                    @elseif($current->status === 'completed')
+                                                        Visit completed
                                                     @else
-                                                        <x-filament::button wire:click="skipPatient" color="gray" icon="heroicon-m-forward">
-                                                            Timeout
-                                                        </x-filament::button>
+                                                        Now calling
                                                     @endif
-                                                @elseif($liveSession->currentBooking->status === 'in_chamber')
-                                                    <x-filament::button wire:click="nextPatient" color="primary" icon="heroicon-m-check-badge" class="!text-white shadow-sm">
-                                                        Complete & Call Next Patient
-                                                    </x-filament::button>
-                                                @endif
+                                                </div>
+                                                <div class="lqc-serial">#{{ $current->serial_number }}</div>
                                             </div>
+                                            @if($current->status === 'called')
+                                                {{-- Short enough not to truncate on a phone. --}}
+                                                <x-filament::badge color="warning" icon="heroicon-m-bell-alert">Not arrived</x-filament::badge>
+                                            @elseif($current->status === 'completed')
+                                                <x-filament::badge color="info" icon="heroicon-m-check-circle">Done</x-filament::badge>
+                                            @else
+                                                <x-filament::badge color="success" icon="heroicon-m-check-circle">In chamber</x-filament::badge>
+                                            @endif
+                                        </div>
+
+                                        <div class="lqc-name">{{ $current->patient_name }}</div>
+
+                                        @php
+                                            $since = $current->status === 'in_chamber'
+                                                ? $current->in_chamber_at
+                                                : ($liveSession->current_called_at ?? $current->called_at);
+                                            $timeoutSeconds = $current->status === 'called' ? $liveSession->callTimeoutSeconds() : null;
+                                        @endphp
+                                        {{-- No running timer once the visit is closed — nothing is elapsing. --}}
+                                        @if($since && $current->status !== 'completed')
+                                            {{-- wire:key forces a fresh DOM node (and a fresh Alpine init)
+                                                 when the patient or their status changes, so the timer
+                                                 restarts from the right moment instead of morphing. --}}
+                                            <div
+                                                class="lqc-muted"
+                                                wire:key="lqc-elapsed-{{ $current->id }}-{{ $current->status }}"
+                                                x-data="{
+                                                    startedAt: Date.parse(@js($since->toIso8601String())),
+                                                    // Correct for clock skew between server and this device,
+                                                    // or a mis-set desk PC shows nonsense elapsed times.
+                                                    skew: Date.now() - Date.parse(@js(now()->toIso8601String())),
+                                                    timeoutSeconds: @js($timeoutSeconds),
+                                                    text: '',
+                                                    over: false,
+                                                    timer: null,
+                                                    init() {
+                                                        const tick = () => {
+                                                            const secs = Math.max(0, Math.floor((Date.now() - this.skew - this.startedAt) / 1000));
+                                                            this.text = secs < 60
+                                                                ? secs + 's'
+                                                                : Math.floor(secs / 60) + 'm ' + String(secs % 60).padStart(2, '0') + 's';
+                                                            this.over = this.timeoutSeconds !== null && secs >= this.timeoutSeconds;
+                                                        };
+                                                        tick();
+                                                        this.timer = setInterval(tick, 1000);
+                                                    },
+                                                    destroy() { clearInterval(this.timer) },
+                                                }"
+                                            >
+                                                {{-- Not "In chamber" — the badge above already says that. --}}
+                                                {{ $timeoutSeconds !== null ? 'Called' : 'With the doctor for' }}
+                                                <span class="lqc-elapsed" :class="{ 'lqc-elapsed-over': over }" x-text="text"></span>
+                                                <span x-show="over" x-cloak>— no response yet</span>
+                                            </div>
+                                        @endif
+
+                                        <div class="lqc-actions">
+                                            @if($current->status === 'called')
+                                                <x-filament::button wire:click="patientArrived" color="success" icon="heroicon-m-check" size="lg">
+                                                    Patient arrived
+                                                </x-filament::button>
+                                                <x-filament::button
+                                                    wire:click="skipPatient"
+                                                    color="{{ $liveSession->isCallTimedOut() ? 'danger' : 'gray' }}"
+                                                    icon="heroicon-m-forward"
+                                                >
+                                                    @if($current->skip_count >= 2)
+                                                        No response — mark no-show
+                                                    @else
+                                                        No response — skip ({{ $current->skip_count + 1 }} of 2)
+                                                    @endif
+                                                </x-filament::button>
+                                                <p class="lqc-xs">
+                                                    @if($current->skip_count >= 2)
+                                                        They have missed both calls — this removes them from today's queue.
+                                                    @else
+                                                        Moves them down the queue; called again after #{{ $current->serial_number + 1 }}.
+                                                    @endif
+                                                </p>
+                                            @elseif($current->status === 'completed')
+                                                {{-- The patient is still in the room: hand over the
+                                                     prescription before calling the next one in. --}}
+                                                @include('filament.tenant-admin.components.prescription-share-actions', [
+                                                    'booking' => $current,
+                                                    'prescription' => $current->visitRecord?->prescription,
+                                                ])
+                                                <x-filament::button wire:click="callNextPatientOnly" color="primary" icon="heroicon-m-megaphone" size="lg">
+                                                    Call next patient
+                                                </x-filament::button>
+                                            @else
+                                                <x-filament::button wire:click="completeVisit" color="primary" icon="heroicon-m-check-badge" size="lg">
+                                                    Complete visit
+                                                </x-filament::button>
+                                            @endif
                                         </div>
                                     @else
-                                        <div style="display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 1rem;">
-                                            <div class="text-lg font-medium text-gray-400">No Active Call</div>
-                                            <div style="display: flex; align-items: center; gap: 0.75rem;">
-                                                <x-filament::button wire:click="nextPatient" color="primary" icon="heroicon-m-megaphone" class="!text-white shadow-sm">
-                                                    Call Next Patient (#{{ optional($bookings->where('status', 'waiting')->first())->serial_number ?? 'End' }})
+                                        <div class="lqc-eyebrow">No active call</div>
+                                        @if($nextWaiting)
+                                            <div class="lqc-serial">#{{ $nextWaiting->serial_number }}</div>
+                                            <div class="lqc-name">{{ $nextWaiting->patient_name }}</div>
+                                            <div class="lqc-actions">
+                                                <x-filament::button wire:click="callNextPatientOnly" color="primary" icon="heroicon-m-megaphone" size="lg">
+                                                    Call #{{ $nextWaiting->serial_number }}
                                                 </x-filament::button>
                                             </div>
-                                        </div>
+                                        @else
+                                            <p class="lqc-muted">
+                                                Nobody left waiting. Use <strong>Session actions → Finish / End session</strong> to close today.
+                                            </p>
+                                            <div class="lqc-actions">
+                                                <x-filament::button color="gray" icon="heroicon-m-megaphone" size="lg" disabled>
+                                                    No one waiting
+                                                </x-filament::button>
+                                            </div>
+                                        @endif
                                     @endif
                                 </div>
                             @endif
                         </div>
                     </x-filament::section>
 
-                    {{-- TV Screen Link Widget --}}
+                    @php
+                        $screenUrl = tenant_web_route('tenant.screen', ['session' => $this->selectedSessionId, 'date' => now()->format('Y-m-d')]);
+                    @endphp
                     <x-filament::section>
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center gap-2 font-medium">
-                                <x-filament::icon icon="heroicon-m-tv" class="w-5 h-5 text-primary-500" style="width: 1.25rem; height: 1.25rem;" />
-                                Outdoor TV Screen
+                        <div class="lqc-stack-sm" x-data="{ copied: false, copy() { navigator.clipboard.writeText(@js($screenUrl)).then(() => { this.copied = true; setTimeout(() => this.copied = false, 2000) }) } }">
+                            <div class="lqc-name">Waiting-room TV screen</div>
+                            <p class="lqc-muted">
+                                Open it on the TV itself, or copy the link and paste it into the display device's browser.
+                            </p>
+                            <div class="lqc-btn-row">
+                                <x-filament::button :href="$screenUrl" tag="a" target="_blank" color="gray" icon="heroicon-m-arrow-top-right-on-square" size="sm">
+                                    Open screen
+                                </x-filament::button>
+                                <x-filament::button x-on:click="copy()" color="gray" icon="heroicon-m-clipboard" size="sm">
+                                    <span x-text="copied ? 'Link copied' : 'Copy link'">Copy link</span>
+                                </x-filament::button>
                             </div>
-                            <x-filament::button href="{{ tenant_web_route('tenant.screen', ['session' => $this->selectedSessionId, 'date' => now()->format('Y-m-d')]) }}" tag="a" target="_blank" color="gray" icon="heroicon-m-arrow-top-right-on-square" size="sm">
-                                Open Screen
-                            </x-filament::button>
                         </div>
                     </x-filament::section>
                 </div>
 
-                {{-- Right Column: Queue Table --}}
-                <div class="lg:col-span-2">
+                {{-- Queue table --}}
+                <div>
                     {{ $this->table }}
                 </div>
             </div>
         @elseif($this->sessions->isNotEmpty())
             <x-filament::section>
-                <div class="py-6 text-center text-sm text-gray-500 dark:text-gray-400">
-                    Choose a session above to open today’s live queue.
+                <x-slot name="heading">Today's sessions</x-slot>
+                <x-slot name="description">Pick the session you are running to open its live queue.</x-slot>
+                <div class="lqc-cards">
+                    @foreach($this->sessions as $id => $label)
+                        <button type="button" class="lqc-session-card" wire:click="$set('selectedSessionId', '{{ $id }}')">
+                            {{ $label }}
+                        </button>
+                    @endforeach
                 </div>
             </x-filament::section>
         @endif
     </div>
 
-    {{-- Filament Action Modals --}}
     <x-filament-actions::modals />
 
     @php
@@ -201,30 +430,66 @@
     @endphp
 
     @if($announceUsesVoice)
-        <audio id="admin-call-announce" preload="auto" class="hidden"></audio>
+        <div
+            x-data="{
+                base: @js($announceBaseUrl),
+                blocked: false,
+                play(payload) {
+                    const raw = Array.isArray(payload)
+                        ? (payload[0]?.serial ?? payload.serial)
+                        : (payload?.serial ?? payload);
+                    const n = parseInt(raw, 10);
+                    const el = this.$refs.audio;
+                    if (! el || ! Number.isFinite(n) || n < 1 || n > 99) return;
+
+                    el.muted = false;
+                    el.pause();
+                    el.src = this.base + '/number-' + n + '.wav';
+                    el.play()
+                        .then(() => { this.blocked = false })
+                        .catch(() => { this.blocked = true });
+                },
+                unlock() {
+                    const el = this.$refs.audio;
+                    if (! el) return;
+                    // Play-then-pause inside the click gesture is what actually
+                    // lifts the autoplay block; muted so staff hear nothing now.
+                    el.muted = true;
+                    el.src = this.base + '/number-1.wav';
+                    el.play().then(() => {
+                        el.pause();
+                        el.currentTime = 0;
+                        el.muted = false;
+                        this.blocked = false;
+                    }).catch(() => {});
+                },
+            }"
+            x-on:queue-called.window="play($event.detail)"
+        >
+            <audio x-ref="audio" preload="auto" style="display: none"></audio>
+
+            {{-- Browsers block audio until the tab has been interacted with.
+                 Failing silently made staff believe the chamber was announcing. --}}
+            <div x-cloak x-show="blocked" style="margin-top: 1.5rem">
+                <x-filament::callout color="warning" icon="heroicon-m-speaker-x-mark" heading="Call announcements are muted">
+                    <x-slot name="description">
+                        Your browser blocked the announcement audio. Tap Enable sound once and every call will be announced here.
+                    </x-slot>
+                    <x-slot name="controls">
+                        <x-filament::button x-on:click="unlock()" color="warning" size="sm" icon="heroicon-m-speaker-wave">
+                            Enable sound
+                        </x-filament::button>
+                    </x-slot>
+                </x-filament::callout>
+            </div>
+        </div>
+
         @script
         <script>
-            const announceBase = @json($announceBaseUrl);
-            const announceEl = document.getElementById('admin-call-announce');
-
-            function playAdminCallAnnounce(serial) {
-                const n = parseInt(serial, 10);
-                if (!announceEl || !Number.isFinite(n) || n < 1 || n > 99) return;
-                announceEl.pause();
-                announceEl.src = announceBase + '/number-' + n + '.wav';
-                announceEl.play().catch(function (e) {
-                    console.log('Admin call announce blocked', e);
-                });
-            }
-
             $wire.on('queue-called', (payload) => {
-                const serial = Array.isArray(payload)
-                    ? (payload[0]?.serial ?? payload.serial)
-                    : (payload?.serial ?? payload);
-                playAdminCallAnnounce(serial);
+                window.dispatchEvent(new CustomEvent('queue-called', { detail: payload }));
             });
         </script>
         @endscript
     @endif
-
 </x-filament-panels::page>

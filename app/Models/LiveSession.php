@@ -83,11 +83,29 @@ class LiveSession extends Model
         return $start->addMinutes($this->delay_minutes);
     }
 
+    public function callTimeoutSeconds(): int
+    {
+        return (int) ($this->tenant?->call_timeout_seconds ?? 10);
+    }
+
     public function isCallTimedOut(): bool
     {
         if (!$this->current_called_at) return false;
-        
-        $timeout = $this->tenant?->call_timeout_seconds ?? 10;
-        return $this->current_called_at->copy()->addSeconds($timeout)->isPast();
+
+        return $this->current_called_at->copy()->addSeconds($this->callTimeoutSeconds())->isPast();
+    }
+
+    /**
+     * When a paused session is expected back, so staff can tell waiting
+     * patients a time instead of "soon". Null when not paused or no estimate.
+     */
+    public function pauseEndsAt(): ?\Carbon\Carbon
+    {
+        if ($this->status !== 'paused' || !$this->paused_at) return null;
+
+        $minutes = (int) ($this->estimated_pause_minutes ?: 0);
+        if ($minutes < 1) return null;
+
+        return $this->paused_at->copy()->addMinutes($minutes);
     }
 }

@@ -61,18 +61,35 @@ class LiveQueueControl extends Page implements HasActions, HasTable
 
         if ($activeLiveSession) {
             $this->selectedSessionId = $activeLiveSession->schedule_session_id;
+
+            return;
+        }
+
+        // A solo chamber usually has exactly one session today — making staff
+        // pick it from a dropdown every morning is a step with no decision in it.
+        if ($this->sessions->count() === 1) {
+            $this->selectedSessionId = $this->sessions->keys()->first();
         }
     }
 
     protected function getHeaderActions(): array
     {
         return [
-            $this->markLateAction(),
-            $this->pauseSessionAction(),
-            $this->resumeSessionAction(),
-            $this->markAbsentAction(),
-            $this->endSessionAction(),
-            
+            // Session lifecycle actions live behind one menu so the destructive
+            // ones (cancel / end) are never a mis-tap away from the routine one.
+            \Filament\Actions\ActionGroup::make([
+                $this->markLateAction(),
+                $this->pauseSessionAction(),
+                $this->resumeSessionAction(),
+                $this->markAbsentAction(),
+                $this->endSessionAction(),
+            ])
+                ->label(__('Session actions'))
+                ->icon('heroicon-m-ellipsis-horizontal')
+                ->color('gray')
+                ->button()
+                ->visible(fn () => $this->selectedSessionId !== null),
+
             \Filament\Actions\Action::make('newWalkIn')
                 ->label(__('New Walk-In'))
                 ->icon('heroicon-o-user-plus')
@@ -166,10 +183,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
             ->icon('heroicon-s-flag')
             ->requiresConfirmation()
             ->modalDescription('Are you sure you want to completely end this session? All remaining patients will be cancelled.')
-            ->extraAttributes([
-                'style' => 'background-color: #fef2f2 !important; border: 1px solid #dc2626 !important; color: #dc2626 !important;',
-                'class' => 'font-bold [&_svg]:!text-red-600 [&_svg]:!fill-red-600'
-            ])
+            ->modalSubmitActionLabel(__('End session'))
             ->action(function () {
                 if (!$this->activeLiveSession) return;
                 $catchUpCount = 0;
@@ -211,12 +225,23 @@ class LiveQueueControl extends Page implements HasActions, HasTable
             });
     }
 
+    /**
+     * Livewire caches `getXProperty()` results for the whole request, so an
+     * action that moves the queue would re-render against the state it just
+     * replaced. Every mutating action clears them.
+     */
+    private function forgetQueueState(): void
+    {
+        unset($this->activeLiveSession, $this->bookings, $this->queueStats);
+    }
+
     public function getActiveLiveSessionProperty()
     {
         if (!$this->selectedSessionId) return null;
 
         return LiveSession::where('schedule_session_id', $this->selectedSessionId)
             ->whereDate('session_date', Carbon::today())
+            ->with(['currentBooking.visitRecord.prescription.items'])
             ->first();
     }
 
@@ -231,6 +256,38 @@ class LiveQueueControl extends Page implements HasActions, HasTable
             ->get();
     }
 
+    /**
+     * "How many are left and when do we finish" — the two questions staff and
+     * the doctor ask all session, previously answerable only by counting rows.
+     */
+    public function getQueueStatsProperty(): array
+    {
+        $bookings = $this->bookings;
+
+        $waiting = $bookings->whereIn('status', ['waiting', 'skipped'])->count();
+        $completed = $bookings->where('status', 'completed');
+
+        $observed = $completed
+            ->filter(fn (Booking $b) => $b->in_chamber_at && $b->completed_at)
+            ->map(fn (Booking $b) => $b->in_chamber_at->diffInMinutes($b->completed_at))
+            ->filter(fn ($minutes) => $minutes > 0);
+
+        $avgMinutes = $observed->isNotEmpty()
+            ? (int) round($observed->avg())
+            : ($this->activeLiveSession?->avgConsultationMinutes() ?? 0);
+
+        return [
+            'waiting' => $waiting,
+            'done' => $completed->count(),
+            'no_show' => $bookings->where('status', 'no_show')->count(),
+            'avg_minutes' => $avgMinutes,
+            'avg_is_observed' => $observed->isNotEmpty(),
+            'finishes_at' => ($waiting > 0 && $avgMinutes > 0)
+                ? Carbon::now()->addMinutes($waiting * $avgMinutes)
+                : null,
+        ];
+    }
+
     public function table(Table $table): Table
     {
         return $table
@@ -243,9 +300,25 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                     }, function ($query) {
                         $query->whereRaw('1 = 0');
                     })
-                    ->orderByRaw("CASE WHEN status = 'in_chamber' THEN 1 WHEN status = 'waiting' THEN 2 WHEN status = 'completed' THEN 3 WHEN status = 'cancelled' THEN 4 ELSE 5 END")
+                    // The patient being called must sit at the top — an earlier
+                    // version left 'called' out of this list, so the person the
+                    // chamber was announcing sank below cancelled bookings.
+                    ->orderByRaw("CASE status"
+                        ." WHEN 'called' THEN 1"
+                        ." WHEN 'in_chamber' THEN 2"
+                        ." WHEN 'waiting' THEN 3"
+                        ." WHEN 'skipped' THEN 4"
+                        ." WHEN 'completed' THEN 5"
+                        ." WHEN 'no_show' THEN 6"
+                        ." WHEN 'cancelled' THEN 7"
+                        ." ELSE 8 END")
                     ->orderBy('serial_number')
             )
+            ->recordClasses(fn (Booking $record) => match ($record->status) {
+                'called' => 'fi-ta-row-called',
+                'in_chamber' => 'fi-ta-row-in-chamber',
+                default => null,
+            })
             ->columns([
                 TextColumn::make('serial_number')
                     ->label('Serial')
@@ -272,12 +345,32 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                         return str_replace('_', ' ', Str::title($state));
                     }),
                 TextColumn::make('retry_queue_position')
-                    ->label('Retry After')
-                    ->formatStateUsing(fn ($state) => $state ? "#" . ($state - 1) : null)
+                    ->label('Back in queue')
+                    ->formatStateUsing(fn ($state, Booking $record) => $state && $record->status === 'skipped'
+                        ? 'After #'.($state - 1)
+                        : null)
                     ->color('warning')
-                    ->visible(fn () => $this->bookings->whereNotNull('retry_queue_position')->count() > 0),
+                    ->visible(fn () => $this->bookings
+                        ->where('status', 'skipped')
+                        ->whereNotNull('retry_queue_position')
+                        ->count() > 0),
             ])
-            ->actions([
+            ->recordActions([
+                \Filament\Actions\Action::make('callNow')
+                    ->label('Call now')
+                    ->icon('heroicon-m-megaphone')
+                    ->color('primary')
+                    ->requiresConfirmation()
+                    ->modalHeading(fn (Booking $record) => "Call #{$record->serial_number} out of turn?")
+                    ->modalDescription('Anyone already called but not yet arrived goes back to waiting — they keep their place and get no skip strike.')
+                    ->modalSubmitActionLabel('Call now')
+                    // Hidden while someone is with the doctor: a consult in
+                    // progress must never be interrupted by a queue jump.
+                    ->visible(fn (Booking $record) => in_array($record->status, ['waiting', 'skipped'], true)
+                        && $this->activeLiveSession?->status === 'active'
+                        && $this->activeLiveSession?->currentBooking?->status !== 'in_chamber')
+                    ->action(fn (Booking $record) => $this->callPatientNow($record->id)),
+
                 \Filament\Actions\Action::make('reinstate')
                     ->label('Reinstate')
                     ->icon('heroicon-m-arrow-path')
@@ -301,28 +394,69 @@ class LiveQueueControl extends Page implements HasActions, HasTable
         $this->dispatchCallAnnounce();
     }
 
-    public function nextPatient()
+    /**
+     * Close the consult without advancing — the prescription is printed or sent
+     * while the patient is still in the room. `callNextPatientOnly()` moves the
+     * queue on once they have left.
+     */
+    public function completeVisit()
     {
         if (! $this->activeLiveSession) {
             return;
         }
 
         if (auth()->user()?->canRecordVisitNotes()) {
-            $this->mountAction('completeAndCallNext');
+            $this->mountAction('completeVisit');
 
             return;
         }
 
-        app(LiveSessionService::class)->completeCurrentPatient($this->activeLiveSession);
+        app(LiveSessionService::class)->completeCurrentPatientWithoutAdvancing($this->activeLiveSession);
+        $this->forgetQueueState();
 
-        Notification::make()->title('Called Next Patient')->success()->send();
+        Notification::make()->title('Visit completed')->success()->send();
+    }
+
+    public function callNextPatientOnly()
+    {
+        if (! $this->activeLiveSession) {
+            return;
+        }
+
+        app(LiveSessionService::class)->callNextPatient($this->activeLiveSession);
+        $this->forgetQueueState();
+
+        // No toast here on purpose — this fires dozens of times a session and
+        // the card already shows the new serial, name and status.
         $this->dispatchCallAnnounce();
     }
 
-    public function completeAndCallNextAction(): Action
+    public function callPatientNow($bookingId)
     {
-        return Action::make('completeAndCallNext')
-            ->label(__('Complete & call next'))
+        if (! $this->activeLiveSession) {
+            return;
+        }
+
+        $booking = Booking::findOrFail($bookingId);
+        $called = app(LiveSessionService::class)->callSpecificPatient($this->activeLiveSession, $booking);
+
+        if (! $called) {
+            Notification::make()
+                ->title('Could not call that patient')
+                ->body('Finish the patient currently in the chamber first.')
+                ->warning()
+                ->send();
+
+            return;
+        }
+
+        $this->dispatchCallAnnounce();
+    }
+
+    public function completeVisitAction(): Action
+    {
+        return Action::make('completeVisit')
+            ->label(__('Complete visit'))
             ->form(VisitNotesFormSchema::components())
             ->modalHeading(__('Complete visit'))
             ->modalDescription(__('Add optional notes, or leave everything blank and tap Complete.'))
@@ -332,14 +466,13 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                 LiveSessionService $liveSessionService,
                 VisitRecordService $visitRecordService,
             ): void {
-                CompleteBookingWithVisitNotes::finishCurrentSessionPatient(
+                // No announce here — nobody new has been called yet.
+                CompleteBookingWithVisitNotes::completeCurrentSessionPatientWithoutAdvancing(
                     $data,
                     $liveSessionService,
                     $visitRecordService,
                     $this->activeLiveSession,
                 );
-
-                $this->dispatchCallAnnounce();
             });
     }
 
@@ -368,17 +501,33 @@ class LiveQueueControl extends Page implements HasActions, HasTable
         if (!$this->activeLiveSession) return;
         
         app(LiveSessionService::class)->patientArrived($this->activeLiveSession);
-        
-        Notification::make()->title('Patient marked as arrived')->success()->send();
+
+        // No toast — the card badge flips to "Inside doctor chamber" already.
     }
 
     public function skipPatient()
     {
         if (!$this->activeLiveSession) return;
-        
+
+        $booking = $this->activeLiveSession->currentBooking;
+        $name = $booking?->patient_name;
+        $serial = $booking?->serial_number;
+
         app(LiveSessionService::class)->skipPatient($this->activeLiveSession);
-        
-        Notification::make()->title('Patient Skipped')->warning()->send();
+
+        $skipped = $booking?->fresh();
+
+        Notification::make()
+            ->title($skipped?->status === 'no_show'
+                ? __('#:serial :name marked no-show', ['serial' => $serial, 'name' => $name])
+                : __('#:serial :name moved down the queue', ['serial' => $serial, 'name' => $name]))
+            ->body($skipped?->status === 'no_show'
+                ? __('Two missed calls. Use Reinstate on their row to put them back.')
+                : __('They will be called again after #:after.', ['after' => (int) $skipped?->retry_queue_position - 1]))
+            ->warning()
+            ->send();
+
+        $this->dispatchCallAnnounce();
     }
 
     public function reinstatePatient($bookingId)

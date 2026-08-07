@@ -135,9 +135,46 @@ class LiveSessionService
         $booking->update([
             'status' => 'called',
             'called_at' => $now,
+            // The retry slot has now been consumed — leaving it set kept a stale
+            // "back in queue after #N" hint on patients who had already been called.
+            'retry_queue_position' => null,
         ]);
 
         return $booking;
+    }
+
+    /**
+     * Call one specific patient out of turn (staff tap "Call now" on a row).
+     *
+     * Never interrupts a consult in progress, and a patient who was merely
+     * called — not yet arrived — returns to `waiting` without a skip strike,
+     * because being jumped is not their fault.
+     */
+    public function callSpecificPatient(LiveSession $liveSession, Booking $booking): ?Booking
+    {
+        return DB::transaction(function () use ($liveSession, $booking) {
+            $liveSession = $this->lockSession($liveSession);
+            $booking = $booking->fresh();
+
+            if (! $booking || ! in_array($booking->status, ['waiting', 'skipped'], true)) {
+                return null;
+            }
+
+            $current = $liveSession->currentBooking;
+
+            if ($current && $current->status === 'in_chamber') {
+                return null;
+            }
+
+            if ($current && $current->status === 'called' && $current->id !== $booking->id) {
+                $current->update([
+                    'status' => 'waiting',
+                    'called_at' => null,
+                ]);
+            }
+
+            return $this->setAsCurrent($liveSession, $booking);
+        });
     }
 
     public function patientArrived(LiveSession $liveSession)
@@ -168,6 +205,31 @@ class LiveSessionService
             }
 
             return $this->advanceQueue($liveSession);
+        });
+    }
+
+    /**
+     * Mark the current patient completed WITHOUT advancing the queue.
+     *
+     * The prescription is written and handed over while the patient is still
+     * in the room, so `current_booking_id` stays pointed at the now-completed
+     * booking until the queue runner explicitly calls the next patient. Callers
+     * must follow up with `callNextPatient()` when the room is actually clear.
+     */
+    public function completeCurrentPatientWithoutAdvancing(LiveSession $liveSession): ?Booking
+    {
+        return DB::transaction(function () use ($liveSession) {
+            $liveSession = $this->lockSession($liveSession);
+            $booking = $liveSession->currentBooking;
+
+            if ($booking) {
+                $booking->update([
+                    'status' => 'completed',
+                    'completed_at' => now(),
+                ]);
+            }
+
+            return $booking?->fresh();
         });
     }
 

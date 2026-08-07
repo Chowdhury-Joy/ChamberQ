@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-06T20:57:04+0600
+Last Updated: 2026-08-07T01:50:29+0600
 
 ## Full Site Map
 
@@ -120,8 +120,8 @@ Available under both platform path and custom domain. Requires doctor role (`can
 
 ### Open clinic day → run queue
 - **Trigger:** Session day starts.
-- **Steps:** Queue runner (staff or doctor per Branding **Who runs the queue**) → Live Queue Control → Start → Call → Patient arrived → Complete. Doctor opens **Consult Screen** for auto-updating patient context (no search).
-- **Success:** Outdoor screen matches control panel; consult screen shows the patient in chamber.
+- **Steps:** Queue runner (staff or doctor per Branding **Who runs the queue**) → Live Queue Control → session auto-selected when today has only one, else pick from the dropdown/session cards → Start → Call → Patient arrived → Complete. A no-response patient is skipped from the current-call card (twice, then no-show); any waiting or skipped patient can be called out of turn via **Call now** on their row (unavailable while someone is in the chamber). Mark Late, Pause, Resume, Cancel session and Finish/End session all live behind the header's **Session actions** menu; **New Walk-In** is the standalone header action. Doctor opens **Consult Screen** for auto-updating patient context (no search).
+- **Success:** Outdoor screen matches control panel; consult screen shows the patient in chamber; the summary strip's waiting count and projected finish time match the table.
 
 ### Doctor consult (doctor role)
 - **Trigger:** Patient called into chamber (`live_sessions.current_booking_id` set).
