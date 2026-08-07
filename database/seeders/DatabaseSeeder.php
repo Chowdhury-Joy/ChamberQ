@@ -2,11 +2,13 @@
 
 namespace Database\Seeders;
 
+use App\Models\Booking;
 use App\Models\Chamber;
 use App\Models\Doctor;
 use App\Models\Domain;
 use App\Models\LabCollectionSlot;
 use App\Models\LabTest;
+use App\Models\LiveSession;
 use App\Models\ScheduleSession;
 use App\Models\Tenant;
 use App\Models\User;
@@ -44,6 +46,7 @@ class DatabaseSeeder extends Seeder
             'font_family' => 'Outfit',
             'default_locale' => 'en',
             'tagline' => 'Consultant physician care in Dhanmondi — book online, pay at the chamber.',
+            'sms_balance' => 47,
         ]);
 
         Domain::firstOrCreate(['domain' => 'solo.localhost'], ['tenant_id' => 'solo']);
@@ -65,22 +68,70 @@ class DatabaseSeeder extends Seeder
 
         tenancy()->initialize($tenant);
 
-        $chamber = Chamber::firstOrCreate(['name' => 'Dhanmondi Chamber'], [
+        $doctor = Doctor::firstOrCreate(['name' => 'Dr. Mahfuzur Rahman']);
+
+        LiveSession::query()->delete();
+        Booking::where('bookable_type', ScheduleSession::class)->delete();
+        ScheduleSession::query()->delete();
+
+        $chamber1 = Chamber::updateOrCreate(['name' => 'Chamber 1'], [
             'address' => 'House 42, Road 9/A, Dhanmondi, Dhaka 1209',
             'contact' => '01712345678',
             'map_url' => 'https://www.google.com/maps?q=23.7461%2C90.3742',
         ]);
+        $chamber2 = Chamber::updateOrCreate(['name' => 'Chamber 2'], [
+            'address' => 'Plot 7, Block C, Mirpur 10, Dhaka 1216',
+            'contact' => '01712345679',
+            'map_url' => 'https://www.google.com/maps?q=23.8069%2C90.3687',
+        ]);
+        $chamber3 = Chamber::updateOrCreate(['name' => 'Chamber 3'], [
+            'address' => 'House 15, Sector 7, Uttara, Dhaka 1230',
+            'contact' => '01712345680',
+            'map_url' => 'https://www.google.com/maps?q=23.8759%2C90.3795',
+        ]);
 
-        $doctor = Doctor::firstOrCreate(['name' => 'Dr. Mahfuzur Rahman']);
+        Chamber::whereNotIn('id', [$chamber1->id, $chamber2->id, $chamber3->id])->delete();
 
-        ScheduleSession::firstOrCreate(
-            ['chamber_id' => $chamber->id, 'doctor_id' => $doctor->id, 'day_of_week' => 1],
-            ['session_name' => 'Morning', 'start_time' => '09:00', 'end_time' => '13:00', 'slot_cap' => 10]
-        );
-        ScheduleSession::firstOrCreate(
-            ['chamber_id' => $chamber->id, 'doctor_id' => $doctor->id, 'day_of_week' => 3],
-            ['session_name' => 'Evening', 'start_time' => '17:00', 'end_time' => '21:00', 'slot_cap' => 12]
-        );
+        $scheduleBlocks = [
+            [
+                'chamber' => $chamber1,
+                'days' => [6, 0], // Saturday–Sunday
+                'session_name' => 'Morning',
+                'start_time' => '10:00',
+                'end_time' => '14:00',
+                'slot_cap' => 10,
+            ],
+            [
+                'chamber' => $chamber2,
+                'days' => [1, 2, 3], // Monday–Wednesday
+                'session_name' => 'Evening',
+                'start_time' => '18:00',
+                'end_time' => '21:00',
+                'slot_cap' => 12,
+            ],
+            [
+                'chamber' => $chamber3,
+                'days' => [4, 5], // Thursday–Friday
+                'session_name' => 'Afternoon',
+                'start_time' => '14:00',
+                'end_time' => '18:00',
+                'slot_cap' => 12,
+            ],
+        ];
+
+        foreach ($scheduleBlocks as $block) {
+            foreach ($block['days'] as $dayOfWeek) {
+                ScheduleSession::create([
+                    'chamber_id' => $block['chamber']->id,
+                    'doctor_id' => $doctor->id,
+                    'day_of_week' => $dayOfWeek,
+                    'session_name' => $block['session_name'],
+                    'start_time' => $block['start_time'],
+                    'end_time' => $block['end_time'],
+                    'slot_cap' => $block['slot_cap'],
+                ]);
+            }
+        }
 
         // Person-led homepage matching the solo client-site design.
         WebPage::updateOrCreate(['slug' => '/'], [
@@ -90,7 +141,7 @@ class DatabaseSeeder extends Seeder
                 ['type' => 'hero', 'data' => [
                     'headline' => "Dr. Mahfuzur\nRahman",
                     'credentials' => 'MBBS, FCPS (Medicine)',
-                    'role_location' => 'Consultant Physician, Dhanmondi',
+                    'role_location' => 'Consultant Physician · Dhanmondi, Mirpur & Uttara',
                     'cta_text' => 'Book Appointment',
                     'cta_link' => '/book',
                     'image_url' => 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=1200&q=80',
@@ -206,12 +257,12 @@ class DatabaseSeeder extends Seeder
                     'heading' => 'Everything You Need To Know',
                     'faqs' => [
                         [
-                            'question' => 'Where is your chamber located?',
-                            'answer' => 'House 42, Road 9/A, Dhanmondi, Dhaka 1209. The chamber is easy to reach by rickshaw, CNG, or private car. Call ahead if you need landmark help.',
+                            'question' => 'Where are your chambers located?',
+                            'answer' => 'Chamber 1 — Dhanmondi (House 42, Road 9/A). Chamber 2 — Mirpur 10 (Plot 7, Block C). Chamber 3 — Uttara Sector 7 (House 15). The booking page shows the right chamber for each day.',
                         ],
                         [
                             'question' => 'What are your consultation hours?',
-                            'answer' => 'Monday mornings 9:00 am – 1:00 pm and Wednesday evenings 5:00 pm – 9:00 pm. Book a serial online before you arrive.',
+                            'answer' => 'Saturday–Sunday 10:00 am – 2:00 pm at Chamber 1 (Dhanmondi). Monday–Wednesday 6:00 pm – 9:00 pm at Chamber 2 (Mirpur). Thursday–Friday 2:00 pm – 6:00 pm at Chamber 3 (Uttara). Book a serial online before you arrive.',
                         ],
                         [
                             'question' => 'How many patients do you see per session?',
@@ -241,6 +292,8 @@ class DatabaseSeeder extends Seeder
                 ]],
             ],
         ]);
+
+        $this->call(SoloDemoSeeder::class);
 
         tenancy()->end();
     }
