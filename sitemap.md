@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-07T12:21:37+0600
+Last Updated: 2026-08-07T14:09:24+0600
 
 ## Full Site Map
 
@@ -138,6 +138,12 @@ The one patient-facing route that shows prescription content. Deliberately outsi
 - **Data/systems touched:** `live_sessions`, `bookings`, `patients`, `visit_records`, `prescriptions`.
 - **Key CTA:** Complete visit → Print / Send via WhatsApp → Call next patient.
 - **Success:** Doctor sees correct person and honest history state; visit notes saved when provided; the prescription can be printed or sent before the next patient is called; patient ticket/portal never show clinical data, and the shared link exposes only that one prescription.
+
+### Type up a paper prescription (staff — only for doctors who opted in)
+- **Trigger:** A doctor who prescribes by hand has finished a consult, and `staff_may_enter_prescriptions` is on for that doctor (Doctors resource; **off by default**).
+- **Steps:** Admin or doctor first turns on **Staff may type this doctor's prescriptions** on the Doctors record. Then staff → **Daily Roster** → the patient's *completed* row → **Enter prescription** (**Edit prescription** once one exists) → photograph the paper slip → pick medicines from the grouped dropdown with dose/frequency/duration chips → set follow-up → Save. Booking status is unchanged and there is no doctor approval step. The form shows medicines, follow-up and the photo only — staff see no diagnosis, advice, voice note, allergy strip or past visits, and cannot open Consult Screen or the prescription print route.
+- **Data/systems touched:** `visit_records` (prescription/follow-up/photo columns only, with `recorded_by` = the staff user), `prescriptions`, `prescription_items`. Any diagnosis or voice note the doctor already recorded is left intact; medicine usage learning is not updated.
+- **Success:** The visit gains a searchable prescription that feeds **Same as last visit** next time, the paper slip is attached for checking, and the printed copy still carries the doctor's name and BM&DC registration from the booking's session.
 
 ### Manage personal medicine list (doctor)
 - **Trigger:** Doctor wants to fix default dose/frequency/duration or hide a brand from their picker.

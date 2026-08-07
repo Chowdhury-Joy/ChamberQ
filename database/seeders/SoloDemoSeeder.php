@@ -35,7 +35,7 @@ class SoloDemoSeeder extends Seeder
 
         $this->clearPreviousDemoData();
 
-        $doctor = Doctor::where('name', 'Dr. Mahfuzur Rahman')->first();
+        $doctor = Doctor::where('name', 'Dr. Shamim Ahmed')->first();
 
         if (! $doctor) {
             tenancy()->end();
@@ -44,7 +44,11 @@ class SoloDemoSeeder extends Seeder
         }
 
         $todayDow = Carbon::today()->dayOfWeek;
-        $session = ScheduleSession::where('day_of_week', $todayDow)->first();
+        $session = ScheduleSession::where('day_of_week', $todayDow)->first()
+            ?? ScheduleSession::query()
+                ->where('session_name', 'Morning')
+                ->orderBy('day_of_week')
+                ->first();
 
         if (! $session) {
             tenancy()->end();

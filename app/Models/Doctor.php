@@ -12,8 +12,13 @@ class Doctor extends Model
     protected $fillable = [
         'name',
         'practice_type',
+        'staff_may_enter_prescriptions',
         'qualifications',
         'registration_number',
+    ];
+
+    protected $casts = [
+        'staff_may_enter_prescriptions' => 'boolean',
     ];
 
     public const PRACTICE_GENERAL = 'general_physician';
@@ -45,5 +50,16 @@ class Doctor extends Model
     {
         return self::practiceTypeOptions()[$this->practice_type ?? self::PRACTICE_GENERAL]
             ?? (string) $this->practice_type;
+    }
+
+    /**
+     * This doctor writes on paper and lets staff key it in afterwards.
+     *
+     * There is no per-prescription approval step: turning this on IS the
+     * doctor's standing permission, so the switch itself is the safeguard.
+     */
+    public function allowsStaffPrescriptionEntry(): bool
+    {
+        return (bool) $this->staff_may_enter_prescriptions;
     }
 }

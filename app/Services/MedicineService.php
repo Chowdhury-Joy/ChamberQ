@@ -12,13 +12,11 @@ use Illuminate\Support\Collection;
 
 class MedicineService
 {
+    public const FREE_TEXT_PREFIX = '__free__:';
+
     public const MIN_SEARCH_LENGTH = 2;
 
     public const MAX_RESULTS = 20;
-
-    public const FREE_TEXT_PREFIX = '__free__:';
-
-    public const CUSTOM_MEDICINE_VALUE = '__custom__';
 
     public function resolvePrescribingDoctor(?Booking $booking = null): ?Doctor
     {
@@ -58,10 +56,6 @@ class MedicineService
         foreach ($this->catalogMedicinesForPracticeType($practiceType) as $category => $options) {
             $groups[$category] = $options;
         }
-
-        $groups[__('Other')] = [
-            self::CUSTOM_MEDICINE_VALUE => __('Other medicine — type below'),
-        ];
 
         return $groups;
     }
@@ -300,10 +294,6 @@ class MedicineService
     public function resolveMedicineNameFromFormState(array $item): ?string
     {
         $name = $item['medicine_name'] ?? null;
-
-        if ($name === self::CUSTOM_MEDICINE_VALUE) {
-            $name = $item['medicine_name_custom'] ?? null;
-        }
 
         return filled($name) ? $this->normalizeMedicineName((string) $name) : null;
     }

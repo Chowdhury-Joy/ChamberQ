@@ -133,6 +133,26 @@ class User extends Authenticatable implements FilamentUser, CanResetPasswordCont
         return $this->isDoctor();
     }
 
+    /**
+     * Typing up a prescription the doctor wrote on paper.
+     *
+     * Deliberately separate from `canRecordVisitNotes()`, which stays
+     * doctor-only. Staff transcribing a paper script get the medicine list and
+     * follow-up and nothing else — no diagnosis, no voice note, no history.
+     */
+    public function canEnterPrescriptionFor(?Doctor $prescribingDoctor): bool
+    {
+        if ($this->canRecordVisitNotes()) {
+            return true;
+        }
+
+        if (! $this->isStaff()) {
+            return false;
+        }
+
+        return $prescribingDoctor?->allowsStaffPrescriptionEntry() ?? false;
+    }
+
     /** Live Queue Control — only the party configured to run the queue. */
     public function canAccessLiveQueueControl(): bool
     {

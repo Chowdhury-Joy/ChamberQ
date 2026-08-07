@@ -36,16 +36,16 @@ class DatabaseSeeder extends Seeder
     private function seedSoloTenant(): void
     {
         $tenant = Tenant::updateOrCreate(['id' => 'solo'], [
-            'name' => "Dr. Mahfuz's Care",
+            'name' => 'Dr. Shamim Ahmed',
             'plan_tier' => 'solo',
             'slot_cap_mode' => 'per_session',
-            'contact_phone' => '01712345678',
-            'whatsapp_number' => '8801712345678',
-            'theme_color' => '#30A9E5',
+            'contact_phone' => '01333709771',
+            'whatsapp_number' => '8801333709771',
+            'theme_color' => '#1B6CA8',
             'favicon_url' => '/icons/health-favicon.svg',
             'font_family' => 'Outfit',
             'default_locale' => 'en',
-            'tagline' => 'Consultant physician care in Dhanmondi — book online, pay at the chamber.',
+            'tagline' => 'Diabetes and medicine specialist at Belle Vue Hospital, Chattogram — book online, pay at the chamber.',
             'sms_balance' => 47,
         ]);
 
@@ -57,7 +57,7 @@ class DatabaseSeeder extends Seeder
         ]);
 
         User::withoutGlobalScope(\App\Scopes\TenantScope::class)->firstOrCreate(['email' => 'doctor@solo.com'], [
-            'name' => 'Solo Doctor', 'password' => Hash::make('password'),
+            'name' => 'Dr. Shamim Ahmed', 'password' => Hash::make('password'),
             'role' => User::ROLE_DOCTOR, 'tenant_id' => 'solo',
         ]);
 
@@ -71,80 +71,60 @@ class DatabaseSeeder extends Seeder
 
         tenancy()->initialize($tenant);
 
-        $doctor = Doctor::firstOrCreate(['name' => 'Dr. Mahfuzur Rahman']);
-
         LiveSession::query()->delete();
         Booking::where('bookable_type', ScheduleSession::class)->delete();
         ScheduleSession::query()->delete();
+        Chamber::query()->delete();
+        Doctor::query()->delete();
 
-        $chamber1 = Chamber::updateOrCreate(['name' => 'Chamber 1'], [
-            'address' => 'House 42, Road 9/A, Dhanmondi, Dhaka 1209',
-            'contact' => '01712345678',
-            'map_url' => 'https://www.google.com/maps?q=23.7461%2C90.3742',
-        ]);
-        $chamber2 = Chamber::updateOrCreate(['name' => 'Chamber 2'], [
-            'address' => 'Plot 7, Block C, Mirpur 10, Dhaka 1216',
-            'contact' => '01712345679',
-            'map_url' => 'https://www.google.com/maps?q=23.8069%2C90.3687',
-        ]);
-        $chamber3 = Chamber::updateOrCreate(['name' => 'Chamber 3'], [
-            'address' => 'House 15, Sector 7, Uttara, Dhaka 1230',
-            'contact' => '01712345680',
-            'map_url' => 'https://www.google.com/maps?q=23.8759%2C90.3795',
+        $doctor = Doctor::create([
+            'name' => 'Dr. Shamim Ahmed',
+            'practice_type' => Doctor::PRACTICE_GENERAL,
+            'qualifications' => 'MBBS, MRCP (London, UK), CCD (Diabetes)',
         ]);
 
-        Chamber::whereNotIn('id', [$chamber1->id, $chamber2->id, $chamber3->id])->delete();
+        $chamber = Chamber::create([
+            'name' => 'Belle Vue Hospital',
+            'address' => '3rd Floor, Room #311, Prabartak Hill, 12/12 O.R. Nizam Road, Panchlaish, Chattogram, Bangladesh',
+            'contact' => '01333709771',
+            'map_url' => 'https://www.google.com/maps?q=22.3470%2C91.8123',
+        ]);
 
-        $scheduleBlocks = [
-            [
-                'chamber' => $chamber1,
-                'days' => [6, 0], // Saturday–Sunday
+        // Saturday–Thursday morning (closed Friday).
+        foreach ([6, 0, 1, 2, 3, 4] as $dayOfWeek) {
+            ScheduleSession::create([
+                'chamber_id' => $chamber->id,
+                'doctor_id' => $doctor->id,
+                'day_of_week' => $dayOfWeek,
                 'session_name' => 'Morning',
-                'start_time' => '10:00',
+                'start_time' => '11:00',
                 'end_time' => '14:00',
-                'slot_cap' => 10,
-            ],
-            [
-                'chamber' => $chamber2,
-                'days' => [1, 2, 3], // Monday–Wednesday
+                'slot_cap' => 15,
+            ]);
+        }
+
+        // Sunday, Tuesday, Thursday evening.
+        foreach ([0, 2, 4] as $dayOfWeek) {
+            ScheduleSession::create([
+                'chamber_id' => $chamber->id,
+                'doctor_id' => $doctor->id,
+                'day_of_week' => $dayOfWeek,
                 'session_name' => 'Evening',
-                'start_time' => '18:00',
+                'start_time' => '19:00',
                 'end_time' => '21:00',
                 'slot_cap' => 12,
-            ],
-            [
-                'chamber' => $chamber3,
-                'days' => [4, 5], // Thursday–Friday
-                'session_name' => 'Afternoon',
-                'start_time' => '14:00',
-                'end_time' => '18:00',
-                'slot_cap' => 12,
-            ],
-        ];
-
-        foreach ($scheduleBlocks as $block) {
-            foreach ($block['days'] as $dayOfWeek) {
-                ScheduleSession::create([
-                    'chamber_id' => $block['chamber']->id,
-                    'doctor_id' => $doctor->id,
-                    'day_of_week' => $dayOfWeek,
-                    'session_name' => $block['session_name'],
-                    'start_time' => $block['start_time'],
-                    'end_time' => $block['end_time'],
-                    'slot_cap' => $block['slot_cap'],
-                ]);
-            }
+            ]);
         }
 
         // Person-led homepage matching the solo client-site design.
         WebPage::updateOrCreate(['slug' => '/'], [
-            'title' => "Dr. Mahfuz's Care",
+            'title' => 'Dr. Shamim Ahmed',
             'is_published' => true,
             'content' => [
                 ['type' => 'hero', 'data' => [
-                    'headline' => "Dr. Mahfuzur\nRahman",
-                    'credentials' => 'MBBS, FCPS (Medicine)',
-                    'role_location' => 'Consultant Physician · Dhanmondi, Mirpur & Uttara',
+                    'headline' => "Dr. Shamim\nAhmed",
+                    'credentials' => 'MBBS, MRCP (London, UK), CCD (Diabetes)',
+                    'role_location' => 'Diabetes & Medicine Specialist · Belle Vue Hospital, Chattogram',
                     'cta_text' => 'Book Appointment',
                     'cta_link' => '/book',
                     'image_url' => 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=1200&q=80',
@@ -153,49 +133,50 @@ class DatabaseSeeder extends Seeder
                     'heading' => 'Conditions I Treat',
                     'conditions' => [
                         [
+                            'name' => 'Diabetes Care',
+                            'description' => 'Structured plans for type 2 diabetes, blood sugar control, and complications screening.',
+                            'features' => [
+                                'HbA1c review and target setting',
+                                'Medicine and insulin counselling',
+                                'Diet and lifestyle guidance',
+                                'Foot and kidney risk checks',
+                            ],
+                        ],
+                        [
                             'name' => 'General Medicine',
-                            'description' => 'Everyday adult medicine with clear plans you can follow at home between visits.',
+                            'description' => 'Everyday adult medicine with clear follow-up between visits.',
                             'features' => [
                                 'Fever, infection & flu care',
                                 'Fatigue and unexplained symptoms',
                                 'Routine health check-ups',
-                                'Medication review & counselling',
+                                'Medication review',
                             ],
                         ],
                         [
-                            'name' => 'Chronic Disease Care',
-                            'description' => 'Long-term control for conditions that need steady monitoring, not rushed visits.',
+                            'name' => 'Chronic Disease',
+                            'description' => 'Steady monitoring for conditions that need long-term control.',
                             'features' => [
-                                'Type 2 diabetes management',
-                                'High blood pressure control',
+                                'High blood pressure',
                                 'Thyroid disorders',
                                 'Cholesterol & metabolic risk',
-                            ],
-                        ],
-                        [
-                            'name' => 'Heart & Respiratory',
-                            'description' => 'Focused evaluation when chest symptoms, breathlessness, or heart risk need a physician’s eye.',
-                            'features' => [
-                                'Chest pain evaluation',
-                                'Asthma & COPD follow-up',
-                                'Palpitations & rhythm concerns',
+                                'Heart risk assessment',
                             ],
                         ],
                     ],
                 ]],
                 ['type' => 'about_doctor', 'data' => [
-                    'heading' => 'Meet Dr. Mahfuzur Rahman',
-                    'subheadline' => 'Dedicated to delivering compassionate, personalized care that puts your health and well-being first.',
+                    'heading' => 'Meet Dr. Shamim Ahmed',
+                    'subheadline' => 'Diabetes and medicine specialist dedicated to clear, practical care you can follow at home.',
                     'cta_text' => 'Book Appointment',
                     'cta_link' => '/book',
                     'highlights' => [
                         [
-                            'title' => 'Study',
-                            'description' => 'FCPS (Medicine) with clinical training at Dhaka Medical College and postgraduate medicine at BSMMU (PG Hospital).',
+                            'title' => 'Qualifications',
+                            'description' => 'MBBS, MRCP (London, UK), and CCD (Diabetes).',
                         ],
                         [
-                            'title' => 'Awards & Honors',
-                            'description' => 'Recognized for patient teaching, diabetes clinic leadership, and consistent chamber practice in Dhanmondi.',
+                            'title' => 'Experience',
+                            'description' => 'Former Clinical Associate at Sengkang General Hospital, Singapore.',
                         ],
                     ],
                 ]],
@@ -260,12 +241,16 @@ class DatabaseSeeder extends Seeder
                     'heading' => 'Everything You Need To Know',
                     'faqs' => [
                         [
-                            'question' => 'Where are your chambers located?',
-                            'answer' => 'Chamber 1 — Dhanmondi (House 42, Road 9/A). Chamber 2 — Mirpur 10 (Plot 7, Block C). Chamber 3 — Uttara Sector 7 (House 15). The booking page shows the right chamber for each day.',
+                            'question' => 'Where is the chamber?',
+                            'answer' => 'Belle Vue Hospital, 3rd Floor Room #311, Prabartak Hill, 12/12 O.R. Nizam Road, Panchlaish, Chattogram.',
                         ],
                         [
                             'question' => 'What are your consultation hours?',
-                            'answer' => 'Saturday–Sunday 10:00 am – 2:00 pm at Chamber 1 (Dhanmondi). Monday–Wednesday 6:00 pm – 9:00 pm at Chamber 2 (Mirpur). Thursday–Friday 2:00 pm – 6:00 pm at Chamber 3 (Uttara). Book a serial online before you arrive.',
+                            'answer' => 'Saturday–Thursday morning 11:00 am – 2:00 pm. Sunday, Tuesday, and Thursday evening 7:00 pm – 9:00 pm. Closed on Friday. Book a serial online before you arrive.',
+                        ],
+                        [
+                            'question' => 'How do I book or ask about my serial?',
+                            'answer' => 'Book online through this site, or call the serial desk on 01333-709771 or the hospital hotline on 01969-901166.',
                         ],
                         [
                             'question' => 'How many patients do you see per session?',
@@ -277,7 +262,7 @@ class DatabaseSeeder extends Seeder
                         ],
                         [
                             'question' => 'What types of conditions do you treat?',
-                            'answer' => 'General medicine for adults — diabetes, hypertension, thyroid issues, infections, respiratory complaints, and ongoing chronic disease follow-up.',
+                            'answer' => 'Diabetes and general medicine for adults — blood pressure, thyroid issues, infections, and ongoing chronic disease follow-up.',
                         ],
                         [
                             'question' => 'Do you offer telemedicine or online consultations?',

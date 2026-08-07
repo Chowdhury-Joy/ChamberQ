@@ -17,8 +17,10 @@ use App\Models\Patient;
 use Carbon\Carbon;
 use App\Services\BookingService;
 use App\Services\LiveSessionService;
+use App\Services\MedicineService;
 use App\Services\PatientService;
 use App\Services\VisitRecordService;
+use Filament\Notifications\Notification;
 use App\Models\LabCollectionSlot;
 use App\Models\ScheduleSession;
 use Filament\Forms\Components\Select;
@@ -48,6 +50,7 @@ class DailyRoster extends Page implements HasTable, HasForms
             ->query(
                 Booking::query()
                     ->whereDate('booking_date', today())
+                    ->with(['visitRecord.prescription'])
                     ->orderByRaw("CASE WHEN status = 'in_chamber' THEN 1 WHEN status = 'waiting' THEN 2 WHEN status = 'completed' THEN 3 WHEN status = 'cancelled' THEN 4 ELSE 5 END")
                     ->orderBy('serial_number')
             )
@@ -104,6 +107,32 @@ class DailyRoster extends Page implements HasTable, HasForms
                             $liveSessionService,
                             $visitRecordService,
                         );
+                    }),
+
+                // Staff typing up a paper prescription after the patient left.
+                // Only appears for doctors who switched the delegation on.
+                VisitNotesFormSchema::configureModal(Action::make('enterPrescription'))
+                    ->label(fn (Booking $record): string => $record->visitRecord?->prescription
+                        ? __('Edit prescription')
+                        : __('Enter prescription'))
+                    ->icon('heroicon-o-pencil-square')
+                    ->color('warning')
+                    ->visible(fn (Booking $record): bool => static::staffMayEnterPrescriptionFor($record))
+                    ->modalHeading(__('Enter paper prescription'))
+                    ->modalDescription(__('Copy in what the doctor wrote by hand. This does not change the visit status.'))
+                    ->modalSubmitActionLabel(__('Save prescription'))
+                    ->fillForm(fn (Booking $record): array => VisitNotesFormSchema::staffStateFromRecord($record->visitRecord))
+                    ->form(fn (Booking $record): array => VisitNotesFormSchema::staffPrescriptionComponents($record))
+                    ->action(function (Booking $record, array $data, VisitRecordService $visitRecordService): void {
+                        /** @var \App\Models\User $user */
+                        $user = auth()->user();
+
+                        $visitRecordService->saveStaffEnteredPrescription($record, $user, $data);
+
+                        Notification::make()
+                            ->title(__('Prescription saved'))
+                            ->success()
+                            ->send();
                     }),
             ])
             ->headerActions([
@@ -207,6 +236,24 @@ class DailyRoster extends Page implements HasTable, HasForms
                     })
                     ->successNotificationTitle(__('Walk-in added to today\'s queue.'))
             ]);
+    }
+
+    /**
+     * Staff-only affordance: doctors already have the full notes modal, so
+     * showing them a second, narrower prescription form would just be confusing.
+     */
+    protected static function staffMayEnterPrescriptionFor(Booking $booking): bool
+    {
+        /** @var \App\Models\User|null $user */
+        $user = auth()->user();
+
+        if (! $user?->isStaff() || $booking->status !== 'completed') {
+            return false;
+        }
+
+        return $user->canEnterPrescriptionFor(
+            app(MedicineService::class)->resolvePrescribingDoctor($booking)
+        );
     }
 
     /**

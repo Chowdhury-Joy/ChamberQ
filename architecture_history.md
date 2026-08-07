@@ -244,3 +244,9 @@
 
 ## 2026-08-07T13:20:43+0600
 - Medicine picker is a grouped dropdown (category + Your medicines + Other) instead of free search; `doctors.practice_type` and `medicines.practice_types` filter the list per specialty; admin sets practice type on Doctors resource.
+
+## 2026-08-07T14:09:24+0600
+- Added per-doctor `doctors.staff_may_enter_prescriptions` (default off) plus `User::canEnterPrescriptionFor()`, a prescription-only staff modal on Daily Roster and `VisitRecordService::saveStaffEnteredPrescription()`, so doctors who write on paper can have staff key the script in without staff gaining visit-note access.
+
+## 2026-08-07T14:32:26+0600
+- Medicine picker UX: pruned 10 junk ORS rows and moved ORS brands to Rehydration; `displayLabel()` includes generic for dropdown search; `+` create action replaces Other/custom field; prescription repeater collapses filled items; `medicines:load --prune`.

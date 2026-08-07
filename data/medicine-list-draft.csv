@@ -1,99 +1,89 @@
 brand_name,generic_name,default_strength,form,aliases,category,practice_types
-NAPA,Paracetamol,500 mg,tablet,napa|paracetamol,Analgesic
-SETRIL,Cetirizine,10 mg,tablet,setril|cetirizine,Allergy
-OMEE,Omeprazole,20 mg,capsule,omee|omeprazole,GI
-NEXUM,Esomeprazole,40 mg,capsule,nexum|esomeprazole,GI
-RISEK,Rabeprazole,20 mg,capsule,risek|rabeprazole,GI
-SERGEL,Esomeprazole,40 mg,capsule,sergel,GI
-MAXIM,Paracetamol,500 mg,tablet,maxim,Analgesic
-ACE,Paracetamol,500 mg,tablet,ace,Analgesic
-FEVASTIN,Paracetamol,500 mg,tablet,fevastin,Analgesic
-NAPA EXTRA,Paracetamol+Caffeine,500 mg,tablet,napa extra,Analgesic
-AMOXIL,Amoxicillin,500 mg,capsule,amoxil|amoxicillin,Antibiotic
-MOXACIL,Amoxicillin,500 mg,capsule,moxacil,Antibiotic
-AUGMENTIN,Amoxicillin+Clavulanate,625 mg,tablet,augmentin,Antibiotic
-CIPROX,Ciprofloxacin,500 mg,tablet,ciprox|ciprofloxacin,Antibiotic
-AZITH,Azithromycin,500 mg,tablet,azith|azithromycin,Antibiotic
-METRO,Metronidazole,400 mg,tablet,metro|metronidazole,Antibiotic
-DOLO,Paracetamol,500 mg,tablet,dolo,Analgesic
-BRUFEN,Ibuprofen,400 mg,tablet,brufen|ibuprofen,Analgesic
-MONTAIR,Montelukast,10 mg,tablet,montair|montelukast,Respiratory
-VENTOLIN,Salbutamol,100 mcg,inhaler,ventolin|salbutamol,Respiratory
-ATEN,Atenolol,50 mg,tablet,aten|atenolol,Cardiac
-AMLO,Amlodipine,5 mg,tablet,amlo|amlodipine,Cardiac
-CONCOR,Bisoprolol,5 mg,tablet,concor|bisoprolol,Cardiac
-LOSARTAN,Losartan,50 mg,tablet,losartan,Cardiac
-TELMISAT,Telmisartan,40 mg,tablet,telmisat|telmisartan,Cardiac
-GLUFORMIN,Metformin,500 mg,tablet,gluformin|metformin,Diabetes
-DIAMET,Metformin,500 mg,tablet,diamet,Diabetes
-GLIBENCLAMIDE,Glibenclamide,5 mg,tablet,glibenclamide,Diabetes
-INSULATARD,Insulin,100 IU/ml,injection,insulatard|insulin,Diabetes
-WARF,Warfarin,5 mg,tablet,warf|warfarin,Cardiac
-ASPIRIN,Aspirin,75 mg,tablet,aspirin,Cardiac
-CLOPILET,Clopidogrel,75 mg,tablet,clopilet|clopidogrel,Cardiac
-ATORVA,Atorvastatin,20 mg,tablet,atorva|atorvastatin,Cardiac
-ROSUVA,Rosuvastatin,10 mg,tablet,rosuva|rosuvastatin,Cardiac
-FOLIC ACID,Folic acid,5 mg,tablet,folic,Supplement
-CALCIMAX,Calcium,500 mg,tablet,calcimax|calcium,Supplement
-FEFOL,Iron+Folic,,tablet,fefol|iron,Supplement
-ORS,Oral rehydration salts,,sachet,ors,GI
-ENTAMIZOLE,Metronidazole,200 mg/5ml,syrup,entamizole,Antibiotic
-FLAGYL,Metronidazole,400 mg,tablet,flagyl,Antibiotic
-DOMPER,Domperidone,10 mg,tablet,domper|domperidone,GI
-MOTILIUM,Domperidone,10 mg,tablet,motilium,GI
-BUSCOPAN,Hyoscine butylbromide,10 mg,tablet,buscopan,GI
-BETNESOL,Betamethasone,0.5 mg,tablet,betnesol,Steroid
-PREDNISOLONE,Prednisolone,5 mg,tablet,prednisolone,Steroid
-CETZINE,Cetirizine,10 mg,tablet,cetzine,Allergy
-ALLEGRA,Fexofenadine,120 mg,tablet,allegra|fexofenadine,Allergy
-LORATADINE,Loratadine,10 mg,tablet,loratadine,Allergy
-SINAREST,Paracetamol+Phenylephrine,,tablet,sinarest,Cold
-DECOLGEN,Paracetamol+Chlorpheniramine,,tablet,decolgen,Cold
-ACTIFED,Triprolidine+Phenylephrine,,tablet,actifed,Cold
-ORS PLUS,ORS,,sachet,ors plus,GI
-ZINCOVIT,Multivitamin,,tablet,zincovit,Supplement
-BECOSULES,B complex,,capsule,becosules,Supplement
-NEUROBION,B complex,,tablet,neurobion,Supplement
-ORSALINE,ORS,,sachet,orsaline,GI
-LOPERAMIDE,Loperamide,2 mg,tablet,loperamide,GI
-IMODIUM,Loperamide,2 mg,tablet,imodium,GI
-ORS BIOLIFE,ORS,,sachet,ors biolife,GI
-CANDID,Clotrimazole,1%,cream,candid|clotrimazole,Dermatology
-BETNOVATE,Betamethasone,0.1%,cream,betnovate,Dermatology
-CLOBEGEN,Clobetasol,0.05%,cream,clobegen,Dermatology
-TERBINAFINE,Terbinafine,250 mg,tablet,terbinafine,Dermatology
-FLUCONAZOLE,Fluconazole,150 mg,tablet,fluconazole,Antifungal
-DIFLUCAN,Fluconazole,150 mg,tablet,diflucan,Antifungal
-ORS N,ORS,,sachet,ors n,GI
-ORSAL,ORS,,sachet,orsal,GI
-ORS BIOPHARMA,ORS,,sachet,ors biopharma,GI
-ORS G,ORS,,sachet,ors g,GI
-ORS T,ORS,,sachet,ors t,GI
-ORS Z,ORS,,sachet,ors z,GI
-ORS LIFE,ORS,,sachet,ors life,GI
-ORS CARE,ORS,,sachet,ors care,GI
-ORS FAST,ORS,,sachet,ors fast,GI
-ORS GOLD,ORS,,sachet,ors gold,GI
-ORS PLUS N,ORS,,sachet,ors plus n,GI
-ORS PLUS G,ORS,,sachet,ors plus g,GI
-ORS PLUS T,ORS,,sachet,ors plus t,GI
-ORS PLUS Z,ORS,,sachet,ors plus z,GI
-ORS PLUS LIFE,ORS,,sachet,ors plus life,GI
-ORS PLUS CARE,ORS,,sachet,ors plus care,GI
-ORS PLUS FAST,ORS,,sachet,ors plus fast,GI
-ORS PLUS GOLD,ORS,,sachet,ors plus gold,GI
-ORS PLUS BIOLIFE,ORS,,sachet,ors plus biolife,GI
-ORS PLUS BIOPHARMA,ORS,,sachet,ors plus biopharma,GI
-ORS PLUS ORSAL,ORS,,sachet,ors plus orsal,GI
-ORS PLUS ORSALINE,ORS,,sachet,ors plus orsaline,GI
-ORS PLUS ORS N,ORS,,sachet,ors plus ors n,GI
-ORS PLUS ORS G,ORS,,sachet,ors plus ors g,GI
-ORS PLUS ORS T,ORS,,sachet,ors plus ors t,GI
-ORS PLUS ORS Z,ORS,,sachet,ors plus ors z,GI
-ORS PLUS ORS LIFE,ORS,,sachet,ors plus ors life,GI
-ORS PLUS ORS CARE,ORS,,sachet,ors plus ors care,GI
-ORS PLUS ORS FAST,ORS,,sachet,ors plus ors fast,GI
-ORS PLUS ORS GOLD,ORS,,sachet,ors plus ors gold,GI
+NAPA,Paracetamol,500 mg,tablet,napa|paracetamol,Analgesic,
+SETRIL,Cetirizine,10 mg,tablet,setril|cetirizine,Allergy,
+OMEE,Omeprazole,20 mg,capsule,omee|omeprazole,GI,
+NEXUM,Esomeprazole,40 mg,capsule,nexum|esomeprazole,GI,
+RISEK,Rabeprazole,20 mg,capsule,risek|rabeprazole,GI,
+SERGEL,Esomeprazole,40 mg,capsule,sergel,GI,
+MAXIM,Paracetamol,500 mg,tablet,maxim,Analgesic,
+ACE,Paracetamol,500 mg,tablet,ace,Analgesic,
+FEVASTIN,Paracetamol,500 mg,tablet,fevastin,Analgesic,
+NAPA EXTRA,Paracetamol+Caffeine,500 mg,tablet,napa extra,Analgesic,
+AMOXIL,Amoxicillin,500 mg,capsule,amoxil|amoxicillin,Antibiotic,
+MOXACIL,Amoxicillin,500 mg,capsule,moxacil,Antibiotic,
+AUGMENTIN,Amoxicillin+Clavulanate,625 mg,tablet,augmentin,Antibiotic,
+CIPROX,Ciprofloxacin,500 mg,tablet,ciprox|ciprofloxacin,Antibiotic,
+AZITH,Azithromycin,500 mg,tablet,azith|azithromycin,Antibiotic,
+METRO,Metronidazole,400 mg,tablet,metro|metronidazole,Antibiotic,
+DOLO,Paracetamol,500 mg,tablet,dolo,Analgesic,
+BRUFEN,Ibuprofen,400 mg,tablet,brufen|ibuprofen,Analgesic,
+MONTAIR,Montelukast,10 mg,tablet,montair|montelukast,Respiratory,
+VENTOLIN,Salbutamol,100 mcg,inhaler,ventolin|salbutamol,Respiratory,
+ATEN,Atenolol,50 mg,tablet,aten|atenolol,Cardiac,
+AMLO,Amlodipine,5 mg,tablet,amlo|amlodipine,Cardiac,
+CONCOR,Bisoprolol,5 mg,tablet,concor|bisoprolol,Cardiac,
+LOSARTAN,Losartan,50 mg,tablet,losartan,Cardiac,
+TELMISAT,Telmisartan,40 mg,tablet,telmisat|telmisartan,Cardiac,
+GLUFORMIN,Metformin,500 mg,tablet,gluformin|metformin,Diabetes,
+DIAMET,Metformin,500 mg,tablet,diamet,Diabetes,
+GLIBENCLAMIDE,Glibenclamide,5 mg,tablet,glibenclamide,Diabetes,
+INSULATARD,Insulin,100 IU/ml,injection,insulatard|insulin,Diabetes,
+WARF,Warfarin,5 mg,tablet,warf|warfarin,Cardiac,
+ASPIRIN,Aspirin,75 mg,tablet,aspirin,Cardiac,
+CLOPILET,Clopidogrel,75 mg,tablet,clopilet|clopidogrel,Cardiac,
+ATORVA,Atorvastatin,20 mg,tablet,atorva|atorvastatin,Cardiac,
+ROSUVA,Rosuvastatin,10 mg,tablet,rosuva|rosuvastatin,Cardiac,
+FOLIC ACID,Folic acid,5 mg,tablet,folic,Supplement,
+CALCIMAX,Calcium,500 mg,tablet,calcimax|calcium,Supplement,
+FEFOL,Iron+Folic,,tablet,fefol|iron,Supplement,
+ORS,Oral rehydration salts,,sachet,ors,Rehydration,
+ENTAMIZOLE,Metronidazole,200 mg/5ml,syrup,entamizole,Antibiotic,
+FLAGYL,Metronidazole,400 mg,tablet,flagyl,Antibiotic,
+DOMPER,Domperidone,10 mg,tablet,domper|domperidone,GI,
+MOTILIUM,Domperidone,10 mg,tablet,motilium,GI,
+BUSCOPAN,Hyoscine butylbromide,10 mg,tablet,buscopan,GI,
+BETNESOL,Betamethasone,0.5 mg,tablet,betnesol,Steroid,
+PREDNISOLONE,Prednisolone,5 mg,tablet,prednisolone,Steroid,
+CETZINE,Cetirizine,10 mg,tablet,cetzine,Allergy,
+ALLEGRA,Fexofenadine,120 mg,tablet,allegra|fexofenadine,Allergy,
+LORATADINE,Loratadine,10 mg,tablet,loratadine,Allergy,
+SINAREST,Paracetamol+Phenylephrine,,tablet,sinarest,Cold,
+DECOLGEN,Paracetamol+Chlorpheniramine,,tablet,decolgen,Cold,
+ACTIFED,Triprolidine+Phenylephrine,,tablet,actifed,Cold,
+ORS PLUS,ORS,,sachet,ors plus,Rehydration,
+ZINCOVIT,Multivitamin,,tablet,zincovit,Supplement,
+BECOSULES,B complex,,capsule,becosules,Supplement,
+NEUROBION,B complex,,tablet,neurobion,Supplement,
+ORSALINE,ORS,,sachet,orsaline,Rehydration,
+LOPERAMIDE,Loperamide,2 mg,tablet,loperamide,GI,
+IMODIUM,Loperamide,2 mg,tablet,imodium,GI,
+ORS BIOLIFE,ORS,,sachet,ors biolife,Rehydration,
+CANDID,Clotrimazole,1%,cream,candid|clotrimazole,Dermatology,
+BETNOVATE,Betamethasone,0.1%,cream,betnovate,Dermatology,
+CLOBEGEN,Clobetasol,0.05%,cream,clobegen,Dermatology,
+TERBINAFINE,Terbinafine,250 mg,tablet,terbinafine,Dermatology,
+FLUCONAZOLE,Fluconazole,150 mg,tablet,fluconazole,Antifungal,
+DIFLUCAN,Fluconazole,150 mg,tablet,diflucan,Antifungal,
+ORS N,ORS,,sachet,ors n,Rehydration,
+ORSAL,ORS,,sachet,orsal,Rehydration,
+ORS BIOPHARMA,ORS,,sachet,ors biopharma,Rehydration,
+ORS G,ORS,,sachet,ors g,Rehydration,
+ORS T,ORS,,sachet,ors t,Rehydration,
+ORS Z,ORS,,sachet,ors z,Rehydration,
+ORS LIFE,ORS,,sachet,ors life,Rehydration,
+ORS CARE,ORS,,sachet,ors care,Rehydration,
+ORS FAST,ORS,,sachet,ors fast,Rehydration,
+ORS GOLD,ORS,,sachet,ors gold,Rehydration,
+ORS PLUS N,ORS,,sachet,ors plus n,Rehydration,
+ORS PLUS G,ORS,,sachet,ors plus g,Rehydration,
+ORS PLUS T,ORS,,sachet,ors plus t,Rehydration,
+ORS PLUS Z,ORS,,sachet,ors plus z,Rehydration,
+ORS PLUS LIFE,ORS,,sachet,ors plus life,Rehydration,
+ORS PLUS CARE,ORS,,sachet,ors plus care,Rehydration,
+ORS PLUS FAST,ORS,,sachet,ors plus fast,Rehydration,
+ORS PLUS GOLD,ORS,,sachet,ors plus gold,Rehydration,
+ORS PLUS BIOLIFE,ORS,,sachet,ors plus biolife,Rehydration,
+ORS PLUS BIOPHARMA,ORS,,sachet,ors plus biopharma,Rehydration,
 ORALDYNE,Chlorhexidine,0.12%,mouthwash,oraldyne,Dental,dentist|general_physician
 DENTOGEL,Metronidazole,1%,gel,dentogel,Dental,dentist|general_physician
 GYNOFAST,Clotrimazole,1%,cream,gynofast,Gynecology,gynecologist|general_physician

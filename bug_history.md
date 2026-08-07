@@ -430,3 +430,12 @@
   <root_cause>`VisitRecordService::recordUsagesFromSubmission()` ran on every `saveForCompletedBooking()` call regardless of booking status.</root_cause>
   <prevention_rule>Personal learning stats (`condition_usages`, `medicine_usages`) increment only when `$booking->status === 'completed'` at save time — mid-consult saves may persist clinical data but must not train pickers.</prevention_rule>
 </bug>
+
+## 2026-08-07T14:32:26+0600
+
+<bug>
+  <category>UI/UX</category>
+  <symptom>Typing a generic name (e.g. "omeprazole") in the prescription medicine dropdown returned no results even though OMEE was in the catalogue.</symptom>
+  <root_cause>The grouped static `Select` search only matches option labels and values. After switching from API search to `groupedSelectOptions()`, labels were brand + strength only (`OMEE 20 mg`) with no generic text, so generic queries never matched.</root_cause>
+  <prevention_rule>Any catalogue medicine shown in a searchable Filament static select must include searchable generic text in `displayLabel()` (or use `getSearchResultsUsing()`), and add a regression test on `displayLabel()` when changing picker wiring.</prevention_rule>
+</bug>

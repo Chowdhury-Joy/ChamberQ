@@ -56,6 +56,10 @@ class Medicine extends Model
             $label .= ' '.$this->default_strength;
         }
 
+        if (filled($this->generic_name)) {
+            $label .= ' — '.$this->generic_name;
+        }
+
         return $label;
     }
 

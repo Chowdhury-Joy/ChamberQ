@@ -3,6 +3,7 @@
 namespace App\Filament\TenantAdmin\Support;
 
 use App\Models\Doctor;
+use App\Models\Medicine;
 use App\Services\MedicineService;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -20,27 +21,84 @@ class MedicinePickerFields
     public static function schema(?Doctor $prescribingDoctor = null): array
     {
         return [
-            Select::make('medicine_name')
-                ->label(__('Medicine'))
-                ->placeholder(__('Choose from the list…'))
-                ->options(fn (): array => app(MedicineService::class)->groupedSelectOptions(
-                    auth()->user(),
-                    $prescribingDoctor,
-                ))
-                ->searchable()
-                ->live()
-                ->required()
-                ->native(false),
-            TextInput::make('medicine_name_custom')
-                ->label(__('Medicine name'))
-                ->placeholder(__('Type medicine name'))
-                ->maxLength(120)
-                ->visible(fn (Get $get): bool => $get('medicine_name') === MedicineService::CUSTOM_MEDICINE_VALUE)
-                ->required(fn (Get $get): bool => $get('medicine_name') === MedicineService::CUSTOM_MEDICINE_VALUE)
-                ->live(onBlur: true)
-                ->afterStateUpdated(fn (?string $state, Set $set): mixed => filled($state)
-                    ? $set('medicine_name_custom', mb_strtoupper(trim($state)))
-                    : null),
+            self::medicineSelect(__('Medicine'), $prescribingDoctor),
         ];
+    }
+
+    public static function prescriptionMedicineSelect(?Doctor $prescribingDoctor = null): Select
+    {
+        return self::medicineSelect(__('Medicine (brand)'), $prescribingDoctor)
+            ->afterStateUpdated(function (?string $state, Set $set, Get $get): void {
+                if (blank($state)) {
+                    return;
+                }
+
+                $set('medicine_name', mb_strtoupper(trim($state)));
+
+                $match = Medicine::query()
+                    ->where('brand_name', mb_strtoupper(trim($state)))
+                    ->first();
+
+                if (! $match) {
+                    return;
+                }
+
+                if (blank($get('generic_name'))) {
+                    $set('generic_name', $match->generic_name);
+                }
+                if (blank($get('dose'))) {
+                    $prefillDose = $match->default_strength;
+                    if (filled($prefillDose) && in_array($prefillDose, VisitNotesFormSchema::DOSE_PRESETS, true)) {
+                        $set('dose', $prefillDose);
+                        $set('dose_other', null);
+                    } elseif (filled($prefillDose)) {
+                        $set('dose', 'other');
+                        $set('dose_other', $prefillDose);
+                    }
+                }
+                if (blank($get('frequency'))) {
+                    $set('frequency', '1+1+1');
+                }
+                if (blank($get('duration'))) {
+                    $set('duration', '5 days');
+                }
+
+                $set('_prefilled', true);
+            });
+    }
+
+    private static function medicineSelect(string $label, ?Doctor $prescribingDoctor = null): Select
+    {
+        $medicineService = app(MedicineService::class);
+
+        return Select::make('medicine_name')
+            ->label($label)
+            ->placeholder(__('Choose from the list…'))
+            ->options(fn (): array => $medicineService->groupedSelectOptions(
+                auth()->user(),
+                $prescribingDoctor,
+            ))
+            ->searchable()
+            ->live()
+            ->required()
+            ->native(false)
+            ->createOptionForm([
+                TextInput::make('brand_name')
+                    ->label(__('Medicine name'))
+                    ->required()
+                    ->maxLength(120),
+            ])
+            ->createOptionModalHeading(__('Medicine not in list'))
+            ->createOptionUsing(fn (array $data): string => $medicineService->normalizeMedicineName($data['brand_name']))
+            ->getOptionLabelUsing(function (?string $value): ?string {
+                if (blank($value)) {
+                    return null;
+                }
+
+                $brand = mb_strtoupper(trim($value));
+                $match = Medicine::query()->where('brand_name', $brand)->first();
+
+                return $match?->displayLabel() ?? $brand;
+            });
     }
 }

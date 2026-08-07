@@ -29,6 +29,24 @@ class VisitNotesFormSchema
 {
     private const VISIT_NOTES_HINT = 'All fields are optional — leave blank to complete without notes.';
 
+    private const STAFF_ENTRY_HINT = 'Type only what the doctor wrote on paper. Attach a photo of the slip so it can be checked later.';
+
+    /**
+     * Fields staff may write when typing up a paper prescription.
+     *
+     * Enforced server-side as well as hidden from the form, so a hand-crafted
+     * request cannot slip a diagnosis or voice note past the role split.
+     *
+     * @var list<string>
+     */
+    public const STAFF_WRITABLE_FIELDS = [
+        'prescription_items',
+        'follow_up_relative',
+        'follow_up_date',
+        'follow_up_note',
+        'prescription_photo',
+    ];
+
     /**
      * Sticky header + footer so Save / Complete stays visible on long phone modals.
      */
@@ -244,31 +262,7 @@ class VisitNotesFormSchema
                 ->viewData(['patient' => $patient])
                 ->columnSpanFull()
                 ->visible(fn (): bool => $patient?->hasClinicalWarnings() ?? false),
-            Section::make(__('Prescription'))
-                ->schema([
-                    View::make('filament.tenant-admin.components.copy-last-prescription')
-                        ->viewData(['items' => $lastItems])
-                        ->columnSpanFull()
-                        ->visible(fn (): bool => $lastItems !== []),
-                    Repeater::make('prescription_items')
-                        ->label(__('Medicines'))
-                        ->schema(self::prescriptionItemSchema($prescribingDoctor))
-                        ->columns(1)
-                        ->defaultItems(0)
-                        ->addActionLabel(__('Add medicine'))
-                        ->reorderable()
-                        ->collapsible()
-                        ->itemLabel(function (array $state): ?string {
-                            $name = $state['medicine_name'] ?? null;
-
-                            if ($name === MedicineService::CUSTOM_MEDICINE_VALUE) {
-                                $name = $state['medicine_name_custom'] ?? null;
-                            }
-
-                            return filled($name) ? mb_strtoupper((string) $name) : null;
-                        }),
-                ])
-                ->columnSpanFull(),
+            self::prescriptionSection($prescribingDoctor, $lastItems),
             Section::make(__('Diagnosis'))
                 ->schema([
                     Select::make('diagnosis')
@@ -320,35 +314,7 @@ class VisitNotesFormSchema
                 ->helperText(__('Blood tests, X-rays, or other reports you looked at today.'))
                 ->rows(2)
                 ->columnSpanFull(),
-            Section::make(__('Follow-up'))
-                ->schema([
-                    ToggleButtons::make('follow_up_relative')
-                        ->label(__('Come back'))
-                        ->options([
-                            '1_week' => __('1 week'),
-                            '2_weeks' => __('2 weeks'),
-                            '1_month' => __('1 month'),
-                            '3_months' => __('3 months'),
-                            'as_needed' => __('As needed'),
-                            'pick_date' => __('Pick a date'),
-                        ])
-                        ->inline()
-                        ->live()
-                        ->columnSpanFull(),
-                    DatePicker::make('follow_up_date')
-                        ->label(__('Or pick a date'))
-                        ->native(false)
-                        ->minDate(now()->toDateString())
-                        ->visible(fn (Get $get): bool => $get('follow_up_relative') === 'pick_date')
-                        ->columnSpanFull(),
-                    TextInput::make('follow_up_note')
-                        ->label(__('Follow-up note'))
-                        ->placeholder(__('e.g. Come back if fever continues'))
-                        ->maxLength(255)
-                        ->visible(fn (Get $get): bool => $get('follow_up_relative') === 'as_needed')
-                        ->columnSpanFull(),
-                ])
-                ->columns(1),
+            self::followUpSection(),
             Section::make(__('Voice note'))
                 ->schema([
                     View::make('filament.tenant-admin.components.visit-voice-recorder')
@@ -361,21 +327,138 @@ class VisitNotesFormSchema
                         ->rows(3)
                         ->columnSpanFull(),
                 ]),
-            Section::make(__('Paper prescription photo'))
-                ->schema([
-                    FileUpload::make('prescription_photo')
-                        ->label(__('Photo of handwritten prescription'))
-                        ->helperText(__('Take a photo on your phone or upload a scan. No handwriting recognition.'))
-                        ->image()
-                        ->acceptedFileTypes(VisitMediaService::allowedPhotoMimeTypes())
-                        ->maxSize(5120)
-                        ->disk('local')
-                        ->directory(fn () => app(VisitMediaService::class)->photoDirectory())
-                        ->visibility('private')
-                        ->columnSpanFull(),
-                ]),
+            self::paperPhotoSection(),
             Hidden::make('_machine_filled')->dehydrated(false),
         ];
+    }
+
+    /**
+     * Staff typing up a prescription the doctor wrote on paper.
+     *
+     * Medicines, follow-up and the photo of the slip only — no diagnosis,
+     * advice, tests, voice note or allergy history. Staff are transcribing,
+     * not making a clinical judgement, so widening this would hand them
+     * patient history the role split says they may not read.
+     *
+     * @return list<\Filament\Forms\Components\Component>
+     */
+    public static function staffPrescriptionComponents(?Booking $booking = null): array
+    {
+        $prescribingDoctor = app(MedicineService::class)->resolvePrescribingDoctor($booking);
+
+        return [
+            TextInput::make('_staff_entry_hint')
+                ->hiddenLabel()
+                ->default(__(self::STAFF_ENTRY_HINT))
+                ->disabled()
+                ->dehydrated(false)
+                ->columnSpanFull(),
+            self::prescriptionSection($prescribingDoctor),
+            self::followUpSection(),
+            self::paperPhotoSection(),
+        ];
+    }
+
+    /**
+     * Form state for the staff entry modal — prescription fields only, so
+     * reopening never surfaces the doctor's diagnosis or voice note.
+     *
+     * @return array<string, mixed>
+     */
+    public static function staffStateFromRecord(?VisitRecord $record): array
+    {
+        $base = ['_staff_entry_hint' => __(self::STAFF_ENTRY_HINT)];
+
+        if (! $record) {
+            return $base + ['prescription_items' => []];
+        }
+
+        $full = self::stateFromRecord($record);
+
+        return $base + [
+            'prescription_items' => $full['prescription_items'],
+            'follow_up_date' => $full['follow_up_date'],
+            'follow_up_note' => $full['follow_up_note'],
+            'follow_up_relative' => $full['follow_up_relative'],
+            'prescription_photo' => $full['prescription_photo'],
+        ];
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $lastItems
+     */
+    private static function prescriptionSection(?Doctor $prescribingDoctor, array $lastItems = []): Section
+    {
+        return Section::make(__('Prescription'))
+            ->schema([
+                View::make('filament.tenant-admin.components.copy-last-prescription')
+                    ->viewData(['items' => $lastItems])
+                    ->columnSpanFull()
+                    ->visible(fn (): bool => $lastItems !== []),
+                Repeater::make('prescription_items')
+                    ->label(__('Medicines'))
+                    ->schema(self::prescriptionItemSchema($prescribingDoctor))
+                    ->columns(1)
+                    ->defaultItems(0)
+                    ->addActionLabel(__('Add medicine'))
+                    ->reorderable()
+                    ->collapsible()
+                    ->collapsed(fn ($item): bool => filled($item?->getRawState()['medicine_name'] ?? null))
+                    ->itemLabel(fn (array $state): ?string => filled($state['medicine_name'] ?? null)
+                        ? mb_strtoupper((string) $state['medicine_name'])
+                        : null),
+            ])
+            ->columnSpanFull();
+    }
+
+    private static function followUpSection(): Section
+    {
+        return Section::make(__('Follow-up'))
+            ->schema([
+                ToggleButtons::make('follow_up_relative')
+                    ->label(__('Come back'))
+                    ->options([
+                        '1_week' => __('1 week'),
+                        '2_weeks' => __('2 weeks'),
+                        '1_month' => __('1 month'),
+                        '3_months' => __('3 months'),
+                        'as_needed' => __('As needed'),
+                        'pick_date' => __('Pick a date'),
+                    ])
+                    ->inline()
+                    ->live()
+                    ->columnSpanFull(),
+                DatePicker::make('follow_up_date')
+                    ->label(__('Or pick a date'))
+                    ->native(false)
+                    ->minDate(now()->toDateString())
+                    ->visible(fn (Get $get): bool => $get('follow_up_relative') === 'pick_date')
+                    ->columnSpanFull(),
+                TextInput::make('follow_up_note')
+                    ->label(__('Follow-up note'))
+                    ->placeholder(__('e.g. Come back if fever continues'))
+                    ->maxLength(255)
+                    ->visible(fn (Get $get): bool => $get('follow_up_relative') === 'as_needed')
+                    ->columnSpanFull(),
+            ])
+            ->columns(1);
+    }
+
+    private static function paperPhotoSection(): Section
+    {
+        return Section::make(__('Paper prescription photo'))
+            ->schema([
+                FileUpload::make('prescription_photo')
+                    ->label(__('Photo of handwritten prescription'))
+                    ->helperText(__('Take a photo on your phone or upload a scan. No handwriting recognition.'))
+                    ->image()
+                    ->acceptedFileTypes(VisitMediaService::allowedPhotoMimeTypes())
+                    ->maxSize(5120)
+                    ->disk('local')
+                    ->directory(fn () => app(VisitMediaService::class)->photoDirectory())
+                    ->visibility('private')
+                    ->columnSpanFull(),
+            ]);
     }
 
     /**
@@ -398,64 +481,7 @@ class VisitNotesFormSchema
     private static function prescriptionItemSchema(?Doctor $prescribingDoctor = null): array
     {
         return [
-            Select::make('medicine_name')
-                ->label(__('Medicine (brand)'))
-                ->placeholder(__('Choose from the list…'))
-                ->options(fn (): array => app(MedicineService::class)->groupedSelectOptions(
-                    auth()->user(),
-                    $prescribingDoctor,
-                ))
-                ->searchable()
-                ->live()
-                ->required()
-                ->native(false)
-                ->afterStateUpdated(function (?string $state, Set $set, Get $get): void {
-                    if (blank($state) || $state === MedicineService::CUSTOM_MEDICINE_VALUE) {
-                        return;
-                    }
-
-                    $set('medicine_name', mb_strtoupper(trim($state)));
-
-                    $match = Medicine::query()
-                        ->where('brand_name', mb_strtoupper(trim($state)))
-                        ->first();
-
-                    if (! $match) {
-                        return;
-                    }
-
-                    if (blank($get('generic_name'))) {
-                        $set('generic_name', $match->generic_name);
-                    }
-                    if (blank($get('dose'))) {
-                        $prefillDose = $match->default_strength;
-                        if (self::isDosePreset($prefillDose)) {
-                            $set('dose', $prefillDose);
-                            $set('dose_other', null);
-                        } elseif (filled($prefillDose)) {
-                            $set('dose', 'other');
-                            $set('dose_other', $prefillDose);
-                        }
-                    }
-                    if (blank($get('frequency'))) {
-                        $set('frequency', '1+1+1');
-                    }
-                    if (blank($get('duration'))) {
-                        $set('duration', '5 days');
-                    }
-
-                    $set('_prefilled', true);
-                }),
-            TextInput::make('medicine_name_custom')
-                ->label(__('Medicine name'))
-                ->placeholder(__('Type medicine name'))
-                ->maxLength(120)
-                ->live(onBlur: true)
-                ->visible(fn (Get $get): bool => $get('medicine_name') === MedicineService::CUSTOM_MEDICINE_VALUE)
-                ->required(fn (Get $get): bool => $get('medicine_name') === MedicineService::CUSTOM_MEDICINE_VALUE)
-                ->afterStateUpdated(fn (?string $state, Set $set): mixed => filled($state)
-                    ? $set('medicine_name_custom', mb_strtoupper(trim($state)))
-                    : null),
+            MedicinePickerFields::prescriptionMedicineSelect($prescribingDoctor),
             View::make('filament.tenant-admin.components.medicine-prefill-hint')
                 ->visible(fn (Get $get): bool => (bool) $get('_prefilled'))
                 ->columnSpanFull(),
@@ -592,11 +618,9 @@ class VisitNotesFormSchema
         ?string $duration,
     ): array {
         $brand = filled($medicineName) ? mb_strtoupper(trim($medicineName)) : null;
-        $inCatalog = $brand && Medicine::query()->where('brand_name', $brand)->exists();
 
         return [
-            'medicine_name' => $inCatalog ? $brand : MedicineService::CUSTOM_MEDICINE_VALUE,
-            'medicine_name_custom' => $inCatalog ? null : $brand,
+            'medicine_name' => $brand,
             'generic_name' => $genericName,
             'dose' => self::isDosePreset($dose) ? $dose : (filled($dose) ? 'other' : null),
             'dose_other' => self::isDosePreset($dose) ? null : $dose,

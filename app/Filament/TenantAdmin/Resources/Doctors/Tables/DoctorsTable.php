@@ -4,6 +4,7 @@ namespace App\Filament\TenantAdmin\Resources\Doctors\Tables;
 
 use App\Models\Doctor;
 use Filament\Actions\EditAction;
+use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -24,6 +25,9 @@ class DoctorsTable
                 TextColumn::make('practice_type')
                     ->label(__('Practice type'))
                     ->formatStateUsing(fn (?string $state, Doctor $record): string => $record->practiceTypeLabel()),
+                IconColumn::make('staff_may_enter_prescriptions')
+                    ->label(__('Staff type scripts'))
+                    ->boolean(),
                 TextColumn::make('created_at')
                     ->dateTime()
                     ->sortable()

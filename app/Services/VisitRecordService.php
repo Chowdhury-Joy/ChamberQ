@@ -87,6 +87,61 @@ class VisitRecordService
         });
     }
 
+    /**
+     * Staff typing up a prescription the doctor wrote on paper.
+     *
+     * Writes only the prescription, follow-up and paper photo. Any diagnosis,
+     * advice, tests, reports or voice note already on the record is left
+     * untouched — staff never overwrite the doctor's clinical notes, and
+     * anything they submit outside the whitelist is discarded.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function saveStaffEnteredPrescription(Booking $booking, User $staff, array $data): ?VisitRecord
+    {
+        $prescribingDoctor = $this->medicineService->resolvePrescribingDoctor($booking);
+
+        if (! $staff->canEnterPrescriptionFor($prescribingDoctor)) {
+            abort(403);
+        }
+
+        $data = VisitNotesFormSchema::normalizeSubmission(
+            array_intersect_key($data, array_flip(VisitNotesFormSchema::STAFF_WRITABLE_FIELDS))
+        );
+
+        if (! $this->submissionHasContent($data)) {
+            return null;
+        }
+
+        return DB::transaction(function () use ($booking, $staff, $data) {
+            $existing = VisitRecord::query()->where('booking_id', $booking->id)->first();
+            $photoPath = $this->normalizeUploadedPath($data['prescription_photo'] ?? null);
+
+            if ($existing && filled($existing->photo_path) && $photoPath !== $existing->photo_path) {
+                $this->visitMediaService->deleteIfExists($existing->photo_path);
+            }
+
+            $visitRecord = VisitRecord::query()->updateOrCreate(
+                ['booking_id' => $booking->id],
+                [
+                    'tenant_id' => tenant('id'),
+                    'patient_id' => $booking->patient_id,
+                    // Who actually keyed it. The prescriber stays derivable
+                    // from the booking's session, so the paper trail shows both.
+                    'recorded_by' => $staff->id,
+                    'follow_up_date' => $data['follow_up_date'] ?? null,
+                    'follow_up_note' => $this->nullableString($data['follow_up_note'] ?? null),
+                    'photo_path' => $photoPath,
+                    'recorded_at' => now(),
+                ]
+            );
+
+            $this->syncPrescription($visitRecord, $staff, $data);
+
+            return $visitRecord->fresh(['condition', 'prescription.items']);
+        });
+    }
+
     public function lastRecordedVisitForPatient(Patient $patient, ?string $excludeBookingId = null): ?VisitRecord
     {
         return VisitRecord::query()

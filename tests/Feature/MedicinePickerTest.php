@@ -173,7 +173,7 @@ class MedicinePickerTest extends TestCase
 
         $gpOptions = $this->medicineService->groupedSelectOptions($this->doctor, $generalOnly);
         $flatGp = collect($gpOptions)
-            ->except([__('Other'), __('Your medicines')])
+            ->except([__('Your medicines')])
             ->flatMap(fn (array $group): array => array_keys($group));
 
         $this->assertTrue($flatGp->contains('NAPA'));
@@ -201,9 +201,29 @@ class MedicinePickerTest extends TestCase
 
         $options = $this->medicineService->groupedSelectOptions($this->doctor, $dentistDoctor);
         $flat = collect($options)
-            ->except([__('Other'), __('Your medicines')])
+            ->except([__('Your medicines')])
             ->flatMap(fn (array $group): array => array_keys($group));
 
         $this->assertFalse($flat->contains('GPONLY'));
+    }
+
+    public function test_display_label_includes_generic_for_dropdown_search(): void
+    {
+        tenancy()->initialize($this->tenant);
+
+        $napa = Medicine::query()->where('brand_name', 'NAPA')->first();
+
+        $this->assertSame('NAPA 500 mg — Paracetamol', $napa->displayLabel());
+    }
+
+    public function test_resolve_medicine_name_from_direct_brand_value(): void
+    {
+        tenancy()->initialize($this->tenant);
+
+        $name = $this->medicineService->resolveMedicineNameFromFormState([
+            'medicine_name' => 'custom brand',
+        ]);
+
+        $this->assertSame('CUSTOM BRAND', $name);
     }
 }

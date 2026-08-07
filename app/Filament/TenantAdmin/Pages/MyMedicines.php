@@ -81,7 +81,6 @@ class MyMedicines extends Page implements HasActions, HasTable
 
                         return [
                             'medicine_name' => $base['medicine_name'],
-                            'medicine_name_custom' => $base['medicine_name_custom'],
                             'generic_name' => $record->generic_name,
                             'last_dose' => $record->last_dose,
                             'last_frequency' => $record->last_frequency,

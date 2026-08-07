@@ -11,7 +11,8 @@ class LoadMedicinesCommand extends Command
 {
     protected $signature = 'medicines:load
         {path? : CSV path (defaults to data/medicine-list-draft.csv)}
-        {--fresh : Delete existing medicines before loading}';
+        {--fresh : Delete existing medicines and all medicine_usages before loading}
+        {--prune : Delete catalogue rows absent from the CSV (keeps medicine_usages)}';
 
     protected $description = 'Load the curated medicine master list from CSV';
 
@@ -28,7 +29,7 @@ class LoadMedicinesCommand extends Command
         if ($this->option('fresh')) {
             DB::table('medicine_usages')->delete();
             Medicine::query()->delete();
-            $this->warn('Existing medicines cleared.');
+            $this->warn('Existing medicines and usages cleared.');
         }
 
         $handle = fopen($path, 'r');
@@ -48,6 +49,7 @@ class LoadMedicinesCommand extends Command
 
         $created = 0;
         $updated = 0;
+        $brandsInCsv = [];
 
         while (($row = fgetcsv($handle)) !== false) {
             if (count($row) < 2 || trim($row[0]) === '') {
@@ -55,6 +57,9 @@ class LoadMedicinesCommand extends Command
             }
 
             [$brand, $generic, $strength, $form, $aliasesRaw, $category, $practiceTypesRaw] = array_pad($row, 7, null);
+
+            $normalizedBrand = mb_strtoupper(trim($brand));
+            $brandsInCsv[] = $normalizedBrand;
 
             $aliases = collect(explode('|', (string) $aliasesRaw))
                 ->map(fn (string $alias) => trim($alias))
@@ -85,7 +90,7 @@ class LoadMedicinesCommand extends Command
             }
 
             $medicine = Medicine::query()->updateOrCreate(
-                ['brand_name' => mb_strtoupper(trim($brand))],
+                ['brand_name' => $normalizedBrand],
                 [
                     'generic_name' => filled($generic) ? trim($generic) : null,
                     'default_strength' => filled($strength) ? trim($strength) : null,
@@ -105,11 +110,21 @@ class LoadMedicinesCommand extends Command
 
         fclose($handle);
 
+        $pruned = 0;
+
+        if ($this->option('prune')) {
+            $brandsInCsv = array_values(array_unique($brandsInCsv));
+            $pruned = Medicine::query()
+                ->whereNotIn('brand_name', $brandsInCsv)
+                ->delete();
+        }
+
         $this->table(
             ['Metric', 'Count'],
             [
                 ['Created', $created],
                 ['Updated', $updated],
+                ['Pruned', $pruned],
                 ['Total in database', Medicine::count()],
             ]
         );
