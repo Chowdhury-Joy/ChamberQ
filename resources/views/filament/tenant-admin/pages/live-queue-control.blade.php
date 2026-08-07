@@ -342,6 +342,7 @@
                                             @elseif($current->status === 'completed')
                                                 {{-- The patient is still in the room: hand over the
                                                      prescription before calling the next one in. --}}
+                                                @include('filament.tenant-admin.components.call-next-nudge', ['booking' => $current])
                                                 @include('filament.tenant-admin.components.prescription-share-actions', [
                                                     'booking' => $current,
                                                     'prescription' => $current->visitRecord?->prescription,

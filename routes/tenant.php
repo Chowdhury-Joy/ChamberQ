@@ -6,6 +6,7 @@ use App\Http\Controllers\BookingController;
 use App\Http\Controllers\ConditionController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PrescriptionController;
+use App\Http\Controllers\PrescriptionShareController;
 use App\Http\Controllers\VisitMediaController;
 use App\Http\Controllers\PWAController;
 use App\Http\Controllers\QueueStatusController;
@@ -61,6 +62,13 @@ $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
     Route::get('/prescriptions/{prescription}/print', [PrescriptionController::class, 'print'])
         ->middleware(['auth'])
         ->name($routeName('prescriptions.print'));
+
+    // Patient's own copy, opened from the doctor's WhatsApp link. No auth by
+    // design — the expiring signature is the gate, and the view exposes only
+    // this prescription's medicines (never a diagnosis).
+    Route::get('/prescriptions/{prescription}/share', [PrescriptionShareController::class, 'show'])
+        ->middleware(['signed', 'throttle:30,1'])
+        ->name($routeName('prescriptions.share'));
 
     Route::post('/api/visit-media/upload-voice', [VisitMediaController::class, 'uploadVoice'])
         ->middleware(['auth', 'throttle:30,1']);

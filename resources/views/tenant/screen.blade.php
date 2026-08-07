@@ -344,10 +344,33 @@
             });
         }
 
+        // Say the number three times: a waiting room is noisy and a patient who
+        // looked away for one pass still catches the second or third.
+        const ANNOUNCE_REPEATS = 3;
+        const ANNOUNCE_GAP_MS = 700;
+
+        // Bumped on every new call so a sequence still repeating for the previous
+        // serial stops instead of talking over the new one.
+        let announceSequence = 0;
+
         async function speakCall(serial) {
             if (!soundUnlocked || soundMuted) return;
+
+            const mySequence = ++announceSequence;
+
             // Pre-recorded only — never fall back to browser TTS (sounds ghostly).
-            await playAnnounceClip(serial);
+            for (let i = 0; i < ANNOUNCE_REPEATS; i++) {
+                if (soundMuted || mySequence !== announceSequence) return;
+
+                const played = await playAnnounceClip(serial);
+
+                // Clip missing or playback blocked — do not retry two more times.
+                if (!played) return;
+
+                if (i < ANNOUNCE_REPEATS - 1) {
+                    await new Promise(function (r) { setTimeout(r, ANNOUNCE_GAP_MS); });
+                }
+            }
         }
 
         function announceCall(serial) {

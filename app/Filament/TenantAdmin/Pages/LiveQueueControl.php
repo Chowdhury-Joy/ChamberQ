@@ -473,6 +473,8 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                     $visitRecordService,
                     $this->activeLiveSession,
                 );
+
+                $this->forgetQueueState();
             });
     }
 

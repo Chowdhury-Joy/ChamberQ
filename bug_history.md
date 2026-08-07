@@ -360,6 +360,15 @@
   <prevention_rule>Patient clinical data — notes, prescriptions, voice, photos — is never written to the `public` disk or anywhere under the web root; it goes to a private disk and is streamed through an authenticated controller, and the service must expose no URL accessor. Unguessable filenames are never treated as access control. Any new clinical media path must be covered by a test asserting it is not fetchable over HTTP, not merely that a role check exists somewhere.</prevention_rule>
 </bug>
 
+## 2026-08-07T01:13:55+0600
+
+<bug>
+  <category>Code</category>
+  <symptom>The visit-notes form (diagnosis, advice, prescription, voice note, photo) crashed on open everywhere it appeared: Consult Screen's catch-up "Add notes" flow, "Complete & call next", and Daily Roster / Live Queue Control's Mark Completed modal for doctors. The action button did nothing visible, or the modal never rendered.</symptom>
+  <root_cause>Two independent bugs stacked. (1) `catch-up-notes-list.blade.php`'s "Add notes" button called `mountAction('catchUpBooking', ...)` while the parent "Patients without notes today" list action was already mounted; Filament resolves a `mountAction` call made while another action is open as a *nested* modal action of that parent, looked up via `$parentAction->getModalAction()` — `catchUpBooking` was never registered there, so resolution silently threw `ActionNotResolvableException`, which `mountAction()` catches by unmounting and returning null with no error surfaced. (2) Once that was fixed by switching to `replaceMountedAction()` (which clears `mountedActions` first so the lookup takes the correct top-level-method path), the shared `VisitNotesFormSchema` still failed while rendering because `visit-voice-recorder.blade.php` had `{{ elapsed }}` — Blade PHP interpolation of a bare, undefined constant — where an Alpine.js `x-text="elapsed"` binding was intended, since `elapsed` is an Alpine data property (`this.elapsed`), not a Blade variable. This threw `Undefined constant "elapsed"` on every render of the shared form.</symptom>
+  <prevention_rule>Never call `mountAction()` for an unrelated action from inside a Blade view rendered as another action's `modalContent()` — it will be resolved as a nested action of the currently-open one and fail silently. Use `replaceMountedAction()` to close the current action and open a different top-level one instead. Also: Alpine.js component state (`x-data` properties) must be rendered with `x-text`/`x-bind`, never bare `{{ }}` Blade interpolation — Blade evaluates that as PHP in the *server's* scope, not Alpine's client-side scope, and a bare identifier like `elapsed` is silently type-coerced into a PHP undefined-constant error. This bug shipped invisibly because clicking the broken button produced no console error and no failed network request — verify actions that open forms by asserting the modal's expected field content actually renders (e.g. via `Livewire::test(...)->call('mountAction', ...)` and inspecting the rendered schema HTML), not just that the click returns 200.</prevention_rule>
+</bug>
+
 ## 2026-08-07T01:50:29+0600
 
 <bug>

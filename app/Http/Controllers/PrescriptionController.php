@@ -2,10 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Chamber;
-use App\Models\Doctor;
 use App\Models\Prescription;
-use App\Models\ScheduleSession;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -26,22 +23,8 @@ class PrescriptionController extends Controller
         ]);
 
         $booking = $prescription->visitRecord?->booking;
-        $doctor = null;
-        $chamber = null;
 
-        if ($booking && $booking->bookable_type === ScheduleSession::class) {
-            $session = ScheduleSession::with(['doctor', 'chamber'])->find($booking->bookable_id);
-            $doctor = $session?->doctor;
-            $chamber = $session?->chamber;
-        }
-
-        if (! $chamber) {
-            $chamber = Chamber::query()->first();
-        }
-
-        if (! $doctor) {
-            $doctor = Doctor::query()->first();
-        }
+        ['doctor' => $doctor, 'chamber' => $chamber] = $prescription->resolveDoctorChamber();
 
         $missingRegistration = blank($doctor?->registration_number);
 

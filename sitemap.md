@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-07T01:50:29+0600
+Last Updated: 2026-08-07T10:33:28+0600
 
 ## Full Site Map
 
@@ -8,7 +8,7 @@ Hosts: values in `CENTRAL_DOMAINS` (e.g. `localhost`).
 
 | Route | Purpose | Access |
 |-------|---------|--------|
-| `/` | Sales landing for Doctor Gemini (Solo/Clinic plans, WhatsApp CTAs); captures `?ref=` and `?code=` into session | public |
+| `/` | Sales landing for ChamberQ (Solo/Clinic plans, WhatsApp CTAs); captures `?ref=` and `?code=` into session | public |
 | `/admin` | Super Admin Filament login | public login |
 | `/admin/*` | Super Admin: Tenants, Marketers, Discount Codes, Commissions; finance dashboard widgets; **Client Health** seller overview (`/admin/seller-overview`); **Research data** aggregate view (`/admin/research`); confirm doctor payments on tenant edit | super_admin only |
 | `/partner` | Marketer partner panel login | public login |
@@ -65,6 +65,13 @@ Available under both platform path and custom domain. Requires doctor role (`can
 | `POST /api/visit-media/upload-voice` | Upload voice note blob from Mark Completed modal | doctor auth (throttled) |
 | `GET /visit-records/{visitRecord}/voice` | Stream visit voice note | doctor auth |
 | `GET /visit-records/{visitRecord}/photo` | View paper prescription photo | doctor auth |
+
+### Tenant patient prescription copy (no login — signed link)
+The one patient-facing route that shows prescription content. Deliberately outside the doctor-auth set above; the expiring signature is the gate.
+
+| Route | Purpose | Access |
+|-------|---------|--------|
+| `GET /prescriptions/{prescription}/share` | The patient's own copy of **one** prescription — medicines, that prescription's advice/follow-up, prescriber name + registration, patient name, date. No diagnosis, no other visit, no chamber contact, no link onward into the record. Doctor sends it via a human-tapped `wa.me` link. | public, **signed URL, expires 48h**, throttled |
 
 ## Customer Journeys
 
@@ -125,9 +132,10 @@ Available under both platform path and custom domain. Requires doctor role (`can
 
 ### Doctor consult (doctor role)
 - **Trigger:** Patient called into chamber (`live_sessions.current_booking_id` set).
-- **Steps:** Tenant admin → **Consult Screen** — screen updates automatically (poll). Review visit count, warnings, last visit diagnosis/advice/voice/photo/transcript, past visits with reprint, voice playback, and photo links. Amber catch-up banner when today's session is active and completed patients lack notes — tap to fill in. On complete (doctor-run mode), optional visit-notes modal — diagnosis picker, advice, prescription builder, voice note (record 10–20s), optional manual transcript, paper prescription photo; all optional. Staff completing from queue skip the modal. Ending the session from Live Queue Control warns if notes are still missing.
+- **Steps:** Tenant admin → **Consult Screen** — screen updates automatically (poll). Review visit count, warnings, last visit diagnosis/advice/voice/photo/transcript, past visits with reprint, voice playback, and photo links. Amber catch-up banner when today's session is active and completed patients lack notes — tap to fill in. While the patient is in the chamber the card carries **Write prescription** (then **Edit prescription**) — the doctor writes during the conversation and can reopen and change it as many times as needed; saving does not end the visit, and the card shows "Prescription so far". The consult then ends in **two steps**: **Complete visit** opens the same modal, pre-filled with whatever was already written (diagnosis picker, advice, prescription builder, voice note 10–20s, optional manual transcript, paper prescription photo — all optional) and closes the visit *without* advancing the queue; the patient stays on screen under "Visit completed — ready for next patient" with **Print prescription** and **Send via WhatsApp** so the script is handed over while they are still in the room; then **Call next patient** advances the queue. Staff completing from the queue skip the modal. Ending the session from Live Queue Control warns if notes are still missing.
 - **Data/systems touched:** `live_sessions`, `bookings`, `patients`, `visit_records`, `prescriptions`.
-- **Success:** Doctor sees correct person and honest history state; visit notes saved when provided; patient ticket/portal never show clinical data.
+- **Key CTA:** Complete visit → Print / Send via WhatsApp → Call next patient.
+- **Success:** Doctor sees correct person and honest history state; visit notes saved when provided; the prescription can be printed or sent before the next patient is called; patient ticket/portal never show clinical data, and the shared link exposes only that one prescription.
 
 ### Content update (staff)
 - **Trigger:** Doctor wants copy/photo change.

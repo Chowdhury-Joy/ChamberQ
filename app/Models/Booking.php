@@ -10,6 +10,13 @@ class Booking extends Model
 {
     use HasUuids, BelongsToTenant;
 
+    /**
+     * How long a finished visit may sit without the next patient being called
+     * before the consult screens say so. Short on purpose: the room is empty
+     * and someone is waiting outside.
+     */
+    public const CALL_NEXT_NUDGE_SECONDS = 30;
+
     protected $fillable = [
         'bookable_type',
         'bookable_id',

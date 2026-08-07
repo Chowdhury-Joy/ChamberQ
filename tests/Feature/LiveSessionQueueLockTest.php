@@ -83,6 +83,29 @@ class LiveSessionQueueLockTest extends TestCase
         $this->assertSame('called', $second->fresh()->status);
     }
 
+    public function test_complete_without_advancing_holds_the_room_until_call_next(): void
+    {
+        $first = $this->makeWaitingBooking('Patient One', 1);
+        $second = $this->makeWaitingBooking('Patient Two', 2);
+
+        $this->service->callNextPatient($this->liveSession);
+        $this->service->completeCurrentPatientWithoutAdvancing($this->liveSession);
+
+        // The consult is closed, but the doctor still has the room: the queue
+        // must not have moved on while the prescription is being handed over.
+        $this->liveSession->refresh();
+        $this->assertSame($first->id, $this->liveSession->current_booking_id);
+        $this->assertSame('completed', $first->fresh()->status);
+        $this->assertNotNull($first->fresh()->completed_at);
+        $this->assertSame('waiting', $second->fresh()->status);
+
+        $this->service->callNextPatient($this->liveSession);
+
+        $this->liveSession->refresh();
+        $this->assertSame($second->id, $this->liveSession->current_booking_id);
+        $this->assertSame('called', $second->fresh()->status);
+    }
+
     public function test_concurrent_call_next_serializes_on_live_session_row_lock(): void
     {
         $first = $this->makeWaitingBooking('Patient One', 1);

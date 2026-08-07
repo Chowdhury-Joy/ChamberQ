@@ -18,6 +18,46 @@ use Filament\Schemas\Components\View;
 class VisitNotesFormSchema
 {
     /**
+     * Load a saved visit back into this form's shape, so a doctor can reopen
+     * what they wrote mid-consult and add to it instead of starting blank.
+     *
+     * Mirrors `VisitRecordService::saveForCompletedBooking()` — any field added
+     * to `components()` must be handled in both or it silently drops on reopen.
+     *
+     * @return array<string, mixed>
+     */
+    public static function stateFromRecord(?\App\Models\VisitRecord $record): array
+    {
+        if (! $record) {
+            return [];
+        }
+
+        return [
+            'condition_id' => $record->condition_id,
+            'diagnosis_free_text' => $record->diagnosis_uncoded,
+            'advice' => $record->advice,
+            'tests_advised' => $record->tests_advised,
+            'reports_seen' => $record->reports_seen,
+            'follow_up_date' => $record->follow_up_date?->toDateString(),
+            'voice_path' => $record->voice_path,
+            'voice_transcript' => $record->voice_transcript,
+            'prescription_photo' => filled($record->photo_path) ? [$record->photo_path] : [],
+            'prescription_items' => $record->prescription
+                ? $record->prescription->items
+                    ->map(fn (\App\Models\PrescriptionItem $item): array => [
+                        'medicine_name' => $item->medicine_name,
+                        'generic_name' => $item->generic_name,
+                        'dose' => $item->dose,
+                        'frequency' => $item->frequency,
+                        'duration' => $item->duration,
+                    ])
+                    ->values()
+                    ->all()
+                : [],
+        ];
+    }
+
+    /**
      * @return list<\Filament\Forms\Components\Component>
      */
     public static function components(): array

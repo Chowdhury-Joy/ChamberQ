@@ -59,7 +59,14 @@ class CompleteBookingWithVisitNotes
             ->send();
     }
 
-    public static function finishCurrentSessionPatient(
+    /**
+     * Save the consult's notes and close the visit, leaving the patient as the
+     * session's current booking so the doctor can print or send the
+     * prescription before calling the next patient in.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public static function completeCurrentSessionPatientWithoutAdvancing(
         array $data,
         LiveSessionService $liveSessionService,
         VisitRecordService $visitRecordService,
@@ -76,10 +83,11 @@ class CompleteBookingWithVisitNotes
             $visitRecordService->saveForCompletedBooking($booking, $user, $data);
         }
 
-        $liveSessionService->completeCurrentPatient($session);
+        $liveSessionService->completeCurrentPatientWithoutAdvancing($session);
 
         Notification::make()
-            ->title(__('Called next patient'))
+            ->title(__('Visit completed'))
+            ->body(__('Print or send the prescription, then tap Call next patient when ready.'))
             ->success()
             ->send();
     }

@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\URL;
 
 class TenancyUrl
 {
@@ -88,6 +89,30 @@ class TenancyUrl
         }
 
         return route($routeName, array_merge(['tenant' => tenant('id')], $parameters), $absolute);
+    }
+
+    /**
+     * Tenant-aware signed route — mirrors `route()` above so a signed URL built
+     * under central-domain path tenancy points at the prefixed route name.
+     *
+     * @param  array<string, mixed>  $parameters
+     */
+    public static function temporarySignedRoute(
+        string $name,
+        \DateTimeInterface $expiration,
+        array $parameters = [],
+        bool $absolute = true,
+    ): string {
+        if (! static::usesPathPrefix()) {
+            return URL::temporarySignedRoute($name, $expiration, $parameters, $absolute);
+        }
+
+        return URL::temporarySignedRoute(
+            static::PATH_ROUTE_PREFIX.$name,
+            $expiration,
+            array_merge(['tenant' => tenant('id')], $parameters),
+            $absolute,
+        );
     }
 
     /**

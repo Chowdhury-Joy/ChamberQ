@@ -42,6 +42,26 @@ class ConsultScreen extends Page implements HasActions
         return $user?->canViewConsultScreen() ?? false;
     }
 
+    /**
+     * Livewire caches `getXProperty()` results for the whole request, so an
+     * action that moves the queue would re-render against the state it just
+     * replaced — showing "Complete visit" again instead of the print/send
+     * buttons until the next 3s poll. Every mutating action clears them.
+     */
+    private function forgetQueueState(): void
+    {
+        unset(
+            $this->runningLiveSession,
+            $this->currentBooking,
+            $this->currentPatient,
+            $this->visitHistory,
+            $this->lastVisitRecord,
+            $this->catchUpCount,
+            $this->catchUpBookings,
+            $this->currentVisitRecord,
+        );
+    }
+
     public function getRunningLiveSessionProperty(): ?LiveSession
     {
         return LiveSession::query()
@@ -49,7 +69,12 @@ class ConsultScreen extends Page implements HasActions
             ->whereIn('status', ['active', 'paused'])
             ->orderByDesc('started_at')
             ->orderByDesc('id')
-            ->with(['currentBooking.patient', 'scheduleSession.doctor', 'scheduleSession.chamber'])
+            ->with([
+                'currentBooking.patient',
+                'currentBooking.visitRecord.prescription.items',
+                'scheduleSession.doctor',
+                'scheduleSession.chamber',
+            ])
             ->first();
     }
 
@@ -105,6 +130,26 @@ class ConsultScreen extends Page implements HasActions
         return $query->limit(20)->get();
     }
 
+    /**
+     * Notes already written for the patient in the room right now.
+     *
+     * Distinct from `lastVisitRecord`, which deliberately excludes today's
+     * booking so the "Last visit" panel keeps showing the previous consult.
+     */
+    public function getCurrentVisitRecordProperty(): ?VisitRecord
+    {
+        $booking = $this->currentBooking;
+
+        if (! $booking) {
+            return null;
+        }
+
+        return VisitRecord::query()
+            ->where('booking_id', $booking->id)
+            ->with(['condition', 'prescription.items'])
+            ->first();
+    }
+
     public function getLastVisitRecordProperty(): ?VisitRecord
     {
         $patient = $this->currentPatient;
@@ -139,28 +184,11 @@ class ConsultScreen extends Page implements HasActions
 
     protected function getHeaderActions(): array
     {
-        $actions = [];
-
-        if (auth()->user()?->canRecordVisitNotes() && $this->catchUpCount > 0) {
-            $actions[] = Action::make('catchUpNotes')
-                ->label(__('Fill in notes (:count)', ['count' => $this->catchUpCount]))
-                ->icon('heroicon-o-pencil-square')
-                ->color('warning')
-                ->modalHeading(__('Patients without notes today'))
-                ->modalDescription(__('Tap a patient to add optional visit notes. Nothing is required.'))
-                ->modalSubmitAction(false)
-                ->modalCancelActionLabel(__('Close'))
-                ->modalContent(fn (): \Illuminate\Contracts\View\View => view(
-                    'filament.tenant-admin.components.catch-up-notes-list',
-                    ['bookings' => $this->catchUpBookings],
-                ));
-        }
-
         if (! auth()->user()?->canOperateQueueControls()) {
-            return $actions;
+            return [];
         }
 
-        return array_merge($actions, [
+        return [
             Action::make('patientArrived')
                 ->label(__('Patient arrived'))
                 ->icon('heroicon-o-check')
@@ -172,21 +200,27 @@ class ConsultScreen extends Page implements HasActions
                         return;
                     }
                     app(LiveSessionService::class)->patientArrived($session);
+                    $this->forgetQueueState();
                     Notification::make()->title(__('Patient marked as arrived'))->success()->send();
                 }),
-            Action::make('completeAndCallNext')
-                ->label(__('Complete & call next'))
-                ->icon('heroicon-o-forward')
+            Action::make('completeVisit')
+                ->label(__('Complete visit'))
+                ->icon('heroicon-o-check-circle')
                 ->color('primary')
                 ->visible(fn (): bool => $this->currentBooking?->status === 'in_chamber')
                 ->form(fn (): array => auth()->user()?->canRecordVisitNotes()
                     ? VisitNotesFormSchema::components()
                     : [])
+                // Carries in anything already written mid-consult, so finishing
+                // never shows a blank form over a prescription that exists.
+                ->fillForm(fn (): array => auth()->user()?->canRecordVisitNotes()
+                    ? VisitNotesFormSchema::stateFromRecord($this->currentVisitRecord)
+                    : [])
                 ->modalHeading(fn (): ?string => auth()->user()?->canRecordVisitNotes()
                     ? __('Complete visit')
                     : null)
                 ->modalDescription(fn (): ?string => auth()->user()?->canRecordVisitNotes()
-                    ? __('Add optional notes, or leave everything blank and tap Complete.')
+                    ? __('Check the notes, or leave everything blank and tap Complete.')
                     : null)
                 ->modalSubmitActionLabel(__('Complete'))
                 ->action(function (
@@ -199,18 +233,21 @@ class ConsultScreen extends Page implements HasActions
                         return;
                     }
 
-                    CompleteBookingWithVisitNotes::finishCurrentSessionPatient(
+                    CompleteBookingWithVisitNotes::completeCurrentSessionPatientWithoutAdvancing(
                         $data,
                         $liveSessionService,
                         $visitRecordService,
                         $session,
                     );
+
+                    $this->forgetQueueState();
                 }),
             Action::make('callNext')
                 ->label(__('Call next patient'))
                 ->icon('heroicon-o-megaphone')
                 ->color('primary')
-                ->visible(fn (): bool => ! $this->currentBooking && $this->runningLiveSession !== null)
+                ->visible(fn (): bool => $this->runningLiveSession !== null
+                    && (! $this->currentBooking || $this->currentBooking->status === 'completed'))
                 ->action(function (): void {
                     $session = $this->runningLiveSession;
                     if (! $session) {
@@ -222,10 +259,65 @@ class ConsultScreen extends Page implements HasActions
 
                         return;
                     }
-                    app(LiveSessionService::class)->completeCurrentPatient($session);
+                    app(LiveSessionService::class)->callNextPatient($session);
+                    $this->forgetQueueState();
                     Notification::make()->title(__('Called next patient'))->success()->send();
                 }),
-        ]);
+        ];
+    }
+
+    public function catchUpNotesAction(): Action
+    {
+        return Action::make('catchUpNotes')
+            ->label(__('Fill in notes (:count)', ['count' => $this->catchUpCount]))
+            ->icon('heroicon-o-pencil-square')
+            ->color('warning')
+            ->modalHeading(__('Patients without notes today'))
+            ->modalDescription(__('Tap a patient to add optional visit notes. Nothing is required.'))
+            ->modalSubmitAction(false)
+            ->modalCancelActionLabel(__('Close'))
+            ->modalContent(fn (): \Illuminate\Contracts\View\View => view(
+                'filament.tenant-admin.components.catch-up-notes-list',
+                ['bookings' => $this->catchUpBookings],
+            ));
+    }
+
+    /**
+     * Write (or reopen and edit) the prescription while the patient is still in
+     * the room. Saves without closing the visit, so the doctor can keep talking,
+     * add a medicine the patient mentions late, and finish only when ready.
+     */
+    public function writePrescriptionAction(): Action
+    {
+        $hasNotes = (bool) $this->currentVisitRecord;
+
+        return Action::make('writePrescription')
+            ->label($hasNotes ? __('Edit prescription') : __('Write prescription'))
+            ->icon('heroicon-o-pencil-square')
+            ->color('primary')
+            ->modalHeading($hasNotes ? __('Edit prescription') : __('Write prescription'))
+            ->modalDescription(__('Saved without ending the visit — you can reopen and change this until you tap Complete visit.'))
+            ->modalSubmitActionLabel(__('Save'))
+            ->form(VisitNotesFormSchema::components())
+            ->fillForm(fn (): array => VisitNotesFormSchema::stateFromRecord($this->currentVisitRecord))
+            ->action(function (array $data, VisitRecordService $visitRecordService): void {
+                $booking = $this->currentBooking;
+                $user = auth()->user();
+
+                if (! $booking || ! $user?->canRecordVisitNotes()) {
+                    return;
+                }
+
+                $visitRecordService->saveForCompletedBooking($booking, $user, $data);
+
+                $this->forgetQueueState();
+
+                Notification::make()
+                    ->title(__('Prescription saved'))
+                    ->body(__('The visit is still open — tap Complete visit when you are done.'))
+                    ->success()
+                    ->send();
+            });
     }
 
     public function catchUpBookingAction(): Action
@@ -252,6 +344,9 @@ class ConsultScreen extends Page implements HasActions
                 if ($visitRecordService->submissionHasContent($data)) {
                     $visitRecordService->saveForCompletedBooking($booking, $user, $data);
                 }
+
+                // Drops this patient out of the catch-up count straight away.
+                $this->forgetQueueState();
 
                 Notification::make()
                     ->title(__('Notes saved'))

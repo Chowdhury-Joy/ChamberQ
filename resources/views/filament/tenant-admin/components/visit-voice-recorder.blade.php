@@ -31,7 +31,7 @@
             {{ __('Stop') }}
         </button>
         <span class="text-xs text-gray-500 dark:text-gray-400" x-show="recording">
-            {{ __('Recording…') }} {{ elapsed }}s
+            {{ __('Recording…') }} <span x-text="elapsed"></span>s
         </span>
         <span class="text-xs text-success-600 dark:text-success-400" x-show="uploadedPath && !recording">
             {{ __('Voice saved') }}
