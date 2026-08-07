@@ -45,6 +45,16 @@ class Prescription extends Model
         return $this->hasMany(PrescriptionItem::class)->orderBy('sort_order');
     }
 
+    public function followUpLabel(): ?string
+    {
+        $record = $this->relationLoaded('visitRecord') ? $this->visitRecord : $this->visitRecord()->first();
+
+        return \App\Filament\TenantAdmin\Support\VisitNotesFormSchema::followUpDisplayLabel(
+            $this->follow_up_date ?? $record?->follow_up_date,
+            $record?->follow_up_note,
+        );
+    }
+
     /**
      * How long a shared prescription link stays openable.
      *

@@ -5,11 +5,31 @@
 
 /* Visit notes modal — full height on phones, sticky save area */
 @media (max-width: 767px) {
-    .fi-modal-window:has(.fi-modal-content) {
+    .fi-modal:not(.fi-modal-slide-over) > .fi-modal-window-ctn {
+        padding: 0;
+        align-items: stretch;
+    }
+
+    .fi-modal:not(.fi-modal-slide-over).fi-modal-has-sticky-footer > .fi-modal-window-ctn > .fi-modal-window {
         max-height: 100dvh;
+        height: 100dvh;
         margin: 0;
         width: 100%;
+        max-width: 100%;
         border-radius: 0;
+    }
+
+    .fi-modal-has-sticky-footer > .fi-modal-window-ctn > .fi-modal-window > .fi-modal-footer {
+        padding-bottom: max(1.25rem, env(safe-area-inset-bottom, 0px));
+        box-shadow: 0 -4px 12px rgb(0 0 0 / 0.06);
+    }
+
+    .dark .fi-modal-has-sticky-footer > .fi-modal-window-ctn > .fi-modal-window > .fi-modal-footer {
+        box-shadow: 0 -4px 12px rgb(0 0 0 / 0.25);
+    }
+
+    .fi-modal-has-sticky-footer > .fi-modal-window-ctn > .fi-modal-window > .fi-modal-footer .fi-btn {
+        min-height: 2.75rem;
     }
 }
 

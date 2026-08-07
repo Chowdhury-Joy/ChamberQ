@@ -205,7 +205,7 @@ class ConsultScreen extends Page implements HasActions
                     $this->forgetQueueState();
                     Notification::make()->title(__('Patient marked as arrived'))->success()->send();
                 }),
-            Action::make('completeVisit')
+            VisitNotesFormSchema::configureModal(Action::make('completeVisit'))
                 ->label(__('Complete visit'))
                 ->icon('heroicon-o-check-circle')
                 ->color('primary')
@@ -319,7 +319,7 @@ class ConsultScreen extends Page implements HasActions
         $hasPrescription = (bool) $this->currentVisitRecord?->prescription?->items->isNotEmpty();
         $label = $hasPrescription ? __('Edit prescription') : __('Write prescription');
 
-        return Action::make('writePrescription')
+        return VisitNotesFormSchema::configureModal(Action::make('writePrescription'))
             ->label($label)
             ->icon('heroicon-o-pencil-square')
             ->color('primary')
@@ -353,7 +353,7 @@ class ConsultScreen extends Page implements HasActions
 
     public function catchUpBookingAction(): Action
     {
-        return Action::make('catchUpBooking')
+        return VisitNotesFormSchema::configureModal(Action::make('catchUpBooking'))
             ->label(__('Add notes'))
             ->form(function (Action $action): array {
                 $bookingId = $action->getArguments()['bookingId'] ?? null;

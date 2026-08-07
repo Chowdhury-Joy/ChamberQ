@@ -33,16 +33,10 @@
         </div>
     @endif
 
-    @if ($record->follow_up_date || filled($record->follow_up_note))
+    @if ($record->followUpLabel())
         <div class="cs-summary-panel__row">
             <span class="cs-summary-panel__label">{{ __('Follow-up') }}</span>
-            <span>
-                @if ($record->follow_up_note)
-                    {{ $record->follow_up_note }}
-                @elseif ($record->follow_up_date)
-                    {{ $record->follow_up_date->translatedFormat('j M Y') }}
-                @endif
-            </span>
+            <span>{{ $record->followUpLabel() }}</span>
         </div>
     @endif
 </div>

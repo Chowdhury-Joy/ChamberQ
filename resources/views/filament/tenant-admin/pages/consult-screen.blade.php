@@ -45,6 +45,21 @@
 
         .cs-stack { display: flex; flex-direction: column; gap: 1.25rem; }
 
+        .cs-layout { display: flex; flex-direction: column; gap: 1.25rem; }
+        .cs-layout__side,
+        .cs-layout__main { display: flex; flex-direction: column; gap: 1.25rem; }
+        @media (max-width: 767px) {
+            .cs-layout__side,
+            .cs-layout__main { display: contents; }
+            .cs-block--header { order: 1; }
+            .cs-block--warnings { order: 2; }
+            .cs-block--write { order: 3; }
+            .cs-block--done { order: 4; }
+            .cs-block--last-visit { order: 5; }
+            .cs-block--past-visits { order: 6; }
+            .cs-block--lab { order: 7; }
+        }
+
         .cs-header { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 1rem; }
         .cs-identity { display: flex; align-items: center; gap: 1rem; min-width: 0; }
         .cs-avatar {
@@ -102,11 +117,19 @@
         .cs-media-chip audio { height: 2rem; width: 100%; max-width: none; }
         @media (min-width: 768px) {
             .cs-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.25rem; align-items: start; }
+            .cs-layout__side,
             .cs-layout__main { display: flex; flex-direction: column; gap: 1.25rem; }
-            .cs-layout__side { display: flex; flex-direction: column; gap: 1.25rem; }
+            .cs-block--header,
+            .cs-block--warnings,
+            .cs-block--write,
+            .cs-block--done,
+            .cs-block--last-visit,
+            .cs-block--past-visits,
+            .cs-block--lab { order: unset; }
             .cs-write-row { flex-direction: row; align-items: center; justify-content: space-between; }
             .cs-primary-btn { width: auto; }
             .cs-sticky-actions { display: none; }
+            .cs-summary { width: auto; max-width: 14rem; }
         }
         @media (min-width: 1280px) {
             .cs-layout__side { position: sticky; top: 1rem; }
@@ -242,304 +265,316 @@
             </div>
         </x-filament::section>
     @else
-        <div class="cs-stack">
-            {{-- Patient header --}}
-            <x-filament::section>
-                <div class="cs-header">
-                    <div class="cs-identity">
-                        <div class="cs-avatar">{{ Str::upper($initials) }}</div>
-                        <div>
-                            <div class="cs-name">{{ $displayName }}</div>
-                            @if ($patient?->displayAge() !== null || $patient?->displaySex())
-                                <div class="cs-pills">
-                                    @if ($patient?->displayAge() !== null)
-                                        <span class="cs-pill">{{ __('Age') }} {{ $patient->displayAge() }}</span>
-                                    @endif
-                                    @if ($patient?->displaySex())
-                                        <span class="cs-pill">{{ ucfirst($patient->displaySex()) }}</span>
+        <div class="cs-layout">
+            <div class="cs-layout__side">
+                {{-- Patient header --}}
+                <div class="cs-block--header">
+                    <x-filament::section>
+                        <div class="cs-header">
+                            <div class="cs-identity">
+                                <div class="cs-avatar">{{ Str::upper($initials) }}</div>
+                                <div>
+                                    <div class="cs-name">{{ $displayName }}</div>
+                                    @if ($patient?->displayAge() !== null || $patient?->displaySex())
+                                        <div class="cs-pills">
+                                            @if ($patient?->displayAge() !== null)
+                                                <span class="cs-pill">{{ __('Age') }} {{ $patient->displayAge() }}</span>
+                                            @endif
+                                            @if ($patient?->displaySex())
+                                                <span class="cs-pill">{{ ucfirst($patient->displaySex()) }}</span>
+                                            @endif
+                                        </div>
                                     @endif
                                 </div>
-                            @endif
-                        </div>
-                    </div>
-                    @if ($patient)
-                        <div class="cs-summary">
-                            <div class="cs-summary-row">
-                                <x-filament::icon icon="heroicon-o-clipboard-document-list" class="cs-summary-icon" />
-                                <span class="cs-summary-strong">{{ $patient->consultHistoryLabel() }}</span>
                             </div>
-                            @if ($patient->lastSeenLabel() && $patient->completedVisitCount() > 0)
-                                <div class="cs-summary-row">
-                                    <x-filament::icon icon="heroicon-o-calendar-days" class="cs-summary-icon" />
-                                    {{ __('Last seen :when', ['when' => $patient->lastSeenLabel()]) }}
-                                </div>
-                            @endif
-                        </div>
-                    @else
-                        <div class="cs-summary">
-                            <span class="cs-first-visit">{{ __('First visit — no history') }}</span>
-                        </div>
-                    @endif
-                </div>
-            </x-filament::section>
-
-            {{-- Warnings first on mobile — allergies must not sit below the fold. --}}
-            @if ($patient?->hasClinicalWarnings())
-                <x-filament::section>
-                    <x-slot name="heading">
-                        <span style="color: var(--warning-700);">{{ __('Warnings') }}</span>
-                    </x-slot>
-                    <div class="cs-warning-grid">
-                        @if (filled($patient->allergies))
-                            <div class="cs-warning-item">
-                                <div class="cs-warning-label">{{ __('Allergies') }}</div>
-                                <div class="cs-warning-value">{{ $patient->allergies }}</div>
-                            </div>
-                        @endif
-                        @if (filled($patient->conditions))
-                            <div class="cs-warning-item">
-                                <div class="cs-warning-label">{{ __('Ongoing conditions') }}</div>
-                                <div class="cs-warning-value">{{ $patient->conditions }}</div>
-                            </div>
-                        @endif
-                        @if (filled($patient->medicines))
-                            <div class="cs-warning-item">
-                                <div class="cs-warning-label">{{ __('Current medicines') }}</div>
-                                <div class="cs-warning-value">{{ $patient->medicines }}</div>
-                            </div>
-                        @endif
-                    </div>
-                </x-filament::section>
-            @endif
-
-            {{-- Patient is in the room: write prescription here, not only in the header. --}}
-            @if ($canWriteNotes && $booking->status === 'in_chamber')
-                @php
-                    $written = $this->currentVisitRecord;
-                    // A prescription means medicines exist — advice or a
-                    // diagnosis alone is notes, not something to "edit" as if
-                    // a script had already been written.
-                    $hasPrescription = (bool) $written?->prescription?->items->isNotEmpty();
-                @endphp
-                <x-filament::section>
-                    <div class="cs-write-row">
-                        <div class="cs-write-summary">
-                            @if ($written)
-                                <div class="cs-write-title">
-                                    {{ $hasPrescription ? __('Prescription so far') : __('Notes so far — no medicines yet') }}
-                                </div>
-                                <div class="cs-write-detail">
-                                    @if ($written->diagnosisLabel())
-                                        <span class="cs-write-chip">{{ $written->diagnosisLabel() }}</span>
-                                    @endif
-                                    @if ($hasPrescription)
-                                        <span class="cs-write-chip">
-                                            {{ trans_choice(':count medicine|:count medicines', $written->prescription->items->count(), ['count' => $written->prescription->items->count()]) }}
-                                        </span>
-                                    @endif
-                                    @if (filled($written->advice))
-                                        <span class="cs-write-chip">{{ __('Advice') }}</span>
-                                    @endif
-                                    @if (filled($written->tests_advised))
-                                        <span class="cs-write-chip">{{ __('Tests advised') }}</span>
-                                    @endif
-                                    @if (filled($written->reports_seen))
-                                        <span class="cs-write-chip">{{ __('Reports seen') }}</span>
-                                    @endif
-                                    @if ($written->follow_up_date)
-                                        <span class="cs-write-chip">{{ __('Follow-up set') }}</span>
-                                    @endif
-                                    @if (filled($written->voice_path))
-                                        <span class="cs-write-chip">{{ __('Voice note') }}</span>
-                                    @endif
-                                    @if (filled($written->photo_path))
-                                        <span class="cs-write-chip">{{ __('Photo') }}</span>
+                            @if ($patient)
+                                <div class="cs-summary">
+                                    <div class="cs-summary-row">
+                                        <x-filament::icon icon="heroicon-o-clipboard-document-list" class="cs-summary-icon" />
+                                        <span class="cs-summary-strong">{{ $patient->consultHistoryLabel() }}</span>
+                                    </div>
+                                    @if ($patient->lastSeenLabel() && $patient->completedVisitCount() > 0)
+                                        <div class="cs-summary-row">
+                                            <x-filament::icon icon="heroicon-o-calendar-days" class="cs-summary-icon" />
+                                            {{ __('Last seen :when', ['when' => $patient->lastSeenLabel()]) }}
+                                        </div>
                                     @endif
                                 </div>
                             @else
-                                <div class="cs-write-title">{{ __('Nothing written yet') }}</div>
-                                <div class="cs-write-hint">
-                                    {{ __('Write while the patient is with you — saving does not end the visit.') }}
+                                <div class="cs-summary">
+                                    <span class="cs-first-visit">{{ __('First visit — no history') }}</span>
                                 </div>
                             @endif
                         </div>
-                        <x-filament::button
-                            class="cs-primary-btn"
-                            color="primary"
-                            icon="heroicon-m-pencil-square"
-                            wire:click="mountAction('writePrescription')"
-                        >
-                            {{ $hasPrescription ? __('Edit prescription') : __('Write prescription') }}
-                        </x-filament::button>
-                    </div>
-                </x-filament::section>
-            @endif
+                    </x-filament::section>
+                </div>
 
-            {{-- Visit closed, patient still in the room: print or send before calling next --}}
-            @if ($booking->status === 'completed')
-                <x-filament::section>
-                    <div class="cs-done-row">
-                        @include('filament.tenant-admin.components.call-next-nudge', ['booking' => $booking])
-                        @include('filament.tenant-admin.components.prescription-share-actions', [
-                            'booking' => $booking,
-                            'prescription' => $booking->visitRecord?->prescription,
-                        ])
-                    </div>
-                </x-filament::section>
-            @endif
-
-            {{-- Last visit notes (with follow-up folded into the header) --}}
-            @if ($canViewNotes)
-                <x-filament::section>
-                    <x-slot name="heading">
-                        <div class="cs-section-heading">
-                            <span>{{ __('Last visit') }}</span>
-                            @if ($lastVisitRecord?->follow_up_date)
-                                <span class="cs-followup-pill">
-                                    <x-filament::icon icon="heroicon-o-calendar" style="width: 0.8125rem; height: 0.8125rem;" />
-                                    {{ __('Follow-up :date', ['date' => $lastVisitRecord->follow_up_date->translatedFormat('j M Y')]) }}
-                                </span>
-                            @endif
-                        </div>
-                    </x-slot>
-                    @if ($lastVisitRecord)
-                        <div>
-                            @if ($lastVisitRecord->diagnosisLabel())
-                                <div class="cs-field">
-                                    <div class="cs-field-label">{{ __('Diagnosis') }}</div>
-                                    <div class="cs-diagnosis">{{ $lastVisitRecord->diagnosisLabel() }}</div>
-                                </div>
-                            @endif
-                            @if (filled($lastVisitRecord->advice))
-                                <div class="cs-field">
-                                    <div class="cs-field-label">{{ __('Advice') }}</div>
-                                    <div class="cs-field-value">{{ $lastVisitRecord->advice }}</div>
-                                </div>
-                            @endif
-                            @if (filled($lastVisitRecord->tests_advised))
-                                <div class="cs-field">
-                                    <div class="cs-field-label">{{ __('Tests advised') }}</div>
-                                    <div class="cs-field-value">{{ $lastVisitRecord->tests_advised }}</div>
-                                </div>
-                            @endif
-                            @if (filled($lastVisitRecord->voice_transcript))
-                                <div class="cs-field">
-                                    <div class="cs-field-label">{{ __('Transcript') }}</div>
-                                    <div class="cs-field-value">{{ $lastVisitRecord->voice_transcript }}</div>
-                                </div>
-                            @endif
-
-                            @if (filled($lastVisitRecord->voice_path) || filled($lastVisitRecord->photo_path) || $lastVisitRecord->booking?->booking_date)
-                                <div class="cs-media-row">
-                                    @if (filled($lastVisitRecord->voice_path))
-                                        <span class="cs-media-chip">
-                                            <x-filament::icon icon="heroicon-o-microphone" style="width: 1rem; height: 1rem;" />
-                                            <audio controls src="{{ tenant_web_route('visit-records.voice', $lastVisitRecord) }}"></audio>
-                                        </span>
-                                    @endif
-                                    @if (filled($lastVisitRecord->photo_path))
-                                        <span class="cs-media-chip">
-                                            <x-filament::icon icon="heroicon-o-photo" style="width: 1rem; height: 1rem;" />
-                                            <a href="{{ tenant_web_route('visit-records.photo', $lastVisitRecord) }}" target="_blank">
-                                                {{ __('View prescription photo') }}
-                                            </a>
-                                        </span>
-                                    @endif
-                                    @if ($lastVisitRecord->booking?->booking_date)
-                                        <span class="cs-media-chip">
-                                            <x-filament::icon icon="heroicon-o-calendar" style="width: 1rem; height: 1rem;" />
-                                            {{ $lastVisitRecord->booking->booking_date->translatedFormat('j M Y') }}
-                                        </span>
-                                    @endif
-                                </div>
-                            @endif
-                        </div>
-                    @elseif ($patient && $patient->completedVisitCount() > 0)
-                        <p class="cs-muted">
-                            {{ __(':count previous visits · no notes recorded', ['count' => $patient->completedVisitCount()]) }}
-                        </p>
-                    @else
-                        <p class="cs-muted">
-                            {{ __('Nothing to show yet.') }}
-                        </p>
-                    @endif
-                </x-filament::section>
-
-                <x-filament::section>
-                    <x-slot name="heading">{{ __('Past visits') }}</x-slot>
-                    @if ($visitHistory->isEmpty())
-                        <p class="cs-muted">{{ __('No completed visits yet.') }}</p>
-                    @else
-                        <div class="cs-visits">
-                            @foreach ($visitHistory as $visit)
-                                @php
-                                    $visitRecord = $visit->visitRecord;
-                                    $hasNotes = $visitRecord?->hasClinicalContent();
-                                @endphp
-                                <div class="cs-visit-card">
-                                    <div class="cs-visit-top">
-                                        <div class="cs-visit-meta">
-                                            <span class="cs-visit-date">{{ $visit->booking_date?->translatedFormat('j M Y') }}</span>
-                                            @if ($isClinic && $visit->bookable?->doctor?->name)
-                                                <span class="cs-visit-doctor">{{ $visit->bookable->doctor->name }}</span>
-                                            @endif
-                                        </div>
-                                        @if ($hasNotes && $visitRecord->diagnosisLabel())
-                                            <span class="cs-status-dot has-notes">{{ $visitRecord->diagnosisLabel() }}</span>
-                                        @else
-                                            <span class="cs-status-dot no-notes">{{ __('No notes recorded') }}</span>
-                                        @endif
+                @if ($patient?->hasClinicalWarnings())
+                    <div class="cs-block--warnings">
+                        <x-filament::section>
+                            <x-slot name="heading">
+                                <span style="color: var(--warning-700);">{{ __('Warnings') }}</span>
+                            </x-slot>
+                            <div class="cs-warning-grid">
+                                @if (filled($patient->allergies))
+                                    <div class="cs-warning-item">
+                                        <div class="cs-warning-label">{{ __('Allergies') }}</div>
+                                        <div class="cs-warning-value">{{ $patient->allergies }}</div>
                                     </div>
+                                @endif
+                                @if (filled($patient->conditions))
+                                    <div class="cs-warning-item">
+                                        <div class="cs-warning-label">{{ __('Ongoing conditions') }}</div>
+                                        <div class="cs-warning-value">{{ $patient->conditions }}</div>
+                                    </div>
+                                @endif
+                                @if (filled($patient->medicines))
+                                    <div class="cs-warning-item">
+                                        <div class="cs-warning-label">{{ __('Current medicines') }}</div>
+                                        <div class="cs-warning-value">{{ $patient->medicines }}</div>
+                                    </div>
+                                @endif
+                            </div>
+                        </x-filament::section>
+                    </div>
+                @endif
 
-                                    @if (filled($visitRecord?->voice_transcript))
-                                        <div class="cs-visit-transcript">{{ $visitRecord->voice_transcript }}</div>
+                @if ($canViewNotes)
+                    <div class="cs-block--last-visit">
+                        <x-filament::section>
+                            <x-slot name="heading">
+                                <div class="cs-section-heading">
+                                    <span>{{ __('Last visit') }}</span>
+                                    @if ($lastVisitRecord?->followUpLabel())
+                                        <span class="cs-followup-pill">
+                                            <x-filament::icon icon="heroicon-o-calendar" style="width: 0.8125rem; height: 0.8125rem;" />
+                                            {{ $lastVisitRecord->followUpLabel() }}
+                                        </span>
+                                    @endif
+                                </div>
+                            </x-slot>
+                            @if ($lastVisitRecord)
+                                <div>
+                                    @if ($lastVisitRecord->diagnosisLabel())
+                                        <div class="cs-field">
+                                            <div class="cs-field-label">{{ __('Diagnosis') }}</div>
+                                            <div class="cs-diagnosis">{{ $lastVisitRecord->diagnosisLabel() }}</div>
+                                        </div>
+                                    @endif
+                                    @if (filled($lastVisitRecord->advice))
+                                        <div class="cs-field">
+                                            <div class="cs-field-label">{{ __('Advice') }}</div>
+                                            <div class="cs-field-value">{{ $lastVisitRecord->advice }}</div>
+                                        </div>
+                                    @endif
+                                    @if (filled($lastVisitRecord->tests_advised))
+                                        <div class="cs-field">
+                                            <div class="cs-field-label">{{ __('Tests advised') }}</div>
+                                            <div class="cs-field-value">{{ $lastVisitRecord->tests_advised }}</div>
+                                        </div>
+                                    @endif
+                                    @if (filled($lastVisitRecord->voice_transcript))
+                                        <div class="cs-field">
+                                            <div class="cs-field-label">{{ __('Transcript') }}</div>
+                                            <div class="cs-field-value">{{ $lastVisitRecord->voice_transcript }}</div>
+                                        </div>
                                     @endif
 
-                                    @if ($visitRecord?->prescription || filled($visitRecord?->voice_path) || filled($visitRecord?->photo_path))
-                                        <div class="cs-visit-actions">
-                                            @if ($visitRecord->prescription)
-                                                <x-filament::button
-                                                    tag="a"
-                                                    href="{{ tenant_web_route('prescriptions.print', $visitRecord->prescription) }}"
-                                                    target="_blank"
-                                                    size="xs"
-                                                    color="gray"
-                                                    icon="heroicon-m-printer"
-                                                >
-                                                    {{ __('Reprint prescription') }}
-                                                </x-filament::button>
-                                            @endif
-                                            @if (filled($visitRecord->voice_path))
+                                    @if (filled($lastVisitRecord->voice_path) || filled($lastVisitRecord->photo_path) || $lastVisitRecord->booking?->booking_date)
+                                        <div class="cs-media-row">
+                                            @if (filled($lastVisitRecord->voice_path))
                                                 <span class="cs-media-chip">
                                                     <x-filament::icon icon="heroicon-o-microphone" style="width: 1rem; height: 1rem;" />
-                                                    <audio controls src="{{ tenant_web_route('visit-records.voice', $visitRecord) }}"></audio>
+                                                    <audio controls src="{{ tenant_web_route('visit-records.voice', $lastVisitRecord) }}"></audio>
                                                 </span>
                                             @endif
-                                            @if (filled($visitRecord->photo_path))
+                                            @if (filled($lastVisitRecord->photo_path))
                                                 <span class="cs-media-chip">
                                                     <x-filament::icon icon="heroicon-o-photo" style="width: 1rem; height: 1rem;" />
-                                                    <a href="{{ tenant_web_route('visit-records.photo', $visitRecord) }}" target="_blank">
+                                                    <a href="{{ tenant_web_route('visit-records.photo', $lastVisitRecord) }}" target="_blank">
                                                         {{ __('View prescription photo') }}
                                                     </a>
                                                 </span>
                                             @endif
+                                            @if ($lastVisitRecord->booking?->booking_date)
+                                                <span class="cs-media-chip">
+                                                    <x-filament::icon icon="heroicon-o-calendar" style="width: 1rem; height: 1rem;" />
+                                                    {{ $lastVisitRecord->booking->booking_date->translatedFormat('j M Y') }}
+                                                </span>
+                                            @endif
                                         </div>
                                     @endif
                                 </div>
-                            @endforeach
-                        </div>
-                    @endif
-                </x-filament::section>
-            @endif
+                            @elseif ($patient && $patient->completedVisitCount() > 0)
+                                <p class="cs-muted">
+                                    {{ __(':count previous visits · no notes recorded', ['count' => $patient->completedVisitCount()]) }}
+                                </p>
+                            @else
+                                <p class="cs-muted">
+                                    {{ __('Nothing to show yet.') }}
+                                </p>
+                            @endif
+                        </x-filament::section>
+                    </div>
 
-            @if ($isClinic)
-                <x-filament::section>
-                    <x-slot name="heading">{{ __('Lab orders') }}</x-slot>
-                    <p class="cs-muted">
-                        {{ __('Lab order history — coming in a later update.') }}
-                    </p>
-                </x-filament::section>
-            @endif
+                    <div class="cs-block--past-visits">
+                        <x-filament::section>
+                            <x-slot name="heading">{{ __('Past visits') }}</x-slot>
+                            @if ($visitHistory->isEmpty())
+                                <p class="cs-muted">{{ __('No completed visits yet.') }}</p>
+                            @else
+                                <div class="cs-visits">
+                                    @foreach ($visitHistory as $visit)
+                                        @php
+                                            $visitRecord = $visit->visitRecord;
+                                            $hasNotes = $visitRecord?->hasClinicalContent();
+                                        @endphp
+                                        <div class="cs-visit-card">
+                                            <div class="cs-visit-top">
+                                                <div class="cs-visit-meta">
+                                                    <span class="cs-visit-date">{{ $visit->booking_date?->translatedFormat('j M Y') }}</span>
+                                                    @if ($isClinic && $visit->bookable?->doctor?->name)
+                                                        <span class="cs-visit-doctor">{{ $visit->bookable->doctor->name }}</span>
+                                                    @endif
+                                                </div>
+                                                @if ($hasNotes && $visitRecord->diagnosisLabel())
+                                                    <span class="cs-status-dot has-notes">{{ $visitRecord->diagnosisLabel() }}</span>
+                                                @else
+                                                    <span class="cs-status-dot no-notes">{{ __('No notes recorded') }}</span>
+                                                @endif
+                                            </div>
+
+                                            @if (filled($visitRecord?->voice_transcript))
+                                                <div class="cs-visit-transcript">{{ $visitRecord->voice_transcript }}</div>
+                                            @endif
+
+                                            @if ($visitRecord?->prescription || filled($visitRecord?->voice_path) || filled($visitRecord?->photo_path))
+                                                <div class="cs-visit-actions">
+                                                    @if ($visitRecord->prescription)
+                                                        <x-filament::button
+                                                            tag="a"
+                                                            href="{{ tenant_web_route('prescriptions.print', $visitRecord->prescription) }}"
+                                                            target="_blank"
+                                                            size="xs"
+                                                            color="gray"
+                                                            icon="heroicon-m-printer"
+                                                        >
+                                                            {{ __('Reprint prescription') }}
+                                                        </x-filament::button>
+                                                    @endif
+                                                    @if (filled($visitRecord->voice_path))
+                                                        <span class="cs-media-chip">
+                                                            <x-filament::icon icon="heroicon-o-microphone" style="width: 1rem; height: 1rem;" />
+                                                            <audio controls src="{{ tenant_web_route('visit-records.voice', $visitRecord) }}"></audio>
+                                                        </span>
+                                                    @endif
+                                                    @if (filled($visitRecord->photo_path))
+                                                        <span class="cs-media-chip">
+                                                            <x-filament::icon icon="heroicon-o-photo" style="width: 1rem; height: 1rem;" />
+                                                            <a href="{{ tenant_web_route('visit-records.photo', $visitRecord) }}" target="_blank">
+                                                                {{ __('View prescription photo') }}
+                                                            </a>
+                                                        </span>
+                                                    @endif
+                                                </div>
+                                            @endif
+                                        </div>
+                                    @endforeach
+                                </div>
+                            @endif
+                        </x-filament::section>
+                    </div>
+                @endif
+            </div>
+
+            <div class="cs-layout__main">
+                @php
+                    $written = $this->currentVisitRecord;
+                    $hasPrescription = (bool) $written?->prescription?->items->isNotEmpty();
+                @endphp
+
+                @if ($canWriteNotes && $booking->status === 'in_chamber')
+                    <div class="cs-block--write">
+                        <x-filament::section>
+                            <div class="cs-write-row">
+                                <div class="cs-write-summary">
+                                    @if ($written)
+                                        <div class="cs-write-title">
+                                            {{ $hasPrescription ? __('Prescription so far') : __('Notes so far — no medicines yet') }}
+                                        </div>
+                                        <div class="cs-write-detail">
+                                            @if ($written->diagnosisLabel())
+                                                <span class="cs-write-chip">{{ $written->diagnosisLabel() }}</span>
+                                            @endif
+                                            @if ($hasPrescription)
+                                                <span class="cs-write-chip">
+                                                    {{ trans_choice(':count medicine|:count medicines', $written->prescription->items->count(), ['count' => $written->prescription->items->count()]) }}
+                                                </span>
+                                            @endif
+                                            @if (filled($written->advice))
+                                                <span class="cs-write-chip">{{ __('Advice') }}</span>
+                                            @endif
+                                            @if (filled($written->tests_advised))
+                                                <span class="cs-write-chip">{{ __('Tests advised') }}</span>
+                                            @endif
+                                            @if (filled($written->reports_seen))
+                                                <span class="cs-write-chip">{{ __('Reports seen') }}</span>
+                                            @endif
+                                            @if ($written->followUpLabel())
+                                                <span class="cs-write-chip">{{ __('Follow-up set') }}</span>
+                                            @endif
+                                            @if (filled($written->voice_path))
+                                                <span class="cs-write-chip">{{ __('Voice note') }}</span>
+                                            @endif
+                                            @if (filled($written->photo_path))
+                                                <span class="cs-write-chip">{{ __('Photo') }}</span>
+                                            @endif
+                                        </div>
+                                    @else
+                                        <div class="cs-write-title">{{ __('Nothing written yet') }}</div>
+                                        <div class="cs-write-hint">
+                                            {{ __('Write while the patient is with you — saving does not end the visit.') }}
+                                        </div>
+                                    @endif
+                                </div>
+                                <x-filament::button
+                                    class="cs-primary-btn"
+                                    color="primary"
+                                    icon="heroicon-m-pencil-square"
+                                    wire:click="mountAction('writePrescription')"
+                                >
+                                    {{ $hasPrescription ? __('Edit prescription') : __('Write prescription') }}
+                                </x-filament::button>
+                            </div>
+                        </x-filament::section>
+                    </div>
+                @endif
+
+                @if ($booking->status === 'completed')
+                    <div class="cs-block--done">
+                        <x-filament::section>
+                            <div class="cs-done-row">
+                                @include('filament.tenant-admin.components.call-next-nudge', ['booking' => $booking])
+                                @include('filament.tenant-admin.components.prescription-share-actions', [
+                                    'booking' => $booking,
+                                    'prescription' => $booking->visitRecord?->prescription,
+                                ])
+                            </div>
+                        </x-filament::section>
+                    </div>
+                @endif
+
+                @if ($isClinic)
+                    <div class="cs-block--lab">
+                        <x-filament::section>
+                            <x-slot name="heading">{{ __('Lab orders') }}</x-slot>
+                            <p class="cs-muted">
+                                {{ __('Lab order history — coming in a later update.') }}
+                            </p>
+                        </x-filament::section>
+                    </div>
+                @endif
+            </div>
         </div>
 
         @if (auth()->user()?->canOperateQueueControls())

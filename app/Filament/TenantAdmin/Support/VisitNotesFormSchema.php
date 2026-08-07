@@ -19,11 +19,22 @@ use Filament\Forms\Components\ToggleButtons;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
+use Filament\Actions\Action;
 use Filament\Schemas\Components\View;
 
 class VisitNotesFormSchema
 {
     private const VISIT_NOTES_HINT = 'All fields are optional — leave blank to complete without notes.';
+
+    /**
+     * Sticky header + footer so Save / Complete stays visible on long phone modals.
+     */
+    public static function configureModal(Action $action): Action
+    {
+        return $action
+            ->stickyModalHeader()
+            ->stickyModalFooter();
+    }
 
     public const FREE_DIAGNOSIS_PREFIX = '__free__:';
 
@@ -468,7 +479,7 @@ class VisitNotesFormSchema
             return null;
         }
 
-        $diff = now()->startOfDay()->diffInDays($date->startOfDay(), false);
+        $diff = (int) now()->startOfDay()->diffInDays($date->startOfDay(), false);
 
         return match ($diff) {
             7 => '1_week',
@@ -486,6 +497,39 @@ class VisitNotesFormSchema
             '2_weeks' => now()->addWeeks(2)->toDateString(),
             '1_month' => now()->addMonth()->toDateString(),
             '3_months' => now()->addMonths(3)->toDateString(),
+            default => null,
+        };
+    }
+
+    public static function followUpDisplayLabel(?\Carbon\CarbonInterface $date, ?string $note = null): ?string
+    {
+        if (filled($note)) {
+            return $note;
+        }
+
+        if (! $date) {
+            return null;
+        }
+
+        $relativePhrase = self::relativeFollowUpPhrase($date);
+
+        if ($relativePhrase) {
+            return __('Come back in about :relative (:date)', [
+                'relative' => $relativePhrase,
+                'date' => $date->translatedFormat('j F Y'),
+            ]);
+        }
+
+        return $date->translatedFormat('j F Y');
+    }
+
+    public static function relativeFollowUpPhrase(?\Carbon\CarbonInterface $date): ?string
+    {
+        return match (self::inferRelativeFollowUp($date)) {
+            '1_week' => __('1 week'),
+            '2_weeks' => __('2 weeks'),
+            '1_month' => __('1 month'),
+            '3_months' => __('3 months'),
             default => null,
         };
     }

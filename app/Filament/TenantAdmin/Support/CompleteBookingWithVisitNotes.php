@@ -22,7 +22,7 @@ class CompleteBookingWithVisitNotes
 
     public static function applyDoctorModal(Action $action): Action
     {
-        return $action
+        return VisitNotesFormSchema::configureModal($action)
             ->modalHeading(__('Complete visit'))
             ->modalDescription(__('Add optional notes, or leave everything blank and tap Complete.'))
             ->schema(VisitNotesFormSchema::components())

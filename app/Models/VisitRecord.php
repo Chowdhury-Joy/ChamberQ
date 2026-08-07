@@ -68,6 +68,14 @@ class VisitRecord extends Model
         return filled($this->diagnosis_uncoded) ? $this->diagnosis_uncoded : null;
     }
 
+    public function followUpLabel(): ?string
+    {
+        return \App\Filament\TenantAdmin\Support\VisitNotesFormSchema::followUpDisplayLabel(
+            $this->follow_up_date,
+            $this->follow_up_note,
+        );
+    }
+
     public function hasClinicalContent(): bool
     {
         return filled($this->condition_id)

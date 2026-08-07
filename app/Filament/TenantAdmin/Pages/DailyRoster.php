@@ -73,7 +73,7 @@ class DailyRoster extends Page implements HasTable, HasForms
                         && $record->status === 'waiting')
                     ->action(fn (Booking $record) => app(LiveSessionService::class)->bringBookingToChamber($record)),
 
-                Action::make('complete')
+                VisitNotesFormSchema::configureModal(Action::make('complete'))
                     ->label('Mark Completed')
                     ->color('success')
                     ->visible(fn (Booking $record): bool => auth()->user()?->canOperateQueueControls()
