@@ -107,18 +107,35 @@ class VisitMediaService
     }
 
     /**
-     * Absolute path for streaming through the authenticated controller. There
-     * is deliberately no public URL accessor — adding one would recreate the
-     * unauthenticated path this disk choice exists to remove.
+     * Whether a stored file still exists, for the controller to 404 on.
+     *
+     * There is deliberately no public URL accessor — adding one would
+     * recreate the unauthenticated path this disk choice exists to remove.
      */
-    public function absolutePath(?string $path): ?string
+    public function exists(?string $path): bool
     {
-        if (blank($path)) {
+        return filled($path) && Storage::disk(self::DISK)->exists($path);
+    }
+
+    /**
+     * Stream a stored file through the authenticated controller.
+     *
+     * Goes through `Storage::disk()->response()`, which reads via Flysystem
+     * rather than resolving a real filesystem path — `absolutePath()` (now
+     * removed) called `Storage::disk()->path()` and `response()->file()`,
+     * both of which only work on the `local` driver. `config/filesystems.php`
+     * already ships an `s3` disk, but nothing pointed clinical media at it: had
+     * the disk ever been switched, this controller would have started
+     * throwing on every request. `response()` works identically on `local`
+     * and any Flysystem-backed disk (`s3`, etc.), so moving `DISK` is a config
+     * change, not a code change.
+     */
+    public function streamResponse(?string $path): ?\Symfony\Component\HttpFoundation\StreamedResponse
+    {
+        if (! $this->exists($path)) {
             return null;
         }
 
-        $full = Storage::disk(self::DISK)->path(ltrim($path, '/'));
-
-        return is_file($full) ? $full : null;
+        return Storage::disk(self::DISK)->response($path);
     }
 }

@@ -280,3 +280,6 @@
 
 ## 2026-08-08T01:58:08+0600
 - Per-doctor outbound notify mix: `doctors.notify_channels` JSON (booking / late / cancel / prescription × SMS + WhatsApp). Extended `SmsService` purposes + `NotifySmsController` staff SMS routes; gated WhatsApp/Send SMS on slot-block + prescription share UIs; `markDelay()` auto-SMS when late SMS is on. Defaults preserve prior behaviour. Tests: `NotifyChannelsTest`.
+
+## 2026-08-08T09:16:59+0600
+- Made clinical-media reads disk-agnostic so moving them off the server is a config change, not a code change. `VisitMediaService::absolutePath()` (which used `Storage::disk()->path()`, and whose result the controller passed to `response()->file()`) is replaced by `exists()` + `streamResponse()`, going through `Storage::disk()->response()` / Flysystem. Both of the old calls are `local`-driver-only, so the `s3` disk already present in `config/filesystems.php` was decorative — repointing `VisitMediaService::DISK` at it would have thrown on every voice-note and prescription-photo request. Behaviour on the `local` disk is unchanged (verified: correct bytes and `Content-Type` over the real authenticated route). The disk is still `local` and nothing is backed up off the server yet; this only removes the code-level blocker.

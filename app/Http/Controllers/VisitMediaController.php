@@ -7,7 +7,7 @@ use App\Services\VisitMediaService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class VisitMediaController extends Controller
 {
@@ -43,30 +43,20 @@ class VisitMediaController extends Controller
         ]);
     }
 
-    public function voice(Request $request, VisitRecord $visitRecord): BinaryFileResponse
+    public function voice(Request $request, VisitRecord $visitRecord): StreamedResponse
     {
         $this->authorizeClinicalRead($request);
 
-        $absolute = app(VisitMediaService::class)->absolutePath($visitRecord->voice_path);
-
-        if (! $absolute) {
-            abort(404);
-        }
-
-        return response()->file($absolute);
+        return app(VisitMediaService::class)->streamResponse($visitRecord->voice_path)
+            ?? abort(404);
     }
 
-    public function photo(Request $request, VisitRecord $visitRecord): BinaryFileResponse
+    public function photo(Request $request, VisitRecord $visitRecord): StreamedResponse
     {
         $this->authorizeClinicalRead($request);
 
-        $absolute = app(VisitMediaService::class)->absolutePath($visitRecord->photo_path);
-
-        if (! $absolute) {
-            abort(404);
-        }
-
-        return response()->file($absolute);
+        return app(VisitMediaService::class)->streamResponse($visitRecord->photo_path)
+            ?? abort(404);
     }
 
     /**
