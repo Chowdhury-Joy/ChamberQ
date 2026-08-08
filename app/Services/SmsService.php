@@ -10,6 +10,7 @@ use App\Models\Prescription;
 use App\Models\ScheduleSession;
 use App\Models\SmsMessage;
 use App\Models\Tenant;
+use App\Support\GsmText;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -132,19 +133,37 @@ class SmsService
     }
 
     /**
-     * Atomically spend one credit. Returns false when the wallet is empty.
+     * Atomically spend credits. Returns false when the wallet cannot cover it.
+     *
+     * Credits are sold as "1 credit = 1 message", and `GsmText` keeps bodies
+     * inside one segment so that stays true. The count is still a parameter
+     * because one message genuinely cannot comply: the signed prescription
+     * share link alone is longer than a segment. Billing what was actually
+     * sent is what keeps a clinic's balance honest.
      */
-    public function debitOneCredit(string $tenantId): bool
+    public function debitCredits(string $tenantId, int $credits): bool
     {
+        $credits = max(1, $credits);
+
         return DB::table('tenants')
             ->where('id', $tenantId)
-            ->where('sms_balance', '>=', 1)
-            ->decrement('sms_balance') > 0;
+            ->where('sms_balance', '>=', $credits)
+            ->decrement('sms_balance', $credits) > 0;
+    }
+
+    public function refundCredits(string $tenantId, int $credits): void
+    {
+        DB::table('tenants')->where('id', $tenantId)->increment('sms_balance', max(1, $credits));
+    }
+
+    public function debitOneCredit(string $tenantId): bool
+    {
+        return $this->debitCredits($tenantId, 1);
     }
 
     public function refundOneCredit(string $tenantId): void
     {
-        DB::table('tenants')->where('id', $tenantId)->increment('sms_balance');
+        $this->refundCredits($tenantId, 1);
     }
 
     public function confirmationBody(Booking $booking): string
@@ -256,12 +275,23 @@ class SmsService
         string $purpose,
         string $failLogEvent,
     ): SmsMessage {
+        // The one place every outgoing body passes through, and therefore the
+        // only place worth enforcing "1 credit = 1 segment". Callers — including
+        // `NotifySmsController`, which forwards free text a staff member typed —
+        // may write whatever reads best; the shared WhatsApp copy keeps its real
+        // dashes. See App\Support\GsmText.
+        $body = GsmText::toSingleSegment($body);
+
         if (! config('sms.enabled')) {
             return $this->record($booking, SmsMessage::STATUS_SKIPPED_DISABLED, body: $body, purpose: $purpose);
         }
 
         $to = $this->internationalPhone((string) $booking->patient_phone);
-        $debited = $this->debitOneCredit((string) $booking->tenant_id);
+
+        // Normally 1 — GsmText has already fitted the body to a segment. More
+        // only when a link is longer than a segment and cannot be cut.
+        $credits = GsmText::segments($body);
+        $debited = $this->debitCredits((string) $booking->tenant_id, $credits);
 
         if (! $debited) {
             return $this->record($booking, SmsMessage::STATUS_SKIPPED_NO_BALANCE, $to, $body, purpose: $purpose);
@@ -270,9 +300,9 @@ class SmsService
         try {
             $this->gateway->send($to, $body);
 
-            return $this->record($booking, SmsMessage::STATUS_SENT, $to, $body, credits: 1, purpose: $purpose);
+            return $this->record($booking, SmsMessage::STATUS_SENT, $to, $body, credits: $credits, purpose: $purpose);
         } catch (Throwable $e) {
-            $this->refundOneCredit((string) $booking->tenant_id);
+            $this->refundCredits((string) $booking->tenant_id, $credits);
 
             Log::warning($failLogEvent, [
                 'booking_id' => $booking->id,
@@ -306,7 +336,10 @@ class SmsService
             'tenant_id' => $booking->tenant_id,
             'booking_id' => $booking->id,
             'to' => $to ?? $this->internationalPhone((string) $booking->patient_phone),
-            'body' => $body ?? '',
+            // Normalised here too, so a row logged on a path that never reached
+            // the gateway (prefs off, wallet empty) still shows the exact text
+            // that would have gone out. Idempotent for the sent path.
+            'body' => GsmText::toSingleSegment((string) ($body ?? '')),
             'purpose' => $purpose,
             'status' => $status,
             'credits' => $credits,

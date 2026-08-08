@@ -964,3 +964,12 @@
  <action>Per-doctor `notify_channels` JSON on `doctors` (four stages × SMS/WhatsApp toggles). Defaults match prior behaviour (booking SMS on; cancel + prescription WhatsApp on; late off). WhatsApp stays human-tapped `wa.me` only. SMS uses the prepaid wallet: auto for booking + Mark Late when that stage SMS is on; staff-tapped Send SMS for cancel + prescription via `NotifySmsController`. Empty wallet or prefs off never fail the booking/queue action.</action>
  <reason>Lets Dr A prefer SMS for delays while Dr B keeps WhatsApp for prescriptions without burning credits on stages a doctor did not opt into, and without requiring WhatsApp Business API.</reason>
 </decision>
+
+## 2026-08-08T09:53:43+0600
+
+<decision>
+  <category>Business_Logic</category>
+  <context>Credits are sold to clinics as "1 credit = 1 message" (200 for ৳100), but networks bill per segment and one non-GSM character cuts a segment from 160 characters to 70. A cancellation notice was billing 3 sends against 1 credit. Owner was asked who absorbs the difference, and chose: always make it fit one credit.</context>
+  <action>Enforced at the send path rather than in the templates: `GsmText::toSingleSegment()` transliterates to the GSM alphabet and truncates prose (never links) so ordinary messages always cost exactly one credit. Bangla is transliterated rather than rejected, so a patient who typed their name in Bangla still appears in their own confirmation. SMS bodies stay hardcoded English — a test fails the build if `SmsService` ever uses `__()`. The one message that physically cannot comply (a signed prescription link alone exceeds a segment) keeps its context and debits the true 2 credits.</action>
+  <reason>The previous approach — a documented rule asking authors to keep bodies ASCII — lasted two days, because the failing text came from a caller rather than a template. Enforcing at the single choke point means no future feature can reintroduce it. Charging true cost in the one impossible case keeps the wallet honest without ever sending a naked URL, which from an unknown number is indistinguishable from a phishing text.</reason>
+</decision>
