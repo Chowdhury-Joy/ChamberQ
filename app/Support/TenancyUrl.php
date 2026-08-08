@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Domain;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\URL;
 
@@ -11,6 +12,60 @@ class TenancyUrl
      * Route-name prefix used for central-domain path tenancy routes.
      */
     public const PATH_ROUTE_PREFIX = 'path.';
+
+    /**
+     * Absolute URL for a patient-facing path that may leave the browser
+     * (SMS, WhatsApp, TV bookmark). Prefer the tenant's custom Domain; otherwise
+     * build from APP_URL + /{tenantId}/… so path tenants never inherit
+     * CENTRAL_DOMAINS[0] (often 127.0.0.1).
+     *
+     * Do not use for same-tab navigation — prefer route(..., absolute: false).
+     */
+    public static function publicAbsolute(string $tenantId, string $path): string
+    {
+        $path = '/'.ltrim($path, '/');
+
+        $host = Domain::where('tenant_id', $tenantId)->value('domain');
+
+        if ($host) {
+            return static::schemeForOutboundHost($host).'://'.$host.$path;
+        }
+
+        $base = rtrim((string) config('app.url'), '/');
+
+        return $base.'/'.$tenantId.$path;
+    }
+
+    /**
+     * Scheme for an outbound link on a known public host.
+     *
+     * Real clinic domains must not inherit `http` from a leftover
+     * `APP_URL=http://localhost`. Local/dev `*.localhost` Domain rows stay
+     * `http` so feature tests can hit them without TLS.
+     */
+    public static function schemeForOutboundHost(string $host): string
+    {
+        $host = strtolower($host);
+
+        if ($host === 'localhost' || $host === '127.0.0.1' || str_ends_with($host, '.localhost')) {
+            return 'http';
+        }
+
+        $appUrl = (string) config('app.url');
+        $scheme = parse_url($appUrl, PHP_URL_SCHEME) ?: 'https';
+        $appHost = strtolower((string) (parse_url($appUrl, PHP_URL_HOST) ?: ''));
+
+        if (
+            $appHost === ''
+            || $appHost === 'localhost'
+            || $appHost === '127.0.0.1'
+            || str_ends_with($appHost, '.localhost')
+        ) {
+            return 'https';
+        }
+
+        return $scheme === 'http' ? 'http' : 'https';
+    }
 
     /**
      * First URL segments reserved on the central domain (marketing, super admin, assets).

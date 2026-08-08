@@ -83,7 +83,12 @@ class Prescription extends Model
      */
     public function shareUrl(): string
     {
-        return TenancyUrl::route('prescriptions.share-token', ['token' => $this->shareToken()]);
+        // Outbound (SMS / WhatsApp): same host rules as booking tickets — Domain
+        // or APP_URL + path tenant — never absolute route() against localhost.
+        return TenancyUrl::publicAbsolute(
+            (string) $this->tenant_id,
+            '/p/'.$this->shareToken(),
+        );
     }
 
     /**

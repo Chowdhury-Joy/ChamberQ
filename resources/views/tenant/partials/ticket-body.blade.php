@@ -5,7 +5,10 @@
     $isLab = $bookable instanceof \App\Models\LabCollectionSlot;
     $tenant = tenant();
     $locale = app()->getLocale();
-    $ticketUrl = url()->current();
+    $ticketUrl = \App\Support\TenancyUrl::publicAbsolute(
+        (string) $booking->tenant_id,
+        '/bookings/'.$booking->id,
+    );
     $chamber = $bookable?->chamber;
     $mapsUrl = $chamber?->googleMapsUrl();
     $shareText = $mapsUrl
@@ -171,7 +174,7 @@
     </main>
 
     <script>
-        const statusUrl = @json(tenant_web_route('queue.status', $booking));
+        const statusUrl = @json(tenant_web_route('queue.status', $booking, absolute: false));
         const i18n = {
             youAreNext: @json(__('You are next.')),
             oneAhead: @json(__('1 person ahead of you')),

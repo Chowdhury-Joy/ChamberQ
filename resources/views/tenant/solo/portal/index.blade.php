@@ -197,7 +197,7 @@
                                     <h3 class="text-base font-semibold text-slate-900">{{ $booking->patient_name }}</h3>
                                     <p class="mt-1 text-xs text-slate-500">{{ __('Phone') }}: {{ $booking->patient_phone }}</p>
                                 </div>
-                                <a href="{{ tenant_web_route('bookings.show', $booking) }}" target="_blank" rel="noopener noreferrer" class="solo-cta-outline text-sm">
+                                <a href="{{ tenant_web_route('bookings.show', $booking, absolute: false) }}" target="_blank" rel="noopener noreferrer" class="solo-cta-outline text-sm">
                                     {{ __('View Digital Ticket') }}
                                 </a>
                             </div>

@@ -28,13 +28,13 @@ class PWAController extends Controller
             'theme_color' => $theme,
             'icons' => [
                 [
-                    'src' => tenant_web_route('pwa.icon', ['size' => 192]),
+                    'src' => tenant_web_route('pwa.icon', ['size' => 192], absolute: false),
                     'sizes' => '192x192',
                     'type' => 'image/svg+xml',
                     'purpose' => 'any',
                 ],
                 [
-                    'src' => tenant_web_route('pwa.icon', ['size' => 512]),
+                    'src' => tenant_web_route('pwa.icon', ['size' => 512], absolute: false),
                     'sizes' => '512x512',
                     'type' => 'image/svg+xml',
                     'purpose' => 'any',

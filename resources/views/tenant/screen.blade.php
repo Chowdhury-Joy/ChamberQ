@@ -257,8 +257,8 @@
         @php
             $liveToday = $liveToday ?? false;
             $statusUrl = $liveToday
-                ? tenant_web_route('api.tenant.screen.today', ['session' => $scheduleSession->id])
-                : tenant_web_route('api.tenant.screen', ['session' => $scheduleSession->id, 'date' => $sessionDate]);
+                ? tenant_web_route('api.tenant.screen.today', ['session' => $scheduleSession->id], absolute: false)
+                : tenant_web_route('api.tenant.screen', ['session' => $scheduleSession->id, 'date' => $sessionDate], absolute: false);
         @endphp
         const statusUrl = @json($statusUrl);
         const liveToday = @json($liveToday);
@@ -291,7 +291,7 @@
             // Unlock recorded “Number twelve” clips the same way as the chime.
             if (usesCallVoice && announceAudio) {
                 try {
-                    announceAudio.src = @json(asset('audio/announce/number-1.wav'));
+                    announceAudio.src = @json(public_asset('audio/announce/number-1.wav'));
                     announceAudio.muted = true;
                     await announceAudio.play();
                     announceAudio.pause();
@@ -333,7 +333,7 @@
             audio.play().catch(e => logAudio('chime blocked by browser', e));
         }
 
-        const announceBaseUrl = @json(rtrim(asset('audio/announce'), '/'));
+        const announceBaseUrl = @json(rtrim(public_asset('audio/announce'), '/'));
 
         function playAnnounceClip(serial) {
             if (!soundUnlocked || soundMuted || !announceAudio) return Promise.resolve(false);

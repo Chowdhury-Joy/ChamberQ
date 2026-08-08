@@ -666,3 +666,12 @@
   <root_cause>`BookingController` returned an absolute `ticket_url` from `tenant_web_route()`. Behind nginx/caddy, PHP sees `127.0.0.1` and Laravel had no `trustProxies`, so absolute URLs baked in localhost. SMS links separately use `APP_URL`, which was often still the local default.</root_cause>
   <prevention_rule>Return a relative path for post-booking `ticket_url` (`absolute: false`); trust reverse proxies in `bootstrap/app.php`; keep production `APP_URL=https://…` and real `CENTRAL_DOMAINS` (enforced by `app:production-check`).</prevention_rule>
 </bug>
+
+## 2026-08-08T23:17:34+0600
+
+<bug>
+ <category>Code</category>
+ <symptom>Beyond the post-booking redirect, other patient and TV links could still open or poll localhost in production: prescription SMS/WhatsApp, portal "View Digital Ticket", ticket live-queue poll, outdoor screen API/audio, and the waiting-room Copy link.</symptom>
+ <root_cause>Those call sites used absolute `tenant_web_route()` / `route()` / `asset()` / `url()->current()`, which bake whatever host Laravel sees (often 127.0.0.1 behind a proxy) or inherit `http` from a leftover localhost `APP_URL` onto a real clinic Domain.</root_cause>
+ <prevention_rule>Links that leave the browser (SMS, WhatsApp, TV bookmark, ticket Copy) must use `TenancyUrl::publicAbsolute()` (Domain or APP_URL). Same-origin navigation and JS fetches must use `tenant_web_route(..., absolute: false)` or `public_asset()` — never absolute `asset()` / `route()` for those surfaces.</prevention_rule>
+</bug>

@@ -212,16 +212,24 @@ class PrescriptionShortLinkTest extends TestCase
      */
     public function test_an_extremely_long_domain_still_costs_one_credit(): void
     {
+        // publicAbsolute uses the first Domain row — leave only the extreme host.
+        Domain::where('tenant_id', $this->tenant->id)
+            ->where('domain', self::LONG_DOMAIN)
+            ->delete();
+
         $body = $this->onTenantHost(
             fn () => app(SmsService::class)->prescriptionBody($this->booking, $this->prescription),
             self::EXTREME_DOMAIN,
         );
 
-        $token = $this->onTenantHost(fn () => $this->prescription->shareToken());
-        $link = 'http://'.self::EXTREME_DOMAIN.'/p/'.$token;
+        $link = $this->onTenantHost(
+            fn () => $this->prescription->shareUrl(),
+            self::EXTREME_DOMAIN,
+        );
         $out = GsmText::toSingleSegment($body);
 
         $this->assertSame(1, GsmText::segments($out));
+        $this->assertStringStartsWith('https://'.self::EXTREME_DOMAIN.'/p/', $link);
         $this->assertStringContainsString($link, $out, 'The link must survive truncation intact.');
         $this->assertStringContainsString('Prescription for', $out, 'A bare link reads as spam.');
     }
@@ -291,12 +299,13 @@ class PrescriptionShortLinkTest extends TestCase
 
     private function shareUrl(): string
     {
+        // Token minting needs tenancy; the absolute URL itself comes from
+        // Domain / APP_URL (TenancyUrl::publicAbsolute), not the request host.
         return $this->onTenantHost(fn () => $this->prescription->shareUrl());
     }
 
     /**
-     * URLs are built from the current request host, so the tenant has to be
-     * initialised and the host set the way a staff request would have them.
+     * Initialise tenancy the way a staff request would (token mint + scopes).
      */
     private function onTenantHost(callable $callback, ?string $host = null): mixed
     {

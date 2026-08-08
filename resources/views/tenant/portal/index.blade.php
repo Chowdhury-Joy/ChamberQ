@@ -251,7 +251,7 @@
                                         <h3>{{ $booking->patient_name }}</h3>
                                         <p class="portal-phone">{{ __('Phone') }}: {{ $booking->patient_phone }}</p>
                                     </div>
-                                    <a class="btn btn-ghost" href="{{ tenant_web_route('bookings.show', $booking) }}" target="_blank" rel="noopener noreferrer">
+                                    <a class="btn btn-ghost" href="{{ tenant_web_route('bookings.show', $booking, absolute: false) }}" target="_blank" rel="noopener noreferrer">
                                         {{ __('View Digital Ticket') }}
                                     </a>
                                 </div>

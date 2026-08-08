@@ -5,12 +5,12 @@ namespace App\Services;
 use App\Contracts\SmsGateway;
 use App\Models\Booking;
 use App\Models\Doctor;
-use App\Models\Domain;
 use App\Models\Prescription;
 use App\Models\ScheduleSession;
 use App\Models\SmsMessage;
 use App\Models\Tenant;
 use App\Support\GsmText;
+use App\Support\TenancyUrl;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
@@ -257,20 +257,10 @@ class SmsService
 
     public function ticketUrl(Booking $booking): string
     {
-        // Prefer the doctor's custom domain when one exists.
-        $host = Domain::where('tenant_id', $booking->tenant_id)->value('domain');
-
-        if ($host) {
-            $scheme = parse_url((string) config('app.url'), PHP_URL_SCHEME) ?: 'https';
-
-            return $scheme.'://'.$host.'/bookings/'.$booking->id;
-        }
-
-        // Platform path tenancy: build from APP_URL so SMS links use the
-        // canonical host (not CENTRAL_DOMAINS[0], which may be 127.0.0.1).
-        $base = rtrim((string) config('app.url'), '/');
-
-        return $base.'/'.$booking->tenant_id.'/bookings/'.$booking->id;
+        return TenancyUrl::publicAbsolute(
+            (string) $booking->tenant_id,
+            '/bookings/'.$booking->id,
+        );
     }
 
     private function send(

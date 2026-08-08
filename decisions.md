@@ -1095,3 +1095,12 @@
   <action>Outdoor screen API adds `next_estimated_time`: the same ETA engine’s `actual_estimate` minus a fixed 5 minutes (`ScreenController::TV_NEXT_ETA_LEAD_MINUTES`). The TV bottom strip shows “Next: #N · ~h:i A”. Deliberately not the ticket’s larger “come early” buffer — the board is for people already in the room who need a short walk-up cue.</action>
   <reason>Actual minus five minutes is close enough to stand up without promising the padded arrival time patients see on their phone.</reason>
 </decision>
+
+## 2026-08-08T23:17:34+0600
+
+<decision>
+ <category>Code</category>
+ <context>After fixing the booking ticket redirect, an audit found the same localhost-host bug class on prescription share, portal ticket links, ticket/TV polls, announce audio, and the outdoor-screen Copy link.</context>
+ <action>Introduce `TenancyUrl::publicAbsolute()` for every outbound patient/TV URL; keep same-origin paths relative (`absolute: false`) or root-relative via `public_asset()`; harden Domain link scheme so a leftover localhost APP_URL cannot force `http://` onto a real clinic host.</action>
+ <reason>One shared builder stops each call site inventing its own host rules; relative same-origin URLs survive a bad APP_URL or missing proxy headers without sending patients off-domain.</reason>
+</decision>

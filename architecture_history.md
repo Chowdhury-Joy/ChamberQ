@@ -318,3 +318,6 @@
 
 ## 2026-08-08T23:06:13+0600
 - Outdoor screen next-up strip now shows estimated call time: API field `next_estimated_time` is the ETA engine’s actual_estimate minus 5 minutes (not the ticket buffer), rendered as “Next: #N · ~h:i A”.
+
+## 2026-08-08T23:17:34+0600
+- Outbound patient/TV URLs consolidated on `TenancyUrl::publicAbsolute()` (prescription share, SMS tickets, waiting-room bookmark, ticket Copy link); same-origin portal/ticket/screen polls and announce audio use relative paths / `public_asset()`.

@@ -384,7 +384,11 @@
 
                     @php
                         // Stable path — no date. Bookmark once; it always shows today for this session.
-                        $screenUrl = tenant_web_route('tenant.screen.today', ['session' => $this->selectedSessionId]);
+                        // Absolute via APP_URL/Domain so a TV paste never lands on localhost.
+                        $screenUrl = \App\Support\TenancyUrl::publicAbsolute(
+                            (string) tenant('id'),
+                            '/screen/'.$this->selectedSessionId,
+                        );
                     @endphp
                     <x-filament::section>
                         <div class="lqc-stack-sm" x-data="{ copied: false, copy() { navigator.clipboard.writeText(@js($screenUrl)).then(() => { this.copied = true; setTimeout(() => this.copied = false, 2000) }) } }">
@@ -428,7 +432,7 @@
 
     @php
         $announceUsesVoice = tenant()?->usesCallVoice() ?? false;
-        $announceBaseUrl = rtrim(asset('audio/announce'), '/');
+        $announceBaseUrl = rtrim(public_asset('audio/announce'), '/');
     @endphp
 
     @if($announceUsesVoice)
