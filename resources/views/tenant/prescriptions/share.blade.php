@@ -1,6 +1,6 @@
 {{--
-    The patient's own copy of ONE prescription, opened from a signed WhatsApp
-    link with no login.
+    The patient's own copy of ONE prescription, opened from a short, expiring
+    /p/{token} link with no login.
 
     Scope is deliberate and must not grow: medicines, the dosing advice and
     follow-up date written on this prescription, the prescriber's name and
@@ -15,6 +15,10 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="robots" content="noindex, nofollow, noarchive">
+    {{-- The share token lives in this page's URL. Nothing here loads or links
+         off-origin today, so nothing can leak it via Referer — this keeps that
+         true if a logo or font is ever added. --}}
+    <meta name="referrer" content="no-referrer">
     <title>{{ __('Prescription') }} — {{ $patient?->name ?? __('Patient') }}</title>
     <style>
         * { box-sizing: border-box; }

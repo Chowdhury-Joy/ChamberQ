@@ -228,12 +228,16 @@ class SmsService
         $date = $booking->booking_date?->format('j M Y') ?? '';
         $link = $prescription->shareUrl();
 
+        // "- view:" was dropped for a bare colon: with a long clinic name and a
+        // long patient name the body lands within ~5 characters of the
+        // 160-unit segment ceiling, and those 7 characters are the difference
+        // between one credit and two. The link is self-evidently the thing to
+        // tap. See PrescriptionShortLinkTest.
         return implode(' ', array_filter([
             $clinic.':',
             'Prescription for '.$booking->patient_name,
             $date !== '' ? 'from '.$date : null,
-            '- view: '.$link,
-        ]));
+        ])).': '.$link;
     }
 
     public function internationalPhone(string $phone): string

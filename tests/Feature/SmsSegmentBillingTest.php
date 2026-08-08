@@ -167,11 +167,14 @@ class SmsSegmentBillingTest extends TestCase
     }
 
     /**
-     * The one body that cannot be squeezed into a segment: a signed
-     * prescription share link is ~181 characters on its own, longer than a
-     * whole segment before any words. The choice is a bare URL or two
-     * segments; a naked link from an unknown number reads as spam, so the
+     * A link longer than a segment on its own leaves no choice: a bare URL or
+     * two segments. A naked link from an unknown number reads as spam, so the
      * context stays and the wallet is charged what was really sent.
+     *
+     * No message sent today reaches this branch — the fixture below is the
+     * signed prescription share URL as it was before /p/{token} replaced it
+     * (see PrescriptionShortLinkTest). This pins the fallback for the next long
+     * link, and must not be deleted as "unreachable".
      */
     public function test_an_unshortenable_link_keeps_its_context_and_bills_honestly(): void
     {

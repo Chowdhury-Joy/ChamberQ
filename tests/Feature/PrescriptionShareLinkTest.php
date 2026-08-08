@@ -17,6 +17,7 @@ use App\Models\VisitRecord;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 /**
@@ -156,7 +157,12 @@ class PrescriptionShareLinkTest extends TestCase
         return $this->prescription->shareUrl();
     }
 
-    public function test_signed_link_opens_without_a_login(): void
+    /**
+     * The share link the doctor actually sends. Its shape (short token vs the
+     * signed URL this replaced) and its billing are covered by
+     * PrescriptionShortLinkTest; what matters here is the privacy scope.
+     */
+    public function test_share_link_opens_without_a_login(): void
     {
         $url = $this->shareUrl();
 
@@ -183,9 +189,23 @@ class PrescriptionShareLinkTest extends TestCase
             ->assertDontSee('0299999999');
     }
 
-    public function test_link_without_a_valid_signature_is_refused(): void
+    /**
+     * The old signed route is kept alive only until the links already delivered
+     * to patients have expired. Until then it must still open — and must still
+     * refuse anything unsigned.
+     */
+    public function test_legacy_signed_link_still_opens_but_only_when_signed(): void
     {
         tenancy()->initialize($this->tenant);
+        $this->app['request']->headers->set('HOST', 'rx-share.localhost');
+
+        $signed = URL::temporarySignedRoute(
+            'prescriptions.share',
+            now()->addHours(Prescription::SHARE_LINK_EXPIRY_HOURS),
+            ['prescription' => $this->prescription->id],
+        );
+
+        $this->get($signed)->assertOk()->assertSee('NAPA');
 
         $bare = 'http://rx-share.localhost/prescriptions/'.$this->prescription->id.'/share';
 
@@ -199,7 +219,7 @@ class PrescriptionShareLinkTest extends TestCase
 
         $this->travelTo(now()->addHours(Prescription::SHARE_LINK_EXPIRY_HOURS + 1));
 
-        $this->get($url)->assertForbidden();
+        $this->get($url)->assertNotFound();
     }
 
     public function test_doctor_only_print_route_is_unchanged(): void

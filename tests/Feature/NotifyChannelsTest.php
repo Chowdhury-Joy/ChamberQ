@@ -277,7 +277,7 @@ class NotifyChannelsTest extends TestCase
             ->where('purpose', SmsMessage::PURPOSE_PRESCRIPTION)
             ->first();
         $this->assertNotNull($message);
-        $this->assertStringContainsString('view:', $message->body);
+        $this->assertStringContainsString('/p/', $message->body, 'The body must carry the share link.');
         $this->assertSame($message->body, mb_convert_encoding($message->body, 'ASCII', 'UTF-8'));
     }
 

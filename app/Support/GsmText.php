@@ -161,12 +161,16 @@ class GsmText
             $text = preg_replace('/[ \t]+/', ' ', $text) ?? $text;
         }
 
-        // Some links cannot be shortened away: a signed prescription share URL
-        // runs ~181 characters, longer than a whole segment on its own. One
-        // segment is then physically impossible, and the choice is between a
-        // bare link and a two-segment message. A naked URL from an unknown
-        // number is indistinguishable from spam, so the context stays and the
-        // caller is billed for what it really costs — see SmsService::send().
+        // Some links cannot be shortened away. A link longer than a segment on
+        // its own makes one segment physically impossible, and the choice is
+        // then between a bare link and a two-segment message. A naked URL from
+        // an unknown number is indistinguishable from spam, so the context
+        // stays and the caller is billed for what it really costs — see
+        // SmsService::send().
+        //
+        // No message sent today reaches this branch: the prescription share URL
+        // did, at ~181 characters, until it became /p/{token}. This is the net
+        // for the next long link, not dead code.
         if ($url !== null && self::units($url) + 1 >= self::SEGMENT_UNITS) {
             $prose = self::truncateToUnits($text, self::SEGMENT_UNITS - 3);
 

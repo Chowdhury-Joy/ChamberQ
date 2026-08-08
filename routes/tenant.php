@@ -86,9 +86,22 @@ $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
         ->middleware(['auth'])
         ->name($routeName('prescriptions.print'));
 
-    // Patient's own copy, opened from the doctor's WhatsApp link. No auth by
-    // design — the expiring signature is the gate, and the view exposes only
-    // this prescription's medicines (never a diagnosis).
+    // Patient's own copy, opened from the doctor's SMS/WhatsApp link. No auth
+    // by design — an unguessable, expiring token is the gate, and the view
+    // exposes only this prescription's medicines (never a diagnosis).
+    //
+    // Deliberately short: a temporary signed URL carries its expiry and
+    // signature in the query string and ran ~181 characters, which pushed the
+    // prescription SMS into a second billable segment. Two segments, so the
+    // `/{slug?}` catch-all below (one segment) can never swallow it.
+    Route::get('/p/{token}', [PrescriptionShareController::class, 'showByToken'])
+        ->where('token', '[A-Za-z0-9]+')
+        ->middleware(['throttle:30,1'])
+        ->name($routeName('prescriptions.share-token'));
+
+    // Superseded by /p/{token} above. Kept only so links already delivered
+    // keep working; every one of them expires within
+    // Prescription::SHARE_LINK_EXPIRY_HOURS, after which this can be deleted.
     Route::get('/prescriptions/{prescription}/share', [PrescriptionShareController::class, 'show'])
         ->middleware(['signed', 'throttle:30,1'])
         ->name($routeName('prescriptions.share'));
