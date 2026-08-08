@@ -1,0 +1,68 @@
+---
+description: SolDoc is pre-production, not a prototype — hardening, durability and ops concerns are in scope by default
+alwaysApply: true
+---
+
+# Prototype phase is over (Solo Doc / ChamberQ)
+
+The shared protocol (`~/AGENTS.md` §0) opens every project as "a working
+prototype, not a hardened production system, **unless the user says
+otherwise**". The owner said otherwise on **2026-08-08**.
+
+**SolDoc is now pre-production.** For this repo, §0's "do not over-invest by
+default" list no longer applies.
+
+## What is now in scope without being asked
+
+- Security hardening (authorisation gaps, data exposure, tenant isolation)
+- Operational concerns: backups, data durability, monitoring, deployment config
+- Edge cases that lose data, money, or a patient's appointment
+- Correctness against the **production** database engine (MySQL), not just SQLite
+
+Previously these needed an explicit request. They no longer do.
+
+## How to work now
+
+- **Treat patient data as already live.** Clinical records, phone numbers and
+  names get production-grade care. "It's only a prototype" is no longer a reason
+  to defer a privacy fix.
+- **"Green tests locally" is not proof.** State plainly what has and has not been
+  verified on a production-shaped environment. CI runs both SQLite and MySQL
+  (`.github/workflows/tests.yml`) — do not remove the MySQL job to speed it up.
+- **Enforce, don't document.** A rule that relies on a future author remembering
+  it has already failed twice here: the SMS "keep bodies ASCII" convention broke
+  within two days, and a date-cast change missed two call sites. Put the guard
+  where the code converges (see `App\Support\GsmText`, applied inside
+  `SmsService::send()`).
+- **Rank by recoverability.** Losing clinical media, or failing to tell a patient
+  their appointment is cancelled, outranks anything merely slow or ugly.
+
+## What this does NOT unlock
+
+- **Patient homepage lock** — still needs `update patient homepage` /
+  `change patient homepage` (`patient-homepage-lock.mdc`)
+- **Session expiry lock** — still needs `change session expiry` /
+  `restore session timeout` (`session-expiry-lock.mdc`). A hardening pass does
+  not unlock it; that is stated explicitly there and still holds.
+- **Online payment** — remains pay-at-chamber until the owner asks
+
+## Known-outstanding production gaps (as of 2026-08-08)
+
+Not yet done, and not blocked by code:
+
+1. **Nothing is backed up** — neither the database nor clinical media
+   (voice notes, prescription photos) on the `local` disk. Storage vendor
+   undecided; `VisitMediaService` is disk-agnostic so it is a config switch.
+2. **No SMS has ever actually been sent** — `SMS_DRIVER` defaults to `log`.
+3. **Password reset mail goes nowhere** — `MAIL_MAILER=log`.
+4. **No production config** — `.env` is still `APP_ENV=local`, `APP_DEBUG=true`,
+   SQLite. No deployment configuration exists anywhere in the repo.
+5. **No error monitoring.**
+6. Deferred by decision: patient portal returns any phone's bookings; solo
+   patient pages still load the Tailwind CDN (locked); prescription SMS costs
+   2 credits until a short-link route exists.
+
+## Context
+
+`decisions.md` 2026-08-08 records the scope change and why. `CLAUDE.md` carries
+the same rule for Claude Code.

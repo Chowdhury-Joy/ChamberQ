@@ -982,3 +982,12 @@
   <action>Dispatched with `->afterResponse()`, which Laravel runs via `dispatchSync()` in the container's terminating callback — same process, after the response is sent, no worker required. The job is still written as a `ShouldQueue` class carrying its own `tenantId` and re-initialising tenancy, so promoting it to a real background job is deleting one method call.</action>
   <reason>A frozen screen is a bad experience; silently not telling patients the doctor is late is a worse one. After-response buys the responsiveness without adding an ops dependency the deployment does not yet have, and costs nothing to reverse once a worker exists. It also keeps tests honest — `dispatchAfterResponse` runs on `app->terminate()`, so the existing assertions still prove the texts are really sent rather than merely enqueued.</reason>
 </decision>
+
+## 2026-08-08T11:49:22+0600
+
+<decision>
+  <category>Code</category>
+  <context>`~/AGENTS.md` §0 governs every project on this machine as "a working prototype, not a hardened production system, unless the user says otherwise", and explicitly tells agents not to over-invest in security hardening, edge cases, or operational concerns. That framing has been shaping every judgement call in this repo — including which audit findings were treated as "fine for a prototype" and deferred. The owner ended the prototype phase on 2026-08-08.</context>
+  <action>Recorded the scope change as a project-level override in `CLAUDE.md` and `.cursor/rules/production-phase.mdc` (both agents work in this repo). Hardening, durability, backups, monitoring and deployment configuration are now in scope by default and no longer need to be requested. Correctness is judged against MySQL, not just SQLite. The patient-homepage and session-expiry locks are explicitly **not** unlocked by this, and pay-at-chamber still stands.</action>
+  <reason>§0 is a real instruction that changes what an agent volunteers, defers, and treats as good enough — leaving it in place while the product goes live would keep producing prototype-grade judgement on live patient data. It lives in `CLAUDE.md` rather than the repo's `AGENTS.md` because that file is a symlink to the machine-wide protocol; editing it would silently reclassify every other project on the machine. The mirrored `.cursor` rule exists because a second agent is committing to this repo and would otherwise keep working to the old standard.</reason>
+</decision>

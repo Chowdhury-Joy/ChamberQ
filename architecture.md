@@ -1,5 +1,5 @@
 # Architecture Overview
-Last Updated: 2026-08-08T10:36:55+0600
+Last Updated: 2026-08-08T11:49:22+0600
 
 ## Overview
 ChamberQ (product formerly "Doctor Gemini") is a multi-tenant SaaS for Bangladesh solo doctors and clinics. Each tenant gets a branded patient website, online serial booking, a live waiting-room queue (outdoor screen + staff control), a patient ticket/portal, and a Filament admin panel. Patients book a serial and pay at the chamber — there is no payment gateway. Online pre-payment is later-stage only: do not suggest or build it unless the owner explicitly asks. Sales CTAs on the central marketing site use WhatsApp (`wa.me`). Patient outbound notices (booking confirmation, doctor late, cancellation, prescription link) follow each doctor's `notify_channels` mix of prepaid SMS and/or human-tapped WhatsApp; Super Admin tops up the tenant SMS wallet. Marketer partners earn commissions on setup and monthly subscription fees (manual bKash billing); Super Admin confirms doctor payments and marketer payouts.
@@ -37,6 +37,14 @@ DB_CONNECTION=mysql DB_DATABASE=soldoc_mysql_test DB_USERNAME=root DB_PASSWORD= 
 
 Shell environment variables override both `.env` and the `<env>` entries in `phpunit.xml`, so no config edit is needed. CI (`.github/workflows/tests.yml`) runs both engines on every pull request.
 
+Before serving real patients, run the readiness gate as the last step of a deploy — a non-zero exit should stop the release:
+
+```bash
+php artisan app:production-check
+```
+
+It checks the settings that fail *silently*: debug mode exposing stack traces, `MAIL_MAILER=log` swallowing a locked-out doctor's password reset, `SMS_DRIVER=log` meaning no patient is ever told their serial, still running on SQLite, a non-https or localhost `APP_URL` (patient ticket links in SMS are built from it), clinical media on the server's own disk, and an insecure session cookie. Blockers exit non-zero; the two storage/cookie items are warnings unless `--strict`. Defined in `app/Support/ProductionReadiness.php`, and CI asserts the gate can still pass on a production-shaped config so it cannot drift into something nobody can satisfy.
+
 Scheduled tasks: `commissions:generate-monthly` runs on the 7th of each month (pending monthly commission rows for referred active tenants).
 
 ## Tech Stack
@@ -57,6 +65,7 @@ Scheduled tasks: `commissions:generate-monthly` runs on the 7th of each month (p
 - `app/Console/Commands/BackfillPatientsCommand.php` — `patients:backfill` (optional `--dry-run`) links legacy bookings to `patients` rows by normalized phone + name
 - `app/Console/Commands/LoadConditionsCommand.php` — `conditions:load` imports the curated master condition list from `data/condition-list-draft.csv` (optional `--fresh`)
 - `app/Support/BdPhone.php` — shared `01…` phone normalization for storage, lookup, and backfill
+- `app/Support/ProductionReadiness.php` + `app/Console/Commands/ProductionCheckCommand.php` — the `app:production-check` deploy gate (see Getting Started). Every item on it is a value someone sets on a server that otherwise fails quietly; this project's repeated lesson is that a rule people must remember is a rule that breaks, so the checklist is a machine check rather than a runbook page
 - `app/Support/GsmText.php` — keeps an SMS body inside one billable segment. Networks bill per **segment** (160 GSM-alphabet characters, or only 70 the moment one character falls outside it) while credits are sold as "1 credit = 1 message". `toSingleSegment()` transliterates via `Str::ascii()` — flattening typographic dashes and rendering a Bangla patient name readably (`ফাতিমা রহমান` → `fatima rhman`) rather than deleting it — then truncates prose, never a link, to fit. `segments()` is encoding-aware (160/153 GSM, 70/67 UCS-2) so the wallet can charge what was really sent
 - `app/Jobs/SendDoctorLateNotices.php` — texts every waiting patient that the doctor is running late. Dispatched from `LiveSessionService::markDelay()` with `->afterResponse()`, **deliberately not onto the queue**: this application runs no queue worker, so a queued job would never be delivered and nobody would notice the patients went untold. After-response runs in the same process once the response is sent, needs no infrastructure, and still frees the screen. Carries `tenantId` and re-initialises tenancy itself, and is `ShouldQueue`, so moving to a real worker later is deleting `->afterResponse()` (`QueueTenancyBootstrapper` is already enabled)
 - `app/Casts/DateOnly.php` — custom cast for date-only columns (`Booking::booking_date`, `LiveSession::session_date`, `SlotBlock::date`). Laravel's built-in `'date'` cast reads back a start-of-day Carbon but writes through the model's generic datetime format on save, leaving a `00:00:00` time component that real DATE columns (MySQL/Postgres) coerce away but SQLite stores literally — `DateOnly` writes `Y-m-d` on every driver, so a plain `where('booking_date', $ymd)` matches consistently and stays index-friendly
