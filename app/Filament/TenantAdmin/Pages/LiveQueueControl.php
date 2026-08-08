@@ -800,11 +800,17 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                 if (!$this->selectedSessionId) return;
                 $scheduleSession = ScheduleSession::with('doctor')->findOrFail($this->selectedSessionId);
                 
-                // create or update live session
+                // create or update live session.
+                // toDateString(), not the Carbon: this array is the WHERE
+                // clause as well as the insert payload, and a Carbon binds as
+                // 'Y-m-d H:i:s' — which never matches the date-only column, so
+                // the lookup misses an existing row and the insert then trips
+                // the (tenant_id, schedule_session_id, session_date) unique
+                // index. Same rule as LiveSessionService::startSession().
                 $liveSession = LiveSession::firstOrCreate([
                     'tenant_id' => tenant('id'),
                     'schedule_session_id' => $scheduleSession->id,
-                    'session_date' => Carbon::today(),
+                    'session_date' => Carbon::today()->toDateString(),
                 ], [
                     'status' => 'delayed',
                 ]);
@@ -883,10 +889,11 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                 if (!$this->selectedSessionId) return;
                 $scheduleSession = ScheduleSession::findOrFail($this->selectedSessionId);
                 
+                // toDateString(), not the Carbon — see markLateAction() above.
                 $liveSession = LiveSession::firstOrCreate([
                     'tenant_id' => tenant('id'),
                     'schedule_session_id' => $scheduleSession->id,
-                    'session_date' => Carbon::today(),
+                    'session_date' => Carbon::today()->toDateString(),
                 ], [
                     'status' => 'cancelled',
                 ]);

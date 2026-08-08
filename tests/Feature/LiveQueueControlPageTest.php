@@ -192,6 +192,53 @@ class LiveQueueControlPageTest extends TestCase
         $this->queuePage()->assertSet('selectedSessionId', $this->session->id);
     }
 
+    /**
+     * Mark Late and Cancel Session both resolve today's live session with
+     * `firstOrCreate`, whose key array is the WHERE clause as well as the
+     * insert payload. `session_date` is a date-only column (App\Casts\DateOnly),
+     * so binding a Carbon there produces 'Y-m-d H:i:s', misses the row that
+     * already exists, and turns the lookup into an INSERT that trips the
+     * (tenant_id, schedule_session_id, session_date) unique index — a 500 on
+     * the queue runner's screen mid-session.
+     *
+     * Both actions run here against an already-existing live session, which is
+     * the only state in which the bug can fire.
+     *
+     * @dataProvider sessionLifecycleActions
+     */
+    public function test_session_lifecycle_actions_reuse_todays_live_session(
+        string $action,
+        array $data,
+        string $startingStatus,
+        string $expectedStatus,
+    ): void {
+        $this->makeWaitingBooking('Patient One', 1);
+
+        // Each action is only offered in certain session states; put the
+        // existing row into one where the action is reachable.
+        $this->liveSession->update(['status' => $startingStatus]);
+
+        $this->assertSame(1, LiveSession::count());
+
+        $this->queuePage()->callAction($action, $data)->assertHasNoActionErrors();
+
+        $this->assertSame(
+            1,
+            LiveSession::count(),
+            "{$action} created a second live_session for today instead of reusing the existing row."
+        );
+        $this->assertSame($expectedStatus, $this->liveSession->fresh()->status);
+    }
+
+    /** @return array<string, array{0: string, 1: array<string, mixed>, 2: string, 3: string}> */
+    public static function sessionLifecycleActions(): array
+    {
+        return [
+            'mark late' => ['markLate', ['delay_minutes' => 30], 'scheduled', 'delayed'],
+            'cancel session' => ['markAbsent', [], 'active', 'cancelled'],
+        ];
+    }
+
     protected function queuePage(): \Livewire\Features\SupportTesting\Testable
     {
         $doctor = User::firstOrCreate(
