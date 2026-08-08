@@ -1052,3 +1052,19 @@
   <action>Remove the signature block and its CSS from `tenant/prescriptions/print.blade.php`. No uploaded signature image feature.</action>
   <reason>Unused chrome on every print; a seal on the physical page does not need a labelled blank on the PDF.</reason>
 </decision>
+
+## 2026-08-08T15:54:34+0600
+
+<decision>
+  <category>Business_Logic</category>
+  <context>Vitals validation was written into the save path, where it could refuse a submission. That path runs before the queue advances, so a slipped digit in an optional weight or BP box would have held the booking open and left the next patient uncalled — and the message would not even have rendered next to the field, because Filament actions namespace the error bag.</context>
+  <action>Split the two jobs. The form validates (`vitalsSection()`: BP required with its partner in both directions, per-field min/max, systolic must exceed diastolic, with clinical wording via `validationMessages()`). The save path only sanitises — `normalizeVitals()` never throws; an unusable BP is dropped as a pair, an implausible weight is dropped, and the rest of the note is kept. `isUsableBloodPressure()` is the one definition both sides call. `submissionHasContent()`'s docblock now states that it must always answer.</action>
+  <reason>Two different failures deserve two different answers. A doctor who mistypes needs to be told, next to the box, before they finish — that is the form's job. A malformed request arriving at the service must not be allowed to stop a patient leaving the chamber; between losing an optional reading and stalling the queue, losing the reading is the recoverable one, and the form makes it nearly unreachable anyway. Keeping the bounds in a shared method rather than restating them in two places is what stops the screen and the database disagreeing later about what a valid reading is.</reason>
+</decision>
+
+<decision>
+  <category>Business_Logic</category>
+  <context>The patient share page shows the patient's age alongside their name; the original share-link decision listed only name and date.</context>
+  <action>Keep the age and record it in `architecture.md` and `sitemap.md` as part of the documented share scope.</action>
+  <reason>Age is on the paper prescription for a reason — a pharmacist reading the patient's own copy uses it to sanity-check a dose, and it is the patient's own data on their own link, adding nothing a stranger holding the link could not already infer from the medicines. The privacy line that matters is unchanged: still no diagnosis, clinical notes, tests, reports, other visits or chamber contact. Documented rather than removed so the scope stops being wider than the record of it.</reason>
+</decision>

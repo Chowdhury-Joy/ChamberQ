@@ -170,6 +170,12 @@ class VisitRecordService
     }
 
     /**
+     * Does this submission hold anything worth keeping?
+     *
+     * Callers ask this *before* completing the booking and advancing the queue,
+     * so this must always answer and never throw — including on nonsense input.
+     * Field-level validation belongs on the form, not here.
+     *
      * @param  array<string, mixed>  $data
      */
     public function submissionHasContent(array $data): bool

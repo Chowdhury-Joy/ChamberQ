@@ -25,7 +25,6 @@ use Filament\Schemas\Components\Utilities\Set;
 use Filament\Actions\Action;
 use Filament\Schemas\Components\View;
 use Illuminate\Support\Js;
-use Illuminate\Validation\ValidationException;
 
 class VisitNotesFormSchema
 {
@@ -63,6 +62,23 @@ class VisitNotesFormSchema
     }
 
     public const FREE_DIAGNOSIS_PREFIX = '__free__:';
+
+    /**
+     * Plausible-reading bounds for the optional vitals boxes. These are not
+     * clinical limits — they only catch a slipped digit (a 1700 systolic, a
+     * weight typed into the BP box), which is why they are generous.
+     */
+    public const WEIGHT_MIN_KG = 0.5;
+
+    public const WEIGHT_MAX_KG = 300;
+
+    public const BP_SYSTOLIC_MIN = 60;
+
+    public const BP_SYSTOLIC_MAX = 250;
+
+    public const BP_DIASTOLIC_MIN = 30;
+
+    public const BP_DIASTOLIC_MAX = 150;
 
     /** @var list<string> */
     public const FREQUENCY_PRESETS = ['1+0+1', '1+1+1', '0+0+1', '1+0+0', '½+0+½'];
@@ -186,8 +202,19 @@ class VisitNotesFormSchema
     }
 
     /**
-     * Cast and validate optional visit vitals. Blank is fine; half-filled BP
-     * or absurd values are rejected so a typo cannot land in the clinical record.
+     * Cast optional visit vitals, dropping anything that is not a usable
+     * reading. This **must not throw**: it runs inside `submissionHasContent()`,
+     * which every completion path calls *before* closing the booking and
+     * advancing the queue, so a rejected value here would strand the patient in
+     * the chamber. Notes have never been allowed to block queue throughput
+     * (see the Stage 4 decision in `decisions.md`), and a typo in a vitals box
+     * is not the moment to start.
+     *
+     * The doctor is stopped earlier instead — `vitalsSection()` carries the
+     * same rules as Filament field rules, so the UI shows the error next to the
+     * input and a bad reading never reaches here. What arrives here is either
+     * already valid or hand-crafted, and half a blood pressure is not a
+     * clinical fact worth storing, so it is dropped as a pair.
      *
      * @param  array<string, mixed>  $data
      * @return array<string, mixed>
@@ -195,65 +222,45 @@ class VisitNotesFormSchema
     public static function normalizeVitals(array $data): array
     {
         $weight = $data['weight_kg'] ?? null;
-        if ($weight === '' || $weight === null) {
-            $data['weight_kg'] = null;
-        } else {
-            if (! is_numeric($weight) || (float) $weight < 0.5 || (float) $weight > 300) {
-                throw ValidationException::withMessages([
-                    'weight_kg' => __('Weight must be between 0.5 and 300 kg.'),
-                ]);
-            }
-            $data['weight_kg'] = round((float) $weight, 1);
-        }
+        $data['weight_kg'] = is_numeric($weight)
+            && (float) $weight >= self::WEIGHT_MIN_KG
+            && (float) $weight <= self::WEIGHT_MAX_KG
+                ? round((float) $weight, 1)
+                : null;
 
-        $systolic = self::nullableInt($data['bp_systolic'] ?? null);
-        $diastolic = self::nullableInt($data['bp_diastolic'] ?? null);
+        $systolic = is_numeric($data['bp_systolic'] ?? null) ? (int) $data['bp_systolic'] : null;
+        $diastolic = is_numeric($data['bp_diastolic'] ?? null) ? (int) $data['bp_diastolic'] : null;
 
-        if (($systolic === null) xor ($diastolic === null)) {
-            throw ValidationException::withMessages([
-                'bp_systolic' => __('Enter both systolic and diastolic blood pressure, or leave both blank.'),
-            ]);
-        }
-
-        if ($systolic !== null && $diastolic !== null) {
-            if ($systolic < 60 || $systolic > 250 || $diastolic < 30 || $diastolic > 150) {
-                throw ValidationException::withMessages([
-                    'bp_systolic' => __('Blood pressure looks out of range. Check the reading.'),
-                ]);
-            }
-
-            if ($systolic < $diastolic) {
-                throw ValidationException::withMessages([
-                    'bp_systolic' => __('Systolic pressure must be higher than diastolic.'),
-                ]);
-            }
+        if (! self::isUsableBloodPressure($systolic, $diastolic)) {
+            $systolic = null;
+            $diastolic = null;
         }
 
         $data['bp_systolic'] = $systolic;
         $data['bp_diastolic'] = $diastolic;
 
-        $notes = $data['clinical_notes'] ?? null;
-        $data['clinical_notes'] = filled($notes) ? trim((string) $notes) : null;
-        if ($data['clinical_notes'] === '') {
-            $data['clinical_notes'] = null;
-        }
+        $notes = trim((string) ($data['clinical_notes'] ?? ''));
+        $data['clinical_notes'] = $notes === '' ? null : $notes;
 
         return $data;
     }
 
-    private static function nullableInt(mixed $value): ?int
+    /**
+     * A blood pressure is only a fact as a pair, in range, systolic over
+     * diastolic. Shared by the form rules and by `normalizeVitals()` so the
+     * screen and the database can never disagree about what is acceptable.
+     */
+    public static function isUsableBloodPressure(?int $systolic, ?int $diastolic): bool
     {
-        if ($value === '' || $value === null) {
-            return null;
+        if ($systolic === null || $diastolic === null) {
+            return false;
         }
 
-        if (! is_numeric($value)) {
-            throw ValidationException::withMessages([
-                'bp_systolic' => __('Blood pressure must be a number.'),
-            ]);
-        }
-
-        return (int) $value;
+        return $systolic >= self::BP_SYSTOLIC_MIN
+            && $systolic <= self::BP_SYSTOLIC_MAX
+            && $diastolic >= self::BP_DIASTOLIC_MIN
+            && $diastolic <= self::BP_DIASTOLIC_MAX
+            && $systolic > $diastolic;
     }
 
     /**
@@ -292,31 +299,7 @@ class VisitNotesFormSchema
                 ->columnSpanFull()
                 ->visible(fn (): bool => $patient?->hasClinicalWarnings() ?? false),
             self::prescriptionSection($prescribingDoctor, $lastItems),
-            Section::make(__('Vitals'))
-                ->schema([
-                    TextInput::make('weight_kg')
-                        ->label(__('Weight (kg)'))
-                        ->numeric()
-                        ->minValue(0.5)
-                        ->maxValue(300)
-                        ->step(0.1)
-                        ->inputMode('decimal'),
-                    TextInput::make('bp_systolic')
-                        ->label(__('BP systolic'))
-                        ->numeric()
-                        ->minValue(60)
-                        ->maxValue(250)
-                        ->inputMode('numeric')
-                        ->placeholder('170'),
-                    TextInput::make('bp_diastolic')
-                        ->label(__('BP diastolic'))
-                        ->numeric()
-                        ->minValue(30)
-                        ->maxValue(150)
-                        ->inputMode('numeric')
-                        ->placeholder('100'),
-                ])
-                ->columns(3),
+            self::vitalsSection(),
             Section::make(__('Diagnosis'))
                 ->schema([
                     Select::make('diagnosis')
@@ -495,6 +478,80 @@ class VisitNotesFormSchema
                     ]),
             ])
             ->columnSpanFull();
+    }
+
+    /**
+     * Optional weight and blood pressure.
+     *
+     * The rules live here, on the fields, rather than only in the save path:
+     * a doctor who mistypes must see the message next to the box they typed
+     * in, and the save path must never refuse a submission (see
+     * `normalizeVitals()` — it runs before the queue advances). Blood pressure
+     * is required as a pair in both directions, so filling one box and tapping
+     * Complete is caught on screen instead of silently dropping the reading.
+     */
+    private static function vitalsSection(): Section
+    {
+        $outOfRange = __('Blood pressure looks out of range. Check the reading.');
+        $bothOrNeither = __('Enter both systolic and diastolic blood pressure, or leave both blank.');
+
+        return Section::make(__('Vitals'))
+            ->description(__('Optional. Leave blank if you did not measure.'))
+            ->schema([
+                TextInput::make('weight_kg')
+                    ->label(__('Weight (kg)'))
+                    ->numeric()
+                    ->minValue(self::WEIGHT_MIN_KG)
+                    ->maxValue(self::WEIGHT_MAX_KG)
+                    ->step(0.1)
+                    ->inputMode('decimal')
+                    ->placeholder('58.5')
+                    ->validationMessages([
+                        'numeric' => __('Weight must be between 0.5 and 300 kg.'),
+                        'min' => __('Weight must be between 0.5 and 300 kg.'),
+                        'max' => __('Weight must be between 0.5 and 300 kg.'),
+                    ]),
+                TextInput::make('bp_systolic')
+                    ->label(__('BP systolic'))
+                    ->numeric()
+                    ->minValue(self::BP_SYSTOLIC_MIN)
+                    ->maxValue(self::BP_SYSTOLIC_MAX)
+                    ->inputMode('numeric')
+                    ->placeholder('170')
+                    ->requiredWith('bp_diastolic')
+                    ->rule(static fn (Get $get) => static function (string $attribute, mixed $value, \Closure $fail) use ($get): void {
+                        $diastolic = $get('bp_diastolic');
+
+                        if (blank($value) || blank($diastolic) || ! is_numeric($value) || ! is_numeric($diastolic)) {
+                            return;
+                        }
+
+                        if ((int) $value <= (int) $diastolic) {
+                            $fail(__('Systolic pressure must be higher than diastolic.'));
+                        }
+                    })
+                    ->validationMessages([
+                        'numeric' => __('Blood pressure must be a number.'),
+                        'min' => $outOfRange,
+                        'max' => $outOfRange,
+                        'required_with' => $bothOrNeither,
+                    ]),
+                TextInput::make('bp_diastolic')
+                    ->label(__('BP diastolic'))
+                    ->numeric()
+                    ->minValue(self::BP_DIASTOLIC_MIN)
+                    ->maxValue(self::BP_DIASTOLIC_MAX)
+                    ->inputMode('numeric')
+                    ->placeholder('100')
+                    ->requiredWith('bp_systolic')
+                    ->validationMessages([
+                        'numeric' => __('Blood pressure must be a number.'),
+                        'min' => $outOfRange,
+                        'max' => $outOfRange,
+                        'required_with' => $bothOrNeither,
+                    ]),
+            ])
+            ->columns(3);
     }
 
     private static function followUpSection(): Section

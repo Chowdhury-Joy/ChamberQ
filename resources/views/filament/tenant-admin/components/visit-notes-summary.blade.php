@@ -14,20 +14,10 @@
         </div>
     @endif
 
-    @if ($record->weightLabel() || $record->bloodPressureLabel())
+    @if ($record->vitalsSummary())
         <div class="cs-summary-panel__row">
             <span class="cs-summary-panel__label">{{ __('Vitals') }}</span>
-            <span>
-                @if ($record->weightLabel())
-                    {{ __('Wt') }} {{ $record->weightLabel() }}
-                @endif
-                @if ($record->weightLabel() && $record->bloodPressureLabel())
-                    ·
-                @endif
-                @if ($record->bloodPressureLabel())
-                    {{ __('BP') }} {{ $record->bloodPressureLabel() }}
-                @endif
-            </span>
+            <span>{{ $record->vitalsSummary() }}</span>
         </div>
     @endif
 

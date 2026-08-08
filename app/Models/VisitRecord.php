@@ -101,6 +101,22 @@ class VisitRecord extends Model
         return $this->bp_systolic.'/'.$this->bp_diastolic;
     }
 
+    /**
+     * One line of vitals for the consult screen and summary panel, e.g.
+     * "Wt 58.5 kg · BP 170/100". Kept on the model because the same line is
+     * drawn in three places and hand-rolled copies had already drifted — one
+     * of them showed only blood pressure when both were recorded.
+     */
+    public function vitalsSummary(): ?string
+    {
+        $parts = array_filter([
+            $this->weightLabel() ? __('Wt').' '.$this->weightLabel() : null,
+            $this->bloodPressureLabel() ? __('BP').' '.$this->bloodPressureLabel() : null,
+        ]);
+
+        return $parts === [] ? null : implode(' · ', $parts);
+    }
+
     public function followUpLabel(): ?string
     {
         return \App\Filament\TenantAdmin\Support\VisitNotesFormSchema::followUpDisplayLabel(

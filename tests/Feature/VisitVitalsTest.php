@@ -19,7 +19,7 @@ use App\Services\VisitRecordService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
-use Illuminate\Validation\ValidationException;
+use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\TestCase;
 
 class VisitVitalsTest extends TestCase
@@ -181,27 +181,75 @@ class VisitVitalsTest extends TestCase
         $this->assertTrue($notesOnly->hasClinicalContent());
     }
 
-    public function test_half_filled_blood_pressure_is_rejected(): void
+    public function test_unusable_blood_pressure_is_dropped_without_losing_the_rest_of_the_note(): void
     {
         tenancy()->initialize($this->tenant);
 
-        $this->expectException(ValidationException::class);
-
-        app(VisitRecordService::class)->saveForCompletedBooking($this->booking->fresh(), $this->doctor, [
+        $record = app(VisitRecordService::class)->saveForCompletedBooking($this->booking->fresh(), $this->doctor, [
             'bp_systolic' => 170,
+            'clinical_notes' => 'C/C: headache',
+            'weight_kg' => 62,
         ]);
+
+        $this->assertNotNull($record);
+        $this->assertNull($record->bp_systolic);
+        $this->assertNull($record->bp_diastolic);
+        $this->assertSame('C/C: headache', $record->clinical_notes);
+        $this->assertSame(62.0, $record->weight_kg);
     }
 
-    public function test_absurd_blood_pressure_is_rejected(): void
+    /**
+     * @return list<array{0: array<string, mixed>}>
+     */
+    public static function unusableVitalsProvider(): array
+    {
+        return [
+            'half-filled BP' => [['bp_systolic' => 170]],
+            'other half-filled BP' => [['bp_diastolic' => 100]],
+            'systolic out of range' => [['bp_systolic' => 400, 'bp_diastolic' => 100]],
+            'diastolic out of range' => [['bp_systolic' => 120, 'bp_diastolic' => 5]],
+            'inverted reading' => [['bp_systolic' => 80, 'bp_diastolic' => 120]],
+            'not a number' => [['bp_systolic' => 'high', 'bp_diastolic' => 'low']],
+        ];
+    }
+
+    #[DataProvider('unusableVitalsProvider')]
+    public function test_unusable_blood_pressure_never_throws(array $input): void
+    {
+        $normalized = VisitNotesFormSchema::normalizeVitals($input);
+
+        $this->assertNull($normalized['bp_systolic']);
+        $this->assertNull($normalized['bp_diastolic']);
+    }
+
+    public function test_absurd_weight_is_dropped_rather_than_stored(): void
+    {
+        $normalized = VisitNotesFormSchema::normalizeVitals(['weight_kg' => 9000]);
+
+        $this->assertNull($normalized['weight_kg']);
+    }
+
+    /**
+     * A typo in an optional vitals box must never strand the patient in the
+     * chamber: `submissionHasContent()` runs before the queue advances, so it
+     * has to answer rather than throw. Guards the Stage 4 rule that notes are
+     * never allowed to block queue throughput.
+     */
+    public function test_bad_vitals_do_not_block_the_queue(): void
     {
         tenancy()->initialize($this->tenant);
 
-        $this->expectException(ValidationException::class);
+        $service = app(VisitRecordService::class);
 
-        VisitNotesFormSchema::normalizeVitals([
-            'bp_systolic' => 400,
-            'bp_diastolic' => 100,
-        ]);
+        $this->assertTrue($service->submissionHasContent([
+            'bp_systolic' => 170,
+            'clinical_notes' => 'C/C: headache',
+        ]));
+
+        $this->assertFalse($service->submissionHasContent([
+            'bp_diastolic' => 'nonsense',
+            'weight_kg' => 9000,
+        ]));
     }
 
     public function test_staff_cannot_write_vitals_or_clinical_notes(): void

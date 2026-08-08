@@ -366,20 +366,10 @@
                             </x-slot>
                             @if ($lastVisitRecord)
                                 <div>
-                                    @if ($lastVisitRecord->weightLabel() || $lastVisitRecord->bloodPressureLabel())
+                                    @if ($lastVisitRecord->vitalsSummary())
                                         <div class="cs-field">
                                             <div class="cs-field-label">{{ __('Vitals') }}</div>
-                                            <div class="cs-field-value">
-                                                @if ($lastVisitRecord->weightLabel())
-                                                    {{ __('Wt') }} {{ $lastVisitRecord->weightLabel() }}
-                                                @endif
-                                                @if ($lastVisitRecord->weightLabel() && $lastVisitRecord->bloodPressureLabel())
-                                                    ·
-                                                @endif
-                                                @if ($lastVisitRecord->bloodPressureLabel())
-                                                    {{ __('BP') }} {{ $lastVisitRecord->bloodPressureLabel() }}
-                                                @endif
-                                            </div>
+                                            <div class="cs-field-value">{{ $lastVisitRecord->vitalsSummary() }}</div>
                                         </div>
                                     @endif
                                     @if ($lastVisitRecord->diagnosisLabel())
@@ -536,14 +526,8 @@
                                             {{ $hasPrescription ? __('Prescription so far') : __('Notes so far — no medicines yet') }}
                                         </div>
                                         <div class="cs-write-detail">
-                                            @if ($written->weightLabel() || $written->bloodPressureLabel())
-                                                <span class="cs-write-chip">
-                                                    @if ($written->bloodPressureLabel())
-                                                        {{ __('BP') }} {{ $written->bloodPressureLabel() }}
-                                                    @elseif ($written->weightLabel())
-                                                        {{ __('Wt') }} {{ $written->weightLabel() }}
-                                                    @endif
-                                                </span>
+                                            @if ($written->vitalsSummary())
+                                                <span class="cs-write-chip">{{ $written->vitalsSummary() }}</span>
                                             @endif
                                             @if ($written->diagnosisLabel())
                                                 <span class="cs-write-chip">{{ $written->diagnosisLabel() }}</span>
