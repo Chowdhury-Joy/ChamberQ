@@ -1068,3 +1068,21 @@
   <action>Keep the age and record it in `architecture.md` and `sitemap.md` as part of the documented share scope.</action>
   <reason>Age is on the paper prescription for a reason — a pharmacist reading the patient's own copy uses it to sanity-check a dose, and it is the patient's own data on their own link, adding nothing a stranger holding the link could not already infer from the medicines. The privacy line that matters is unchanged: still no diagnosis, clinical notes, tests, reports, other visits or chamber contact. Documented rather than removed so the scope stops being wider than the record of it.</reason>
 </decision>
+
+## 2026-08-08T23:04:53+0600
+
+<decision>
+  <category>UI/UX</category>
+  <context>Waiting-room TV links included today's date, so staff had to copy a fresh URL every morning — awkward for a display that should stay bookmarked.</context>
+  <action>Canonical outdoor screen link is `/screen/{session}` (and `/api/screen/{session}`), always resolving to `Carbon::today()` in APP_TIMEZONE. Live Queue Control Open/Copy uses that URL and tells staff to bookmark once. Dated `/screen/{session}/{date}` stays for old bookmarks. Stable pages reload when the poll's `session_date` rolls to a new calendar day.</action>
+  <reason>One bookmark per Morning/Evening slot matches how a chamber TV is set up once; different sessions still need different links because they are different queues.</reason>
+</decision>
+
+## 2026-08-08T23:06:13+0600
+
+<decision>
+  <category>UI/UX</category>
+  <context>Waiting-room TVs showed the next serial number but not when that patient would roughly be called, so people further back kept asking reception “how long?”.</context>
+  <action>Outdoor screen API adds `next_estimated_time`: the same ETA engine’s `actual_estimate` minus a fixed 5 minutes (`ScreenController::TV_NEXT_ETA_LEAD_MINUTES`). The TV bottom strip shows “Next: #N · ~h:i A”. Deliberately not the ticket’s larger “come early” buffer — the board is for people already in the room who need a short walk-up cue.</action>
+  <reason>Actual minus five minutes is close enough to stand up without promising the padded arrival time patients see on their phone.</reason>
+</decision>

@@ -383,13 +383,14 @@
                     </x-filament::section>
 
                     @php
-                        $screenUrl = tenant_web_route('tenant.screen', ['session' => $this->selectedSessionId, 'date' => now()->format('Y-m-d')]);
+                        // Stable path — no date. Bookmark once; it always shows today for this session.
+                        $screenUrl = tenant_web_route('tenant.screen.today', ['session' => $this->selectedSessionId]);
                     @endphp
                     <x-filament::section>
                         <div class="lqc-stack-sm" x-data="{ copied: false, copy() { navigator.clipboard.writeText(@js($screenUrl)).then(() => { this.copied = true; setTimeout(() => this.copied = false, 2000) }) } }">
                             <div class="lqc-name">Waiting-room TV screen</div>
                             <p class="lqc-muted">
-                                Open it on the TV itself, or copy the link and paste it into the display device's browser.
+                                Bookmark this link on the TV once — it always shows today's queue for this session. No need to paste a new link each morning.
                             </p>
                             <div class="lqc-btn-row">
                                 <x-filament::button :href="$screenUrl" tag="a" target="_blank" color="gray" icon="heroicon-m-arrow-top-right-on-square" size="sm">

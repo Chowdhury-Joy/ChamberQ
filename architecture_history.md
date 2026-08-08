@@ -309,3 +309,9 @@
 
 ## 2026-08-08T15:54:34+0600
 - Vitals validation moved off the save path and onto the form. `normalizeVitals()` now sanitises instead of throwing — it runs inside `submissionHasContent()`, which every completion path calls before the queue advances, so a mistyped blood pressure would have held the booking open and left the next patient uncalled. Field rules (`vitalsSection()`) show the error next to the box instead; `isUsableBloodPressure()` is the shared definition so form and service cannot drift. Added `VisitRecord::vitalsSummary()` and pointed all three views at it, fixing a Consult Screen chip that hid weight when BP was also present. Deleted the throwaway `public/previews/` mock prescriptions (realistic patient data inside the web root). Verified on MySQL 9.7 with strict `sql_mode`: `migrate:fresh --seed`, `migrate:reset` + `migrate`, and all 398 tests.
+
+## 2026-08-08T23:04:53+0600
+- Outdoor TV gained a stable date-free URL (`/screen/{session}` + matching API) that always shows today; Live Queue Control Open/Copy uses it; dated `/screen/{session}/{date}` kept for old bookmarks.
+
+## 2026-08-08T23:06:13+0600
+- Outdoor screen next-up strip now shows estimated call time: API field `next_estimated_time` is the ETA engine’s actual_estimate minus 5 minutes (not the ticket buffer), rendered as “Next: #N · ~h:i A”.

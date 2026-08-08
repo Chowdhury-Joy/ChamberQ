@@ -137,12 +137,28 @@ $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
         ->middleware('throttle:120,1')
         ->name($routeName('queue.status'));
 
+    // Stable "always today" outdoor TV links — bookmark once per schedule session.
+    Route::get('/screen/{session}', [ScreenController::class, 'showToday'])
+        ->middleware('throttle:60,1')
+        ->whereNumber('session')
+        ->name($routeName('tenant.screen.today'));
+
+    Route::get('/api/screen/{session}', [ScreenController::class, 'apiToday'])
+        ->middleware('throttle:120,1')
+        ->whereNumber('session')
+        ->name($routeName('api.tenant.screen.today'));
+
+    // Dated URLs kept for old bookmarks / deep links.
     Route::get('/screen/{session}/{date}', [ScreenController::class, 'show'])
         ->middleware('throttle:60,1')
+        ->whereNumber('session')
+        ->where('date', '\d{4}-\d{2}-\d{2}')
         ->name($routeName('tenant.screen'));
 
     Route::get('/api/screen/{session}/{date}', [ScreenController::class, 'api'])
         ->middleware('throttle:120,1')
+        ->whereNumber('session')
+        ->where('date', '\d{4}-\d{2}-\d{2}')
         ->name($routeName('api.tenant.screen'));
 
     Route::get('/bookings/{booking}', [BookingController::class, 'show'])

@@ -140,9 +140,15 @@
             border-top: 1px solid rgba(255,255,255,0.1);
         }
 
-        .next-up span {
+        .next-up #nextSerial {
             font-weight: 700;
             color: var(--color-primary);
+        }
+
+        .next-up #nextEta {
+            font-weight: 500;
+            color: #94a3b8;
+            margin-inline-start: 0.35em;
         }
 
         .sound-overlay {
@@ -217,7 +223,7 @@
             <div class="session-label">{{ $scheduleSession->screenLabel() }}</div>
         </div>
         <div style="text-align: right;">
-            <div style="font-size: 1.5rem; color: #94a3b8;">{{ \Carbon\Carbon::parse($sessionDate)->translatedFormat('j F Y') }}</div>
+            <div id="screenDate" style="font-size: 1.5rem; color: #94a3b8;">{{ \Carbon\Carbon::parse($sessionDate)->translatedFormat('j F Y') }}</div>
         </div>
     </div>
 
@@ -237,7 +243,7 @@
     </div>
 
     <div class="next-up" id="nextUpContainer" style="display: none;">
-        {{ __('Next:') }} <span id="nextSerial"></span>
+        {{ __('Next:') }} <span id="nextSerial"></span><span id="nextEta"></span>
     </div>
 
     @if($usesCallChime)
@@ -248,7 +254,15 @@
     @endif
 
     <script>
-        const statusUrl = @json(tenant_web_route('api.tenant.screen', ['session' => $scheduleSession->id, 'date' => $sessionDate]));
+        @php
+            $liveToday = $liveToday ?? false;
+            $statusUrl = $liveToday
+                ? tenant_web_route('api.tenant.screen.today', ['session' => $scheduleSession->id])
+                : tenant_web_route('api.tenant.screen', ['session' => $scheduleSession->id, 'date' => $sessionDate]);
+        @endphp
+        const statusUrl = @json($statusUrl);
+        const liveToday = @json($liveToday);
+        let pageDate = @json($sessionDate);
         const callAnnounceLocale = @json($callAnnounceLocale);
         const usesCallChime = @json($usesCallChime);
         const usesCallVoice = @json($usesCallVoice);
@@ -427,6 +441,13 @@
                 if (!res.ok) return;
                 const data = await res.json();
 
+                // Stable TV bookmark: when the calendar day rolls over (APP_TIMEZONE
+                // on the server), reload so the header date and queue match today.
+                if (liveToday && data.session_date && data.session_date !== pageDate) {
+                    window.location.reload();
+                    return;
+                }
+
                 const box = document.getElementById('statusContainer');
                 const defaultView = document.getElementById('defaultView');
                 const messageView = document.getElementById('messageView');
@@ -465,6 +486,20 @@
                     return;
                 }
 
+                function renderNextUp(payload) {
+                    if (payload.next_booking) {
+                        nextUp.style.display = 'block';
+                        document.getElementById('nextSerial').textContent = '#' + payload.next_booking;
+                        document.getElementById('nextEta').textContent = payload.next_estimated_time
+                            ? (' · ~' + payload.next_estimated_time)
+                            : '';
+                    } else {
+                        nextUp.style.display = 'none';
+                        document.getElementById('nextSerial').textContent = '';
+                        document.getElementById('nextEta').textContent = '';
+                    }
+                }
+
                 if (data.status === 'paused') {
                     defaultView.style.display = 'none';
                     messageView.style.display = 'block';
@@ -472,13 +507,7 @@
                     document.getElementById('messageText').style.color = '#f59e0b';
                     document.getElementById('messageSubtext').textContent = (data.pause_reason || '') + (data.estimated_resume_time ? (' — আনুমানিক শুরু: ' + data.estimated_resume_time) : '');
                     box.className = 'now-serving-box';
-                    
-                    if (data.next_booking) {
-                        nextUp.style.display = 'block';
-                        document.getElementById('nextSerial').textContent = '#' + data.next_booking;
-                    } else {
-                        nextUp.style.display = 'none';
-                    }
+                    renderNextUp(data);
                     return;
                 }
 
@@ -489,12 +518,7 @@
                 document.getElementById('currentSerial').textContent = data.now_serving ? '#' + data.now_serving : '—';
                 document.getElementById('currentName').textContent = data.now_serving_name ?? '';
 
-                if (data.next_booking) {
-                    nextUp.style.display = 'block';
-                    document.getElementById('nextSerial').textContent = '#' + data.next_booking;
-                } else {
-                    nextUp.style.display = 'none';
-                }
+                renderNextUp(data);
 
                 // Handle 'Called' state and announce (chime / voice)
                 if (data.is_called && data.now_serving) {

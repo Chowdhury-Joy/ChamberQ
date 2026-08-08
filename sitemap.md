@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-08T15:54:34+0600
+Last Updated: 2026-08-08T23:04:53+0600
 
 ## Full Site Map
 
@@ -24,7 +24,8 @@ Same central host; tenant identified by URL slug (tenant `id`), e.g. `drkarim`.
 | `/{slug}/book` | Booking wizard | public |
 | `/{slug}/bookings/{booking}` | Patient ticket | public (UUID) |
 | `/{slug}/portal` | Phone lookup | public (throttled) |
-| `/{slug}/screen/{session}/{date}` | Outdoor display | public |
+| `/{slug}/screen/{session}` | Outdoor TV (always today for that schedule session — bookmark once) | public |
+| `/{slug}/screen/{session}/{date}` | Outdoor display for a specific date (legacy / deep link) | public |
 | `/{slug}/admin` | Tenant staff Filament panel | staff login |
 | `/{slug}/manifest.webmanifest`, `/{slug}/sw.js`, … | PWA | public |
 
@@ -40,7 +41,8 @@ When a doctor connects their own domain (e.g. `drkarim.com`), routes live at the
 | `POST /book` | Homepage hero form target — flashes name/phone to session, redirects to the wizard so patient details never enter the URL | public (throttled) |
 | `/bookings/{booking}` | Patient ticket (UUID) | public |
 | `/portal` | Phone lookup | public (throttled) |
-| `/screen/{session}/{date}` | Outdoor waiting-room display | public (throttled) |
+| `/screen/{session}` | Outdoor waiting-room TV (always today — bookmark once per schedule session) | public (throttled) |
+| `/screen/{session}/{date}` | Outdoor waiting-room display for a specific date (legacy) | public (throttled) |
 | `/lang/{locale}` | Switch session locale `en` / `bn` | public |
 | `/manifest.webmanifest`, `/sw.js`, `/pwa-icon-{192\|512}.svg` | PWA bits | public |
 | `/admin` | Tenant staff Filament panel | staff login |
@@ -55,7 +57,8 @@ Available under both platform path (`/{slug}/api/…`) and custom domain (`/api/
 | `GET /api/conditions/search` | Coded condition autocomplete for doctor diagnosis picker | doctor auth, same tenant (throttled) |
 | `POST /api/bookings` | Create booking | public (throttled; blocked if billing closed) |
 | `GET /api/queue/{booking}` | Ticket queue poll by booking UUID | public (throttled) |
-| `GET /api/screen/{session}/{date}` | Screen poll payload | public (throttled) |
+| `GET /api/screen/{session}` | Outdoor TV poll (always today) | public (throttled) |
+| `GET /api/screen/{session}/{date}` | Screen poll for a specific date (legacy) | public (throttled) |
 | `POST /api/bookings/{booking}/sms/cancellation` | Staff-tapped cancellation SMS (prepaid; gated by doctor `cancellation` SMS pref) | auth, same tenant (ops/queue/visit-notes), throttled |
 | `POST /api/prescriptions/{prescription}/sms` | Staff-tapped prescription-link SMS (prepaid; gated by doctor `prescription` SMS pref) | auth, same tenant (ops/queue/visit-notes), throttled |
 
@@ -102,7 +105,7 @@ The one patient-facing route that shows prescription content. Deliberately outsi
 2. Portal: enter BD phone → see matching bookings.
 
 ### Patient → waiting room
-1. Watch outdoor screen URL for today's session.
+1. Watch the outdoor TV (staff bookmark `/screen/{session}` once — always shows today for that Morning/Evening slot).
 2. Hear call chime when serial is called.
 
 ## Admin/Staff Journeys
@@ -132,7 +135,7 @@ The one patient-facing route that shows prescription content. Deliberately outsi
 
 ### Open clinic day → run queue
 - **Trigger:** Session day starts.
-- **Steps:** Queue runner (staff or doctor per Branding **Who runs the queue**) → Live Queue Control → session auto-selected when today has only one, else pick from the dropdown/session cards → Start → Call → Patient arrived → Complete. A no-response patient is skipped from the current-call card (twice, then no-show); any waiting or skipped patient can be called out of turn via **Call now** on their row (unavailable while someone is in the chamber). Mark Late, Pause, Resume, Cancel session and Finish/End session all live behind the header's **Session actions** menu; **New Walk-In** is the standalone header action. Doctor opens **Consult Screen** for auto-updating patient context (no search).
+- **Steps:** Queue runner (staff or doctor per Branding **Who runs the queue**) → Live Queue Control → session auto-selected when today has only one, else pick from the dropdown/session cards → **Open screen / Copy link** once onto the waiting-room TV (stable URL, no date — bookmark and reuse every day for that session) → Start → Call → Patient arrived → Complete. A no-response patient is skipped from the current-call card (twice, then no-show); any waiting or skipped patient can be called out of turn via **Call now** on their row (unavailable while someone is in the chamber). Mark Late, Pause, Resume, Cancel session and Finish/End session all live behind the header's **Session actions** menu; **New Walk-In** is the standalone header action. Doctor opens **Consult Screen** for auto-updating patient context (no search).
 - **Success:** Outdoor screen matches control panel; consult screen shows the patient in chamber; the summary strip's waiting count and projected finish time match the table.
 
 ### Doctor consult (doctor role)
