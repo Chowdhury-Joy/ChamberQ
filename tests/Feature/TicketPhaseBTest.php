@@ -130,7 +130,14 @@ class TicketPhaseBTest extends TestCase
             ->assertSee('https://www.google.com/maps?q=', false)
             ->assertSee('wa.me/?text=', false)
             ->assertSee('Now serving', false)
-            ->assertDontSee('people ahead of you:', false);
+            ->assertDontSee('people ahead of you:', false)
+            // Text <input> must show the ticket alone — a newline in value=
+            // is stripped and glues the map URL onto the booking id.
+            ->assertSee('value="http://ticket-b.localhost/bookings/'.$fatima->id.'"', false)
+            ->assertDontSee($fatima->id.'https://', false)
+            ->assertSee('const copyPayload = '.json_encode(
+                'http://ticket-b.localhost/bookings/'.$fatima->id."\n".'https://www.google.com/maps?q=23.7461%2C90.3742'
+            ), false);
     }
 
     public function test_chamber_uses_the_pasted_google_maps_link(): void

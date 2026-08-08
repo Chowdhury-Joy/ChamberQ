@@ -24,7 +24,9 @@
             'link' => $ticketUrl,
         ]);
     $whatsAppShareUrl = 'https://wa.me/?text=' . rawurlencode($shareText);
-    $copyPayload = $mapsUrl ? ($ticketUrl . "\n" . $mapsUrl) : $ticketUrl;
+    // Clipboard may include ticket + map on two lines. Never put that in an
+    // <input type="text"> value — browsers strip newlines and glue the URLs.
+    $copyPayload = $mapsUrl ? ($ticketUrl."\n".$mapsUrl) : $ticketUrl;
 @endphp
 
     {{-- Keeps the serial (and the number being called) on screen once the big
@@ -156,7 +158,7 @@
             </div>
             <div class="link-box no-print">
                 <label class="sr-only" for="ticketLink">{{ __('Link to this ticket') }}</label>
-                <input id="ticketLink" class="form-control" type="text" readonly value="{{ $copyPayload }}">
+                <input id="ticketLink" class="form-control" type="text" readonly value="{{ $ticketUrl }}">
             </div>
             <p class="text-muted no-print" style="margin-top:0.35rem;font-size:0.85rem;">
                 {{ $mapsUrl ? __('Copy includes your ticket link and the chamber map.') : __('Save this link to check your place in the queue.') }}
@@ -175,6 +177,7 @@
 
     <script>
         const statusUrl = @json(tenant_web_route('queue.status', $booking, absolute: false));
+        const copyPayload = @json($copyPayload);
         const i18n = {
             youAreNext: @json(__('You are next.')),
             oneAhead: @json(__('1 person ahead of you')),
@@ -286,7 +289,9 @@
             const feedback = document.getElementById('copyFeedback');
             input.select();
             try {
-                await navigator.clipboard.writeText(input.value);
+                // Prefer the JS payload so a map link stays on its own line —
+                // the visible input is ticket-only (text inputs cannot hold \n).
+                await navigator.clipboard.writeText(copyPayload);
             } catch (e) {
                 document.execCommand('copy');
             }

@@ -675,3 +675,12 @@
  <root_cause>Those call sites used absolute `tenant_web_route()` / `route()` / `asset()` / `url()->current()`, which bake whatever host Laravel sees (often 127.0.0.1 behind a proxy) or inherit `http` from a leftover localhost `APP_URL` onto a real clinic Domain.</root_cause>
  <prevention_rule>Links that leave the browser (SMS, WhatsApp, TV bookmark, ticket Copy) must use `TenancyUrl::publicAbsolute()` (Domain or APP_URL). Same-origin navigation and JS fetches must use `tenant_web_route(..., absolute: false)` or `public_asset()` — never absolute `asset()` / `route()` for those surfaces.</prevention_rule>
 </bug>
+
+## 2026-08-08T23:21:36+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>Ticket "Copy link" showed or copied the ticket URL stuck to the Google Maps URL with no space (`…/bookings/uuidhttps://www.google.com/maps?…`).</symptom>
+ <root_cause>Copy payload put a newline between ticket and map, then stuffed that string into `<input type="text" value="…">`. Text inputs cannot hold newlines, so the browser dropped `\n` and glued the two URLs.</root_cause>
+ <prevention_rule>Never put a multi-line copy payload in an `<input type="text">` value. Show the ticket URL alone in the field; keep ticket+map (with a real newline) in a JS string for `navigator.clipboard.writeText`.</prevention_rule>
+</bug>

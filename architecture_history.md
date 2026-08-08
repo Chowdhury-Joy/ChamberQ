@@ -321,3 +321,6 @@
 
 ## 2026-08-08T23:17:34+0600
 - Outbound patient/TV URLs consolidated on `TenancyUrl::publicAbsolute()` (prescription share, SMS tickets, waiting-room bookmark, ticket Copy link); same-origin portal/ticket/screen polls and announce audio use relative paths / `public_asset()`.
+
+## 2026-08-08T23:21:36+0600
+- Ticket Copy link: visible input is ticket URL only; clipboard payload keeps ticket + map on separate lines in JS (HTML text inputs strip newlines and were gluing the two URLs).
