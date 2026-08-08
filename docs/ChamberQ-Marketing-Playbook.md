@@ -64,8 +64,8 @@ Think of a busy bakery that used to shout numbers and leave people standing for 
 
 | Plan | Who it’s for | Setup | Monthly |
 |------|----------------|--------|---------|
-| **Solo** (featured) | One doctor, up to 5 locations | ৳12,000 | ৳2,000 / month |
-| **Clinic** | Multi-doctor clinics & labs | ৳25,000 | ৳7,500 / month |
+| **Solo** (featured) | One doctor, up to 5 locations | ৳15,000 | ৳3,000 / month |
+| **Clinic** | Multi-doctor clinics & labs | ৳75,000 | ৳7,500 / month |
 
 ### Solo includes
 - One doctor, up to 5 locations
@@ -251,8 +251,8 @@ If they only have a pretty website but never run the queue, the wait-time promis
 
 **Product:** ChamberQ  
 **Primary CTA:** WhatsApp  
-**Solo:** ৳12,000 setup + ৳2,000/mo · 1 doctor · up to 5 locations  
-**Clinic:** ৳25,000 setup + ৳7,500/mo · multi-doctor + labs  
+**Solo:** ৳15,000 setup + ৳3,000/mo · 1 doctor · up to 5 locations  
+**Clinic:** ৳75,000 setup + ৳7,500/mo · multi-doctor + labs  
 **Payment model (patients):** Pay at chamber  
 **SMS:** Prepaid ~৳0.50 · not free · not commissionable  
 **Partner:** `/partner` · `?ref=` · setup + monthly commission on paid amounts  

@@ -11,6 +11,7 @@ Solo-doctor v1 work lives on branch `Solo-Doc-V1`.
 - Waiting-room call announcements: Branding → Live Queue Settings — chime only, voice only (“Calling number N”), or chime + voice; optional Bangla phrase via browser speech
 
 ### Changed
+- Marketing list prices: Solo ৳15,000 setup / ৳3,000 mo; Clinic ৳75,000 setup / ৳7,500 mo
 - Patient marketing site: brand-first full-bleed hero with Book CTA; Portal quiet in nav; mobile menu; default theme blue (`#2563eb`) and English locale
 - Homepage EN/BN switch only when Super Admin enables `bangla_homepage` (paid add-on); Book/Ticket/Portal always offer EN/BN for system strings
 - Booking Phase A: session cards show seats left / Full / Closed for the next matching day; identity step review strip; local (not UTC) dates; BD phone check before submit; “Booking…” while saving; capacity race returns a clear code + message; phones stored normalized as `01…`

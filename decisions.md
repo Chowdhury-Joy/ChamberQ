@@ -1007,3 +1007,30 @@
   <action>`showByToken()` and the legacy `show()` both delegate to one private `render()`; neither builds its own view payload. Added `<meta name="referrer" content="no-referrer">` to the share view.</action>
   <reason>A duplicated `load()` call is exactly how a future change adds `visitRecord.condition` to one path and not the other, and the resulting leak would be invisible in review. The referrer meta is pre-emptive: nothing on the page loads off-origin today, but the token now sits in a URL that is reused for 48 hours, so the day someone adds a logo or a web font the token would start travelling to that third party in the `Referer` header.</reason>
 </decision>
+
+## 2026-08-08T12:29:52+0600
+
+<decision>
+  <category>Business_Logic</category>
+  <context>List prices needed a clean reset for current ChamberQ sales: Solo had drifted across ৳5k and ৳12k setup stories, and Clinic setup at ৳25k no longer matched the intended offer.</context>
+  <action>Set marketing defaults to Solo ৳15,000 setup / ৳3,000 monthly and Clinic ৳75,000 setup / ৳7,500 monthly in `config/marketing.php` and `.env.example`. Updated EN/BN client + marketing guides, landing-page test expectations, pitch-deck build scripts, and regenerated `docs/slides/ChamberQ-Painpoint-Feature-Solution.pdf` plus `ChamberQ-Painpoint-Feature-Solution-Solo-Top7.pdf`.</action>
+  <reason>One source of truth for what partners quote and what leave-behinds show — regenerating PDFs from scripts prevents the old SoloDoc-style price drift.</reason>
+</decision>
+
+## 2026-08-08T12:32:31+0600
+
+<decision>
+  <category>CRO</category>
+  <context>Owner asked for a PDF of the full feature list (not the Pain Point / Feature / Solution leave-behind) after updating list prices.</context>
+  <action>Added `docs/slides/build-full-feature-list.py` → `ChamberQ-Full-Feature-List.pdf`: plain-English catalogue of patient, queue, consult/records/Rx, ops, and Clinic-only features, with Solo ৳15,000/৳3,000 and Clinic ৳75,000/৳7,500 in the footer band.</action>
+  <reason>Sales and partners needed one printable “everything we ship” sheet; regenerating from a script keeps it aligned with the product and marketing prices.</reason>
+</decision>
+
+## 2026-08-08T13:15:50+0600
+
+<decision>
+  <category>CRO</category>
+  <context>Owner needed a second leave-behind to share directly with a solo doctor — the internal full feature catalogue includes Clinic extras and reads like a product inventory, not a doctor-facing “what you get.”</context>
+  <action>Added `docs/slides/build-solo-what-you-get.py` → `ChamberQ-Solo-What-You-Get.pdf`: Solo-only features in plain chamber language, no multi-doctor/labs, WhatsApp close band with Solo Tk 15,000 / 3,000.</action>
+  <reason>Doctors should receive a shareable Solo sheet; partners keep the full catalogue. Same regenerate-from-script pattern as other leave-behinds.</reason>
+</decision>

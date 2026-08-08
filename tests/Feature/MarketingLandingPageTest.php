@@ -29,9 +29,9 @@ class MarketingLandingPageTest extends TestCase
         $response->assertSee('Your day list', escape: false);
         $response->assertSee('They tell others', escape: false);
         $response->assertSee('That was easy.', escape: false);
-        $response->assertSee('৳5,000', escape: false);
-        $response->assertSee('৳2,000', escape: false);
-        $response->assertSee('৳25,000', escape: false);
+        $response->assertSee('৳15,000', escape: false);
+        $response->assertSee('৳3,000', escape: false);
+        $response->assertSee('৳75,000', escape: false);
         $response->assertSee('৳7,500', escape: false);
         $response->assertSee('One doctor, up to 5 locations', escape: false);
         $response->assertSee('Prepaid SMS confirmations', escape: false);

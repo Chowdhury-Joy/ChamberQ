@@ -63,8 +63,8 @@ return [
         'solo' => [
             'name' => 'Solo',
             'tagline' => 'For one doctor, up to 5 chambers',
-            'setup' => (int) env('MARKETING_SOLO_SETUP', 5000),
-            'monthly' => (int) env('MARKETING_SOLO_MONTHLY', 2000),
+            'setup' => (int) env('MARKETING_SOLO_SETUP', 15000),
+            'monthly' => (int) env('MARKETING_SOLO_MONTHLY', 3000),
             'featured' => true,
             'features' => [
                 'One doctor, up to 5 locations',
@@ -77,7 +77,7 @@ return [
         'clinic' => [
             'name' => 'Clinic',
             'tagline' => 'For multi-doctor clinics & labs',
-            'setup' => (int) env('MARKETING_CLINIC_SETUP', 25000),
+            'setup' => (int) env('MARKETING_CLINIC_SETUP', 75000),
             'monthly' => (int) env('MARKETING_CLINIC_MONTHLY', 7500),
             'featured' => false,
             'features' => [

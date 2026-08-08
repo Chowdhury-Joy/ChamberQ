@@ -100,8 +100,8 @@ class MarketerCommissionTest extends TestCase
 
         $commission = Commission::where('tenant_id', $tenant->id)->first();
         $this->assertNotNull($commission);
-        $this->assertSame(4000, $commission->base_amount);
-        $this->assertSame(800, $commission->commission_amount);
+        $this->assertSame(12000, $commission->base_amount);
+        $this->assertSame(2400, $commission->commission_amount);
         $this->assertSame(Commission::STATUS_PENDING, $commission->status);
     }
 
@@ -153,7 +153,7 @@ class MarketerCommissionTest extends TestCase
             ->first();
 
         $this->assertSame(Commission::STATUS_PENDING, $commission->status);
-        $this->assertSame(200, $commission->commission_amount);
+        $this->assertSame(300, $commission->commission_amount);
 
         $service->confirmMonthlyPayment($tenant, $period, $superAdmin);
         $commission->refresh();

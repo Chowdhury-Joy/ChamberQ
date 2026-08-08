@@ -39,8 +39,8 @@ class FamilyBookingTest extends TestCase
             'doctor_id' => $doctor->id,
             'day_of_week' => Carbon::today()->dayOfWeek,
             'session_name' => 'Morning',
-            'start_time' => '09:00',
-            'end_time' => '12:00',
+            'start_time' => '00:00',
+            'end_time' => '23:59',
             'slot_cap' => 10,
         ]);
 
