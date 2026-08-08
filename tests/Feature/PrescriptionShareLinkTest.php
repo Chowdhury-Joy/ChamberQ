@@ -176,6 +176,33 @@ class PrescriptionShareLinkTest extends TestCase
             ->assertSee('C-55443');
     }
 
+    /**
+     * The masthead labels carry Bangla and English at once, on both the
+     * patient's copy and the doctor's printout. A patient's family reads the
+     * Bangla; a pharmacist or a referred-to consultant may be handed only the
+     * English. Neither may be the sole language on the page.
+     */
+    public function test_prescription_headers_label_the_patient_row_in_both_languages(): void
+    {
+        $this->get($this->shareUrl())
+            ->assertOk()
+            ->assertSee('Prescription / ব্যবস্থাপত্র', escape: false)
+            ->assertSee('Patient / রোগী', escape: false)
+            ->assertSee('Date / তারিখ', escape: false)
+            ->assertSee('Reg. No. / রেজি. নং', escape: false);
+
+        tenancy()->initialize($this->tenant);
+        $printUrl = 'http://rx-share.localhost/prescriptions/'.$this->prescription->id.'/print';
+        tenancy()->end();
+
+        $this->actingAs($this->doctor)->get($printUrl)
+            ->assertOk()
+            ->assertSee('Prescription / ব্যবস্থাপত্র', escape: false)
+            ->assertSee('Patient / রোগী', escape: false)
+            ->assertSee('Age / বয়স', escape: false)
+            ->assertSee('Female / মহিলা', escape: false);
+    }
+
     public function test_shared_copy_never_carries_the_diagnosis_or_chamber_contact(): void
     {
         $url = $this->shareUrl();

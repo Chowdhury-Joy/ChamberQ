@@ -65,6 +65,10 @@ class VisitRecordService
                     'recorded_by' => $doctor->id,
                     'condition_id' => $diagnosis['condition_id'],
                     'diagnosis_uncoded' => $diagnosis['coded'] ? null : $diagnosis['name'],
+                    'weight_kg' => $data['weight_kg'] ?? null,
+                    'bp_systolic' => $data['bp_systolic'] ?? null,
+                    'bp_diastolic' => $data['bp_diastolic'] ?? null,
+                    'clinical_notes' => $this->nullableString($data['clinical_notes'] ?? null),
                     'advice' => $this->nullableString($data['advice'] ?? null),
                     'tests_advised' => $this->nullableString($data['tests_advised'] ?? null),
                     'reports_seen' => $this->nullableString($data['reports_seen'] ?? null),
@@ -91,9 +95,9 @@ class VisitRecordService
      * Staff typing up a prescription the doctor wrote on paper.
      *
      * Writes only the prescription, follow-up and paper photo. Any diagnosis,
-     * advice, tests, reports or voice note already on the record is left
-     * untouched — staff never overwrite the doctor's clinical notes, and
-     * anything they submit outside the whitelist is discarded.
+     * vitals, clinical notes, advice, tests, reports or voice note already on
+     * the record is left untouched — staff never overwrite the doctor's
+     * clinical notes, and anything they submit outside the whitelist is discarded.
      *
      * @param  array<string, mixed>  $data
      */
@@ -176,10 +180,16 @@ class VisitRecordService
             return true;
         }
 
-        foreach (['advice', 'tests_advised', 'reports_seen', 'voice_path', 'voice_transcript', 'follow_up_note'] as $field) {
+        foreach (['advice', 'tests_advised', 'reports_seen', 'clinical_notes', 'voice_path', 'voice_transcript', 'follow_up_note'] as $field) {
             if (filled($data[$field] ?? null)) {
                 return true;
             }
+        }
+
+        if (($data['weight_kg'] ?? null) !== null
+            || ($data['bp_systolic'] ?? null) !== null
+            || ($data['bp_diastolic'] ?? null) !== null) {
+            return true;
         }
 
         if ($this->normalizeUploadedPath($data['prescription_photo'] ?? null) !== null) {

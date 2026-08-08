@@ -18,6 +18,10 @@ class VisitRecord extends Model
         'recorded_by',
         'condition_id',
         'diagnosis_uncoded',
+        'weight_kg',
+        'bp_systolic',
+        'bp_diastolic',
+        'clinical_notes',
         'advice',
         'tests_advised',
         'reports_seen',
@@ -30,6 +34,9 @@ class VisitRecord extends Model
     ];
 
     protected $casts = [
+        'weight_kg' => 'float',
+        'bp_systolic' => 'integer',
+        'bp_diastolic' => 'integer',
         'follow_up_date' => 'date',
         'recorded_at' => 'datetime',
     ];
@@ -68,6 +75,32 @@ class VisitRecord extends Model
         return filled($this->diagnosis_uncoded) ? $this->diagnosis_uncoded : null;
     }
 
+    /**
+     * "62.5 kg" — or null when weight was not recorded this visit.
+     */
+    public function weightLabel(): ?string
+    {
+        if ($this->weight_kg === null) {
+            return null;
+        }
+
+        $formatted = rtrim(rtrim(number_format((float) $this->weight_kg, 1, '.', ''), '0'), '.');
+
+        return $formatted.' kg';
+    }
+
+    /**
+     * "170/100" — both numbers required; half-filled rows never reach here.
+     */
+    public function bloodPressureLabel(): ?string
+    {
+        if ($this->bp_systolic === null || $this->bp_diastolic === null) {
+            return null;
+        }
+
+        return $this->bp_systolic.'/'.$this->bp_diastolic;
+    }
+
     public function followUpLabel(): ?string
     {
         return \App\Filament\TenantAdmin\Support\VisitNotesFormSchema::followUpDisplayLabel(
@@ -80,6 +113,10 @@ class VisitRecord extends Model
     {
         return filled($this->condition_id)
             || filled($this->diagnosis_uncoded)
+            || $this->weight_kg !== null
+            || $this->bp_systolic !== null
+            || $this->bp_diastolic !== null
+            || filled($this->clinical_notes)
             || filled($this->advice)
             || filled($this->tests_advised)
             || filled($this->reports_seen)

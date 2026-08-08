@@ -58,6 +58,14 @@
             font-weight: 700;
             margin: 0 0 4px;
         }
+        .sheet-title {
+            margin: 0 0 6px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #64748b;
+        }
         .muted { color: #475569; font-size: 13px; }
         .patient-row {
             display: flex;
@@ -103,11 +111,21 @@
             margin: 16px 0;
             white-space: pre-wrap;
         }
-        .signature {
-            margin-top: 48px;
-            padding-top: 8px;
-            border-top: 1px solid #94a3b8;
-            width: 240px;
+        .clinical-block {
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e2e8f0;
+        }
+        .clinical-block strong {
+            display: block;
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #64748b;
+            margin-bottom: 4px;
+        }
+        .clinical-block .body {
+            white-space: pre-wrap;
         }
         @media print {
             .no-print { display: none !important; }
@@ -129,13 +147,19 @@
             </div>
         @endif
 
+        {{-- Fixed labels print in both languages (see \App\Support\Bilingual):
+             the patient's family reads the Bangla, a pharmacist or a referred-to
+             consultant may only be handed the English. Names, qualifications and
+             anything the doctor typed are stored in one language and pass
+             through as written. --}}
         <header class="header">
+            <p class="sheet-title">{{ bilingual('Prescription') }}</p>
             <p class="doctor-name">Dr. {{ $doctor?->name ?? $tenant?->displayName() }}</p>
             @if (filled($doctor?->qualifications))
                 <p class="muted">{{ $doctor->qualifications }}</p>
             @endif
             @if (filled($doctor?->registration_number))
-                <p class="muted">{{ __('Reg. No.') }} {{ $doctor->registration_number }}</p>
+                <p class="muted">{{ bilingual('Reg. No.') }} {{ $doctor->registration_number }}</p>
             @endif
             @if ($chamber)
                 <p class="muted">
@@ -152,20 +176,47 @@
 
         <div class="patient-row">
             <div>
-                <div class="muted">{{ __('Patient') }}</div>
+                <div class="muted">{{ bilingual('Patient') }}</div>
                 <strong>{{ $patient?->name ?? $booking?->patient_name }}</strong>
                 @if ($patient?->displayAge())
-                    <span class="muted"> · {{ __('Age') }} {{ $patient->displayAge() }}</span>
+                    <span class="muted"> · {{ bilingual('Age') }} {{ $patient->displayAge() }}</span>
                 @endif
                 @if ($patient?->displaySex())
-                    <span class="muted"> · {{ ucfirst($patient->displaySex()) }}</span>
+                    <span class="muted"> · {{ bilingual(ucfirst($patient->displaySex())) }}</span>
+                @endif
+                @if ($visitRecord?->weightLabel())
+                    <span class="muted"> · {{ bilingual('Wt') }} {{ $visitRecord->weightLabel() }}</span>
+                @endif
+                @if ($visitRecord?->bloodPressureLabel())
+                    <span class="muted"> · {{ bilingual('BP') }} {{ $visitRecord->bloodPressureLabel() }}</span>
                 @endif
             </div>
             <div class="muted" style="text-align: right;">
-                {{ __('Date') }}<br>
+                {{ bilingual('Date') }}<br>
                 <strong style="color:#111;">{{ ($booking?->booking_date ?? now())->translatedFormat('j F Y') }}</strong>
             </div>
         </div>
+
+        @if ($visitRecord?->diagnosisLabel())
+            <div class="clinical-block">
+                <strong>{{ bilingual('Diagnosis') }}</strong>
+                <div class="body">{{ $visitRecord->diagnosisLabel() }}</div>
+            </div>
+        @endif
+
+        @if (filled($visitRecord?->clinical_notes))
+            <div class="clinical-block">
+                <strong>{{ bilingual('Clinical notes') }}</strong>
+                <div class="body">{{ $visitRecord->clinical_notes }}</div>
+            </div>
+        @endif
+
+        @if (filled($visitRecord?->tests_advised))
+            <div class="clinical-block">
+                <strong>{{ bilingual('Tests advised') }}</strong>
+                <div class="body">{{ $visitRecord->tests_advised }}</div>
+            </div>
+        @endif
 
         <div class="rx-symbol">℞</div>
 
@@ -207,10 +258,6 @@
         @if ($prescription->followUpLabel())
             <p><strong>{{ __('Follow-up') }}:</strong> {{ $prescription->followUpLabel() }}</p>
         @endif
-
-        <div class="signature">
-            <div class="muted">{{ __('Doctor\'s signature') }}</div>
-        </div>
     </div>
 </body>
 </html>

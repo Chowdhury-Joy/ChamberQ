@@ -366,10 +366,32 @@
                             </x-slot>
                             @if ($lastVisitRecord)
                                 <div>
+                                    @if ($lastVisitRecord->weightLabel() || $lastVisitRecord->bloodPressureLabel())
+                                        <div class="cs-field">
+                                            <div class="cs-field-label">{{ __('Vitals') }}</div>
+                                            <div class="cs-field-value">
+                                                @if ($lastVisitRecord->weightLabel())
+                                                    {{ __('Wt') }} {{ $lastVisitRecord->weightLabel() }}
+                                                @endif
+                                                @if ($lastVisitRecord->weightLabel() && $lastVisitRecord->bloodPressureLabel())
+                                                    ·
+                                                @endif
+                                                @if ($lastVisitRecord->bloodPressureLabel())
+                                                    {{ __('BP') }} {{ $lastVisitRecord->bloodPressureLabel() }}
+                                                @endif
+                                            </div>
+                                        </div>
+                                    @endif
                                     @if ($lastVisitRecord->diagnosisLabel())
                                         <div class="cs-field">
                                             <div class="cs-field-label">{{ __('Diagnosis') }}</div>
                                             <div class="cs-diagnosis">{{ $lastVisitRecord->diagnosisLabel() }}</div>
+                                        </div>
+                                    @endif
+                                    @if (filled($lastVisitRecord->clinical_notes))
+                                        <div class="cs-field">
+                                            <div class="cs-field-label">{{ __('Clinical notes') }}</div>
+                                            <div class="cs-field-value">{{ $lastVisitRecord->clinical_notes }}</div>
                                         </div>
                                     @endif
                                     @if (filled($lastVisitRecord->advice))
@@ -514,6 +536,15 @@
                                             {{ $hasPrescription ? __('Prescription so far') : __('Notes so far — no medicines yet') }}
                                         </div>
                                         <div class="cs-write-detail">
+                                            @if ($written->weightLabel() || $written->bloodPressureLabel())
+                                                <span class="cs-write-chip">
+                                                    @if ($written->bloodPressureLabel())
+                                                        {{ __('BP') }} {{ $written->bloodPressureLabel() }}
+                                                    @elseif ($written->weightLabel())
+                                                        {{ __('Wt') }} {{ $written->weightLabel() }}
+                                                    @endif
+                                                </span>
+                                            @endif
                                             @if ($written->diagnosisLabel())
                                                 <span class="cs-write-chip">{{ $written->diagnosisLabel() }}</span>
                                             @endif
@@ -521,6 +552,9 @@
                                                 <span class="cs-write-chip">
                                                     {{ trans_choice(':count medicine|:count medicines', $written->prescription->items->count(), ['count' => $written->prescription->items->count()]) }}
                                                 </span>
+                                            @endif
+                                            @if (filled($written->clinical_notes))
+                                                <span class="cs-write-chip">{{ __('Clinical notes') }}</span>
                                             @endif
                                             @if (filled($written->advice))
                                                 <span class="cs-write-chip">{{ __('Advice') }}</span>

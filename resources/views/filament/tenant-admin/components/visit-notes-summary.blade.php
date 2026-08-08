@@ -14,6 +14,30 @@
         </div>
     @endif
 
+    @if ($record->weightLabel() || $record->bloodPressureLabel())
+        <div class="cs-summary-panel__row">
+            <span class="cs-summary-panel__label">{{ __('Vitals') }}</span>
+            <span>
+                @if ($record->weightLabel())
+                    {{ __('Wt') }} {{ $record->weightLabel() }}
+                @endif
+                @if ($record->weightLabel() && $record->bloodPressureLabel())
+                    ·
+                @endif
+                @if ($record->bloodPressureLabel())
+                    {{ __('BP') }} {{ $record->bloodPressureLabel() }}
+                @endif
+            </span>
+        </div>
+    @endif
+
+    @if (filled($record->clinical_notes))
+        <div class="cs-summary-panel__row">
+            <span class="cs-summary-panel__label">{{ __('Clinical notes') }}</span>
+            <span>{{ $record->clinical_notes }}</span>
+        </div>
+    @endif
+
     @if ($items->isNotEmpty())
         <div class="cs-summary-panel__row">
             <span class="cs-summary-panel__label">{{ __('Medicines') }}</span>
@@ -30,6 +54,13 @@
         <div class="cs-summary-panel__row">
             <span class="cs-summary-panel__label">{{ __('Advice') }}</span>
             <span>{{ $record->advice }}</span>
+        </div>
+    @endif
+
+    @if (filled($record->tests_advised))
+        <div class="cs-summary-panel__row">
+            <span class="cs-summary-panel__label">{{ __('Tests advised') }}</span>
+            <span>{{ $record->tests_advised }}</span>
         </div>
     @endif
 

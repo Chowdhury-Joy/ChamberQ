@@ -2,12 +2,12 @@
     The patient's own copy of ONE prescription, opened from a short, expiring
     /p/{token} link with no login.
 
-    Scope is deliberate and must not grow: medicines, the dosing advice and
-    follow-up date written on this prescription, the prescriber's name and
-    registration, the patient's name, and the date. Nothing from `visit_records`
-    (diagnosis, tests advised, reports seen, voice, photos) is loaded by
-    `PrescriptionShareController`, and nothing here links onward into the
-    practice's records. See the 2026-08-07 decision in `decisions.md`.
+    Scope is deliberate: medicines, dosing advice, follow-up, the prescriber's
+    name and registration, the patient's name and date, plus visit vitals
+    (weight / BP) so a referral (e.g. to cardiology) carries the reading that
+    prompted it. Diagnosis, clinical notes, tests, reports, voice and photos
+    stay off this page — only pre-formatted `$weightLabel` / `$bloodPressureLabel`
+    are passed in. Nothing here links onward into the practice's records.
 --}}
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
@@ -58,6 +58,14 @@
             margin-bottom: 16px;
         }
         .doctor-name { font-size: 19px; font-weight: 700; margin: 0 0 4px; }
+        .sheet-title {
+            margin: 0 0 6px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #64748b;
+        }
         .muted { color: #475569; font-size: 13px; }
         .patient-row {
             display: flex;
@@ -117,20 +125,35 @@
                     : 'Dr. '.$doctorName;
             @endphp
 
+            {{-- Fixed labels appear in both languages (see \App\Support\Bilingual).
+                 This copy is opened on the patient's own phone and shown to
+                 whoever is helping them, so neither language can be the only
+                 one present. Names and the doctor's own words pass through as
+                 written. --}}
             <header class="header">
+                <p class="sheet-title">{{ bilingual('Prescription') }}</p>
                 <p class="doctor-name">{{ $doctorLabel }}</p>
                 @if (filled($doctor?->registration_number))
-                    <p class="muted">{{ __('Reg. No.') }} {{ $doctor->registration_number }}</p>
+                    <p class="muted">{{ bilingual('Reg. No.') }} {{ $doctor->registration_number }}</p>
                 @endif
             </header>
 
             <div class="patient-row">
                 <div>
-                    <div class="muted">{{ __('Patient') }}</div>
+                    <div class="muted">{{ bilingual('Patient') }}</div>
                     <strong>{{ $patient?->name ?? $booking?->patient_name }}</strong>
+                    @if ($patient?->displayAge())
+                        <span class="muted"> · {{ bilingual('Age') }} {{ $patient->displayAge() }}</span>
+                    @endif
+                    @if (! empty($weightLabel))
+                        <span class="muted"> · {{ bilingual('Wt') }} {{ $weightLabel }}</span>
+                    @endif
+                    @if (! empty($bloodPressureLabel))
+                        <span class="muted"> · {{ bilingual('BP') }} {{ $bloodPressureLabel }}</span>
+                    @endif
                 </div>
                 <div class="muted" style="text-align: right;">
-                    {{ __('Date') }}<br>
+                    {{ bilingual('Date') }}<br>
                     <strong style="color:#111;">
                         {{ ($booking?->booking_date ?? $prescription->created_at)->translatedFormat('j F Y') }}
                     </strong>

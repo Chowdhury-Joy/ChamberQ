@@ -1034,3 +1034,21 @@
   <action>Added `docs/slides/build-solo-what-you-get.py` → `ChamberQ-Solo-What-You-Get.pdf`: Solo-only features in plain chamber language, no multi-doctor/labs, WhatsApp close band with Solo Tk 15,000 / 3,000.</action>
   <reason>Doctors should receive a shareable Solo sheet; partners keep the full catalogue. Same regenerate-from-script pattern as other leave-behinds.</reason>
 </decision>
+
+## 2026-08-08T15:26:29+0600
+
+<decision>
+  <category>Business_Logic</category>
+  <context>Real Bangladeshi prescription pads carry weight and BP on every visit, and BP is often the clinical reason for a referral (e.g. cardiology). Those numbers had no structured home in SolDoc, and the patient share link deliberately excluded all visit_records fields — so a shared Rx could not carry the reading a referred consultant needs.</context>
+  <action>Add optional per-visit `weight_kg`, `bp_systolic`/`bp_diastolic`, and free-text `clinical_notes` on `visit_records` (doctor notes modal only; staff paper-entry whitelist unchanged). Doctor print shows vitals in the patient strip plus diagnosis, clinical notes, and tests advised above the ℞ block. Patient share (`/p/{token}`) may show pre-formatted weight and BP labels only — diagnosis, clinical notes, tests, reports, voice and photos remain off the share page.</action>
+  <reason>Vitals are the recoverable clinical signal on the pad (Mrs Gouri’s 170/100 explains the cardiology referral); putting them on the patient copy helps the next clinician without reopening the Stage 4 rule that the share link is not a back door into the full visit record.</reason>
+</decision>
+
+## 2026-08-08T15:42:23+0600
+
+<decision>
+  <category>UI/UX</category>
+  <context>The doctor printout reserved a "Doctor's signature" line at the bottom. Owner said doctors who want to authenticate the paper will stamp/seal it rather than sign in a printed box.</context>
+  <action>Remove the signature block and its CSS from `tenant/prescriptions/print.blade.php`. No uploaded signature image feature.</action>
+  <reason>Unused chrome on every print; a seal on the physical page does not need a labelled blank on the PDF.</reason>
+</decision>

@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-08T12:31:00+0600
+Last Updated: 2026-08-08T15:26:29+0600
 
 ## Full Site Map
 
@@ -75,7 +75,7 @@ The one patient-facing route that shows prescription content. Deliberately outsi
 
 | Route | Purpose | Access |
 |-------|---------|--------|
-| `GET /p/{token}` | The patient's own copy of **one** prescription — medicines, that prescription's advice/follow-up, prescriber name + registration, patient name, date. No diagnosis, no other visit, no chamber contact, no link onward into the record. Doctor/staff send it via WhatsApp and/or SMS per that doctor's `prescription` notify prefs. Deliberately short so the SMS fits one billable segment. Unknown or expired token → 404; the tenant global scope means one clinic's token never resolves on another's host. | public, **10-char token, expires 48h**, throttled 30/min |
+| `GET /p/{token}` | The patient's own copy of **one** prescription — medicines, that prescription's advice/follow-up, visit vitals (weight / BP when recorded), prescriber name + registration, patient name, date. No diagnosis, clinical notes, tests, other visit, chamber contact, or link onward into the record. Doctor/staff send it via WhatsApp and/or SMS per that doctor's `prescription` notify prefs. Deliberately short so the SMS fits one billable segment. Unknown or expired token → 404; the tenant global scope means one clinic's token never resolves on another's host. | public, **10-char token, expires 48h**, throttled 30/min |
 | `GET /prescriptions/{prescription}/share` | **Superseded by `/p/{token}`.** Kept registered only so links already delivered to patients keep working; every one expires within 48h, after which this route is deletable. | public, **signed URL, expires 48h**, throttled |
 
 ## Customer Journeys

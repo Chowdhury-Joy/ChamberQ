@@ -25,6 +25,7 @@ use Filament\Schemas\Components\Utilities\Set;
 use Filament\Actions\Action;
 use Filament\Schemas\Components\View;
 use Illuminate\Support\Js;
+use Illuminate\Validation\ValidationException;
 
 class VisitNotesFormSchema
 {
@@ -91,6 +92,10 @@ class VisitNotesFormSchema
             'diagnosis' => $diagnosis,
             'condition_id' => $record->condition_id,
             'diagnosis_free_text' => $record->diagnosis_uncoded,
+            'weight_kg' => $record->weight_kg,
+            'bp_systolic' => $record->bp_systolic,
+            'bp_diastolic' => $record->bp_diastolic,
+            'clinical_notes' => $record->clinical_notes,
             'advice' => $record->advice,
             'tests_advised' => $record->tests_advised,
             'reports_seen' => $record->reports_seen,
@@ -175,8 +180,80 @@ class VisitNotesFormSchema
             ->all();
 
         $data['prescription_items'] = $items;
+        $data = self::normalizeVitals($data);
 
         return $data;
+    }
+
+    /**
+     * Cast and validate optional visit vitals. Blank is fine; half-filled BP
+     * or absurd values are rejected so a typo cannot land in the clinical record.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public static function normalizeVitals(array $data): array
+    {
+        $weight = $data['weight_kg'] ?? null;
+        if ($weight === '' || $weight === null) {
+            $data['weight_kg'] = null;
+        } else {
+            if (! is_numeric($weight) || (float) $weight < 0.5 || (float) $weight > 300) {
+                throw ValidationException::withMessages([
+                    'weight_kg' => __('Weight must be between 0.5 and 300 kg.'),
+                ]);
+            }
+            $data['weight_kg'] = round((float) $weight, 1);
+        }
+
+        $systolic = self::nullableInt($data['bp_systolic'] ?? null);
+        $diastolic = self::nullableInt($data['bp_diastolic'] ?? null);
+
+        if (($systolic === null) xor ($diastolic === null)) {
+            throw ValidationException::withMessages([
+                'bp_systolic' => __('Enter both systolic and diastolic blood pressure, or leave both blank.'),
+            ]);
+        }
+
+        if ($systolic !== null && $diastolic !== null) {
+            if ($systolic < 60 || $systolic > 250 || $diastolic < 30 || $diastolic > 150) {
+                throw ValidationException::withMessages([
+                    'bp_systolic' => __('Blood pressure looks out of range. Check the reading.'),
+                ]);
+            }
+
+            if ($systolic < $diastolic) {
+                throw ValidationException::withMessages([
+                    'bp_systolic' => __('Systolic pressure must be higher than diastolic.'),
+                ]);
+            }
+        }
+
+        $data['bp_systolic'] = $systolic;
+        $data['bp_diastolic'] = $diastolic;
+
+        $notes = $data['clinical_notes'] ?? null;
+        $data['clinical_notes'] = filled($notes) ? trim((string) $notes) : null;
+        if ($data['clinical_notes'] === '') {
+            $data['clinical_notes'] = null;
+        }
+
+        return $data;
+    }
+
+    private static function nullableInt(mixed $value): ?int
+    {
+        if ($value === '' || $value === null) {
+            return null;
+        }
+
+        if (! is_numeric($value)) {
+            throw ValidationException::withMessages([
+                'bp_systolic' => __('Blood pressure must be a number.'),
+            ]);
+        }
+
+        return (int) $value;
     }
 
     /**
@@ -215,6 +292,31 @@ class VisitNotesFormSchema
                 ->columnSpanFull()
                 ->visible(fn (): bool => $patient?->hasClinicalWarnings() ?? false),
             self::prescriptionSection($prescribingDoctor, $lastItems),
+            Section::make(__('Vitals'))
+                ->schema([
+                    TextInput::make('weight_kg')
+                        ->label(__('Weight (kg)'))
+                        ->numeric()
+                        ->minValue(0.5)
+                        ->maxValue(300)
+                        ->step(0.1)
+                        ->inputMode('decimal'),
+                    TextInput::make('bp_systolic')
+                        ->label(__('BP systolic'))
+                        ->numeric()
+                        ->minValue(60)
+                        ->maxValue(250)
+                        ->inputMode('numeric')
+                        ->placeholder('170'),
+                    TextInput::make('bp_diastolic')
+                        ->label(__('BP diastolic'))
+                        ->numeric()
+                        ->minValue(30)
+                        ->maxValue(150)
+                        ->inputMode('numeric')
+                        ->placeholder('100'),
+                ])
+                ->columns(3),
             Section::make(__('Diagnosis'))
                 ->schema([
                     Select::make('diagnosis')
@@ -253,6 +355,11 @@ class VisitNotesFormSchema
                         ->native(false),
                 ])
                 ->columns(1),
+            Textarea::make('clinical_notes')
+                ->label(__('Clinical notes'))
+                ->helperText(__('Chief complaint, exam findings, measurements — whatever you would write on the left of a paper pad.'))
+                ->rows(3)
+                ->columnSpanFull(),
             Textarea::make('advice')
                 ->label(__('Advice'))
                 ->rows(2)
@@ -287,9 +394,9 @@ class VisitNotesFormSchema
      * Staff typing up a prescription the doctor wrote on paper.
      *
      * Medicines, follow-up and the photo of the slip only — no diagnosis,
-     * advice, tests, voice note or allergy history. Staff are transcribing,
-     * not making a clinical judgement, so widening this would hand them
-     * patient history the role split says they may not read.
+     * vitals, clinical notes, advice, tests, voice note or allergy history.
+     * Staff are transcribing, not making a clinical judgement, so widening
+     * this would hand them patient history the role split says they may not read.
      *
      * @return list<\Filament\Forms\Components\Component>
      */

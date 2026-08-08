@@ -10,9 +10,10 @@ use Illuminate\View\View;
  * link the doctor sends before the patient leaves the chamber.
  *
  * Deliberately unauthenticated — an unguessable, expiring token is the gate.
- * The view is scoped to this prescription's medicines only: no diagnosis, no
- * other visit, no route onward into the practice's records. See the 2026-08-07
- * decision in `decisions.md`.
+ * The view is scoped to this prescription's medicines, dosing advice, follow-up,
+ * and visit vitals (weight / BP) — vitals travel with a referral (e.g. to a
+ * cardiologist). Diagnosis, clinical notes, tests, reports, voice and photos
+ * stay off this page. See the decisions in `decisions.md`.
  *
  * Two entry points reach the same view: `showByToken()` is the short `/p/{token}`
  * link now sent, and `show()` is the older temporary-signed URL, kept alive only
@@ -45,17 +46,21 @@ class PrescriptionShareController extends Controller
 
     private function render(Prescription $prescription): View
     {
-        // visitRecord is loaded only to reach the booking date — the share view
-        // never touches its clinical fields.
+        // visitRecord is loaded for the booking date and for vitals only —
+        // diagnosis / clinical notes / tests are never passed into the view.
         $prescription->load(['items', 'patient', 'visitRecord.booking']);
 
         ['doctor' => $doctor] = $prescription->resolveDoctorChamber();
 
+        $visit = $prescription->visitRecord;
+
         return view('tenant.prescriptions.share', [
             'prescription' => $prescription,
             'patient' => $prescription->patient,
-            'booking' => $prescription->visitRecord?->booking,
+            'booking' => $visit?->booking,
             'doctor' => $doctor,
+            'weightLabel' => $visit?->weightLabel(),
+            'bloodPressureLabel' => $visit?->bloodPressureLabel(),
         ]);
     }
 }

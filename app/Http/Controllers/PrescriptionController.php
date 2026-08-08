@@ -23,9 +23,11 @@ class PrescriptionController extends Controller
             'items',
             'patient',
             'visitRecord.booking.bookable',
+            'visitRecord.condition',
         ]);
 
         $booking = $prescription->visitRecord?->booking;
+        $visitRecord = $prescription->visitRecord;
 
         ['doctor' => $doctor, 'chamber' => $chamber] = $prescription->resolveDoctorChamber();
 
@@ -33,6 +35,7 @@ class PrescriptionController extends Controller
 
         return view('tenant.prescriptions.print', [
             'prescription' => $prescription,
+            'visitRecord' => $visitRecord,
             'patient' => $prescription->patient,
             'booking' => $booking,
             'doctor' => $doctor,

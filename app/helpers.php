@@ -54,3 +54,15 @@ if (! function_exists('tenant_web_route')) {
         return TenancyUrl::route($name, $parameters, $absolute);
     }
 }
+
+if (! function_exists('bilingual')) {
+    /**
+     * A fixed label in Bangla and English at once, for prescription paperwork
+     * that is read by patients and clinicians who may not share a language.
+     * See \App\Support\Bilingual.
+     */
+    function bilingual(string $key): string
+    {
+        return \App\Support\Bilingual::label($key);
+    }
+}

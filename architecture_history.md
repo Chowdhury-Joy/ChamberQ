@@ -303,3 +303,6 @@
 - Prescription medicine repeater: adding a row now dispatches `prescription-medicine-added` from the add action's `after()` hook, and the repeater scrolls its last item into view — collapsing the rows above had left the new empty row off-screen.
 - Written-up (collapsed) medicine rows are greyed to separate them from the row being typed into: new `cs-rx-medicines` scoping class on the repeater plus rules in `resources/css/filament/tenantAdmin/theme.css` (`--gray-100` light, translucent `white/2%` dark). Requires `npm run build`, since `public/build` is gitignored.
 - Consult Screen: hid the Filament header actions below 768px so the sticky bottom bar is the only copy on phones (the two had been rendering together as duplicate Complete visit buttons), and pinned `.cs-primary-btn` to one line with `white-space: nowrap` + `flex-shrink: 0`.
+
+## 2026-08-08T15:26:29+0600
+- Visit records gained per-visit vitals (`weight_kg`, `bp_systolic`/`bp_diastolic`) and `clinical_notes`; doctor print shows diagnosis/notes/tests + vitals; patient share shows vitals only (still no diagnosis).
