@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Filament\TenantAdmin\Pages\LiveQueueControl;
+use App\Jobs\SendDoctorLateNotices;
 use App\Models\Booking;
 use App\Models\Chamber;
 use App\Models\Doctor;
@@ -14,6 +15,7 @@ use App\Services\LiveSessionService;
 use Carbon\Carbon;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Hash;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -237,6 +239,115 @@ class LiveQueueControlPageTest extends TestCase
             'mark late' => ['markLate', ['delay_minutes' => 30], 'scheduled', 'delayed'],
             'cancel session' => ['markAbsent', [], 'active', 'cancelled'],
         ];
+    }
+
+    /**
+     * Marking late texts every waiting patient, and each send waits on the
+     * gateway. Thirty people waiting must not mean a frozen queue screen, so
+     * the sending is handed to `SendDoctorLateNotices` and runs once the
+     * response is out.
+     */
+    public function test_mark_late_does_not_send_inside_the_request(): void
+    {
+        $doctor = Doctor::first();
+        $doctor->update([
+            'notify_channels' => array_replace_recursive(
+                Doctor::defaultNotifyChannels(),
+                [Doctor::NOTIFY_DOCTOR_LATE => ['sms' => true, 'whatsapp' => false]],
+            ),
+        ]);
+
+        $this->makeWaitingBooking('Patient One', 1);
+        $this->makeWaitingBooking('Patient Two', 2);
+        $this->liveSession->update(['status' => 'scheduled']);
+
+        Bus::fake();
+
+        $this->queuePage()->callAction('markLate', ['delay_minutes' => 30])->assertHasNoActionErrors();
+
+        Bus::assertDispatchedAfterResponse(
+            SendDoctorLateNotices::class,
+            fn (SendDoctorLateNotices $job) => count($job->bookingIds) === 2 && $job->delayMinutes === 30,
+        );
+    }
+
+    /** Nothing to hand off when this doctor has late SMS switched off. */
+    public function test_mark_late_dispatches_nothing_when_late_sms_is_off(): void
+    {
+        $this->makeWaitingBooking('Patient One', 1);
+        $this->liveSession->update(['status' => 'scheduled']);
+
+        Bus::fake();
+
+        $this->queuePage()->callAction('markLate', ['delay_minutes' => 15])->assertHasNoActionErrors();
+
+        Bus::assertNotDispatchedAfterResponse(SendDoctorLateNotices::class);
+    }
+
+    /**
+     * Spending a credit per waiting patient should never be silent — End
+     * Session already names what it is about to do.
+     */
+    public function test_mark_late_warns_what_it_will_cost(): void
+    {
+        Doctor::first()->update([
+            'notify_channels' => array_replace_recursive(
+                Doctor::defaultNotifyChannels(),
+                [Doctor::NOTIFY_DOCTOR_LATE => ['sms' => true, 'whatsapp' => false]],
+            ),
+        ]);
+        $this->tenant->update(['sms_balance' => 10]);
+
+        $this->makeWaitingBooking('Patient One', 1);
+        $this->makeWaitingBooking('Patient Two', 2);
+        $this->liveSession->update(['status' => 'scheduled']);
+
+        // Read off the mounted action, not the helper directly, so this fails
+        // if the warning is ever unwired from the modal.
+        $warning = $this->mountedMarkLateDescription();
+
+        $this->assertStringContainsString('2 waiting patient', $warning);
+        $this->assertStringContainsString('2 SMS credit', $warning);
+        $this->assertStringContainsString('Balance after: 8', $warning);
+    }
+
+    /** Running out mid-blast is worth saying out loud, not discovering later. */
+    public function test_mark_late_warns_when_the_wallet_cannot_cover_everyone(): void
+    {
+        Doctor::first()->update([
+            'notify_channels' => array_replace_recursive(
+                Doctor::defaultNotifyChannels(),
+                [Doctor::NOTIFY_DOCTOR_LATE => ['sms' => true, 'whatsapp' => false]],
+            ),
+        ]);
+        $this->tenant->update(['sms_balance' => 1]);
+
+        $this->makeWaitingBooking('Patient One', 1);
+        $this->makeWaitingBooking('Patient Two', 2);
+        $this->makeWaitingBooking('Patient Three', 3);
+        $this->liveSession->update(['status' => 'scheduled']);
+
+        $warning = $this->mountedMarkLateDescription();
+
+        $this->assertStringContainsString('Only 1 credit', $warning);
+        $this->assertStringContainsString('last 2 patient', $warning);
+    }
+
+    /** Silent when the doctor has late SMS off — there is no cost to warn about. */
+    public function test_mark_late_shows_no_cost_warning_when_sms_is_off(): void
+    {
+        $this->makeWaitingBooking('Patient One', 1);
+        $this->liveSession->update(['status' => 'scheduled']);
+
+        $this->assertSame('', $this->mountedMarkLateDescription());
+    }
+
+    /** The cost warning as staff actually see it, resolved off the mounted action. */
+    protected function mountedMarkLateDescription(): string
+    {
+        $action = $this->queuePage()->mountAction('markLate')->instance()->getMountedAction();
+
+        return (string) $action?->getModalDescription();
     }
 
     protected function queuePage(): \Livewire\Features\SupportTesting\Testable

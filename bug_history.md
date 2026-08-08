@@ -609,3 +609,12 @@
   <root_cause>A signed prescription share link is ~181 characters — longer than a whole 160-character segment before any words — so the "always fit one segment" rule had no room for context and the first implementation returned the URL alone. Caught by the existing `NotifyChannelsTest`, which asserts the body contains "view:".</root_cause>
   <prevention_rule>When a size limit cannot be met, degrade by charging honestly, never by stripping meaning. `GsmText::toSingleSegment()` keeps the surrounding words when a link alone exceeds a segment and lets the message run to two, which `SmsService` then bills. Restoring true one-credit prescription SMS needs a short redirect link, not a shorter sentence.</prevention_rule>
 </bug>
+
+## 2026-08-08T10:36:55+0600
+
+<bug>
+  <category>UI/UX</category>
+  <symptom>"Mark Late" texted every waiting patient one at a time inside the staff member's own request, and spent one SMS credit per patient without mentioning either. Thirty people waiting meant up to ten seconds each on the gateway — minutes of a frozen Live Queue Control screen at the exact moment staff need it — and thirty credits gone silently.</symptom>
+  <root_cause>`LiveSessionService::markDelay()` looped `SmsService::sendDoctorLateNotices()` synchronously. The action also had no confirmation step, unlike End Session, which already names the patients it is about to cancel.</root_cause>
+  <prevention_rule>Anything that calls an external service once per patient belongs off the request: `SendDoctorLateNotices` is dispatched with `->afterResponse()`, not queued, because this app runs no worker and a queued job would silently never send. Any action that spends prepaid credits must state the count and the cost before it is confirmed, and say so when the wallet cannot cover everyone. Both halves are pinned by `LiveQueueControlPageTest`, and the cost warning is asserted off the mounted action rather than the helper method, so unwiring it from the modal fails the build.</prevention_rule>
+</bug>

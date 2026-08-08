@@ -777,6 +777,49 @@ class LiveQueueControl extends Page implements HasActions, HasTable
     }
 
     // Action for Mark Late
+    /**
+     * What "Mark Late" is about to send, and what it will cost.
+     *
+     * Null when this doctor has late SMS switched off, in which case marking
+     * late spends nothing and there is no warning worth showing.
+     */
+    public function markLateCostWarning(): ?string
+    {
+        if (! $this->selectedSessionId) {
+            return null;
+        }
+
+        $doctor = ScheduleSession::with('doctor')->find($this->selectedSessionId)?->doctor;
+
+        if (! $doctor?->wantsSms(\App\Models\Doctor::NOTIFY_DOCTOR_LATE)) {
+            return null;
+        }
+
+        $waiting = $this->bookings
+            ->whereIn('status', ['waiting', 'called', 'skipped'])
+            ->count();
+
+        if ($waiting === 0) {
+            return null;
+        }
+
+        $balance = (int) (tenant()->sms_balance ?? 0);
+
+        $warning = __('This texts :count waiting patient(s) and uses :count SMS credit(s). Balance after: :left.', [
+            'count' => $waiting,
+            'left' => max(0, $balance - $waiting),
+        ]);
+
+        if ($balance < $waiting) {
+            $warning .= ' '.__('Only :balance credit(s) left, so the last :short patient(s) will not get a text.', [
+                'balance' => $balance,
+                'short' => $waiting - $balance,
+            ]);
+        }
+
+        return $warning;
+    }
+
     public function markLateAction(): Action
     {
         return Action::make('markLate')
@@ -796,6 +839,10 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                     ])
                     ->required(),
             ])
+            // Say what this costs before it is spent. End Session already names
+            // the patients it is about to cancel; this quietly texted everyone
+            // waiting and spent a credit each with no mention of either.
+            ->modalDescription(fn (): ?string => $this->markLateCostWarning())
             ->action(function (array $data) {
                 if (!$this->selectedSessionId) return;
                 $scheduleSession = ScheduleSession::with('doctor')->findOrFail($this->selectedSessionId);

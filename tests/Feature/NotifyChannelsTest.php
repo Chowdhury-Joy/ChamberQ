@@ -131,6 +131,17 @@ class NotifyChannelsTest extends TestCase
 
         app(LiveSessionService::class)->markDelay($live, 30);
 
+        // The notices are handed to SendDoctorLateNotices and run once the
+        // response has been sent, so the queue screen does not sit waiting on
+        // the gateway. Terminating the app is what a real request does next.
+        $this->assertSame(
+            0,
+            SmsMessage::withoutGlobalScopes()->where('purpose', SmsMessage::PURPOSE_DOCTOR_LATE)->count(),
+            'Late notices must not block the request that marked the session late.',
+        );
+
+        $this->app->terminate();
+
         $message = SmsMessage::withoutGlobalScopes()
             ->where('booking_id', $booking->id)
             ->where('purpose', SmsMessage::PURPOSE_DOCTOR_LATE)
@@ -167,6 +178,10 @@ class NotifyChannelsTest extends TestCase
         ]);
 
         app(LiveSessionService::class)->markDelay($live, 15);
+
+        // Terminate too, so this asserts nothing is sent *at all* rather than
+        // merely nothing sent yet — the after-response hand-off would hide it.
+        $this->app->terminate();
 
         $this->assertSame(0, SmsMessage::withoutGlobalScopes()
             ->where('purpose', SmsMessage::PURPOSE_DOCTOR_LATE)

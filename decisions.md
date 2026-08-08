@@ -973,3 +973,12 @@
   <action>Enforced at the send path rather than in the templates: `GsmText::toSingleSegment()` transliterates to the GSM alphabet and truncates prose (never links) so ordinary messages always cost exactly one credit. Bangla is transliterated rather than rejected, so a patient who typed their name in Bangla still appears in their own confirmation. SMS bodies stay hardcoded English — a test fails the build if `SmsService` ever uses `__()`. The one message that physically cannot comply (a signed prescription link alone exceeds a segment) keeps its context and debits the true 2 credits.</action>
   <reason>The previous approach — a documented rule asking authors to keep bodies ASCII — lasted two days, because the failing text came from a caller rather than a template. Enforcing at the single choke point means no future feature can reintroduce it. Charging true cost in the one impossible case keeps the wallet honest without ever sending a naked URL, which from an unknown number is indistinguishable from a phishing text.</reason>
 </decision>
+
+## 2026-08-08T10:36:55+0600
+
+<decision>
+  <category>Code</category>
+  <context>The doctor-late SMS blast had to come off the request thread, but this application runs no queue worker and never has — `QUEUE_CONNECTION=database` is configured and nothing is queued. Dispatching to the queue would have been the conventional answer and the wrong one: with no worker consuming it, every late notice would sit in the jobs table unsent, and the failure would be silent.</context>
+  <action>Dispatched with `->afterResponse()`, which Laravel runs via `dispatchSync()` in the container's terminating callback — same process, after the response is sent, no worker required. The job is still written as a `ShouldQueue` class carrying its own `tenantId` and re-initialising tenancy, so promoting it to a real background job is deleting one method call.</action>
+  <reason>A frozen screen is a bad experience; silently not telling patients the doctor is late is a worse one. After-response buys the responsiveness without adding an ops dependency the deployment does not yet have, and costs nothing to reverse once a worker exists. It also keeps tests honest — `dispatchAfterResponse` runs on `app->terminate()`, so the existing assertions still prove the texts are really sent rather than merely enqueued.</reason>
+</decision>

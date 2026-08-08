@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Jobs\SendDoctorLateNotices;
 use App\Models\Booking;
 use App\Models\Doctor;
 use App\Models\LiveSession;
@@ -489,12 +490,17 @@ class LiveSessionService
 
         $doctor = $liveSession->scheduleSession?->doctor;
 
-        if ($doctor?->wantsSms(Doctor::NOTIFY_DOCTOR_LATE)) {
-            $sms = app(SmsService::class);
-
-            foreach ($bookings as $booking) {
-                $sms->sendDoctorLateNotices($booking, $minutes);
-            }
+        if ($doctor?->wantsSms(Doctor::NOTIFY_DOCTOR_LATE) && $bookings->isNotEmpty()) {
+            // Handed off rather than looped here: each send waits up to ten
+            // seconds on the gateway, so thirty waiting patients could hold the
+            // queue screen for minutes at the exact moment staff need it to
+            // respond. See SendDoctorLateNotices for why this is
+            // after-response and not a queued job.
+            SendDoctorLateNotices::dispatch(
+                (string) tenant('id'),
+                $bookings->pluck('id')->all(),
+                $minutes,
+            )->afterResponse();
         }
 
         return $bookings;
