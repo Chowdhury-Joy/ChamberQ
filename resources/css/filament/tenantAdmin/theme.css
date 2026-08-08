@@ -49,6 +49,16 @@
 .dark .cs-modal-warning { border-color: var(--warning-800); background: color-mix(in srgb, var(--warning-950) 50%, transparent); }
 .cs-modal-warning__label { font-size: 0.6875rem; font-weight: 700; text-transform: uppercase; color: var(--warning-800); }
 .cs-modal-warning__value { font-size: 0.875rem; margin-top: 0.125rem; }
+/* A medicine that is written up folds shut (see VisitNotesFormSchema). Greying
+   those rows leaves the one still open reading as the row being typed into,
+   which matters most mid-consult when the list is five or six drugs long. */
+.cs-rx-medicines .fi-fo-repeater-item.fi-collapsed { background: var(--gray-100); }
+/* Translucent, like the tint Filament puts on an open row in dark mode
+   (white/5%), so a done row still reads as a surface rather than a hole if the
+   modal's own background is ever not gray-900. `--gray-50` was too close to
+   white to see at all in light mode; `--gray-100` is the first step that reads. */
+.dark .cs-rx-medicines .fi-fo-repeater-item.fi-collapsed { background: rgb(255 255 255 / 0.02); }
+
 .cs-copy-last { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; justify-content: space-between; }
 .cs-copy-last__text { font-size: 0.8125rem; color: var(--gray-600); }
 .cs-prefill-hint { font-size: 0.75rem; color: var(--primary-600); margin: 0; }

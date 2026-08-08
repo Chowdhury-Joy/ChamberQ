@@ -114,6 +114,14 @@
             border-color: var(--gray-800);
         }
         .cs-sticky-actions__btn { width: 100%; min-height: 2.75rem; }
+        /* The sticky bar repeats Patient arrived / Complete visit / Call next in a
+           thumb-reachable strip, and it is the only copy shown on phones — the page
+           header's own actions are the same three, under the same conditions, so
+           leaving both on screen showed the doctor two Complete visit buttons.
+           Desktop is the reverse: the sticky bar is hidden and the header stands. */
+        @media (max-width: 767px) {
+            .fi-header-actions-ctn { display: none; }
+        }
         .cs-media-chip audio { height: 2rem; width: 100%; max-width: none; }
         @media (min-width: 768px) {
             .cs-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.25rem; align-items: start; }
@@ -127,7 +135,10 @@
             .cs-block--past-visits,
             .cs-block--lab { order: unset; }
             .cs-write-row { flex-direction: row; align-items: center; justify-content: space-between; }
-            .cs-primary-btn { width: auto; }
+            /* Once the button is sized to its content it is a flex item next to a
+               summary that can grow, so without these it gets squeezed and
+               "Write prescription" breaks onto a second line. */
+            .cs-primary-btn { width: auto; flex-shrink: 0; white-space: nowrap; }
             .cs-sticky-actions { display: none; }
             .cs-summary { width: auto; max-width: 14rem; }
         }

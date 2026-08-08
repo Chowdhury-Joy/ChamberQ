@@ -405,4 +405,120 @@ class CompleteVisitCallNextSplitTest extends TestCase
             'medicine_name' => 'SERGEL',
         ]);
     }
+
+    /**
+     * Filling in a medicine and pressing "Add medicine" must fold the finished
+     * row away, or the doctor scrolls past every drug already prescribed to
+     * reach the empty one.
+     *
+     * `collapsed()` alone cannot do this: it only seeds an item's initial Alpine
+     * state, and Livewire's morph preserves the client-side state of rows that
+     * are already mounted. So the button also dispatches Filament's own
+     * `repeater-collapse` event, which mounted rows do listen to.
+     *
+     * This asserts the rendered attributes because both plausible spellings fail
+     * silently and look correct in review:
+     *   - `x-on:click` in extraAttributes is dropped — Action seeds that key into
+     *     the bag itself, and the bag wins over merged extra attributes.
+     *   - `alpineClickHandler()` replaces `wire:click`, leaving a button that
+     *     collapses the list but never adds a row.
+     */
+    public function test_add_medicine_collapses_finished_rows_and_still_adds_one(): void
+    {
+        tenancy()->initialize($this->tenant);
+        $this->actingAs($this->doctor);
+
+        $schema = \Filament\Schemas\Schema::make(new ConsultScreen())
+            ->statePath('data')
+            ->components(VisitNotesFormSchema::components());
+
+        $repeater = null;
+        foreach ($schema->getFlatComponents(withHidden: true) as $component) {
+            if ($component instanceof \Filament\Forms\Components\Repeater
+                && $component->getName() === 'prescription_items') {
+                $repeater = $component;
+
+                break;
+            }
+        }
+
+        $this->assertNotNull($repeater, 'The prescription medicine repeater was not found.');
+
+        $addAction = $repeater->getAction('add');
+
+        // Mirrors Action::toButtonHtml(): the bag is seeded first, then extra
+        // attributes are merged over it. Asserting on the merged result is the
+        // only way to catch a key that the bag silently swallows.
+        $rendered = (new \Filament\Support\View\ComponentAttributeBag([
+            'wire:click' => $addAction->getLivewireClickHandler(),
+            'x-on:click' => $addAction->getAlpineClickHandler(),
+        ]))->merge($addAction->getExtraAttributes(), escape: false)->toHtml();
+
+        $this->assertStringContainsString('repeater-collapse', $rendered);
+        $this->assertStringContainsString($repeater->getStatePath(), $rendered);
+        // The row must still actually be added.
+        $this->assertStringContainsString('mountAction', $rendered);
+    }
+
+    /**
+     * Collapsing the rows above shrinks the page under the doctor's scroll
+     * position, so the new empty row can land off-screen and they have to
+     * scroll back up to type — the exact complaint the collapse was meant to
+     * fix. The add action therefore announces itself once the row exists, and
+     * the repeater listens for that and scrolls the new row into view.
+     *
+     * Asserted end to end (row really appended, event really dispatched)
+     * because the browser calls this action with a schema *key*
+     * (`mountedActionSchema0.…`), not the state path — pass the wrong one and
+     * the call silently succeeds while adding nothing.
+     */
+    public function test_adding_a_medicine_announces_itself_so_the_new_row_is_scrolled_to(): void
+    {
+        tenancy()->initialize($this->tenant);
+        $this->actingAs($this->doctor);
+        Filament::setCurrentPanel(Filament::getPanel('tenantAdmin'));
+
+        $component = Livewire::test(ConsultScreen::class)
+            ->mountAction('writePrescription')
+            ->call('mountAction', 'add', [], [
+                'schemaComponent' => 'mountedActionSchema0.prescription_items',
+            ]);
+
+        $this->assertCount(
+            1,
+            $component->get('mountedActions')[0]['data']['prescription_items'] ?? [],
+            'Add medicine did not append a row.',
+        );
+
+        $component->assertDispatched(VisitNotesFormSchema::MEDICINE_ADDED_EVENT);
+
+        // …and the repeater is actually listening for it.
+        $schema = \Filament\Schemas\Schema::make(new ConsultScreen())
+            ->statePath('data')
+            ->components(VisitNotesFormSchema::components());
+
+        $repeater = null;
+        foreach ($schema->getFlatComponents(withHidden: true) as $child) {
+            if ($child instanceof \Filament\Forms\Components\Repeater
+                && $child->getName() === 'prescription_items') {
+                $repeater = $child;
+
+                break;
+            }
+        }
+
+        $this->assertArrayHasKey(
+            'x-on:'.VisitNotesFormSchema::MEDICINE_ADDED_EVENT.'.window',
+            $repeater->getExtraAttributes(),
+            'Nothing reacts to the event, so the new row is never scrolled to.',
+        );
+
+        // theme.css greys written-up (collapsed) rows via this class. Without it
+        // the rule silently matches nothing and every row looks identical again.
+        $this->assertStringContainsString(
+            'cs-rx-medicines',
+            $repeater->getExtraAttributes()['class'] ?? '',
+            'The medicine repeater lost the class theme.css styles collapsed rows through.',
+        );
+    }
 }

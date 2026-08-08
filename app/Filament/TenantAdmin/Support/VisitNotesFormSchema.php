@@ -24,10 +24,14 @@ use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Actions\Action;
 use Filament\Schemas\Components\View;
+use Illuminate\Support\Js;
 
 class VisitNotesFormSchema
 {
     private const VISIT_NOTES_HINT = 'All fields are optional — leave blank to complete without notes.';
+
+    /** Browser event announcing that "Add medicine" has appended a row. */
+    public const MEDICINE_ADDED_EVENT = 'prescription-medicine-added';
 
     private const STAFF_ENTRY_HINT = 'Type only what the doctor wrote on paper. Attach a photo of the slip so it can be checked later.';
 
@@ -353,7 +357,35 @@ class VisitNotesFormSchema
                     ->collapsed(fn ($item): bool => filled($item?->getRawState()['medicine_name'] ?? null))
                     ->itemLabel(fn (array $state): ?string => filled($state['medicine_name'] ?? null)
                         ? mb_strtoupper((string) $state['medicine_name'])
-                        : null),
+                        : null)
+                    // `collapsed()` only decides an item's *initial* Alpine state. Livewire's
+                    // morph keeps already-mounted items' client-side state across a re-render,
+                    // so a row filled in earlier never re-collapses on its own when the next
+                    // one is added — the doctor ends up scrolling past finished medicines.
+                    // Dispatching `repeater-collapse` is what Filament's own "Collapse all"
+                    // does, and it reaches mounted rows; the appended row is a brand-new node
+                    // that mounts expanded, so it is still the one ready to type into.
+                    // The key must be `x-on:click.capture`, not `x-on:click`: Action seeds a
+                    // plain `x-on:click` into its attribute bag, and the bag beats merged extra
+                    // attributes, so that spelling is silently dropped. `alpineClickHandler()`
+                    // is worse — it *replaces* the action's `wire:click`, leaving a button that
+                    // collapses the list but never adds a row.
+                    ->addAction(fn (Action $action) => $action
+                        ->extraAttributes(
+                            fn (Repeater $component): array => [
+                                'x-on:click.capture' => '$dispatch('.Js::from('repeater-collapse').', '.Js::from($component->getStatePath()).')',
+                            ],
+                        )
+                        // Fired once the new row exists in the DOM. Collapsing the rows above
+                        // shrinks the page under the doctor's scroll position, so without this
+                        // the empty row lands off-screen and they have to scroll back up to it.
+                        ->after(fn (\Livewire\Component $livewire) => $livewire->dispatch(self::MEDICINE_ADDED_EVENT)))
+                    ->extraAttributes([
+                        // Scopes the "already written up" row styling in theme.css to this
+                        // repeater — the page builder has a dozen unrelated ones.
+                        'class' => 'cs-rx-medicines',
+                        'x-on:'.self::MEDICINE_ADDED_EVENT.'.window' => '$nextTick(() => { const rows = $el.querySelectorAll(\'.fi-fo-repeater-item\'); rows[rows.length - 1]?.scrollIntoView({ block: \'center\' }); })',
+                    ]),
             ])
             ->columnSpanFull();
     }
