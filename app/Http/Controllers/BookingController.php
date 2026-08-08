@@ -205,7 +205,11 @@ class BookingController extends Controller
             'booking' => [
                 'id' => $booking->id,
                 'serial_number' => $booking->serial_number,
-                'ticket_url' => tenant_web_route('bookings.show', $booking),
+                // Relative on purpose: absolute URLs bake in whatever host Laravel
+                // thinks it has (often localhost behind a reverse proxy). The
+                // wizard already runs on the patient's real domain, so a path
+                // keeps them there.
+                'ticket_url' => tenant_web_route('bookings.show', $booking, absolute: false),
             ],
         ]);
     }

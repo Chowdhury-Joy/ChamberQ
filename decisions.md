@@ -1069,6 +1069,15 @@
   <reason>Age is on the paper prescription for a reason — a pharmacist reading the patient's own copy uses it to sanity-check a dose, and it is the patient's own data on their own link, adding nothing a stranger holding the link could not already infer from the medicines. The privacy line that matters is unchanged: still no diagnosis, clinical notes, tests, reports, other visits or chamber contact. Documented rather than removed so the scope stops being wider than the record of it.</reason>
 </decision>
 
+## 2026-08-08T22:47:24+0600
+
+<decision>
+  <category>Code</category>
+  <context>Production booking sent patients to a localhost ticket because absolute URLs were built from the internal PHP host behind the reverse proxy.</context>
+  <action>Post-booking API `ticket_url` is relative (`tenant_web_route(..., absolute: false)`). Also enable `trustProxies(at: '*')` so other absolute links (ticket copy/share, prescription URLs) use the public forwarded host. SMS ticket links still require a correct production `APP_URL`.</action>
+  <reason>A relative path keeps the patient on the domain they already used — like “room 12 in this building” instead of printing the wrong street address. Proxy trust fixes share links that must be absolute; APP_URL remains the SMS source of truth because texts are not tied to a browser session.</reason>
+</decision>
+
 ## 2026-08-08T23:04:53+0600
 
 <decision>

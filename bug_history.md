@@ -657,3 +657,12 @@
   <root_cause>The same three-branch "weight · BP" line was hand-written in three Blade files. One of the three used `@elseif` instead of a second `@if`, so the two readings became mutually exclusive in that copy alone.</root_cause>
   <prevention_rule>A formatted line that appears in more than one view is built once on the model, not per-template: `VisitRecord::vitalsSummary()` now composes it and all three views print it. Duplicating display logic across Blade files is how one copy silently drifts from the others.</prevention_rule>
 </bug>
+
+## 2026-08-08T22:47:24+0600
+
+<bug>
+  <category>Code</category>
+  <symptom>After booking on the live domain, the browser jumped to a localhost ticket URL (and SMS/share links could also say localhost).</symptom>
+  <root_cause>`BookingController` returned an absolute `ticket_url` from `tenant_web_route()`. Behind nginx/caddy, PHP sees `127.0.0.1` and Laravel had no `trustProxies`, so absolute URLs baked in localhost. SMS links separately use `APP_URL`, which was often still the local default.</root_cause>
+  <prevention_rule>Return a relative path for post-booking `ticket_url` (`absolute: false`); trust reverse proxies in `bootstrap/app.php`; keep production `APP_URL=https://…` and real `CENTRAL_DOMAINS` (enforced by `app:production-check`).</prevention_rule>
+</bug>

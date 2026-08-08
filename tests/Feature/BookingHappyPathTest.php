@@ -67,8 +67,11 @@ class BookingHappyPathTest extends TestCase
 
         $ticketUrl = $response->json('booking.ticket_url');
         $this->assertNotEmpty($ticketUrl);
+        $this->assertStringStartsWith('/', $ticketUrl);
+        $this->assertStringNotContainsString('://', $ticketUrl);
 
-        $this->get($ticketUrl)
+        // Relative path — open it on the same tenant host the patient booked on.
+        $this->get('http://happy-path.localhost'.$ticketUrl)
             ->assertOk()
             ->assertSee('Fatima', false)
             ->assertSee('Show this number at reception', false);
