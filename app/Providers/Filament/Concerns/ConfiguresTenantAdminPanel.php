@@ -2,6 +2,8 @@
 
 namespace App\Providers\Filament\Concerns;
 
+use App\Filament\TenantAdmin\Widgets\TenantStatsOverview;
+use App\Filament\TenantAdmin\Widgets\TodayAppointmentsWidget;
 use Filament\Panel;
 use Filament\Support\Colors\Color;
 use Filament\Widgets\AccountWidget;
@@ -11,7 +13,7 @@ trait ConfiguresTenantAdminPanel
     protected function configureTenantAdminPanel(Panel $panel): Panel
     {
         return $panel
-            ->brandName('ChamberQ')
+            ->brandName(fn (): string => tenant()?->displayName() ?? 'ChamberQ')
             ->viteTheme('resources/css/filament/tenantAdmin/theme.css')
             ->login()
             ->passwordReset()
@@ -23,8 +25,8 @@ trait ConfiguresTenantAdminPanel
             ->discoverWidgets(in: app_path('Filament/TenantAdmin/Widgets'), for: 'App\Filament\TenantAdmin\Widgets')
             ->widgets([
                 AccountWidget::class,
-                \App\Filament\TenantAdmin\Widgets\TenantStatsOverview::class,
-                \App\Filament\TenantAdmin\Widgets\TodayAppointmentsWidget::class,
+                TenantStatsOverview::class,
+                TodayAppointmentsWidget::class,
             ])
             ->renderHook(
                 'panels::head.end',
