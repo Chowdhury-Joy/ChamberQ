@@ -2,6 +2,7 @@
 
 namespace App\Filament\SuperAdmin\Resources\Tenants\Tables;
 
+use App\Filament\SuperAdmin\Support\TenantBackupActions;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -60,6 +61,7 @@ class TenantsTable
             ])
             ->recordActions([
                 EditAction::make(),
+                TenantBackupActions::downloadAction(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([

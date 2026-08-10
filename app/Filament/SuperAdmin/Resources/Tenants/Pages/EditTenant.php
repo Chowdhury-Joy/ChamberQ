@@ -3,6 +3,7 @@
 namespace App\Filament\SuperAdmin\Resources\Tenants\Pages;
 
 use App\Filament\SuperAdmin\Resources\Tenants\TenantResource;
+use App\Filament\SuperAdmin\Support\TenantBackupActions;
 use App\Models\DiscountCode;
 use App\Services\CommissionService;
 use App\Services\SmsService;
@@ -146,6 +147,8 @@ class EditTenant extends EditRecord
                         ->success()
                         ->send();
                 }),
+            TenantBackupActions::downloadAction(),
+            TenantBackupActions::restoreAction(),
             DeleteAction::make(),
         ];
     }
