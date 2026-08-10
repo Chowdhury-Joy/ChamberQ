@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-08T23:04:53+0600
+Last Updated: 2026-08-11T02:29:34+0600
 
 ## Full Site Map
 
@@ -10,7 +10,7 @@ Hosts: values in `CENTRAL_DOMAINS` (e.g. `localhost`).
 |-------|---------|--------|
 | `/` | Sales landing for ChamberQ (Solo/Clinic plans, WhatsApp CTAs); captures `?ref=` and `?code=` into session | public |
 | `/admin` | Super Admin Filament login | public login |
-| `/admin/*` | Super Admin: Tenants, Marketers, Discount Codes, Commissions; finance dashboard widgets; **Client Health** seller overview (`/admin/seller-overview`); **Research data** aggregate view (`/admin/research`); confirm doctor payments on tenant edit | super_admin only |
+| `/admin/*` | Super Admin: Tenants, Marketers, Discount Codes, Commissions; finance dashboard widgets; **Client Health** seller overview (`/admin/seller-overview`); **Research data** aggregate view (`/admin/research`); **Platform data backup** (`/admin/data-backup`); per-tenant chamber backup download/restore on Tenants; confirm doctor payments on tenant edit | super_admin only |
 | `/partner` | Marketer partner panel login | public login |
 | `/partner/*` | Marketer: referral link, owed/paid stats, referred doctors list, commission history | marketer only |
 | `/up` | Laravel health check | public |
@@ -26,7 +26,14 @@ Same central host; tenant identified by URL slug (tenant `id`), e.g. `drkarim`.
 | `/{slug}/portal` | Phone lookup | public (throttled) |
 | `/{slug}/screen/{session}` | Outdoor TV (always today for that schedule session — bookmark once) | public |
 | `/{slug}/screen/{session}/{date}` | Outdoor display for a specific date (legacy / deep link) | public |
+| `/{slug}/departments` | Clinic departments listing (clinic tier only) | public |
+| `/{slug}/departments/{slug}` | Single department page | public |
+| `/{slug}/blog` | Clinic health articles listing (clinic tier only) | public |
+| `/{slug}/blog/{slug}` | Single blog article | public |
+| `/{slug}/doctors` | Clinic doctor profiles listing (clinic tier only) | public |
+| `/{slug}/doctors/{slug}` | Single doctor public profile | public |
 | `/{slug}/admin` | Tenant staff Filament panel | staff login |
+| `/{slug}/admin/data-backup` | Chamber disaster-recovery backup download + restore (Admin only) | admin only |
 | `/{slug}/manifest.webmanifest`, `/{slug}/sw.js`, … | PWA | public |
 
 Example: `https://doctorgemini.com/drkarim/book`
@@ -37,6 +44,12 @@ When a doctor connects their own domain (e.g. `drkarim.com`), routes live at the
 | Route | Purpose | Access |
 |-------|---------|--------|
 | `/{slug?}` | Branded website pages from WebPage builder (home = empty slug) | public |
+| `/departments` | Clinic departments listing (clinic tier only) | public |
+| `/departments/{slug}` | Single department page | public |
+| `/blog` | Clinic health articles listing (clinic tier only) | public |
+| `/blog/{slug}` | Single blog article | public |
+| `/doctors` | Clinic doctor profiles listing (clinic tier only) | public |
+| `/doctors/{slug}` | Single doctor public profile | public |
 | `/book` | Online serial booking wizard | public |
 | `POST /book` | Homepage hero form target — flashes name/phone to session, redirects to the wizard so patient details never enter the URL | public (throttled) |
 | `/bookings/{booking}` | Patient ticket (UUID) | public |
@@ -46,6 +59,7 @@ When a doctor connects their own domain (e.g. `drkarim.com`), routes live at the
 | `/lang/{locale}` | Switch session locale `en` / `bn` | public |
 | `/manifest.webmanifest`, `/sw.js`, `/pwa-icon-{192\|512}.svg` | PWA bits | public |
 | `/admin` | Tenant staff Filament panel | staff login |
+| `/admin/data-backup` | Chamber disaster-recovery backup download + restore (Admin only) | admin only |
 
 ### Tenant public APIs
 Available under both platform path (`/{slug}/api/…`) and custom domain (`/api/…`).
@@ -166,13 +180,30 @@ The one patient-facing route that shows prescription content. Deliberately outsi
 
 ### Content update (staff)
 - **Trigger:** Doctor wants copy/photo change.
-- **Steps:** Staff edits Web Page blocks in tenant admin.
+- **Steps:** Staff edits Web Page blocks in tenant admin, or (clinic tier) adds/edits **Departments**, **Blog posts**, and doctor **Website profile** fields under **Website** in tenant admin.
+
+### Clinic website content (admin/staff — clinic tier)
+- **Trigger:** Clinic needs a new department, blog article, or public doctor profile.
+- **Steps:** Tenant admin → **Website** → **Departments** / **Blog posts** (create, publish) or **Doctors** → enable **Show on website**, photo, bio, slug → homepage sections (`service_matrix`, `health_insights`, `doctor_grid`) pull published rows automatically.
+- **Data/systems touched:** `departments`, `blog_posts`, `doctors` website columns; public routes `/departments`, `/blog`, `/doctors`.
+- **Success:** List + detail pages live; homepage teasers match without duplicating cards in the page builder.
 
 ### Block a date — vacation / holiday / doctor away (admin/doctor)
 - **Trigger:** The clinic, a chamber, or one doctor will not sit on a given date.
 - **Steps:** Slot Blocks → New → pick date, optionally chamber and/or doctor → the form shows how many bookings this will cancel and requires the confirmation checkbox → Save. Saving cancels those bookings (waiting/called/in-chamber only — completed visits are left alone) and reports the count. Then **Notify patients** on that block row → tap each patient to open WhatsApp with a prepared message.
 - **Data/systems touched:** `slot_blocks`, `bookings` (`status`, `cancelled_at`, `cancellation_reason`, `slot_block_id`) via `SlotBlockService`.
 - **Success:** No patient still holds a serial for a closed date, and every cancelled patient appears in the notify list.
+
+### Disaster-recovery backup (chamber Admin)
+- **Trigger:** Weekly off-server copy, cyber attack, or rebuild from empty database.
+- **Steps:** Tenant admin → **Settings → Data backup** → **Download chamber backup** (save ZIP to Drive/USB) → after wipe/redeploy, **Upload and restore** (replace mode + type chamber ID to confirm; or merge / dry-run). Staff use **Forgot password** after restore.
+- **Data/systems touched:** All tenant-owned tables (patients, bookings, visit records, prescriptions, schedules, staff users, etc.) — not shared medicine/condition catalogues; not voice/photo files (paths only in CSV).
+- **Success:** ZIP round-trips; chamber data readable in Excel; clinical media still needs separate disk backup.
+
+### Disaster-recovery backup (Super Admin)
+- **Trigger:** Platform wipe or per-chamber restore without logging into that chamber.
+- **Steps:** **Platform data backup** (`/admin/data-backup`) for central tables; or Tenants → **Download chamber backup** / **Restore chamber backup** on a row or tenant edit.
+- **Success:** Platform or single-chamber data restored; passwords reset via Forgot password.
 
 ### Ops review (admin/doctor)
 - **Trigger:** End of day/week.

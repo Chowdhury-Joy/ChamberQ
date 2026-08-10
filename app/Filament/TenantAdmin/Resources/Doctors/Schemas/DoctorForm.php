@@ -60,6 +60,35 @@ class DoctorForm
                 TextInput::make('registration_number')
                     ->label(__('BM&DC registration number'))
                     ->maxLength(80),
+                Fieldset::make(__('Website profile'))
+                    ->visible(fn (): bool => ! tenant()?->isSoloDoctor())
+                    ->columns(2)
+                    ->schema([
+                        Toggle::make('show_on_website')
+                            ->label(__('Show on website'))
+                            ->default(false)
+                            ->columnSpanFull(),
+                        TextInput::make('public_slug')
+                            ->label(__('Profile URL slug'))
+                            ->helperText(__('Used in /doctors/your-slug'))
+                            ->maxLength(120),
+                        TextInput::make('public_title')
+                            ->label(__('Title on website'))
+                            ->placeholder(__('e.g. Consultant Physiotherapist'))
+                            ->maxLength(255),
+                        TextInput::make('photo_url')
+                            ->label(__('Photo URL'))
+                            ->maxLength(2048)
+                            ->columnSpanFull(),
+                        TextInput::make('website_sort_order')
+                            ->label(__('Sort order'))
+                            ->numeric()
+                            ->default(0)
+                            ->minValue(0),
+                        \Filament\Forms\Components\RichEditor::make('bio')
+                            ->label(__('Bio'))
+                            ->columnSpanFull(),
+                    ]),
                 Fieldset::make(__('Patient notifications'))
                     ->columns(2)
                     ->schema([

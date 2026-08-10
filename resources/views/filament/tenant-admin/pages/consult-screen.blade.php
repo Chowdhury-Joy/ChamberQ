@@ -613,7 +613,7 @@
                         {{ __('Patient arrived') }}
                     </x-filament::button>
                 @elseif ($canWriteNotes && $booking->status === 'in_chamber')
-                    <x-filament::button class="cs-sticky-actions__btn" color="primary" wire:click="mountAction('completeVisit')">
+                    <x-filament::button class="cs-sticky-actions__btn" color="success" wire:click="mountAction('completeVisit')">
                         {{ __('Complete visit') }}
                     </x-filament::button>
                 @elseif ($booking->status === 'completed')

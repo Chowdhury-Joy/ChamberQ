@@ -324,3 +324,35 @@
 
 ## 2026-08-08T23:21:36+0600
 - Ticket Copy link: visible input is ticket URL only; clipboard payload keeps ticket + map on separate lines in JS (HTML text inputs strip newlines and were gluing the two URLs).
+
+## 2026-08-09T02:22:57+0600
+- Added queue-themed ChamberQ monogram at `public/icons/chamberq-mark-queue.svg` (+ PNG exports) and app-icon variant `chamberq-logo-queue.svg` (+ PNG): C+Q with segmented serial ring, gold active token, stepped queue tail.
+
+## 2026-08-09T02:29:56+0600
+- Added token-kiosk ChamberQ mark at `public/icons/chamberq-mark-token.svg` (+ PNG exports) and app-icon variant `chamberq-logo-token.svg` (+ PNG): dispenser machine dispensing gold token numbered 10.
+
+## 2026-08-09T02:31:13+0600
+- Added C+Q token monogram at `public/icons/chamberq-mark-cq-token.svg` (+ PNG exports) and app-icon variant `chamberq-logo-cq-token.svg` (+ PNG): open C chamber frame, gold Q token with 10 and Q tail.
+
+## 2026-08-09T02:32:54+0600
+- Added three non-token C+Q marks: `chamberq-mark-cq-flow` (queue-step tail), `chamberq-mark-cq-ring` (segmented serial ring), `chamberq-mark-cq-dots` (queue dots tail); each with app-icon SVG/PNG pair.
+
+## 2026-08-09T15:27:52+0600
+- Medicine catalogue deploy gap: added `catalogues:load` (conditions + medicines CSV importers), wired into `composer setup`, and `app:production-check` blocker `MEDICINE_CATALOGUE` when the table is empty on production servers.
+
+## 2026-08-09
+- Added `NusratUrmiSeeder` for solo tenant `nusraturmi` (Dr. Nusrat Sultana Urmi / Dermavilla): dermatologist profile, two chambers, schedule, homepage CMS, domains `nusraturmi.localhost` + `drurminusrat.com`.
+- Solo patient homepage hero (`tenant/solo/sections/hero.blade.php`) set to `min-h-[90vh]` per owner request.
+- Solo hero portrait crop changed to `aspect-square` with `object-center` (was full-height column crop).
+- Reverted solo hero `min-h-[90vh]`; kept square centered portrait only.
+- Added `NusratUrmiDemoSeeder` — today's dermatology queue (8 serials, live session) for Daily Roster on tenant `nusraturmi`.
+- Tenant admin Filament `brandName` now reads `Tenant::displayName()` so practice panels show the doctor's name (e.g. Nusrat Urmi) instead of ChamberQ.
+- Reverted mistaken `schedule_sessions.slots_blocked` experiment; `NusratUrmiDemoSeeder` now seeds two future `SlotBlock` rows (vacation/holiday closures) for the Slot Blocks admin screen.
+- Live Queue Control outdoor TV link: `TenancyUrl::screenBookmarkUrl()` keeps path-tenant host/port (`127.0.0.1:8000/{tenant}/screen/{id}`) instead of the first `*.localhost` Domain row on port 80.
+- Outdoor waiting-room screen UI strings now use `lang/bn.json` via tenant `default_locale`; Nusrat Urmi demo tenant defaults to Bangla.
+
+## 2026-08-10
+- Expanded medicine catalogue from ~88 to ~460 curated Bangladesh brands (`data/medicine-list-draft.csv`); added `data/build-medicine-catalogue.py` to regenerate from pinned household brands plus BDDrugBank-scored generic fills per category budget.
+- Disaster-recovery CSV backup: `DataBackupService` / `DataImportService`, chamber Admin + Super Admin Filament pages, tenant actions on Tenants, Artisan `data:backup-export` / `data:backup-import`; passwords excluded, voice/photo binaries not in ZIP.
+- Prescription picker: hide already-selected brands in the repeater dropdown; dose chips from catalogue `default_strength` only; Consult Screen Complete visit green (no two blue buttons); Write prescription modal hint removed.
+- Clinic relational CMS: `departments` + `blog_posts` tables, doctor website fields, public list/detail routes, homepage sections wired to DB collections.

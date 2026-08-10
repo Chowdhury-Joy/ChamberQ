@@ -28,4 +28,12 @@ class VisitNotesFormSchemaTest extends TestCase
 
         $this->assertSame('500 mg', $normalized['prescription_items'][0]['dose']);
     }
+
+    public function test_prefill_dose_from_strength_uses_raw_catalogue_value(): void
+    {
+        $prefill = VisitNotesFormSchema::prefillDoseFromStrength('40 mg');
+
+        $this->assertSame('40 mg', $prefill['dose']);
+        $this->assertNull($prefill['dose_other']);
+    }
 }

@@ -606,6 +606,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
     {
         return VisitNotesFormSchema::configureModal(Action::make('completeVisit'))
             ->label(__('Complete visit'))
+            ->color('success')
             ->form(function (Action $action): array {
                 if (! auth()->user()?->canRecordVisitNotes()) {
                     return [];

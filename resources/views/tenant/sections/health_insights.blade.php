@@ -1,11 +1,14 @@
 @php
-    /*
-     * 1:1 from public/previews/clireo-homepage.html #blog.
-     */
     $heading = $data['heading'] ?? 'Latest Physiotherapy Tips & Insights';
     $viewAllText = preg_replace('/\s*[→➜➔]\s*$/u', '', (string) ($data['view_all_text'] ?? 'View all posts')) ?: 'View all posts';
-    $viewAllLink = \App\Support\SafeUrl::href($data['view_all_link'] ?? '', '');
-    $articles = $data['articles'] ?? [];
+    $viewAllLink = tenant_safe_href($data['view_all_link'] ?? '/blog', '/blog');
+    $articles = collect($blogPosts ?? [])->map(fn ($post) => [
+        'title' => $post->title,
+        'meta' => $post->displayDate(),
+        'image_url' => $post->image_url,
+        'link' => tenant_web_url('/blog/'.$post->slug),
+        'excerpt' => $post->excerpt,
+    ]);
 @endphp
 
 <section class="space-section" id="blog" data-reveal-section>
@@ -16,13 +19,13 @@
                 <h2 class="fx-heading" data-fx-words data-reveal-block data-reveal-kind="heading">{{ $heading }}</h2>
             </div>
             @if($viewAllLink !== '')
-                <a class="btn-pink sm" href="{{ $viewAllLink }}" target="_blank" rel="noopener noreferrer" data-reveal-block data-reveal-kind="fade">
+                <a class="btn-pink sm" href="{{ $viewAllLink }}" @if(str_starts_with($viewAllLink, 'http')) target="_blank" rel="noopener noreferrer" @endif data-reveal-block data-reveal-kind="fade">
                     <span>{{ $viewAllText }}</span>
                 </a>
             @endif
         </div>
 
-        <div class="blog-grid grid-cards" data-card-count="{{ count($articles) }}" data-reveal-block data-reveal-kind="fade">
+        <div class="blog-grid grid-cards" data-card-count="{{ $articles->count() }}" data-reveal-block data-reveal-kind="fade">
             @foreach($articles as $article)
                 @php $articleLink = \App\Support\SafeUrl::href($article['link'] ?? '', '#'); @endphp
                 <a class="blog-card" href="{{ $articleLink }}" @if($articleLink !== '#' && str_starts_with($articleLink, 'http')) target="_blank" rel="noopener noreferrer" @endif>

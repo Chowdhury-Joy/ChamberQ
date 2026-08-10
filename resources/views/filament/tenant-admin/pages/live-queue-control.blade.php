@@ -351,7 +351,7 @@
                                                     Call next patient
                                                 </x-filament::button>
                                             @else
-                                                <x-filament::button wire:click="completeVisit" color="primary" icon="heroicon-m-check-badge" size="lg">
+                                                <x-filament::button wire:click="completeVisit" color="success" icon="heroicon-m-check-badge" size="lg">
                                                     Complete visit
                                                 </x-filament::button>
                                             @endif
@@ -384,10 +384,9 @@
 
                     @php
                         // Stable path — no date. Bookmark once; it always shows today for this session.
-                        // Absolute via APP_URL/Domain so a TV paste never lands on localhost.
-                        $screenUrl = \App\Support\TenancyUrl::publicAbsolute(
+                        $screenUrl = \App\Support\TenancyUrl::screenBookmarkUrl(
                             (string) tenant('id'),
-                            '/screen/'.$this->selectedSessionId,
+                            (int) $this->selectedSessionId,
                         );
                     @endphp
                     <x-filament::section>

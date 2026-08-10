@@ -21,6 +21,10 @@ class WebPageResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Website';
+
+    protected static ?int $navigationSort = 1;
+
     public static function canViewAny(): bool
     {
         /** @var \App\Models\User|null $user */
@@ -171,26 +175,17 @@ class WebPageResource extends Resource
                         Forms\Components\Builder\Block::make('service_matrix')
                             ->label('Services & Specialties Matrix')
                             ->schema([
+                                Forms\Components\Placeholder::make('service_matrix_source')
+                                    ->label(__('Content source'))
+                                    ->content(__('Cards are loaded from published Departments in Website → Departments.'))
+                                    ->columnSpanFull(),
                                 Forms\Components\TextInput::make('heading')->default('Our Clinical Services'),
                                 Forms\Components\TextInput::make('footer_text')
                                     ->label('Carousel footer caption')
                                     ->default('Explore our services and book the one you need online.')
                                     ->columnSpanFull(),
                                 Forms\Components\TextInput::make('view_all_text')->label('Header CTA label')->default('View all services →'),
-                                Forms\Components\TextInput::make('view_all_link')->label('Header CTA link')->default('/book'),
-                                Forms\Components\Repeater::make('items')
-                                    ->columns(2)
-                                    ->schema([
-                                        Forms\Components\TextInput::make('title')->required(),
-                                        Forms\Components\TextInput::make('image_url')->label('Card image URL')->columnSpan(2),
-                                        Forms\Components\TextInput::make('icon_url')->label('Icon image URL (optional)'),
-                                        Forms\Components\TextInput::make('description')->columnSpan(2),
-                                    ])
-                                    ->default([
-                                        ['title' => 'Primary & Preventive Care', 'description' => 'Routine checkups, vaccinations, and wellness counseling.'],
-                                        ['title' => 'Specialist Consultations', 'description' => 'Expert evaluation for complex medical conditions.'],
-                                        ['title' => 'Diagnostic Testing & Labs', 'description' => 'Fast, accurate on-site laboratory testing.'],
-                                    ]),
+                                Forms\Components\TextInput::make('view_all_link')->label('Header CTA link')->default('/departments'),
                             ]),
 
                         // 5. Doctor & Medical Team Directory (Clinic Only)
@@ -198,17 +193,14 @@ class WebPageResource extends Resource
                             ->label('Doctor Directory (Clinic Only)')
                             ->columns(2)
                             ->schema([
+                                Forms\Components\Placeholder::make('doctor_grid_source')
+                                    ->label(__('Content source'))
+                                    ->content(__('Cards are loaded from doctors with “Show on website” enabled in the Doctors resource.'))
+                                    ->columnSpanFull(),
                                 Forms\Components\TextInput::make('eyebrow')->default('Our physiotherapists'),
                                 Forms\Components\TextInput::make('heading')->default('Meet The Experts Behind Your Recovery')->columnSpanFull(),
-                                Forms\Components\Repeater::make('cards')
-                                    ->label('Featured cards (optional — overrides live doctor list)')
-                                    ->columnSpanFull()
-                                    ->columns(2)
-                                    ->schema([
-                                        Forms\Components\TextInput::make('name')->required(),
-                                        Forms\Components\TextInput::make('specialty')->label('Title / specialty'),
-                                        Forms\Components\TextInput::make('image_url')->label('Photo URL')->columnSpanFull(),
-                                    ]),
+                                Forms\Components\TextInput::make('view_all_text')->label('Header CTA label')->default('View all doctors →'),
+                                Forms\Components\TextInput::make('view_all_link')->label('Header CTA link')->default('/doctors'),
                                 Forms\Components\TextInput::make('stats_heading')
                                     ->label('Stats band heading')
                                     ->placeholder('Trusted Physiotherapy Centre In Panchlaish, Chattogram')
@@ -449,18 +441,13 @@ class WebPageResource extends Resource
                         Forms\Components\Builder\Block::make('health_insights')
                             ->label('Health Insights & Articles')
                             ->schema([
+                                Forms\Components\Placeholder::make('health_insights_source')
+                                    ->label(__('Content source'))
+                                    ->content(__('Cards are loaded from published Blog posts in Website → Blog posts.'))
+                                    ->columnSpanFull(),
                                 Forms\Components\TextInput::make('heading')->default('Latest Health Insights & Articles'),
                                 Forms\Components\TextInput::make('view_all_text')->label('Header CTA label')->default('View all posts →'),
-                                Forms\Components\TextInput::make('view_all_link')->label('Header CTA link')->placeholder('https://...'),
-                                Forms\Components\Repeater::make('articles')
-                                    ->columns(2)
-                                    ->schema([
-                                        Forms\Components\TextInput::make('title')->required()->columnSpanFull(),
-                                        Forms\Components\TextInput::make('meta')->label('Meta line')->placeholder('Jan 12, 2026 · Stroke Care'),
-                                        Forms\Components\TextInput::make('image_url'),
-                                        Forms\Components\TextInput::make('link'),
-                                        Forms\Components\Textarea::make('excerpt')->columnSpan(2),
-                                    ]),
+                                Forms\Components\TextInput::make('view_all_link')->label('Header CTA link')->default('/blog'),
                             ]),
 
                         // 15. High-Converting Action Banner

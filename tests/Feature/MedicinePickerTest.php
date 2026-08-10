@@ -322,4 +322,28 @@ class MedicinePickerTest extends TestCase
 
         $this->assertSame('CUSTOM BRAND', $name);
     }
+
+    public function test_grouped_select_options_can_exclude_already_selected_brands(): void
+    {
+        tenancy()->initialize($this->tenant);
+
+        $options = $this->medicineService->groupedSelectOptions($this->doctor, null, ['NAPA']);
+
+        $allBrands = collect($options)->flatMap(fn (array $group): array => array_keys($group));
+
+        $this->assertFalse($allBrands->contains('NAPA'));
+        $this->assertTrue($allBrands->contains('SERGEL'));
+    }
+
+    public function test_dose_options_for_catalogue_brand_include_strength_and_other_only(): void
+    {
+        tenancy()->initialize($this->tenant);
+
+        $options = \App\Filament\TenantAdmin\Support\VisitNotesFormSchema::doseOptionsForBrand('NAPA');
+
+        $this->assertSame([
+            '500 mg' => '500 mg',
+            'other' => 'Other',
+        ], $options);
+    }
 }

@@ -208,7 +208,7 @@ class ConsultScreen extends Page implements HasActions
             VisitNotesFormSchema::configureModal(Action::make('completeVisit'))
                 ->label(__('Complete visit'))
                 ->icon('heroicon-o-check-circle')
-                ->color('primary')
+                ->color('success')
                 ->visible(fn (): bool => $this->currentBooking?->status === 'in_chamber')
                 ->form(function (Action $action): array {
                     if (! auth()->user()?->canRecordVisitNotes()) {
@@ -325,7 +325,6 @@ class ConsultScreen extends Page implements HasActions
             ->icon('heroicon-o-pencil-square')
             ->color('primary')
             ->modalHeading($label)
-            ->modalDescription(__('Saved without ending the visit — you can reopen and change this until you tap Complete visit.'))
             ->modalSubmitActionLabel(__('Save'))
             ->form(fn (): array => VisitNotesFormSchema::components(
                 $this->currentPatient,
@@ -347,7 +346,6 @@ class ConsultScreen extends Page implements HasActions
 
                 Notification::make()
                     ->title(__('Prescription saved'))
-                    ->body(__('The visit is still open — tap Complete visit when you are done.'))
                     ->success()
                     ->send();
             });

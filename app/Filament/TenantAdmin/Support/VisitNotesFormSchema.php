@@ -90,6 +90,45 @@ class VisitNotesFormSchema
     public const DOSE_PRESETS = ['500 mg', '10 mg', '20 mg', '40 mg', '400 mg', '5 mg', '50 mg'];
 
     /**
+     * Dose chip options for a selected brand — catalogue strength only, plus Other.
+     *
+     * @return array<string, string>
+     */
+    public static function doseOptionsForBrand(?string $brandName): array
+    {
+        $brand = mb_strtoupper(trim((string) $brandName));
+
+        if ($brand === '') {
+            return ['other' => __('Other')];
+        }
+
+        $strength = Medicine::query()
+            ->where('brand_name', $brand)
+            ->value('default_strength');
+
+        if (blank($strength)) {
+            return ['other' => __('Other')];
+        }
+
+        return [
+            $strength => $strength,
+            'other' => __('Other'),
+        ];
+    }
+
+    /**
+     * @return array{dose: ?string, dose_other: ?string}
+     */
+    public static function prefillDoseFromStrength(?string $defaultStrength): array
+    {
+        if (blank($defaultStrength)) {
+            return ['dose' => null, 'dose_other' => null];
+        }
+
+        return ['dose' => $defaultStrength, 'dose_other' => null];
+    }
+
+    /**
      * @return array<string, mixed>
      */
     public static function stateFromRecord(?VisitRecord $record): array
@@ -440,6 +479,7 @@ class VisitNotesFormSchema
                     ->label(__('Medicines'))
                     ->schema(self::prescriptionItemSchema($prescribingDoctor))
                     ->columns(1)
+                    ->live()
                     ->defaultItems(0)
                     ->addActionLabel(__('Add medicine'))
                     ->reorderable()
@@ -636,10 +676,7 @@ class VisitNotesFormSchema
                 ->maxLength(120),
             ToggleButtons::make('dose')
                 ->label(__('Dose'))
-                ->options(array_merge(
-                    array_combine(self::DOSE_PRESETS, self::DOSE_PRESETS),
-                    ['other' => __('Other')]
-                ))
+                ->options(fn (Get $get): array => self::doseOptionsForBrand($get('medicine_name')))
                 ->inline()
                 ->live(),
             TextInput::make('dose_other')

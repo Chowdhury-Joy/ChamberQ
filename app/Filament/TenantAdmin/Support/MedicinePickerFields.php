@@ -27,7 +27,7 @@ class MedicinePickerFields
 
     public static function prescriptionMedicineSelect(?Doctor $prescribingDoctor = null): Select
     {
-        return self::medicineSelect(__('Medicine (brand)'), $prescribingDoctor)
+        return self::medicineSelect(__('Medicine (brand)'), $prescribingDoctor, excludeSiblings: true)
             ->afterStateUpdated(function (?string $state, Set $set, Get $get): void {
                 if (blank($state)) {
                     return;
@@ -47,14 +47,9 @@ class MedicinePickerFields
                     $set('generic_name', $match->generic_name);
                 }
                 if (blank($get('dose'))) {
-                    $prefillDose = $match->default_strength;
-                    if (filled($prefillDose) && in_array($prefillDose, VisitNotesFormSchema::DOSE_PRESETS, true)) {
-                        $set('dose', $prefillDose);
-                        $set('dose_other', null);
-                    } elseif (filled($prefillDose)) {
-                        $set('dose', 'other');
-                        $set('dose_other', $prefillDose);
-                    }
+                    $prefill = VisitNotesFormSchema::prefillDoseFromStrength($match->default_strength);
+                    $set('dose', $prefill['dose']);
+                    $set('dose_other', $prefill['dose_other']);
                 }
                 if (blank($get('frequency'))) {
                     $set('frequency', '1+1+1');
@@ -67,17 +62,27 @@ class MedicinePickerFields
             });
     }
 
-    private static function medicineSelect(string $label, ?Doctor $prescribingDoctor = null): Select
-    {
+    private static function medicineSelect(
+        string $label,
+        ?Doctor $prescribingDoctor = null,
+        bool $excludeSiblings = false,
+    ): Select {
         $medicineService = app(MedicineService::class);
 
         return Select::make('medicine_name')
             ->label($label)
             ->placeholder(__('Choose from the list…'))
-            ->options(fn (): array => $medicineService->groupedSelectOptions(
-                auth()->user(),
-                $prescribingDoctor,
-            ))
+            ->options(function (Get $get) use ($medicineService, $prescribingDoctor, $excludeSiblings): array {
+                $exclude = $excludeSiblings
+                    ? self::brandsSelectedOnOtherRepeaterRows($get)
+                    : [];
+
+                return $medicineService->groupedSelectOptions(
+                    auth()->user(),
+                    $prescribingDoctor,
+                    $exclude,
+                );
+            })
             ->searchable()
             ->live()
             ->required()
@@ -100,5 +105,28 @@ class MedicinePickerFields
 
                 return $match?->displayLabel() ?? $brand;
             });
+    }
+
+    /**
+     * Brands already chosen on sibling repeater rows (current row kept visible).
+     *
+     * @return list<string>
+     */
+    private static function brandsSelectedOnOtherRepeaterRows(Get $get): array
+    {
+        $currentBrand = mb_strtoupper(trim((string) ($get('medicine_name') ?? '')));
+        $exclude = [];
+
+        foreach ($get('../../prescription_items') ?? [] as $item) {
+            $brand = mb_strtoupper(trim((string) ($item['medicine_name'] ?? '')));
+
+            if ($brand === '' || $brand === $currentBrand) {
+                continue;
+            }
+
+            $exclude[] = $brand;
+        }
+
+        return array_values(array_unique($exclude));
     }
 }

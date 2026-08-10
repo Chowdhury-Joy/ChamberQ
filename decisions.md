@@ -1104,3 +1104,216 @@
  <action>Introduce `TenancyUrl::publicAbsolute()` for every outbound patient/TV URL; keep same-origin paths relative (`absolute: false`) or root-relative via `public_asset()`; harden Domain link scheme so a leftover localhost APP_URL cannot force `http://` onto a real clinic host.</action>
  <reason>One shared builder stops each call site inventing its own host rules; relative same-origin URLs survive a bad APP_URL or missing proxy headers without sending patients off-domain.</reason>
 </decision>
+
+## 2026-08-09
+
+<decision>
+ <category>CRO</category>
+ <context>ChamberQ sales proposals and doctor-facing copy were framing the product as a “patient website,” listing pay-at-chamber as a feature, and saying “no patient login” in a way that sounded like patients could only book — understating ticket follow-up, portal lookup, and prescription links, and missing the always-improving product story.</context>
+ <action>Sales and proposal language: (1) call the public site the doctor’s <strong>portfolio website</strong> that also works as their booking platform — not a “patient website”; (2) do <strong>not</strong> sell pay-at-chamber or absence of a payment gateway as a product feature (that is operational reality, not a ChamberQ capability); (3) describe the patient side positively as a <strong>full experience without sign-up</strong> — book, follow ticket, check status by phone, receive prescription links — not “no login accounts”; (4) state that ChamberQ is actively developed and new features roll out to subscribed chambers automatically without per-feature fees or the doctor having to ask.</action>
+ <reason>Matches how doctors think about their professional presence (portfolio first), avoids sounding like a limitation when patients get more than booking, and positions the monthly fee as a living product rather than a frozen brochure site.</reason>
+</decision>
+
+## 2026-08-09T10:52:29+0600
+
+<decision>
+ <category>Code</category>
+ <context>Composer on a PHP 8.5 Mac locked Filament's HTML sanitiser to Symfony 8, which crashes on the live PHP 8.3 server whenever Filament sanitises form HTML.</context>
+ <action>Require PHP ^8.3 (matches production and Filament's openspout dependency), pin symfony/html-sanitizer to ^7.0, set composer.json config.platform.php to 8.3.0, and re-lock related Symfony components on the 7.4 line.</action>
+ <reason>Composer must resolve for the server patients hit, not the developer laptop. v7 still uses Masterminds on PHP &lt; 8.4, so admin saves work on 8.3 without upgrading the host overnight.</reason>
+</decision>
+
+## 2026-08-09T23:46:54+0600
+
+<decision>
+ <category>CRO</category>
+ <context>The CBPH proposal showed only a flat ৳75,000 setup + ৳7,500 monthly, so the hospital could not see why a multi-cabin clinic costs what it does versus a solo chamber.</context>
+ <action>CBPH proposal Investment section is itemized and CBPH-named: portfolio website at ৳2,000/page (10 pages = ৳20,000), queue management ৳30,000, waiting-room/outdoor TVs ৳8,000, consult & home-programme screens ৳10,000, rooms/therapists/sittings & training ৳7,000 (setup total ৳75,000); monthly ৳7,500 explained as hosting, multi-therapist use, automatic product updates, and desk support. SMS remains optional prepaid. Cash only.</action>
+ <reason>Line items with a plain-English “why” make the quote feel built for CBPH (shared desk, Female Dept., named therapists) rather than a generic clinic price tag — and match how the buyer evaluates work (website pages vs queue system vs screens).</reason>
+</decision>
+
+
+## 2026-08-09T23:58:34+0600
+
+<decision>
+ <category>CRO</category>
+ <context>CBPH setup line items previously summed exactly to ৳75,000 with a per-page website rate, so the special felt like a flat total rather than a concession — and a hospital-sized site is closer to 15–25 pages than ten.</context>
+ <action>Show inflated round list prices that sum to ৳95,000 (website ৳30,000 for a 15–25 page overview with no per-page rate; queue ৳35,000; TVs ৳10,000; consult screens ৳12,000; rooms/training ৳8,000), then CBPH special setup ৳75,000 and “You save ৳20,000”. Monthly stays ৳7,500.</action>
+ <reason>Round list → special total makes the discount readable; page-range overview matches how a multi-therapist hospital site is scoped without nickel-and-diming per page.</reason>
+</decision>
+
+
+## 2026-08-10T00:08:17+0600
+
+<decision>
+ <category>CRO</category>
+ <context>CBPH proposal had too many setup micro-lines (TVs, consult screens, rooms/training) that confused the buyer; website was underpriced for a 15–25 page hospital site; hosting cost was invisible.</context>
+ <action>Simplify setup to two cash lines — portfolio website ৳50,000 and “Setup the system” ৳55,000 (queue, TVs, cabin screens, rooms, training) — standard total ৳105,000, CBPH special ৳75,000 (save ৳30,000). Add hosting ৳10,000/year, auto-renewable, paid by ChamberQ until storage reaches 200GB. Monthly remains ৳7,500 for product use, updates, and desk support.</action>
+ <reason>Fewer lines read as a hospital package; higher website + system list makes the special feel real; hosting with a 200GB courtesy cap is a clear extra benefit without burying it inside monthly.</reason>
+</decision>
+
+
+## 2026-08-10T00:11:25+0600
+
+<decision>
+ <category>CRO</category>
+ <context>Owner did not want the CBPH quote collapsed into website + one big “setup the system”; only the three micro-lines (TVs, consult screens, rooms/training) should go — replaced by a small setup fee — while queue management stays its own line.</context>
+ <action>CBPH setup lines: website ৳50,000; queue management ৳35,000; Setup the system ৳5,000 (rooms, TVs, cabin screens, training). Standard total ৳90,000 → CBPH special ৳75,000 (save ৳15,000). Hosting ৳10,000/year auto-renewable, paid by ChamberQ until 200GB, unchanged.</action>
+ <reason>Matches the owner’s instruction exactly: remove those three priced lines, keep queue separate, put system wiring at ৳5,000.</reason>
+</decision>
+
+
+## 2026-08-10T00:12:31+0600
+
+<decision>
+ <category>CRO</category>
+ <context>CBPH proposal hosting line was ৳10,000/year.</context>
+ <action>Hosting is ৳15,000/year, auto-renewable; ChamberQ still pays until storage reaches 200GB.</action>
+ <reason>Owner set the hosting list price at ৳15,000.</reason>
+</decision>
+
+
+## 2026-08-10T00:24:16+0600
+
+<decision>
+ <category>CRO</category>
+ <context>CBPH quote needed SEO content as a visible line, and the monthly fee needed to show what the hospital pays for besides product use.</context>
+ <action>Setup adds “SEO’d blog articles — 6 to start” at ৳3,000 (standard setup total ৳93,000 → CBPH special ৳75,000, save ৳18,000). Monthly ৳7,500 broken into ChamberQ clinic ৳6,500 + 2 SEO’d articles/month ৳1,000. Hosting remains ৳15,000/year (we pay until 200GB). PDF not regenerated until owner asks.</action>
+ <reason>Starter + ongoing articles match how search content is sold; breaking monthly makes the ৳1,000 article retainer obvious inside the same ৳7,500 total.</reason>
+</decision>
+
+
+## 2026-08-10T00:26:39+0600
+
+<decision>
+ <category>CRO</category>
+ <context>CBPH quote needed hosting visible on the one-time table without folding it into cash setup or monthly, and monthly needed the same what/why/amount detail as setup.</context>
+ <action>Hosting listed on one-time table as ৳15,000/year with * footnote (auto-renewable; ChamberQ pays until 200GB; not in ৳75,000 cash). Monthly broken like setup: clinic use ৳4,000, updates ৳1,500, desk support ৳1,000, 2 SEO articles ৳1,000 (total ৳7,500). No hosting on monthly. PDF not regenerated until asked.</action>
+ <reason>Star + footnote keeps the hosting benefit and courtesy cap clear without inflating the special; matching table shape makes monthly easy to compare with setup.</reason>
+</decision>
+
+
+## 2026-08-10T00:31:15+0600
+
+<decision>
+ <category>CRO</category>
+ <context>“Ongoing product updates” on the CBPH monthly quote was unclear to the buyer; clinic use needed to read as maintenance for website vs queue, with a slight list inflate like setup.</context>
+ <action>Monthly lines: website maintenance ৳3,000, queue maintenance ৳3,500, desk support ৳1,500, 2 SEO articles ৳1,000 — standard ৳9,000 → CBPH special ৳7,500 (save ৳1,500). Dropped “product updates.”</action>
+ <reason>Maintenance split matches how the hospital thinks about the site vs the desk; list → special mirrors the setup discount pattern.</reason>
+</decision>
+
+
+## 2026-08-10T00:40:03+0600
+
+<decision>
+ <category>CRO</category>
+ <context>CBPH monthly maintenance lines felt too high; owner wanted data backup and hosting maintenance on the monthly list while keeping standard monthly at ৳9,000.</context>
+ <action>Monthly standard ৳9,000: website maintenance ৳2,000, queue maintenance ৳2,500, desk support ৳2,000, SEO 2 articles ৳1,000, data backup ৳1,000, hosting maintenance ৳500 → CBPH special ৳7,500 (save ৳1,500). Desk support = WhatsApp/remote help for reception and therapists.</action>
+ <reason>Lower maintenance + backup/hosting care reads as a fuller ops package without raising the special.</reason>
+</decision>
+
+
+## 2026-08-10T02:22:55+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>The shared medicine catalogue (~88 brands) was too thin for real GP prescribing and weak in sales against “large database” competitors; the owner wanted ~450 verified-enough brands without a 24k MedEx dump or licensing risk.</context>
+ <action>Expanded `data/medicine-list-draft.csv` to ~460 brands across 22 categories. Added `data/build-medicine-catalogue.py`: ~60 household brands pinned with correct strength/form; remaining rows scored from BDDrugBank `medex_merged.csv` (build-time reference only) within per-category budgets. ORS capped at ~10 real products (removed nonsense ORS PLUS variants). Production test now expects &gt;400 rows after `catalogues:load`.</action>
+ <reason>Curated scale beats raw row count for prescribing UX and patient safety; pinned brands stop MedEx multi-form ambiguity (e.g. ACE IV vs 500 mg tablet); rebuild script keeps the list maintainable without shipping third-party data in the repo.</reason>
+</decision>
+
+
+## 2026-08-10T16:10:23+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Pre-production readiness called for off-server data copies after cyber attack or a from-scratch redeploy; nothing in the app exported or restored tenant data, and clinical media on disk was already flagged as unbacked-up.</context>
+ <action>Ship disaster-recovery ZIP export + import: chamber Admin **Data backup** page (Settings) and Super Admin **Platform data backup** plus per-tenant download/restore on Tenants. Each ZIP holds one UTF-8 CSV per table, `manifest.json`, FK-ordered import (`replace` or `merge`, optional `dry-run`). Artisan `data:backup-export` / `data:backup-import` for empty-server rebuilds. Passwords never exported; import assigns random passwords. Voice/photo binaries stay off-ZIP (paths only).</action>
+ <reason>One-click full-chamber backup matches the owner's disaster-recovery goal better than per-table Filament exporters; round-trip CSV keeps Excel-readable copies while UUID primary keys preserve relationships on restore.</reason>
+</decision>
+
+2026-08-10T20:50:09+0600
+
+## 2026-08-10T20:49:56+0600
+
+<decision>
+  <category>Business_Logic</category>
+  <context>Small / price-sensitive solo chambers need a quieter, thinner offer than full Solo, without becoming the main sales focus or a separate company brand. Full Solo remains the primary one-doctor product; Clinic stays for multi-doctor.</context>
+  <action>Split one-doctor marketing into two named plans under ChamberQ: **Rising Star** (small-doctor lane) and **Maestro** (main Solo, formerly marketed as Solo). Rising Star: full multi-section homepage; **no extra custom pages** (homepage only); **no outdoor/TV queue screen**; **live queue on the patient’s phone ticket**; website + booking focused; **100 patients per month** cap; listed on the central marketing homepage **only in the pricing section** (not featured elsewhere) plus a dedicated **subdomain**; not actively marketed beyond that. Maestro: full Solo product including TV/outdoor screen; will later support **additional custom pages**. Clinic plan unchanged. Rising Star is not the owner’s main focus.</action>
+  <reason>Gives small chambers a clear, limited package that protects Maestro as the premium one-doctor story, caps support load (no TV setup, no multi-page site, monthly patient limit), and still lets curious buyers find Rising Star without a second brand or a hard Lite push in every sales channel.</reason>
+</decision>
+2026-08-10T21:09:55+0600
+
+## 2026-08-10T21:09:55+0600
+
+<decision>
+  <category>Business_Logic</category>
+  <context>Rising Star / Maestro plan split was logged 2026-08-10T20:49:56+0600 without prices, subdomain hostname, or a precise patient-cap definition.</context>
+  <action>Rising Star pricing: **৳8,000 setup / ৳1,200 per month** (~৳22,400 year-1). Cap = **100 bookings created per calendar month** (not unique patients); overage should block further online bookings and point to Maestro upgrade. Marketing subdomain: **risingstar.chamberq.com**. Maestro keeps current Solo sticker **৳15,000 setup / ৳3,000 per month** until changed. Clinic unchanged.</action>
+  <reason>Option B setup with a slightly lower monthly (৳1,200 vs ৳1,500) keeps Rising Star clearly under Maestro (~half year-1) without racing the ৳500 free-tier competitors; booking-count cap is simple to enforce and explain.</reason>
+</decision>
+2026-08-10T22:08:24+0600
+
+## 2026-08-10T22:08:24+0600
+
+<decision>
+  <category>Business_Logic</category>
+  <context>Rising Star monthly booking cap was set at 100 (2026-08-10T21:09:55+0600). Owner tightened the small-doctor lane and clarified unlimited use on higher plans.</context>
+  <action>Rising Star cap is **50 bookings created per calendar month** (was 100). **Maestro** has **no booking cap** (unlimited). **Clinic** is **yes to everything** in this split: full site features (including extra pages when shipped), TV/outdoor screen, phone live queue, multi-doctor/labs as today, and **no Rising Star-style booking cap** (unlimited).</action>
+  <reason>50 bookings/month better matches a small chamber and pushes upgrade to Maestro sooner; Maestro and Clinic stay the unlimited operational products.</reason>
+</decision>
+
+## 2026-08-10T22:24:20+0600
+<decision>
+  <category>CRO</category>
+  <context>Two Belle Vue Hospital doctors (Dr. Shamim Ahmed — diabetes & medicine; Dr. Sharfuddin Mahmood — cardiology) needed sales proposals after flyer research. Owner chose 1C (separate proposal per doctor) and Maestro pricing.</context>
+  <action>Shipped two Maestro solo proposals under `docs/proposals/`: `Dr-Shamim-Ahmed-ChamberQ-Proposal` and `Dr-Sharfuddin-Mahmood-ChamberQ-Proposal` (HTML + Markdown each). Same CBPH proposal shell; personalized chambers/sittings (Belle Vue + Labaid / Belle Vue + Shajinaz); sticker ৳15,000 setup / ৳3,000 month; WhatsApp 01818-614349.</action>
+  <reason>One doctor = one Maestro story keeps the pitch personal and matches Solo sticker; Clinic-style multi-doctor framing would undersell their individual practice and overcomplicate a first conversation.</reason>
+</decision>
+
+## 2026-08-10T22:27:33+0600
+<decision>
+  <category>CRO</category>
+  <context>Belle Vue Maestro proposals needed the competitor comparison chart, and all sales pages must stay portrait (A4) — the existing comparison PDF was landscape letter.</context>
+  <action>Embedded the v3 strengths comparison as three portrait A4 pages inside both doctor HTML proposals (before Investment). Also wrote `docs/slides/ChamberQ-Competitor-Comparison-v3-portrait.pdf` and `docs/proposals/build-portrait-comparison.py` to regenerate. Doctor-facing pages omit the internal “gaps” table; the standalone portrait PDF keeps it.</action>
+  <reason>Doctors print/share one portrait PDF; landscape charts force sideways pages mid-proposal. Strengths-only in the proposal stays sales-safe; gaps stay available for internal use.</reason>
+</decision>
+
+## 2026-08-10T22:31:42+0600
+
+<decision>
+  <category>Business_Logic</category>
+  <context>Rising Star earlier included live queue on the patient phone ticket (no TV). Owner narrowed the small-doctor lane further.</context>
+  <action>Rising Star has **no phone live queue** and **no outdoor/TV queue**. Rising Star is **website (full homepage, no extra pages) + online booking only**, with the **50 bookings created / calendar month** cap. Maestro and Clinic keep phone live queue (and TV where applicable); Clinic remains yes to everything.</action>
+  <reason>Keeps Rising Star focused on digital presence and taking serials online without queue-ops setup or support; live queue stays a Maestro/Clinic differentiator.</reason>
+</decision>
+
+## 2026-08-10T23:32:04+0600
+<decision>
+  <category>CRO</category>
+  <context>Owner wanted sendable PDFs of the two Belle Vue Maestro proposals, with the portrait comparison chart inside each file — not a separate landscape/portrait slide.</context>
+  <action>Printed both HTML proposals to portrait A4 PDFs via Brave headless: `Dr-Shamim-Ahmed-ChamberQ-Proposal.pdf` and `Dr-Sharfuddin-Mahmood-ChamberQ-Proposal.pdf` (14 pages each; comparison on pages 10–12). Regenerator: `docs/proposals/print-doctor-proposals.sh`.</action>
+  <reason>One PDF per doctor is what gets WhatsApp’d; comparison must travel with the pitch, upright with the rest of the proposal.</reason>
+</decision>
+
+## 2026-08-11T02:29:34+0600
+<decision>
+  <category>Business_Logic</category>
+  <context>Doctors were picking the same brand twice on one prescription, and dose chips showed strengths (e.g. 20 mg) that the selected brand does not carry in the catalogue.</context>
+  <action>Prescription repeater dropdown excludes brands already chosen on sibling rows. Dose ToggleButtons resolve from the selected brand's `default_strength` plus Other only; frequency/duration presets unchanged.</action>
+  <reason>Matches how real prescribing works — one line per brand, dose from the bottle label — and stops misleading strength chips.</reason>
+</decision>
+
+<decision>
+  <category>UI/UX</category>
+  <context>Mobile Write prescription modal showed a grey lecture under the title; Complete visit and Write prescription were both blue on Consult Screen.</context>
+  <action>Removed the Write prescription modal description and the post-save "visit still open" toast body. Complete visit is green on Consult Screen and Live Queue Control.</action>
+  <reason>Doctors already know the flow; colour separates "keep writing" (blue) from "finish visit" (green).</reason>
+</decision>
+
+<decision>
+  <category>Business_Logic</category>
+  <context>Clinic websites duplicated departments, blog cards, and doctor bios inside homepage JSON — five departments meant retyping the same card five times.</context>
+  <action>Clinic relational CMS: Departments and Blog posts as tenant tables with one list + one detail Blade each; doctor public profiles on `doctors`; homepage `service_matrix` / `health_insights` / `doctor_grid` read published rows. Solo homepage unchanged.</action>
+  <reason>One template, many items — like Word styles vs copying paragraphs — and staff edit content once in Website admin.</reason>
+</decision>

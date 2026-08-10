@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BlogPost;
 use App\Models\Chamber;
+use App\Models\Department;
 use App\Models\Doctor;
 use App\Models\ScheduleSession;
 use App\Models\WebPage;
@@ -41,12 +43,27 @@ class WebPageController extends Controller
             && $doctors->isNotEmpty()
             && $sessions->isNotEmpty();
 
+        $departments = tenant()?->isSoloDoctor()
+            ? collect()
+            : Department::published()->ordered()->limit(8)->get();
+
+        $blogPosts = tenant()?->isSoloDoctor()
+            ? collect()
+            : BlogPost::published()->ordered()->limit(8)->get();
+
+        $websiteDoctors = tenant()?->isSoloDoctor()
+            ? collect()
+            : Doctor::publishedOnWebsite()->limit(8)->get();
+
         return view($view, [
             'page' => $page,
             // Loaded here rather than queried from inside section blades.
             'doctors' => $doctors,
             'sessions' => $sessions,
             'bookingAvailable' => $bookingAvailable,
+            'departments' => $departments,
+            'blogPosts' => $blogPosts,
+            'websiteDoctors' => $websiteDoctors,
         ]);
     }
 }

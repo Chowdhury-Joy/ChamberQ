@@ -12,6 +12,7 @@ use App\Http\Controllers\VisitMediaController;
 use App\Http\Controllers\PWAController;
 use App\Http\Controllers\QueueStatusController;
 use App\Http\Controllers\ScreenController;
+use App\Http\Controllers\ClinicContentController;
 use App\Http\Controllers\WebPageController;
 use App\Http\Middleware\EnsureTenantAcceptsBookings;
 use App\Http\Middleware\Localization;
@@ -168,9 +169,22 @@ $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
         ->middleware('throttle:30,1')
         ->name($routeName('patient.portal'));
 
+    Route::get('/departments', [ClinicContentController::class, 'departmentsIndex'])
+        ->name($routeName('clinic.departments.index'));
+    Route::get('/departments/{slug}', [ClinicContentController::class, 'departmentShow'])
+        ->name($routeName('clinic.departments.show'));
+    Route::get('/blog', [ClinicContentController::class, 'blogIndex'])
+        ->name($routeName('clinic.blog.index'));
+    Route::get('/blog/{slug}', [ClinicContentController::class, 'blogShow'])
+        ->name($routeName('clinic.blog.show'));
+    Route::get('/doctors', [ClinicContentController::class, 'doctorsIndex'])
+        ->name($routeName('clinic.doctors.index'));
+    Route::get('/doctors/{slug}', [ClinicContentController::class, 'doctorShow'])
+        ->name($routeName('clinic.doctors.show'));
+
     Route::get('/{slug?}', [WebPageController::class, 'show'])
         // Exact-segment negative lookahead — (?!foo|bar$) only anchors the last alt.
-        ->where('slug', '^(?!(?:tenant|admin|api|lang|bookings|portal)$).*$');
+        ->where('slug', '^(?!(?:tenant|admin|api|lang|bookings|portal|departments|blog|doctors)$).*$');
 };
 
 foreach (config('tenancy.central_domains', []) as $centralDomain) {

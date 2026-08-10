@@ -3,7 +3,11 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
+use App\Support\HtmlSanitizer;
+use App\Support\SafeUrl;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Str;
 
 class Doctor extends Model
 {
@@ -16,13 +20,40 @@ class Doctor extends Model
         'staff_may_enter_prescriptions',
         'qualifications',
         'registration_number',
+        'public_slug',
+        'public_title',
+        'bio',
+        'photo_url',
+        'show_on_website',
+        'website_sort_order',
         'notify_channels',
     ];
 
     protected $casts = [
         'staff_may_enter_prescriptions' => 'boolean',
+        'show_on_website' => 'boolean',
+        'website_sort_order' => 'integer',
         'notify_channels' => 'array',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (self $doctor): void {
+            if (filled($doctor->public_slug)) {
+                $doctor->public_slug = Str::slug($doctor->public_slug);
+            } elseif ($doctor->show_on_website && filled($doctor->name)) {
+                $doctor->public_slug = Str::slug($doctor->name);
+            }
+
+            if (filled($doctor->bio)) {
+                $doctor->bio = HtmlSanitizer::clean($doctor->bio);
+            }
+
+            if (filled($doctor->photo_url)) {
+                $doctor->photo_url = SafeUrl::href($doctor->photo_url, '');
+            }
+        });
+    }
 
     public const PRACTICE_GENERAL = 'general_physician';
 
@@ -146,5 +177,32 @@ class Doctor extends Model
     public function wantsWhatsapp(string $stage): bool
     {
         return (bool) ($this->notifyChannels()[$stage]['whatsapp'] ?? false);
+    }
+
+    /**
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
+    public function scopePublishedOnWebsite(Builder $query): Builder
+    {
+        return $query
+            ->where('show_on_website', true)
+            ->whereNotNull('public_slug')
+            ->where('public_slug', '!=', '')
+            ->orderBy('website_sort_order')
+            ->orderBy('name');
+    }
+
+    public function websiteSpecialtyLabel(): string
+    {
+        if (filled($this->public_title)) {
+            return $this->public_title;
+        }
+
+        if (filled($this->qualifications)) {
+            return $this->qualifications;
+        }
+
+        return $this->practiceTypeLabel();
     }
 }

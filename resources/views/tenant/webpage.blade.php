@@ -75,6 +75,9 @@
                     'doctors' => $doctors ?? [],
                     'sessions' => $sessions ?? [],
                     'bookingAvailable' => $bookingAvailable ?? false,
+                    'departments' => $departments ?? collect(),
+                    'blogPosts' => $blogPosts ?? collect(),
+                    'websiteDoctors' => $websiteDoctors ?? collect(),
                     'tenant' => $tenant,
                 ])
             @endif

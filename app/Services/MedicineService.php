@@ -52,17 +52,25 @@ class MedicineService
     /**
      * Grouped options for prescription / My medicines dropdowns.
      *
+     * @param  list<string>  $excludeBrands  Uppercase brand names to omit (already on this prescription).
      * @return array<string, array<string, string>>
      */
-    public function groupedSelectOptions(?User $doctor, ?Doctor $prescribingDoctor = null): array
-    {
+    public function groupedSelectOptions(
+        ?User $doctor,
+        ?Doctor $prescribingDoctor = null,
+        array $excludeBrands = [],
+    ): array {
         $prescribingDoctor ??= $this->resolvePrescribingDoctor();
         $practiceType = $prescribingDoctor?->practice_type ?? Doctor::PRACTICE_GENERAL;
+        $exclude = $this->normalizedBrandSet($excludeBrands);
 
         $groups = [];
 
         if ($doctor) {
-            $personal = $this->personalMedicineOptions($doctor, $practiceType);
+            $personal = $this->excludeBrandsFromOptions(
+                $this->personalMedicineOptions($doctor, $practiceType),
+                $exclude,
+            );
 
             if ($personal !== []) {
                 $groups[__('Your medicines')] = $personal;
@@ -70,10 +78,51 @@ class MedicineService
         }
 
         foreach ($this->catalogMedicinesForPracticeType($practiceType) as $category => $options) {
-            $groups[$category] = $options;
+            $filtered = $this->excludeBrandsFromOptions($options, $exclude);
+
+            if ($filtered !== []) {
+                $groups[$category] = $filtered;
+            }
         }
 
         return $groups;
+    }
+
+    /**
+     * @param  list<string>  $brands
+     * @return array<string, true>
+     */
+    private function normalizedBrandSet(array $brands): array
+    {
+        $set = [];
+
+        foreach ($brands as $brand) {
+            $normalized = mb_strtoupper(trim((string) $brand));
+
+            if ($normalized !== '') {
+                $set[$normalized] = true;
+            }
+        }
+
+        return $set;
+    }
+
+    /**
+     * @param  array<string, string>  $options
+     * @param  array<string, true>  $exclude
+     * @return array<string, string>
+     */
+    private function excludeBrandsFromOptions(array $options, array $exclude): array
+    {
+        if ($exclude === []) {
+            return $options;
+        }
+
+        return array_filter(
+            $options,
+            fn (string $label, string $brand): bool => ! isset($exclude[$brand]),
+            ARRAY_FILTER_USE_BOTH,
+        );
     }
 
     /**
