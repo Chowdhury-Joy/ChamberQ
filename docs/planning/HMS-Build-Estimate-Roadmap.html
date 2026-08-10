@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Full HMS on the ChamberQ Stack — Build Estimate &amp; Phased Roadmap</title>
+<style>
+  :root {
+    --ink: #0f3d3e;
+    --ink-soft: #134e4a;
+    --accent: #0f766e;
+    --body: #1a2332;
+    --muted: #6b7280;
+    --muted-2: #64748b;
+    --line: #e5e7eb;
+    --card: #f4f7f7;
+    --card-accent: #ecf6f5;
+    --cover: #0c3a3b;
+    --cover-2: #0f4f4a;
+    --mint: #5eead4;
+    --warn-bg: #fef3c7;
+    --warn-border: #f59e0b;
+  }
+
+  @page {
+    size: A4;
+    margin: 18mm 16mm 16mm;
+  }
+  @page cover {
+    size: A4;
+    margin: 0;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: var(--body);
+    font-size: 10.5pt;
+    line-height: 1.55;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .cover {
+    page: cover;
+    page-break-after: always;
+    width: 210mm;
+    height: 297mm;
+    min-height: 297mm;
+    margin: 0;
+    padding: 28mm 22mm 20mm;
+    background: linear-gradient(135deg, #0a2f30 0%, #0f4a46 55%, #0c3d3a 100%);
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover-brand {
+    font-size: 12pt;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin: 0 0 8px;
+    color: #ffffff;
+  }
+  .cover-tag {
+    font-size: 10.5pt;
+    color: rgba(255,255,255,0.78);
+    max-width: 380px;
+    margin: 0;
+    line-height: 1.5;
+  }
+  .cover-hero { margin-top: 52mm; max-width: 460px; }
+  .cover-rule {
+    width: 40px;
+    height: 2px;
+    background: var(--mint);
+    border: 0;
+    margin: 0 0 20px;
+  }
+  .cover-title {
+    font-size: 30pt;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1.1;
+    margin: 0 0 18px;
+    color: #ffffff;
+  }
+  .cover-lead {
+    font-size: 12pt;
+    color: rgba(255,255,255,0.9);
+    max-width: 420px;
+    line-height: 1.55;
+    margin: 0;
+  }
+  .cover-meta {
+    position: absolute;
+    left: 22mm;
+    bottom: 18mm;
+    font-size: 10.5pt;
+    line-height: 1.7;
+    color: rgba(255,255,255,0.88);
+  }
+  .cover-meta strong { color: #fff; font-weight: 700; }
+
+  .sheet {
+    page-break-after: always;
+    padding-bottom: 6mm;
+  }
+  .sheet:last-child { page-break-after: auto; }
+
+  .eyebrow {
+    font-size: 8.5pt;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 10px;
+  }
+  h1 {
+    font-size: 22pt;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 0 0 12px;
+    line-height: 1.15;
+  }
+  h2 {
+    font-size: 13pt;
+    font-weight: 700;
+    color: var(--ink-soft);
+    margin: 22px 0 10px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 4px;
+  }
+  h3 {
+    font-size: 11pt;
+    font-weight: 700;
+    color: var(--body);
+    margin: 16px 0 8px;
+  }
+  p { margin: 0 0 10px; }
+  .subhead {
+    font-size: 11pt;
+    color: var(--muted-2);
+    margin: 0 0 18px;
+    line-height: 1.5;
+  }
+  ul, ol { margin: 0 0 12px; padding-left: 1.25em; }
+  li { margin-bottom: 5px; }
+  li strong { color: var(--ink-soft); }
+
+  .callout {
+    background: var(--card-accent);
+    border-left: 3px solid var(--accent);
+    padding: 10px 14px;
+    margin: 14px 0;
+    font-size: 10pt;
+  }
+  .callout-warn {
+    background: var(--warn-bg);
+    border-left: 3px solid var(--warn-border);
+  }
+  .callout strong { color: var(--ink); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 10px 0 16px;
+    font-size: 9pt;
+    line-height: 1.35;
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 6px 8px;
+    vertical-align: top;
+    text-align: left;
+  }
+  th {
+    background: var(--ink);
+    color: #fff;
+    font-weight: 700;
+    font-size: 8.5pt;
+    letter-spacing: 0.03em;
+  }
+  tr:nth-child(even) td { background: var(--card); }
+  td.num { text-align: center; font-variant-numeric: tabular-nums; }
+  td.right { text-align: right; font-variant-numeric: tabular-nums; }
+  tfoot td {
+    font-weight: 700;
+    background: var(--card-accent);
+  }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 12px 0 16px;
+  }
+  .stat-box {
+    background: var(--card);
+    border: 1px solid var(--line);
+    padding: 10px 12px;
+    border-radius: 4px;
+  }
+  .stat-label {
+    font-size: 8pt;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 4px;
+  }
+  .stat-value {
+    font-size: 14pt;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.2;
+  }
+  .stat-note {
+    font-size: 8.5pt;
+    color: var(--muted-2);
+    margin-top: 2px;
+  }
+
+  .answer-box {
+    background: var(--ink);
+    color: #fff;
+    padding: 14px 16px;
+    margin: 16px 0;
+    border-radius: 4px;
+  }
+  .answer-box p { margin: 0; color: rgba(255,255,255,0.92); }
+  .answer-box strong { color: var(--mint); font-size: 12pt; }
+
+  .footer-note {
+    font-size: 8.5pt;
+    color: var(--muted);
+    margin-top: 20px;
+    border-top: 1px solid var(--line);
+    padding-top: 8px;
+  }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+  }
+</style>
+</head>
+<body>
+
+<!-- Cover -->
+<div class="cover">
+  <p class="cover-brand">ChamberQ</p>
+  <p class="cover-tag">Hospital &amp; clinic management on Laravel / Filament</p>
+  <div class="cover-hero">
+    <hr class="cover-rule">
+    <h1 class="cover-title">Full HMS Build Estimate &amp; Phased Roadmap</h1>
+    <p class="cover-lead">How long to build a 13-module Hospital Management System on the ChamberQ stack — measured velocity, bottom-up estimate, and module-by-module delivery plan.</p>
+  </div>
+  <div class="cover-meta">
+    <strong>Prepared:</strong> 2026-08-09<br>
+    <strong>Status:</strong> Planning only — no code changes proposed<br>
+    <strong>Team:</strong> Owner + 1 developer + 1 domain/QA<br>
+    <strong>Delivery:</strong> Module by module → test → production → next
+  </div>
+</div>
+
+<!-- Context -->
+<div class="sheet">
+  <p class="eyebrow">Section 1</p>
+  <h1>Context</h1>
+  <p class="subhead">ChamberQ is live with real paying clients. The next goal is a full Hospital Management System on the same stack.</p>
+
+  <div class="callout">
+    <strong>Stack:</strong> Laravel 12 / Filament 4 / stancl tenancy. Laravel 13 upgrade is explicitly deferred — do not act on it unless asked.
+  </div>
+
+  <h2>Competitor reference</h2>
+  <p>The benchmark bid is <strong>AGMM Soft → Moin Uddin Pain Solution, Chattogram</strong>, dated 25 July 2026:</p>
+  <div class="stat-grid">
+    <div class="stat-box">
+      <div class="stat-label">One-time</div>
+      <div class="stat-value">৳380,000</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Monthly</div>
+      <div class="stat-value">৳12,000</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Modules claimed</div>
+      <div class="stat-value">13</div>
+      <div class="stat-note">"All modules within a month including training"</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">This document answers</div>
+      <div class="stat-value" style="font-size:11pt;">How long would it take us?</div>
+    </div>
+  </div>
+
+  <h2>Delivery model (confirmed)</h2>
+  <ul>
+    <li><strong>Module by module</strong> — build one module, test in house, ship to production, then the next.</li>
+    <li><strong>Team:</strong> owner + 1 developer + 1 domain/QA person.</li>
+  </ul>
+
+  <div class="callout callout-warn">
+    <strong>Read the "one month" claim correctly.</strong> AGMM is not building this in a month. They are implementing and configuring an existing product they already sold to Chittagong Medical College (Outdoor), Chevron Clinical Lab, Asian Specialized, and others. Building it took them years. Our comparison is <strong>build-vs-build</strong>.
+  </div>
+</div>
+
+<!-- Module comparison -->
+<div class="sheet">
+  <p class="eyebrow">Section 2</p>
+  <h1>What the competitor is selling</h1>
+  <p class="subhead">Every sub-module listed in the competitor PDF (pages 4–9), counted and mapped against ChamberQ today.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Module</th>
+        <th class="num">Sub-modules</th>
+        <th>We have today</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td class="num">1</td><td>Dashboard &amp; Registration</td><td class="num">1</td><td>partial</td></tr>
+      <tr><td class="num">2</td><td>Diagnostic Department</td><td class="num">47</td><td>none</td></tr>
+      <tr><td class="num">3</td><td>Indoor Patient Dept (IPD)</td><td class="num">38</td><td>~5 (Complete Patients File overlaps visit records)</td></tr>
+      <tr><td class="num">4</td><td>Outdoor Patient Dept (OPD)</td><td class="num">10</td><td>~7 — our strongest area</td></tr>
+      <tr><td class="num">5</td><td>Emergency</td><td class="num">8</td><td>none</td></tr>
+      <tr><td class="num">6</td><td>Accounts</td><td class="num">13</td><td>none — zero money handling</td></tr>
+      <tr><td class="num">7</td><td>Pharmacy</td><td class="num">40</td><td>none (medicine catalogue only, no stock)</td></tr>
+      <tr><td class="num">8</td><td>Store (Inventory)</td><td class="num">24</td><td>none</td></tr>
+      <tr><td class="num">9</td><td>HR</td><td class="num">~12</td><td>none</td></tr>
+      <tr><td class="num">10</td><td>SMS</td><td class="num">1</td><td>done, arguably better (prepaid wallet, segment-billing guard)</td></tr>
+      <tr><td class="num">11</td><td>Patient &amp; Doctor Portal</td><td class="num">1</td><td>done</td></tr>
+      <tr><td class="num">12</td><td>MIS</td><td class="num">3</td><td>~1 (booking KPIs, not financial)</td></tr>
+      <tr><td class="num">13</td><td>Setting &amp; Security</td><td class="num">7</td><td>~3 (users, roles, organization)</td></tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="2"><strong>Total</strong></td>
+        <td class="num"><strong>~205</strong></td>
+        <td><strong>~28 (≈14%)</strong></td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+<!-- Velocity -->
+<div class="sheet">
+  <p class="eyebrow">Section 3</p>
+  <h1>Velocity baseline</h1>
+  <p class="subhead">Measured from git log on this repo — not guessed.</p>
+
+  <table>
+    <tbody>
+      <tr><td><strong>First commit</strong> (c8b37ff, README only)</td><td>2026-07-25</td></tr>
+      <tr><td><strong>Latest commit</strong></td><td>2026-08-08</td></tr>
+      <tr><td><strong>Distinct working days</strong></td><td>10</td></tr>
+      <tr><td><strong>Commits</strong></td><td>81</td></tr>
+    </tbody>
+  </table>
+
+  <h2>What 10 working days produced</h2>
+  <div class="stat-grid">
+    <div class="stat-box">
+      <div class="stat-label">app/ LOC</div>
+      <div class="stat-value">18,206</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Blade LOC</div>
+      <div class="stat-value">9,874</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Migrations</div>
+      <div class="stat-value">45</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Models</div>
+      <div class="stat-value">26</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Filament resources</div>
+      <div class="stat-value">15</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Panel pages</div>
+      <div class="stat-value">49</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Services</div>
+      <div class="stat-value">16</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Tests</div>
+      <div class="stat-value">369</div>
+    </div>
+  </div>
+  <p>Also: three panels, hybrid path+domain multi-tenancy, a production readiness gate, and <strong>live paying clients</strong>.</p>
+
+  <div class="callout">
+    That is the real number to extrapolate from. It is also the <strong>optimistic bound</strong>: it was greenfield, single-domain, and carried no support load.
+  </div>
+</div>
+
+<!-- Why slower -->
+<div class="sheet">
+  <p class="eyebrow">Section 4</p>
+  <h1>Why HMS work is slower per screen</h1>
+  <p class="subhead">ChamberQ greenfield velocity does not transfer 1:1 to hospital-grade modules.</p>
+
+  <ol>
+    <li><strong>Financial correctness is an invariant problem, not a screen problem.</strong> A ledger needs reconciliation tests, not feature tests.</li>
+    <li><strong>Domain knowledge we do not have.</strong> How Chattogram diagnostic centres split referral-doctor commissions, and how BD hospital accounting conventions run, cannot be produced by AI. This is the single largest schedule risk — and it is exactly what the domain/QA hire retires.</li>
+    <li><strong>We now have live clients.</strong> Every HMS migration touches shared tables. Regression budget goes up; support competes for build hours.</li>
+    <li><strong>Data migration</strong> from whatever the client runs today.</li>
+    <li><strong>Module-by-module production shipping</strong> (the chosen model) adds per-module release, migration-on-live-DB, and pilot-support overhead — worth paying, but it is not free.</li>
+  </ol>
+</div>
+
+<!-- Estimate -->
+<div class="sheet">
+  <p class="eyebrow">Section 5</p>
+  <h1>The estimate</h1>
+  <p class="subhead">Bottom-up, weighting the ~205 sub-modules by real difficulty.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Weight</th>
+        <th class="num">Count</th>
+        <th class="num">Rate</th>
+        <th class="right">Dev-days</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Trivial CRUD setup (Item/UOM/Dept/Type setups, lists)</td>
+        <td class="num">~70</td>
+        <td class="num">5/day</td>
+        <td class="right">14</td>
+      </tr>
+      <tr>
+        <td>Moderate transactional (order entry, indents, transfers, invoices, cancels, status changes)</td>
+        <td class="num">~85</td>
+        <td class="num">2/day</td>
+        <td class="right">43</td>
+      </tr>
+      <tr>
+        <td>Heavy engine work (double-entry ledger, batch/expiry stock valuation, pathology result engine, IPD running bill, referral commission engine, roster/attendance, audit log)</td>
+        <td class="num">~50</td>
+        <td class="num">0.5/day</td>
+        <td class="right">100</td>
+      </tr>
+      <tr>
+        <td><strong>Build subtotal</strong></td>
+        <td></td>
+        <td></td>
+        <td class="right"><strong>157</strong></td>
+      </tr>
+      <tr>
+        <td>Domain discovery &amp; rework absorbed by devs (rest owned by domain/QA)</td>
+        <td></td>
+        <td></td>
+        <td class="right">15</td>
+      </tr>
+      <tr>
+        <td>Data migration + import tooling</td>
+        <td></td>
+        <td></td>
+        <td class="right">10</td>
+      </tr>
+      <tr>
+        <td>Hardening, permissions matrix, MySQL/production validation</td>
+        <td></td>
+        <td></td>
+        <td class="right">15</td>
+      </tr>
+      <tr>
+        <td>Bangla staff-panel UI + training material (dev share)</td>
+        <td></td>
+        <td></td>
+        <td class="right">6</td>
+      </tr>
+      <tr>
+        <td>UAT / pilot fix loop (dev share; QA owns the loop)</td>
+        <td></td>
+        <td></td>
+        <td class="right">10</td>
+      </tr>
+      <tr>
+        <td>Per-module production release overhead (13 × ~2d)</td>
+        <td></td>
+        <td></td>
+        <td class="right">26</td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="3"><strong>Total</strong></td>
+        <td class="right"><strong>≈ 239 dev-days</strong></td>
+      </tr>
+    </tfoot>
+  </table>
+
+  <p>Two developers on this kind of work parallelize at roughly <strong>1.7×</strong>, not 2× (shared schema, review load, sequenced dependencies): <strong>≈ 140 working days elapsed</strong>.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th>Cadence</th>
+        <th>Elapsed</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>5 focused days/week, support drag absorbed by others</td>
+        <td>~28 weeks ≈ <strong>6.5 months</strong></td>
+      </tr>
+      <tr>
+        <td>4 focused days/week (realistic with live ChamberQ clients)</td>
+        <td>~35 weeks ≈ <strong>8 months</strong></td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="answer-box">
+    <p><strong>Answer: 7–9 months</strong> to all 13 modules, with the 3-person team, shipping module by module. First sellable module lands in <strong>~2–3 months</strong>.</p>
+  </div>
+
+  <p>A second method — summing the per-module calendar estimates below (47 weeks sequential, ~34 weeks with two parallelizable tracks) — lands in the same place, which is the main reason to trust the number.</p>
+</div>
+
+<!-- Roadmap -->
+<div class="sheet">
+  <p class="eyebrow">Section 6</p>
+  <h1>Module-by-module roadmap</h1>
+  <p class="subhead">Each phase: build → in-house test → ship to production → next. Ordering driven by dependency and what can be sold on its own.</p>
+
+  <table>
+    <thead>
+      <tr>
+        <th class="num">#</th>
+        <th>Module</th>
+        <th class="num">Weeks</th>
+        <th>Why here</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="num">1</td>
+        <td>Settings &amp; Security + Audit Log (MIS)</td>
+        <td class="num">2</td>
+        <td>Approval Authority and Access Profile are prerequisites for every financial screen. Audit log must exist before money moves.</td>
+      </tr>
+      <tr>
+        <td class="num">2</td>
+        <td>OPD completion — Consultation Invoice, Cash Counter, Consultation Policy</td>
+        <td class="num">3</td>
+        <td>Introduces the first money on ground we already know cold. Validates billing primitives cheaply.</td>
+      </tr>
+      <tr>
+        <td class="num">3</td>
+        <td>Diagnostic Department</td>
+        <td class="num">8</td>
+        <td>Largest module (47) and biggest seller — BD market volume is diagnostic centres. Commission engine can reuse CommissionService shape.</td>
+      </tr>
+      <tr>
+        <td class="num">4</td>
+        <td>Accounts (double-entry core)</td>
+        <td class="num">6</td>
+        <td>Only meaningful once phases 2–3 generate real money to post.</td>
+      </tr>
+      <tr>
+        <td class="num">5</td>
+        <td>Pharmacy</td>
+        <td class="num">7</td>
+        <td>Batch/expiry/MRP/GRN/purchase-return/indent. Build the stock ledger engine here, once.</td>
+      </tr>
+      <tr>
+        <td class="num">6</td>
+        <td>Store (Inventory)</td>
+        <td class="num">4</td>
+        <td>Largely a second face on phase 5's engine. Parallelizable with phase 4.</td>
+      </tr>
+      <tr>
+        <td class="num">7</td>
+        <td>IPD</td>
+        <td class="num">9</td>
+        <td>Heaviest clinical module; depends on phases 3, 4 and 5.</td>
+      </tr>
+      <tr>
+        <td class="num">8</td>
+        <td>Emergency</td>
+        <td class="num">2</td>
+        <td>Thin layer over IPD + billing primitives.</td>
+      </tr>
+      <tr>
+        <td class="num">9</td>
+        <td>HR</td>
+        <td class="num">4</td>
+        <td>Standalone, lowest differentiation. Parallelizable with phase 7.</td>
+      </tr>
+      <tr>
+        <td class="num">10</td>
+        <td>SMS + Portal extension</td>
+        <td class="num">1</td>
+        <td>Extend existing work to the new modules.</td>
+      </tr>
+      <tr>
+        <td class="num">11</td>
+        <td>Unified Dashboard &amp; Registration</td>
+        <td class="num">1</td>
+        <td>Built last, once there is something to unify.</td>
+      </tr>
+    </tbody>
+    <tfoot>
+      <tr>
+        <td colspan="2"><strong>Sequential total</strong></td>
+        <td class="num"><strong>47 weeks</strong></td>
+        <td>~34 weeks with phases 6 and 9 run in parallel</td>
+      </tr>
+    </tfoot>
+  </table>
+</div>
+
+<!-- Architecture decisions -->
+<div class="sheet">
+  <p class="eyebrow">Section 7</p>
+  <h1>Architectural decisions this plan forces</h1>
+  <p class="subhead">Expensive to change later. None is a blocker; all need an explicit call — log in decisions.md when chosen.</p>
+
+  <h3>1. Ledgers, not mutable columns</h3>
+  <p>Both the accounting ledger and the stock ledger must be append-only with balanced-entry invariants enforced at the single write path — the same "put the guard where the code converges" lesson from SMS segment billing (<code>GsmText::toSingleSegment()</code> inside <code>SmsService::send()</code>). Money and stock deserve the same choke point.</p>
+
+  <h3>2. Shared-DB multi-tenancy at ~150 tables</h3>
+  <p>We are at 45 migrations with 19 FKs into tenants (0000_01_01_000000, deliberately ahead of Laravel's own — do not renumber). HMS roughly triples that. Recommendation: stay shared-DB and invest in tenant-scope enforcement, because per-tenant databases would break ResearchDataService and SellerOverviewService.</p>
+
+  <h3>3. Bangla staff panel</h3>
+  <p>The 2026-08-08 decision made the admin panel English-only. Ward, store and pharmacy staff in Chattogram will need Bangla. That decision needs revisiting — extending PatientFacingBanglaTest discipline to the admin panel means hundreds of strings.</p>
+
+  <h3>4. A real queue worker is now required</h3>
+  <p>SendDoctorLateNotices uses <code>->afterResponse()</code> because no worker runs. Stock revaluation, report generation and accounting period close cannot work that way. Infrastructure work — QueueTenancyBootstrapper is already enabled.</p>
+
+  <h3>5. Clinical media has no off-server backup</h3>
+  <p>Local disk; S3 is a one-line config change but nothing is backed up off the server yet. A system holding hospital records cannot ship in that state. Must be closed before phase 7 (IPD), ideally before phase 3.</p>
+
+  <h3>6. Laravel 13</h3>
+  <p>Not upgrading (per instruction). An 8-month build spans its release — write upgrade-clean code and avoid deprecated APIs so the option stays cheap.</p>
+</div>
+
+<!-- Commercial -->
+<div class="sheet">
+  <p class="eyebrow">Section 8</p>
+  <h1>Commercial note</h1>
+
+  <p>The bid is <strong>৳380,000 one-time + ৳12,000/month</strong> ≈ $3,100 + $100/mo.</p>
+
+  <p>Spending 7–9 months to win deals at that price only works as <strong>SaaS across many centres</strong> — which is precisely what our multi-tenant platform already is, and which AGMM's model apparently is not (per-install, "Desktop Setting" in their module list, and a stated policy of denying the client database access).</p>
+
+  <div class="callout">
+    <strong>That asymmetry is the real competitive position</strong> — and it is worth more than feature parity.
+  </div>
+
+  <h2>Verification</h2>
+  <p>Nothing to run — this is an estimate, not a code change. Numbers are reproducible:</p>
+  <ul style="font-family: monospace; font-size: 9pt;">
+    <li>git log --reverse --format="%ad" --date=short | head -1</li>
+    <li>git log --all --format="%ad" --date=short | sort -u | wc -l</li>
+    <li>find app -name "*.php" | xargs wc -l | tail -1</li>
+    <li>grep -rh "public function test" tests/ | wc -l</li>
+  </ul>
+
+  <p class="footer-note">ChamberQ — Full HMS Build Estimate &amp; Phased Roadmap · Prepared 2026-08-09 · Planning document only</p>
+</div>
+
+</body>
+</html>

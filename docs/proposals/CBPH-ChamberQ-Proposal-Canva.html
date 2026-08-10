@@ -1,0 +1,940 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ChamberQ — Business Proposal for CBPH (Canva style)</title>
+<style>
+  :root {
+    --navy: #0b1d42;
+    --navy-2: #102a5c;
+    --yellow: #e1f652;
+    --yellow-soft: #eef88a;
+    --title-blue: #9aafc8;
+    --page: #eef2f7;
+    --page-blue: #c9d7ea;
+    --ink: #0b1d42;
+    --ink-soft: #2a3d66;
+    --line: rgba(11, 29, 66, 0.18);
+    --white: #ffffff;
+  }
+
+  @page {
+    size: A4;
+    margin: 0;
+  }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: var(--ink);
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    background: #ddd;
+  }
+
+  .page {
+    width: 210mm;
+    height: 297mm;
+    margin: 0 auto 8mm;
+    padding: 18mm 16mm 16mm;
+    position: relative;
+    overflow: hidden;
+    background: var(--page);
+    page-break-after: always;
+    break-after: page;
+  }
+  .page:last-child { page-break-after: auto; break-after: auto; }
+
+  @media print {
+    html, body { background: none; }
+    .page {
+      margin: 0;
+      box-shadow: none;
+      page-break-after: always;
+    }
+  }
+
+  .foot {
+    position: absolute;
+    left: 16mm;
+    right: 16mm;
+    bottom: 10mm;
+    display: flex;
+    justify-content: space-between;
+    font-size: 8.5pt;
+    letter-spacing: 0.02em;
+    color: var(--ink-soft);
+  }
+  .page-dark .foot,
+  .page-yellow .foot { color: rgba(255,255,255,0.75); }
+  .page-yellow .foot { color: var(--navy); }
+
+  h1 {
+    margin: 0;
+    font-size: 28pt;
+    line-height: 0.95;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    color: var(--navy);
+  }
+  h2 {
+    margin: 0 0 10px;
+    font-size: 12pt;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: var(--navy);
+  }
+  p {
+    margin: 0 0 12px;
+    font-size: 10.5pt;
+    line-height: 1.55;
+    color: var(--ink-soft);
+  }
+  .lead {
+    font-size: 11.5pt;
+    line-height: 1.55;
+    color: var(--ink);
+    max-width: 155mm;
+  }
+
+  /* —— Cover —— */
+  .cover {
+    background: var(--navy);
+    padding: 0;
+    color: #fff;
+  }
+  .cover-waves {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 118mm;
+    overflow: hidden;
+  }
+  .cover-waves svg { width: 100%; height: 100%; display: block; }
+  .cover-mid {
+    position: absolute;
+    top: 128mm;
+    left: 16mm;
+    right: 16mm;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-weight: 800;
+    letter-spacing: 0.14em;
+    font-size: 11pt;
+  }
+  .brand-mark {
+    width: 22px;
+    height: 22px;
+  }
+  .cover-year {
+    font-size: 11pt;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    color: rgba(255,255,255,0.85);
+  }
+  .cover-title {
+    position: absolute;
+    left: 16mm;
+    right: 16mm;
+    top: 155mm;
+    font-size: 52pt;
+    line-height: 0.92;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    text-transform: uppercase;
+    color: var(--title-blue);
+    margin: 0;
+  }
+  .cover-meta {
+    position: absolute;
+    left: 16mm;
+    right: 16mm;
+    bottom: 16mm;
+    display: grid;
+    grid-template-columns: 1fr 1.2fr 1.1fr;
+    gap: 12px;
+    font-size: 8.5pt;
+    line-height: 1.45;
+    color: rgba(255,255,255,0.7);
+  }
+  .cover-meta strong {
+    display: block;
+    margin-top: 3px;
+    color: #fff;
+    font-size: 9.5pt;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+
+  /* —— TOC —— */
+  .toc {
+    background: var(--yellow);
+  }
+  .toc h1 {
+    font-size: 36pt;
+    max-width: 120mm;
+    margin-bottom: 0;
+  }
+  .toc-list {
+    position: absolute;
+    right: 18mm;
+    bottom: 32mm;
+    width: 95mm;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+  .toc-list li {
+    display: grid;
+    grid-template-columns: 28px 1fr;
+    gap: 14px;
+    padding: 7px 0;
+    font-size: 11pt;
+    font-weight: 600;
+    color: var(--navy);
+    border-bottom: 1px solid rgba(11,29,66,0.12);
+  }
+  .toc-list li:last-child { border-bottom: 0; }
+  .toc-list span { font-variant-numeric: tabular-nums; }
+
+  /* —— Intro bands —— */
+  .bands {
+    position: absolute;
+    top: 34mm;
+    left: 0;
+    width: 78%;
+    z-index: 0;
+  }
+  .band {
+    height: 11mm;
+    margin-bottom: 3mm;
+    background: #b8c9de;
+    clip-path: polygon(0 0, 100% 0, 96% 100%, 0 100%);
+  }
+  .band:nth-child(1) { width: 92%; }
+  .band:nth-child(2) { width: 84%; margin-left: 6%; }
+  .band:nth-child(3) { width: 76%; margin-left: 12%; }
+  .band:nth-child(4) { width: 68%; margin-left: 18%; }
+  .intro-body {
+    position: relative;
+    z-index: 1;
+    margin-top: 78mm;
+    max-width: 150mm;
+  }
+
+  /* —— Who we are split —— */
+  .split-top {
+    position: absolute;
+    inset: 0 0 38% 0;
+    background: var(--page-blue);
+    padding: 18mm 16mm 12mm;
+  }
+  .split-bottom {
+    position: absolute;
+    left: 0; right: 0; bottom: 0;
+    height: 38%;
+    background: #fff;
+    padding: 14mm 16mm 16mm;
+    display: grid;
+    grid-template-columns: 55mm 1fr;
+    gap: 18px;
+    align-items: start;
+  }
+  .big-year {
+    font-size: 42pt;
+    font-weight: 800;
+    line-height: 1;
+    color: var(--navy);
+    margin-top: 4px;
+  }
+  .founded-label {
+    font-size: 9pt;
+    font-weight: 800;
+    letter-spacing: 0.12em;
+  }
+
+  /* —— Yellow stats —— */
+  .stats {
+    position: absolute;
+    left: 0; right: 0; bottom: 28mm;
+    height: 58mm;
+    background: var(--yellow);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    padding: 10mm 16mm;
+    gap: 16px;
+  }
+  .stats-col {
+    position: relative;
+    padding-right: 12px;
+  }
+  .stats-col + .stats-col {
+    border-left: 2px solid rgba(255,255,255,0.7);
+    padding-left: 16px;
+  }
+  .stats-label {
+    font-size: 10pt;
+    font-weight: 600;
+    color: var(--navy);
+    line-height: 1.35;
+    max-width: 70mm;
+    margin-bottom: 8px;
+  }
+  .stats-num {
+    font-size: 36pt;
+    font-weight: 800;
+    color: var(--navy);
+    line-height: 1;
+  }
+  .dots {
+    position: absolute;
+    inset: 0;
+    background-image: radial-gradient(circle, rgba(255,255,255,0.55) 1.5px, transparent 1.6px);
+    background-size: 10px 10px;
+    opacity: 0.55;
+    pointer-events: none;
+  }
+
+  /* —— Challenge grid —— */
+  .bars-deco {
+    position: absolute;
+    top: 14mm;
+    right: 14mm;
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+    height: 28mm;
+  }
+  .bars-deco i {
+    display: block;
+    width: 5px;
+    background: #c5d3e8;
+    border-radius: 1px;
+  }
+  .challenge-sub {
+    text-align: center;
+    margin: 28mm 0 14mm;
+    font-size: 12pt;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+  .qgrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border-top: 1px solid var(--line);
+    border-left: 1px solid var(--line);
+  }
+  .qcell {
+    padding: 12mm 8mm 10mm;
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+  }
+  .qcell h3 {
+    margin: 8px 0 6px;
+    font-size: 12pt;
+    color: var(--navy);
+  }
+  .qcell p { font-size: 9.5pt; margin: 0; }
+  .check {
+    width: 22px;
+    height: 22px;
+    border: 2px solid var(--navy);
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11pt;
+    font-weight: 800;
+    color: var(--navy);
+  }
+
+  /* —— Dark features —— */
+  .features {
+    background: var(--navy);
+    color: #fff;
+  }
+  .features h1 { color: var(--yellow); font-size: 24pt; max-width: 160mm; }
+  .feat-list { margin-top: 18mm; }
+  .feat {
+    display: grid;
+    grid-template-columns: 28px 58mm 1fr;
+    gap: 14px;
+    padding: 11px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.14);
+    align-items: start;
+  }
+  .feat-n {
+    font-size: 22pt;
+    font-weight: 800;
+    color: var(--yellow);
+    line-height: 1;
+  }
+  .feat-t {
+    font-size: 11pt;
+    font-weight: 700;
+    color: var(--yellow-soft);
+    line-height: 1.35;
+  }
+  .feat-d {
+    font-size: 9.5pt;
+    line-height: 1.45;
+    color: rgba(255,255,255,0.82);
+    margin: 0;
+  }
+
+  /* —— Yellow 3-col —— */
+  .caps {
+    background: var(--yellow);
+  }
+  .caps h1 { margin-bottom: 22mm; }
+  .cols3 {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 0;
+  }
+  .col3 {
+    padding: 0 10px;
+    border-left: 1.5px solid rgba(11,29,66,0.35);
+  }
+  .col3:first-child { border-left: 0; padding-left: 0; }
+  .col3:last-child { padding-right: 0; }
+  .arrow {
+    font-size: 18pt;
+    font-weight: 800;
+    color: var(--navy);
+    margin-bottom: 10px;
+  }
+  .col3 h3 {
+    margin: 0 0 6px;
+    font-size: 12pt;
+    color: var(--navy);
+  }
+  .col3 .tag {
+    font-size: 10pt;
+    font-weight: 700;
+    color: var(--navy);
+    margin-bottom: 10px;
+  }
+  .col3 p { font-size: 9.5pt; color: var(--navy); }
+
+  /* —— Two-column content —— */
+  .two {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-top: 12mm;
+  }
+  .card-lite {
+    background: #fff;
+    border-radius: 4px;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+  }
+  .card-lite h3 {
+    margin: 0 0 8px;
+    font-size: 11pt;
+    color: var(--navy);
+  }
+  .card-lite ul {
+    margin: 0;
+    padding-left: 16px;
+    font-size: 9.5pt;
+    line-height: 1.5;
+    color: var(--ink-soft);
+  }
+  .steps {
+    margin: 10px 0 0;
+    padding: 0;
+    list-style: none;
+    counter-reset: step;
+  }
+  .steps li {
+    counter-increment: step;
+    display: grid;
+    grid-template-columns: 22px 1fr;
+    gap: 8px;
+    margin-bottom: 7px;
+    font-size: 10pt;
+    color: var(--ink-soft);
+  }
+  .steps li::before {
+    content: counter(step);
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: var(--navy);
+    color: var(--yellow);
+    font-size: 9pt;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  /* —— Pricing —— */
+  .price-wrap {
+    margin-top: 22mm;
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    align-items: end;
+    position: relative;
+    z-index: 1;
+  }
+  .price-wrap::before {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: 150mm;
+    height: 150mm;
+    transform: translate(-50%, -55%);
+    border: 1.5px solid #c5d3e8;
+    border-radius: 50%;
+    z-index: 0;
+  }
+  .pcard {
+    position: relative;
+    z-index: 1;
+    border-radius: 40px;
+    padding: 18px 16px 20px;
+    min-height: 118mm;
+  }
+  .pcard.y { background: var(--yellow); color: var(--navy); }
+  .pcard.g { background: #9eb0c9; color: var(--navy); min-height: 132mm; }
+  .pcard.n { background: var(--navy); color: var(--yellow); }
+  .pcard .name {
+    font-size: 11pt;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .pcard .amt {
+    font-size: 22pt;
+    font-weight: 800;
+    line-height: 1.1;
+    margin-bottom: 16px;
+  }
+  .pcard ul {
+    margin: 0;
+    padding-left: 16px;
+    font-size: 9.5pt;
+    line-height: 1.55;
+  }
+  .pcard.n p { color: var(--yellow); font-size: 9.5pt; }
+
+  /* —— Next steps yellow —— */
+  .next {
+    background: var(--yellow);
+  }
+  .next h1 { font-size: 34pt; margin-bottom: 10mm; }
+  .next-card {
+    margin-top: 18mm;
+    background: var(--navy);
+    color: #fff;
+    border-radius: 22px;
+    padding: 16mm 14mm;
+  }
+  .next-card .label {
+    font-size: 11pt;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    margin-bottom: 10px;
+  }
+  .next-card ol {
+    margin: 0;
+    padding-left: 18px;
+    font-size: 10.5pt;
+    line-height: 1.6;
+    color: rgba(255,255,255,0.92);
+  }
+
+  /* —— Contact —— */
+  .contact {
+    background: var(--navy);
+    color: #fff;
+  }
+  .contact-bars {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 72mm;
+    display: flex;
+    align-items: flex-end;
+    gap: 5px;
+    padding: 0 12mm;
+    opacity: 0.35;
+  }
+  .contact-bars i {
+    display: block;
+    width: 7px;
+    background: #7a91b8;
+  }
+  .contact h1 {
+    position: relative;
+    z-index: 1;
+    margin-top: 58mm;
+    color: var(--yellow-soft);
+    font-size: 36pt;
+  }
+  .contact .lead {
+    position: relative;
+    z-index: 1;
+    color: rgba(255,255,255,0.88);
+    max-width: 145mm;
+    margin-top: 8mm;
+  }
+  .cinfo {
+    position: absolute;
+    left: 16mm;
+    right: 16mm;
+    bottom: 28mm;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0 24px;
+  }
+  .cinfo div {
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(154, 175, 200, 0.45);
+    font-size: 11pt;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: #fff;
+  }
+  .cinfo div::before {
+    content: "→ ";
+    color: var(--yellow);
+  }
+
+  .tiny {
+    font-size: 8.5pt;
+    color: var(--ink-soft);
+    margin-top: 8px;
+  }
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin: 10px 0 0;
+  }
+  .chip {
+    border: 1.5px solid var(--navy);
+    color: var(--navy);
+    border-radius: 999px;
+    padding: 5px 12px;
+    font-size: 9pt;
+    font-weight: 700;
+  }
+</style>
+</head>
+<body>
+
+<!-- 01 Cover -->
+<section class="page cover page-dark">
+  <div class="cover-waves" aria-hidden="true">
+    <svg viewBox="0 0 800 450" preserveAspectRatio="none">
+      <path d="M0 40 H520 Q620 40 620 140 V450 H560 V160 Q560 100 500 100 H0 Z" fill="#e1f652"/>
+      <path d="M0 100 H440 Q540 100 540 200 V450 H480 V220 Q480 160 420 160 H0 Z" fill="#e1f652"/>
+      <path d="M0 160 H360 Q460 160 460 260 V450 H400 V280 Q400 220 340 220 H0 Z" fill="#e1f652"/>
+      <path d="M0 220 H280 Q380 220 380 320 V450 H320 V340 Q320 280 260 280 H0 Z" fill="#e1f652"/>
+      <path d="M0 280 H200 Q300 280 300 380 V450 H240 V400 Q240 340 180 340 H0 Z" fill="#e1f652"/>
+    </svg>
+  </div>
+  <div class="cover-mid">
+    <div class="brand">
+      <svg class="brand-mark" viewBox="0 0 24 24" aria-hidden="true">
+        <path d="M12 2 L20 8 L12 14 L4 8 Z" fill="#e1f652"/>
+        <path d="M12 8 L20 14 L12 20 L4 14 Z" fill="#e1f652" opacity="0.75"/>
+        <path d="M12 14 L18 18.5 L12 23 L6 18.5 Z" fill="#e1f652" opacity="0.5"/>
+      </svg>
+      CHAMBERQ
+    </div>
+    <div class="cover-year">2026</div>
+  </div>
+  <h1 class="cover-title">Business<br>Proposal</h1>
+  <div class="cover-meta">
+    <div>Prepared by<strong>Joy Chowdhury</strong></div>
+    <div>Prepared for<strong>Chattogram Best Physiotherapy Hospital</strong></div>
+    <div>Contact<strong>WhatsApp 01818-614349</strong></div>
+  </div>
+</section>
+
+<!-- 02 TOC -->
+<section class="page toc page-yellow">
+  <h1>Table of<br>Contents</h1>
+  <ol class="toc-list">
+    <li><span>03</span> Introduction</li>
+    <li><span>04</span> Your digital front desk</li>
+    <li><span>05</span> A morning with your patients</li>
+    <li><span>06</span> What slows a busy clinic</li>
+    <li><span>07</span> How ChamberQ fits CBPH</li>
+    <li><span>08</span> Shared desk &amp; private cabins</li>
+    <li><span>09</span> Home programmes &amp; go-live</li>
+    <li><span>10</span> Investment</li>
+    <li><span>11</span> Next steps</li>
+    <li><span>12</span> Contact</li>
+  </ol>
+  <div class="foot"><span>Business Proposal</span><span>02</span></div>
+</section>
+
+<!-- 03 Introduction -->
+<section class="page">
+  <h1 style="position:relative;z-index:1;">Introduction</h1>
+  <div class="bands" aria-hidden="true">
+    <div class="band"></div>
+    <div class="band"></div>
+    <div class="band"></div>
+    <div class="band"></div>
+  </div>
+  <div class="intro-body">
+    <p class="lead"><strong>Dear CBPH,</strong></p>
+    <p class="lead">This is not a generic clinic brochure with your name pasted on. It is how <strong>your</strong> hospital — your therapists, your female department, your Panchlaish rooms — would run on ChamberQ: quieter halls, clearer serials, and a website that already feels like CBPH.</p>
+    <p>When someone in Chattogram searches for recovery at CBPH, they should land somewhere that feels like <strong>you</strong> — not a template hospital.</p>
+    <p class="tiny">553 O.R. Nizam Road, GEC, Panchlaish, Chattogram · August 2026</p>
+  </div>
+  <div class="foot"><span>Business Proposal</span><span>03</span></div>
+</section>
+
+<!-- 04 Who / front desk -->
+<section class="page" style="padding:0;background:#fff;">
+  <div class="split-top">
+    <h1>Your digital<br>front desk</h1>
+    <p style="margin-top:14mm;max-width:145mm;">We set ChamberQ up as <strong>CBPH’s</strong> front door — one face for the hospital, every therapist on it, booking that matches how your families already call for a serial.</p>
+    <p style="max-width:145mm;">No app to install. No password to remember. A ticket they can save, print, or forward on WhatsApp.</p>
+  </div>
+  <div class="split-bottom">
+    <div>
+      <div class="founded-label">Built for</div>
+      <div class="big-year">CBPH</div>
+    </div>
+    <div>
+      <p style="margin:0;font-size:10pt;">Website · phone booking · ticket · waiting-room TVs · staff &amp; therapist screens for notes, home programmes, and follow-up — all under your CBPH colours and story.</p>
+    </div>
+  </div>
+  <div class="foot" style="color:var(--ink-soft);"><span>Business Proposal</span><span>04</span></div>
+</section>
+
+<!-- 05 Morning / landscape -->
+<section class="page">
+  <h1 style="font-size:24pt;max-width:170mm;">A morning with<br>your patients</h1>
+  <h2 style="margin-top:8mm;">From Panchlaish search to cabin call</h2>
+  <p style="max-width:155mm;">A stroke patient’s daughter opens <strong>your</strong> CBPH page. She sees stroke rehab, pain &amp; paralysis, sports injury, neurological and orthopedic care — and faces she recognises: <strong>Dr. Antar Das</strong>, <strong>Batia Nahar Ahsan</strong> (Female Dept.), <strong>Dr. Mohammad Golam Eazdani</strong>.</p>
+  <p style="max-width:155mm;">She books Batia’s evening sitting, tomorrow’s date, and mother’s phone. If father already booked with Antar on that number, she picks <strong>who</strong> this visit is for. She gets a ticket with a serial.</p>
+  <div class="stats">
+    <div class="stats-col">
+      <div class="stats-label">Ticket on the phone — no login account for patients</div>
+      <div class="stats-num">0 apps</div>
+    </div>
+    <div class="stats-col">
+      <div class="dots"></div>
+      <div class="stats-label" style="position:relative;z-index:1;">Home plan link stays on the family’s phone</div>
+      <div class="stats-num" style="position:relative;z-index:1;">48 hrs</div>
+    </div>
+  </div>
+  <div class="foot"><span>Business Proposal</span><span>05</span></div>
+</section>
+
+<!-- 06 Challenge -->
+<section class="page">
+  <h1 style="max-width:140mm;">What slows a<br>busy clinic day</h1>
+  <div class="bars-deco" aria-hidden="true">
+    <i style="height:60%"></i><i style="height:85%"></i><i style="height:45%"></i><i style="height:100%"></i><i style="height:70%"></i>
+    <i style="height:40%"></i><i style="height:90%"></i><i style="height:55%"></i><i style="height:75%"></i><i style="height:50%"></i>
+  </div>
+  <div class="challenge-sub">Most multi-cabin days struggle with</div>
+  <div class="qgrid">
+    <div class="qcell">
+      <div class="check">✓</div>
+      <h3>Mixed queues</h3>
+      <p>One phone for the whole family, but Antar’s serial and Female Dept. must not collide on the same board.</p>
+    </div>
+    <div class="qcell">
+      <div class="check">✓</div>
+      <h3>Hallway noise</h3>
+      <p>“When will they call us?” repeats all morning when the TV and ticket do not agree on who is next.</p>
+    </div>
+    <div class="qcell">
+      <div class="check">✓</div>
+      <h3>Paper programmes</h3>
+      <p>Home exercises leave with the patient — and vanish from memory by the second day.</p>
+    </div>
+    <div class="qcell">
+      <div class="check">✓</div>
+      <h3>One desk, many rooms</h3>
+      <p>Reception already serves every cabin. The software should switch boards the same way — not force a separate system per therapist.</p>
+    </div>
+  </div>
+  <div class="foot"><span>Business Proposal</span><span>06</span></div>
+</section>
+
+<!-- 07 Features dark -->
+<section class="page features page-dark">
+  <h1>How ChamberQ fits<br>CBPH’s day</h1>
+  <div class="feat-list">
+    <div class="feat">
+      <div class="feat-n">1</div>
+      <div class="feat-t">Your branded website &amp; Book</div>
+      <p class="feat-d">CBPH colours, logo, treatments, team, reviews, FAQ — and Book in the header so Chattogram finds you first.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-n">2</div>
+      <div class="feat-t">Serial booking on the phone</div>
+      <p class="feat-d">Patients take a serial for the therapist they came for. Ticket they can save, print, or forward on WhatsApp.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-n">3</div>
+      <div class="feat-t">Waiting-room &amp; outdoor TVs</div>
+      <p class="feat-d">One link per sitting. Antar’s screen never shows Batia’s list. Reception bookmarks “today” for that cabin.</p>
+    </div>
+    <div class="feat">
+      <div class="feat-n">4</div>
+      <div class="feat-t">Consult &amp; home programmes</div>
+      <p class="feat-d">Notes stay in the cabin. Print a plan or send a short WhatsApp / SMS link — not the full clinical file.</p>
+    </div>
+  </div>
+  <div class="foot"><span>Business Proposal</span><span>07</span></div>
+</section>
+
+<!-- 08 Shared + private -->
+<section class="page caps page-yellow">
+  <h1>Shared desk.<br>Private cabins.</h1>
+  <div class="cols3">
+    <div class="col3">
+      <div class="arrow">→</div>
+      <h3>One Live Queue Control</h3>
+      <div class="tag">Reception’s counter</div>
+      <p>Switch Antar’s board → Batia’s → Eazdani’s on the same screen. Walk-ins drop onto the right sitting. Close the hospital, one room, or one therapist.</p>
+    </div>
+    <div class="col3">
+      <div class="arrow">→</div>
+      <h3>Busy-day rhythm</h3>
+      <div class="tag">Start → Call → Arrived → Complete</div>
+      <p>Also skip no-shows, mark late, pause, end the day. You choose whether reception runs the queue (usual for CBPH) or a therapist does.</p>
+    </div>
+    <div class="col3">
+      <div class="arrow">→</div>
+      <h3>Each therapist’s room</h3>
+      <div class="tag">Notes stay in the cabin</div>
+      <p>Their sittings, serials, Consult Screen, prescriptions, medicine favourites, SMS habits — and late or day-off only for their list.</p>
+    </div>
+  </div>
+  <div class="foot"><span>Business Proposal</span><span>08</span></div>
+</section>
+
+<!-- 09 Home + build -->
+<section class="page">
+  <h1 style="font-size:26pt;max-width:160mm;">Home programmes<br>&amp; what we build</h1>
+  <div class="two">
+    <div class="card-lite">
+      <h3>Sending the plan home</h3>
+      <ul>
+        <li>Follow-up: “1 week”, “as needed”, or a date</li>
+        <li>Medicines from a searchable list — including “same as last visit”</li>
+        <li>Print a clean copy for the patient</li>
+        <li>WhatsApp / SMS link: medicines, advice, follow-up — not the full file</li>
+      </ul>
+    </div>
+    <div class="card-lite">
+      <h3>We set up your CBPH</h3>
+      <ul>
+        <li>Panchlaish clinic &amp; female department room if separate</li>
+        <li>Your physiotherapists and logins</li>
+        <li>Morning / evening sittings with a daily cap you choose</li>
+        <li>Reception on Live Queue Control; one TV bookmark per sitting</li>
+        <li>Website copy and photos in your voice</li>
+      </ul>
+    </div>
+  </div>
+  <h2 style="margin-top:14mm;">Kept simple on purpose</h2>
+  <p>Therapy packages (e.g. 10 sessions) stay how you sell them; each visit still takes its own serial. Patients do not create login accounts — ticket link and phone lookup are enough.</p>
+  <div class="flow">
+    <span class="chip">See patient</span>
+    <span class="chip">Write plan</span>
+    <span class="chip">Complete</span>
+    <span class="chip">Print / WhatsApp</span>
+    <span class="chip">Call next</span>
+  </div>
+  <div class="foot"><span>Business Proposal</span><span>09</span></div>
+</section>
+
+<!-- 10 Investment -->
+<section class="page">
+  <h1 style="font-size:26pt;">Transparent<br>investment</h1>
+  <div class="price-wrap">
+    <div class="pcard y">
+      <div class="name">Setup (one-time)</div>
+      <div class="amt">৳75,000</div>
+      <ul>
+        <li>Account &amp; therapists</li>
+        <li>Rooms &amp; sittings</li>
+        <li>Branded CBPH site</li>
+        <li>Logins &amp; walkthrough</li>
+      </ul>
+    </div>
+    <div class="pcard g">
+      <div class="name">Monthly</div>
+      <div class="amt">৳7,500</div>
+      <ul>
+        <li>Hosting &amp; product use</li>
+        <li>Ongoing updates</li>
+        <li>Support for your desk</li>
+      </ul>
+    </div>
+    <div class="pcard n">
+      <div class="name">SMS (optional)</div>
+      <div class="amt">Prepaid</div>
+      <p>Top up when you want confirmations. If credits run out, booking still works — only the text stops.</p>
+      <p style="margin-top:14px;"><strong>All payments in cash.</strong></p>
+    </div>
+  </div>
+  <div class="foot"><span>Business Proposal</span><span>10</span></div>
+</section>
+
+<!-- 11 Next steps -->
+<section class="page next page-yellow">
+  <h1>Let’s get<br>started</h1>
+  <p class="lead" style="color:var(--navy);max-width:150mm;">When it is working, families ask “when should we come?” less, the waiting area feels fairer, and CBPH looks as organised online as you are in Panchlaish.</p>
+  <div class="next-card">
+    <div class="label">Next step</div>
+    <ol>
+      <li>You tell us which therapists and sittings start first</li>
+      <li>We build your CBPH site, schedules, and logins</li>
+      <li>Short training — reception on boards &amp; TVs; therapists on consult &amp; home plans</li>
+      <li>Soft launch beside your current phone booking — no big-bang day required</li>
+      <li>Everyday: your desk runs the halls; your therapists see the right patient in the cabin</li>
+    </ol>
+  </div>
+  <div class="foot"><span>Business Proposal</span><span>11</span></div>
+</section>
+
+<!-- 12 Contact -->
+<section class="page contact page-dark">
+  <div class="contact-bars" aria-hidden="true">
+    <i style="height:35%"></i><i style="height:55%"></i><i style="height:28%"></i><i style="height:70%"></i>
+    <i style="height:45%"></i><i style="height:85%"></i><i style="height:40%"></i><i style="height:60%"></i>
+    <i style="height:95%"></i><i style="height:50%"></i><i style="height:75%"></i><i style="height:32%"></i>
+    <i style="height:68%"></i><i style="height:42%"></i><i style="height:80%"></i><i style="height:58%"></i>
+    <i style="height:30%"></i><i style="height:90%"></i><i style="height:48%"></i><i style="height:72%"></i>
+    <i style="height:38%"></i><i style="height:65%"></i><i style="height:52%"></i><i style="height:88%"></i>
+  </div>
+  <h1>Get in touch</h1>
+  <p class="lead">Message me on WhatsApp. We will walk you through <strong>your</strong> flow live: book as a CBPH patient → see the TV → call a serial → open the cabin screen → send a plan home.</p>
+  <div class="cinfo">
+    <div>JOY CHOWDHURY</div>
+    <div>WHATSAPP 01818-614349</div>
+    <div>CHAMBERQ</div>
+    <div>FOR CBPH, PANCHLAISH</div>
+  </div>
+  <div class="foot"><span>Business Proposal</span><span>12</span></div>
+</section>
+
+</body>
+</html>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="ChamberQ">
+
+<path fill="none" stroke="#0e4f43" stroke-width="40" stroke-linecap="round" d="M 372.98 405.72 A 190 190 0 1 0 372.98 106.28" />
+<path fill="none" stroke="#f1c969" stroke-width="28" stroke-linecap="round" d="M 222.37 138.73 A 122 122 0 0 0 289.63 138.73" />
+<path fill="none" stroke="#176b5b" stroke-width="28" stroke-linecap="round" d="M 140.65 216.28 A 122 122 0 0 0 179.22 161.19" />
+<path fill="none" stroke="#176b5b" stroke-width="28" stroke-linecap="round" d="M 157.30 327.71 A 122 122 0 0 0 134.30 264.51" />
+<path fill="none" stroke="#176b5b" stroke-width="28" stroke-linecap="round" d="M 258.13 377.98 A 122 122 0 0 0 193.17 360.57" />
+<path fill="none" stroke="#176b5b" stroke-width="28" stroke-linecap="round" d="M 365.65 202.52 A 122 122 0 0 0 377.33 268.75" />
+<path fill="none" stroke="#176b5b" stroke-width="28" stroke-linecap="round" d="M 275.09 135.50 A 122 122 0 0 0 336.04 163.93" />
+<rect fill="#0e4f43" x="350.6" y="329.9" width="40" height="12" rx="5" transform="rotate(34.0 350.6 329.9)" />
+<rect fill="#0e4f43" x="367.1" y="341.1" width="35" height="12" rx="5" transform="rotate(34.0 367.1 341.1)" />
+<rect fill="#0e4f43" x="383.7" y="352.2" width="30" height="12" rx="5" transform="rotate(34.0 383.7 352.2)" />
+</svg>
