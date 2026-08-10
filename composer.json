@@ -6,12 +6,13 @@
     "keywords": ["laravel", "framework"],
     "license": "MIT",
     "require": {
-        "php": "^8.2",
+        "php": "^8.3",
         "filament/filament": "^4.0",
         "laravel/framework": "^12.0",
         "laravel/tinker": "^2.10.1",
         "mews/purifier": "^3.4",
-        "stancl/tenancy": "^3.10"
+        "stancl/tenancy": "^3.10",
+        "symfony/html-sanitizer": "^7.0"
     },
     "require-dev": {
         "fakerphp/faker": "^1.23",
@@ -43,6 +44,7 @@
             "@php -r \"file_exists('.env') || copy('.env.example', '.env');\"",
             "@php artisan key:generate",
             "@php artisan migrate --force",
+            "@php artisan catalogues:load",
             "npm install",
             "npm run build"
         ],
@@ -86,6 +88,9 @@
         "allow-plugins": {
             "pestphp/pest-plugin": true,
             "php-http/discovery": true
+        },
+        "platform": {
+            "php": "8.3.0"
         }
     },
     "minimum-stability": "stable",

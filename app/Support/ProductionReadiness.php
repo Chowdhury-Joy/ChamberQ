@@ -2,6 +2,9 @@
 
 namespace App\Support;
 
+use App\Models\Medicine;
+use Illuminate\Support\Facades\Schema;
+
 /**
  * The configuration this app must not go live without.
  *
@@ -137,6 +140,24 @@ class ProductionReadiness
                 'detect' => fn (): ?string => config('session.secure') !== true
                     ? 'Session cookie is not marked secure, so it can be sent over plain http.'
                     : null,
+            ],
+            [
+                'severity' => self::SEVERITY_BLOCKER,
+                'key' => 'MEDICINE_CATALOGUE',
+                'fix' => 'php artisan catalogues:load (or medicines:load) after every migrate on a new server',
+                'detect' => function (): ?string {
+                    if (! app()->environment('production')) {
+                        return null;
+                    }
+
+                    if (! Schema::hasTable('medicines')) {
+                        return null;
+                    }
+
+                    return Medicine::query()->count() === 0
+                        ? 'The medicine catalogue is empty. Prescription pickers will show no brands until `medicines:load` is run — migrations alone do not import the CSV.'
+                        : null;
+                },
             ],
         ];
     }
