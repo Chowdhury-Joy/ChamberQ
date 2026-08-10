@@ -252,4 +252,14 @@ class OutdoorScreenTodayTest extends TestCase
             ->assertJsonPath('session_date', $this->today)
             ->assertJsonPath('status', 'active');
     }
+
+    public function test_screen_labels_follow_tenant_default_locale(): void
+    {
+        $this->tenant->update(['default_locale' => 'bn']);
+
+        $this->get($this->host.'/screen/'.$this->session->id)
+            ->assertOk()
+            ->assertSee('সেবা নিচ্ছেন', escape: false)
+            ->assertSee('শব্দ চালু করতে ট্যাপ করুন', escape: false);
+    }
 }

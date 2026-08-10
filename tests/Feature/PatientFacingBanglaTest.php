@@ -20,6 +20,7 @@ class PatientFacingBanglaTest extends TestCase
         'resources/views/tenant/partials/ticket-body.blade.php',
         'resources/views/tenant/portal/index.blade.php',
         'resources/views/tenant/solo/portal/index.blade.php',
+        'resources/views/tenant/screen.blade.php',
     ];
 
     public function test_every_patient_facing_string_has_a_bangla_translation(): void

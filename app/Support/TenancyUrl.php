@@ -37,6 +37,25 @@ class TenancyUrl
     }
 
     /**
+     * Waiting-room TV bookmark for Live Queue Control (Open screen / Copy link).
+     *
+     * On path tenancy (e.g. 127.0.0.1:8000/{tenant}/admin) this uses the
+     * current request host and port — not the tenant's Domain row — so staff
+     * are not sent to http://tenant.localhost/… on port 80 while artisan serve
+     * is on :8000. Custom-domain tenants still use publicAbsolute().
+     */
+    public static function screenBookmarkUrl(string $tenantId, int $sessionId): string
+    {
+        $path = '/screen/'.$sessionId;
+
+        if (static::usesPathPrefix()) {
+            return url(static::url($path));
+        }
+
+        return static::publicAbsolute($tenantId, $path);
+    }
+
+    /**
      * Scheme for an outbound link on a known public host.
      *
      * Real clinic domains must not inherit `http` from a leftover

@@ -3,12 +3,16 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Live Queue - {{ $scheduleSession->chamber->name }}</title>
+    <title>{{ __('Live queue') }} — {{ $scheduleSession->chamber->name }}</title>
     
     @php
         $tenant = tenant();
+        $isBn = app()->getLocale() === 'bn';
         $themeColor = $tenant->theme_color ?? '#0ea5e9';
         $fontFamily = $tenant->font_family ?? 'Inter';
+        if ($isBn && ! in_array($fontFamily, ['Hind Siliguri'], true)) {
+            $fontFamily = 'Hind Siliguri';
+        }
         $callAudioUrl = $tenant->callAudioUrl();
         $callAnnounceLocale = $tenant->call_announce_locale ?? 'en';
         $usesCallChime = $tenant->usesCallChime();
@@ -99,10 +103,12 @@
 
         .label {
             font-size: 2.5rem;
-            text-transform: uppercase;
-            letter-spacing: 2px;
+            letter-spacing: {{ $isBn ? '0' : '2px' }};
             margin-bottom: 2rem;
             color: #cbd5e1;
+            @unless($isBn)
+            text-transform: uppercase;
+            @endunless
         }
 
         .now-serving-box.calling .label {
@@ -230,7 +236,7 @@
     <div class="main-content">
         <div id="statusContainer" class="now-serving-box">
             <div id="defaultView">
-                <div class="label" id="mainLabel">{{ __('NOW SERVING') }}</div>
+                <div class="label" id="mainLabel">{{ __('Now serving') }}</div>
                 <div class="serial" id="currentSerial">—</div>
                 <div class="patient-name" id="currentName"></div>
             </div>
@@ -260,12 +266,33 @@
                 ? tenant_web_route('api.tenant.screen.today', ['session' => $scheduleSession->id], absolute: false)
                 : tenant_web_route('api.tenant.screen', ['session' => $scheduleSession->id, 'date' => $sessionDate], absolute: false);
         @endphp
+        @php
+            $bookUrl = tenant('id') === 'nusraturmi'
+                ? 'drurminusrat.com/book'
+                : (\App\Support\TenancyUrl::usesPathPrefix()
+                    ? url(tenant_web_url('/book'))
+                    : \App\Support\TenancyUrl::publicAbsolute((string) tenant('id'), '/book'));
+            $screenLabels = [
+                'nowServing' => __('Now serving'),
+                'nowCalling' => __('Now calling you'),
+                'sessionNotStarted' => __('Session has not started yet'),
+                'pleaseWait' => __('Please wait'),
+                'sessionCancelled' => __("Today's session has been cancelled"),
+                'contactReception' => __('Contact reception'),
+                'sessionEnded' => __('Session ended — thank you'),
+                'nextBooking' => __('For your next booking:'),
+                'breakInProgress' => __('Break in progress'),
+                'estimatedResume' => __('Estimated resume:'),
+            ];
+        @endphp
         const statusUrl = @json($statusUrl);
         const liveToday = @json($liveToday);
         let pageDate = @json($sessionDate);
         const callAnnounceLocale = @json($callAnnounceLocale);
         const usesCallChime = @json($usesCallChime);
         const usesCallVoice = @json($usesCallVoice);
+        const labels = @json($screenLabels);
+        const bookUrl = @json($bookUrl);
         let lastCalledTime = null;
         let soundUnlocked = false;
         let soundMuted = false;
@@ -456,9 +483,9 @@
                 if (data.status === 'scheduled') {
                     defaultView.style.display = 'none';
                     messageView.style.display = 'block';
-                    document.getElementById('messageText').textContent = 'সেশন এখনো শুরু হয়নি';
+                    document.getElementById('messageText').textContent = labels.sessionNotStarted;
                     document.getElementById('messageText').style.color = '#f59e0b';
-                    document.getElementById('messageSubtext').textContent = 'দয়া করে অপেক্ষা করুন';
+                    document.getElementById('messageSubtext').textContent = labels.pleaseWait;
                     box.className = 'now-serving-box';
                     nextUp.style.display = 'none';
                     return;
@@ -467,9 +494,9 @@
                 if (data.status === 'cancelled') {
                     defaultView.style.display = 'none';
                     messageView.style.display = 'block';
-                    document.getElementById('messageText').textContent = '❌ আজকের সেশন বাতিল করা হয়েছে';
+                    document.getElementById('messageText').textContent = '❌ ' + labels.sessionCancelled;
                     document.getElementById('messageText').style.color = '#ef4444';
-                    document.getElementById('messageSubtext').textContent = 'রিসেপশনে যোগাযোগ করুন';
+                    document.getElementById('messageSubtext').textContent = labels.contactReception;
                     box.className = 'now-serving-box';
                     nextUp.style.display = 'none';
                     return;
@@ -478,9 +505,9 @@
                 if (data.status === 'completed') {
                     defaultView.style.display = 'none';
                     messageView.style.display = 'block';
-                    document.getElementById('messageText').textContent = 'সেশন শেষ হয়েছে';
+                    document.getElementById('messageText').textContent = labels.sessionEnded;
                     document.getElementById('messageText').style.color = '#94a3b8';
-                    document.getElementById('messageSubtext').textContent = 'আজকের কিউ শেষ';
+                    document.getElementById('messageSubtext').textContent = labels.nextBooking + ' ' + bookUrl;
                     box.className = 'now-serving-box';
                     nextUp.style.display = 'none';
                     return;
@@ -503,9 +530,9 @@
                 if (data.status === 'paused') {
                     defaultView.style.display = 'none';
                     messageView.style.display = 'block';
-                    document.getElementById('messageText').textContent = '⏸ বিরতি চলছে';
+                    document.getElementById('messageText').textContent = '⏸ ' + labels.breakInProgress;
                     document.getElementById('messageText').style.color = '#f59e0b';
-                    document.getElementById('messageSubtext').textContent = (data.pause_reason || '') + (data.estimated_resume_time ? (' — আনুমানিক শুরু: ' + data.estimated_resume_time) : '');
+                    document.getElementById('messageSubtext').textContent = (data.pause_reason || '') + (data.estimated_resume_time ? (' — ' + labels.estimatedResume + ' ' + data.estimated_resume_time) : '');
                     box.className = 'now-serving-box';
                     renderNextUp(data);
                     return;
@@ -523,7 +550,7 @@
                 // Handle 'Called' state and announce (chime / voice)
                 if (data.is_called && data.now_serving) {
                     box.className = 'now-serving-box calling';
-                    document.getElementById('mainLabel').textContent = 'আপনাকে ডাকা হচ্ছে';
+                    document.getElementById('mainLabel').textContent = labels.nowCalling;
                     
                     if (data.called_at !== lastCalledTime) {
                         lastCalledTime = data.called_at;
@@ -531,7 +558,7 @@
                     }
                 } else {
                     box.className = 'now-serving-box';
-                    document.getElementById('mainLabel').textContent = 'NOW SERVING';
+                    document.getElementById('mainLabel').textContent = labels.nowServing;
                 }
 
             } catch (e) {

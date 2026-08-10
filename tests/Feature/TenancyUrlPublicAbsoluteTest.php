@@ -6,6 +6,7 @@ use App\Models\Domain;
 use App\Models\Tenant;
 use App\Support\TenancyUrl;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\Request;
 use Tests\TestCase;
 
 class TenancyUrlPublicAbsoluteTest extends TestCase
@@ -49,5 +50,23 @@ class TenancyUrlPublicAbsoluteTest extends TestCase
         $url = TenancyUrl::publicAbsolute($tenant->id, '/screen/9');
 
         $this->assertSame('http://solo.localhost/screen/9', $url);
+    }
+
+    public function test_screen_bookmark_on_path_tenant_uses_request_host_not_domain_row(): void
+    {
+        config(['tenancy.central_domains' => ['127.0.0.1', 'localhost']]);
+
+        $tenant = Tenant::create(['id' => 'nusraturmi', 'plan_tier' => 'solo']);
+        Domain::create(['domain' => 'nusraturmi.localhost', 'tenant_id' => $tenant->id]);
+
+        $this->app->instance('request', Request::create('http://127.0.0.1:8000/nusraturmi/admin'));
+        tenancy()->initialize($tenant);
+
+        $url = TenancyUrl::screenBookmarkUrl($tenant->id, 81);
+
+        $this->assertSame('http://127.0.0.1:8000/nusraturmi/screen/81', $url);
+        $this->assertStringNotContainsString('nusraturmi.localhost', $url);
+
+        tenancy()->end();
     }
 }

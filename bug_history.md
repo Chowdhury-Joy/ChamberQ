@@ -684,3 +684,21 @@
  <root_cause>Copy payload put a newline between ticket and map, then stuffed that string into `<input type="text" value="…">`. Text inputs cannot hold newlines, so the browser dropped `\n` and glued the two URLs.</root_cause>
  <prevention_rule>Never put a multi-line copy payload in an `<input type="text">` value. Show the ticket URL alone in the field; keep ticket+map (with a real newline) in a JS string for `navigator.clipboard.writeText`.</prevention_rule>
 </bug>
+
+## 2026-08-09T15:27:52+0600
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>Prescription medicine dropdowns were completely empty in production — no brands, no categories, nothing to pick.</symptom>
+ <root_cause>The `medicines` table is filled by `php artisan medicines:load` from `data/medicine-list-draft.csv`, not by migrations or `db:seed`. Production had run `migrate` but never the catalogue import, so the table existed but had zero rows. The UI fails silently — an empty grouped select looks like "no medicines configured" rather than throwing an error.</root_cause>
+ <prevention_rule>After every fresh `migrate` on a new server, run `php artisan catalogues:load` (or include it in the deploy script). `app:production-check` now blocks production when `medicines` is empty; `composer setup` runs the load step automatically.</prevention_rule>
+</bug>
+
+## 2026-08-09T22:18:50+0600
+
+<bug>
+ <category>Code</category>
+ <symptom>Live Queue Control "Open screen" did nothing (or opened a dead tab) when the practice was browsed at `127.0.0.1:8000/{tenant}/admin`.</symptom>
+ <root_cause>The TV link used `TenancyUrl::publicAbsolute()`, which prefers the tenant's first Domain row (`nusraturmi.localhost`) without the dev server's port. That URL targets port 80, not `:8000`, while path tenancy lives under `127.0.0.1:8000/{tenant}/…`.</root_cause>
+ <prevention_rule>Waiting-room Open/Copy links on path tenancy must use `TenancyUrl::screenBookmarkUrl()` (current request host + `/{tenant}/screen/{id}`), not `publicAbsolute()`. Reserve `publicAbsolute()` for SMS/WhatsApp and custom-domain production bookmarks.</prevention_rule>
+</bug>
