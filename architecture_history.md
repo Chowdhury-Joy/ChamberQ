@@ -356,3 +356,6 @@
 - Disaster-recovery CSV backup: `DataBackupService` / `DataImportService`, chamber Admin + Super Admin Filament pages, tenant actions on Tenants, Artisan `data:backup-export` / `data:backup-import`; passwords excluded, voice/photo binaries not in ZIP.
 - Prescription picker: hide already-selected brands in the repeater dropdown; dose chips from catalogue `default_strength` only; Consult Screen Complete visit green (no two blue buttons); Write prescription modal hint removed.
 - Clinic relational CMS: `departments` + `blog_posts` tables, doctor website fields, public list/detail routes, homepage sections wired to DB collections.
+- Date-first booking: `BookingService::openDatesFor()`, `GET /api/bookings/open-dates`, wizard `step-when`, `bookings.wants_earlier_date`, tenant admin **Waiting for earlier date** page.
+- Fixed date-step advance: keep `step-when` in the wizard flow after a pick so `nextStep` reaches patient details (same index-stability rule as the type step).
+- Booking details: Confirm disabled until required fields; optional `whatsapp_phone` when patient marks a different WhatsApp number.

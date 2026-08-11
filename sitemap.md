@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-11T02:29:34+0600
+Last Updated: 2026-08-11T16:03:15+0600
 
 ## Full Site Map
 
@@ -33,6 +33,7 @@ Same central host; tenant identified by URL slug (tenant `id`), e.g. `drkarim`.
 | `/{slug}/doctors` | Clinic doctor profiles listing (clinic tier only) | public |
 | `/{slug}/doctors/{slug}` | Single doctor public profile | public |
 | `/{slug}/admin` | Tenant staff Filament panel | staff login |
+| `/{slug}/admin/waiting-for-earlier-date` | Staff list of patients who opted in for an earlier date (WhatsApp per row) | staff login (ops) |
 | `/{slug}/admin/data-backup` | Chamber disaster-recovery backup download + restore (Admin only) | admin only |
 | `/{slug}/manifest.webmanifest`, `/{slug}/sw.js`, … | PWA | public |
 
@@ -59,6 +60,7 @@ When a doctor connects their own domain (e.g. `drkarim.com`), routes live at the
 | `/lang/{locale}` | Switch session locale `en` / `bn` | public |
 | `/manifest.webmanifest`, `/sw.js`, `/pwa-icon-{192\|512}.svg` | PWA bits | public |
 | `/admin` | Tenant staff Filament panel | staff login |
+| `/admin/waiting-for-earlier-date` | Staff list of patients who opted in for an earlier date (WhatsApp per row) | staff login (ops) |
 | `/admin/data-backup` | Chamber disaster-recovery backup download + restore (Admin only) | admin only |
 
 ### Tenant public APIs
@@ -66,7 +68,8 @@ Available under both platform path (`/{slug}/api/…`) and custom domain (`/api/
 
 | Route | Purpose | Access |
 |-------|---------|--------|
-| `GET /api/bookings/availability` | Session/lab availability for wizard | public (throttled) |
+| `GET /api/bookings/availability` | Session/lab availability for wizard (re-check on identity step) | public (throttled) |
+| `GET /api/bookings/open-dates` | Open bookable+date options for wizard "When can you come?" step (60-day window, soonest first) | public (throttled) |
 | `GET /api/patients/by-phone` | Household members on a phone (booking picker) — returns **masked initials + age only**, never names | public (throttled 10/min) |
 | `GET /api/conditions/search` | Coded condition autocomplete for doctor diagnosis picker | doctor auth, same tenant (throttled) |
 | `POST /api/bookings` | Create booking | public (throttled; blocked if billing closed) |
@@ -110,7 +113,7 @@ The one patient-facing route that shows prescription content. Deliberately outsi
 
 ### Patient → book serial → ticket
 1. Open `/{slug}/` or custom domain home — see doctor brand + Book CTA. On clinic-tier sites the Book Appointment CTA now also sits in the header nav (desktop) and the mobile drawer, per the Clireo design port; solo keeps its locked layout.
-2. Book flow — pick session/date (selections are keyboard-operable buttons; a session whose end time has already passed today is not offered), enter phone; if the number is known, choose **Who is this appointment for?** inline — options show masked initials (`F. R., 34`), and picking one stands the name field down because the server resolves the real name from the id. On a clinic site the homepage hero form can start this flow, POSTing name/phone so they stay out of the URL.
+2. Book flow — chamber/doctor when needed, then **When can you come?** (only dates with seats left, soonest first; earliest option highlighted). Patient details step shows the locked date with **Change date**; optional **Tell me if an earlier date opens up**. If the number is known, choose **Who is this appointment for?** inline — masked initials (`F. R., 34`); picking one stands the name field down. Clinic hero form can POST name/phone into the session first.
 3. Submit → ticket at `…/bookings/{uuid}`. Goal: proof of serial; share via WhatsApp/copy, or Print / Save as PDF for a paper or file copy.
 4. Optional: PWA install scoped to tenant path or custom domain.
 
@@ -187,6 +190,12 @@ The one patient-facing route that shows prescription content. Deliberately outsi
 - **Steps:** Tenant admin → **Website** → **Departments** / **Blog posts** (create, publish) or **Doctors** → enable **Show on website**, photo, bio, slug → homepage sections (`service_matrix`, `health_insights`, `doctor_grid`) pull published rows automatically.
 - **Data/systems touched:** `departments`, `blog_posts`, `doctors` website columns; public routes `/departments`, `/blog`, `/doctors`.
 - **Success:** List + detail pages live; homepage teasers match without duplicating cards in the page builder.
+
+### Earlier-date waiting list (staff — ops)
+- **Trigger:** A patient booked online and ticked **Tell me if an earlier date opens up**, or staff want to contact those patients when a seat frees up.
+- **Steps:** Tenant admin → **Operations** → **Waiting for earlier date** — review future flagged bookings (soonest booked date first) → tap **WhatsApp** per row to message that patient (staff-tapped; no automatic SMS).
+- **Data/systems touched:** `bookings.wants_earlier_date`, `bookings.booking_date`, patient name/phone on the booking row.
+- **Success:** Staff can reach patients who asked to move earlier without hunting through the full roster.
 
 ### Block a date — vacation / holiday / doctor away (admin/doctor)
 - **Trigger:** The clinic, a chamber, or one doctor will not sit on a given date.

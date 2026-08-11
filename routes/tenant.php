@@ -71,6 +71,9 @@ $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
     Route::get('/api/bookings/availability', [BookingController::class, 'availability'])
         ->middleware(['throttle:60,1']);
 
+    Route::get('/api/bookings/open-dates', [BookingController::class, 'openDates'])
+        ->middleware(['throttle:60,1']);
+
     // Unauthenticated patient-name oracle keyed on a guessable BD mobile —
     // throttled hard on purpose. A real patient types their number once or
     // twice; 60/min only ever served a scraper.

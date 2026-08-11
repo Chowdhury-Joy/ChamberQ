@@ -25,8 +25,10 @@ class Booking extends Model
         'patient_id',
         'patient_name',
         'patient_phone',
+        'whatsapp_phone',
         'serial_number',
         'status',
+        'wants_earlier_date',
         'cancelled_at',
         'cancellation_reason',
         'patient_notified',
@@ -40,6 +42,7 @@ class Booking extends Model
     protected $casts = [
         'booking_date' => DateOnly::class,
         'serial_number' => 'integer',
+        'wants_earlier_date' => 'boolean',
         'cancelled_at' => 'datetime',
         'patient_notified' => 'boolean',
         'called_at' => 'datetime',
@@ -55,8 +58,11 @@ class Booking extends Model
      */
     public function whatsappLink(?string $message = null): string
     {
+        // Prefer an explicit WhatsApp number when the patient said their WA
+        // is different from the phone they show at reception.
+        $raw = filled($this->whatsapp_phone) ? $this->whatsapp_phone : $this->patient_phone;
         // wa.me needs a bare international number: 8801XXXXXXXXX.
-        $digits = preg_replace('/\D/', '', (string) $this->patient_phone);
+        $digits = preg_replace('/\D/', '', (string) $raw);
 
         if (str_starts_with($digits, '0')) {
             $digits = '88' . $digits;
@@ -71,6 +77,17 @@ class Booking extends Model
         ]);
 
         return 'https://wa.me/' . $digits . '?text=' . rawurlencode($message);
+    }
+
+    public function earlierDateWhatsappLink(): string
+    {
+        $message = __('Hello :name, an earlier appointment date may be available for your booking on :date (serial :serial). Please reply if you would like to move to an earlier date.', [
+            'name' => $this->patient_name,
+            'serial' => $this->serial_number,
+            'date' => $this->booking_date?->translatedFormat('j F Y'),
+        ]);
+
+        return $this->whatsappLink($message);
     }
 
     public function slotBlock()

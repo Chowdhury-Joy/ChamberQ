@@ -10,8 +10,9 @@ use App\Models\LabTest;
 use App\Models\SlotBlock;
 use App\Support\BdPhone;
 use Carbon\Carbon;
-use Illuminate\Support\Facades\DB;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class BookingService
 {
@@ -32,6 +33,81 @@ class BookingService
     }
 
     /**
+     * Open bookable+date pairs within the booking window, soonest first.
+     *
+     * Uses three queries (bookings grouped, slot blocks, bookables already loaded)
+     * rather than one availability check per candidate date.
+     *
+     * @param  iterable<ScheduleSession|LabCollectionSlot>  $bookables
+     * @return list<array{bookable_id: int|string, date: string, remaining: int, cap: int, booked: int}>
+     */
+    public function openDatesFor(iterable $bookables, int $withinDays = 60, int $limit = 20): array
+    {
+        $bookables = collect($bookables)->filter();
+        if ($bookables->isEmpty()) {
+            return [];
+        }
+
+        $capMode = tenant()->slot_cap_mode ?? 'per_session';
+        if ($capMode === 'per_day') {
+            $capMode = 'per_doctor_chamber';
+        }
+
+        $startDate = Carbon::today();
+        $endDate = $startDate->copy()->addDays($withinDays);
+        $bookableClass = $bookables->first()::class;
+
+        $slotBlocks = SlotBlock::query()
+            ->where('date', '>=', $startDate->toDateString())
+            ->where('date', '<=', $endDate->toDateString())
+            ->get();
+
+        $bookingCounts = $this->bulkBookingCounts($bookables, $bookableClass, $capMode, $startDate, $endDate);
+
+        $open = [];
+
+        foreach ($bookables as $bookable) {
+            $cursor = $this->firstCandidateDate($bookable, $startDate);
+
+            while ($cursor->lte($endDate)) {
+                $ymd = $cursor->toDateString();
+
+                if (! $this->isDateBlockedWithBlocks($bookable, $ymd, $slotBlocks)) {
+                    $booked = $this->bookedCountFromIndex($bookable, $ymd, $capMode, $bookingCounts);
+                    $cap = max(0, (int) $bookable->slot_cap);
+                    $remaining = max(0, $cap - $booked);
+
+                    if ($remaining > 0) {
+                        $open[] = [
+                            'bookable_id' => $bookable->id,
+                            'date' => $ymd,
+                            'remaining' => $remaining,
+                            'cap' => $cap,
+                            'booked' => $booked,
+                        ];
+                    }
+                }
+
+                $cursor->addWeek();
+            }
+        }
+
+        usort($open, function (array $a, array $b) use ($bookables): int {
+            $dateCmp = strcmp($a['date'], $b['date']);
+            if ($dateCmp !== 0) {
+                return $dateCmp;
+            }
+
+            $bookableA = $bookables->firstWhere('id', $a['bookable_id']);
+            $bookableB = $bookables->firstWhere('id', $b['bookable_id']);
+
+            return strcmp((string) ($bookableA->start_time ?? ''), (string) ($bookableB->start_time ?? ''));
+        });
+
+        return array_slice($open, 0, $limit);
+    }
+
+    /**
      * @param  array<int, int|string>  $labTestIds  Line items for a lab booking.
      * @param  bool  $sendSms  False for sample/dev seed bookings that must not burn credits.
      */
@@ -43,10 +119,16 @@ class BookingService
         array $labTestIds = [],
         bool $sendSms = true,
         ?string $patientId = null,
+        bool $wantsEarlierDate = false,
+        ?string $whatsappPhone = null,
     ): Booking {
         $patientPhone = $this->normalizeBdPhone($patientPhone);
+        $whatsappPhone = filled($whatsappPhone) ? $this->normalizeBdPhone($whatsappPhone) : null;
+        if ($whatsappPhone === $patientPhone) {
+            $whatsappPhone = null;
+        }
 
-        $booking = DB::transaction(function () use ($bookable, $bookingDate, $patientName, $patientPhone, $labTestIds, $patientId) {
+        $booking = DB::transaction(function () use ($bookable, $bookingDate, $patientName, $patientPhone, $labTestIds, $patientId, $wantsEarlierDate, $whatsappPhone) {
             $tenant = tenant();
             $capMode = $tenant->slot_cap_mode ?? 'per_session';
             if ($capMode === 'per_day') {
@@ -131,8 +213,10 @@ class BookingService
                 // booking would put "F. R." on the ticket and in the SMS.
                 'patient_name' => $patient->name,
                 'patient_phone' => $patientPhone,
+                'whatsapp_phone' => $whatsappPhone,
                 'serial_number' => $nextSerial,
                 'status' => 'waiting',
+                'wants_earlier_date' => $wantsEarlierDate,
             ]);
 
             if ($labTestIds !== []) {
@@ -241,6 +325,131 @@ class BookingService
         return $query->where('bookable_type', get_class($bookable))
             ->where('bookable_id', $bookable->id)
             ->count();
+    }
+
+    private function firstCandidateDate(Model $bookable, Carbon $from): Carbon
+    {
+        $date = $from->copy();
+        while ($date->dayOfWeek !== (int) $bookable->day_of_week) {
+            $date->addDay();
+        }
+
+        if ($this->sessionAlreadyEndedToday($bookable, $date->toDateString())) {
+            $date->addWeek();
+        }
+
+        return $date;
+    }
+
+    /**
+     * @param  Collection<int, ScheduleSession|LabCollectionSlot>  $bookables
+     * @return array{per_session: array<string, int>, per_doctor_chamber: array<string, int>}
+     */
+    private function bulkBookingCounts(
+        Collection $bookables,
+        string $bookableClass,
+        string $capMode,
+        Carbon $startDate,
+        Carbon $endDate,
+    ): array {
+        $rows = Booking::query()
+            ->selectRaw('bookable_id, booking_date, COUNT(*) as cnt')
+            ->where('booking_date', '>=', $startDate->toDateString())
+            ->where('booking_date', '<=', $endDate->toDateString())
+            ->where('status', '!=', 'cancelled')
+            ->where('bookable_type', $bookableClass)
+            ->whereIn('bookable_id', $bookables->pluck('id'))
+            ->groupBy('bookable_id', 'booking_date')
+            ->get();
+
+        $perSession = [];
+        foreach ($rows as $row) {
+            $date = $row->booking_date instanceof Carbon
+                ? $row->booking_date->toDateString()
+                : (string) $row->booking_date;
+            $perSession["{$row->bookable_id}:{$date}"] = (int) $row->cnt;
+        }
+
+        $perDoctorChamber = [];
+        if ($capMode === 'per_doctor_chamber' && $bookableClass === ScheduleSession::class) {
+            $sessionMap = $bookables->mapWithKeys(fn (Model $b) => [
+                $b->id => $b->doctor_id.':'.$b->chamber_id,
+            ]);
+
+            foreach ($perSession as $key => $cnt) {
+                [$sessionId, $date] = explode(':', $key, 2);
+                $dc = $sessionMap->get((int) $sessionId);
+                if ($dc) {
+                    $dcKey = "{$dc}:{$date}";
+                    $perDoctorChamber[$dcKey] = ($perDoctorChamber[$dcKey] ?? 0) + $cnt;
+                }
+            }
+        }
+
+        return [
+            'per_session' => $perSession,
+            'per_doctor_chamber' => $perDoctorChamber,
+        ];
+    }
+
+    /**
+     * @param  array{per_session: array<string, int>, per_doctor_chamber: array<string, int>}  $bookingCounts
+     */
+    private function bookedCountFromIndex(
+        Model $bookable,
+        string $bookingDate,
+        string $capMode,
+        array $bookingCounts,
+    ): int {
+        if ($bookable instanceof ScheduleSession && $capMode === 'per_doctor_chamber') {
+            $key = $bookable->doctor_id.':'.$bookable->chamber_id.':'.$bookingDate;
+
+            return $bookingCounts['per_doctor_chamber'][$key] ?? 0;
+        }
+
+        $key = $bookable->id.':'.$bookingDate;
+
+        return $bookingCounts['per_session'][$key] ?? 0;
+    }
+
+    private function isDateBlockedWithBlocks(Model $bookable, string $bookingDate, Collection $slotBlocks): bool
+    {
+        if ($this->sessionAlreadyEndedToday($bookable, $bookingDate)) {
+            return true;
+        }
+
+        $blocksOnDate = $slotBlocks->filter(function ($block) use ($bookingDate) {
+            $date = $block->date instanceof Carbon
+                ? $block->date->toDateString()
+                : (string) $block->date;
+
+            return $date === $bookingDate;
+        });
+
+        if ($bookable instanceof ScheduleSession) {
+            return $blocksOnDate->contains(function ($block) use ($bookable) {
+                if (is_null($block->chamber_id) && is_null($block->doctor_id)) {
+                    return true;
+                }
+                if ($block->chamber_id === $bookable->chamber_id && is_null($block->doctor_id)) {
+                    return true;
+                }
+
+                return $block->doctor_id === $bookable->doctor_id;
+            });
+        }
+
+        if ($bookable instanceof LabCollectionSlot) {
+            return $blocksOnDate->contains(function ($block) use ($bookable) {
+                if (is_null($block->chamber_id) && is_null($block->doctor_id)) {
+                    return true;
+                }
+
+                return $block->chamber_id === $bookable->chamber_id && is_null($block->doctor_id);
+            });
+        }
+
+        return false;
     }
 
     /**

@@ -147,10 +147,13 @@ class BookingController extends Controller
             // any id fails to resolve.
             'lab_tests' => 'nullable|array',
             'lab_tests.*' => 'integer',
+            'wants_earlier_date' => 'nullable|boolean',
+            'whatsapp_phone' => ['nullable', 'string', 'regex:/^(?:\+?88)?01[3-9]\d{8}$/'],
         ], [
             'booking_date.after_or_equal' => __('Please choose today or a future date.'),
             'booking_date.before_or_equal' => __('Please choose a date within the next 60 days.'),
             'patient_phone.regex' => __('Please enter a valid Bangladeshi mobile number, for example 01712345678.'),
+            'whatsapp_phone.regex' => __('Please enter a valid Bangladeshi WhatsApp number, for example 01712345678.'),
         ]);
 
         // findOrFail runs through the tenant global scope, so an id belonging to
@@ -188,6 +191,8 @@ class BookingController extends Controller
                 $validated['lab_tests'] ?? [],
                 true,
                 $chosenPatient?->id,
+                (bool) ($validated['wants_earlier_date'] ?? false),
+                $validated['whatsapp_phone'] ?? null,
             );
         } catch (BookingUnavailableException $e) {
             // Only this exception type is safe to echo back to an anonymous
@@ -257,6 +262,70 @@ class BookingController extends Controller
         return response()->json([
             'date' => $validated['booking_date'],
             'items' => $items,
+        ]);
+    }
+
+    /**
+     * Open dates for the booking wizard's "when can you come?" step.
+     */
+    public function openDates(Request $request, BookingService $bookingService)
+    {
+        $validated = $request->validate([
+            'bookable_type' => 'required|in:session,lab',
+            'bookable_ids' => 'required|array|min:1|max:50',
+            'bookable_ids.*' => 'integer',
+        ]);
+
+        $modelClass = $validated['bookable_type'] === 'session'
+            ? ScheduleSession::class
+            : LabCollectionSlot::class;
+
+        $with = $validated['bookable_type'] === 'session'
+            ? ['chamber', 'doctor']
+            : ['chamber'];
+
+        $bookables = $modelClass::with($with)
+            ->whereIn('id', $validated['bookable_ids'])
+            ->get();
+
+        $open = $bookingService->openDatesFor($bookables);
+
+        $bookablesById = $bookables->keyBy('id');
+        $options = [];
+
+        foreach ($open as $row) {
+            $bookable = $bookablesById->get($row['bookable_id']);
+            if (! $bookable) {
+                continue;
+            }
+
+            $option = [
+                'bookable_id' => (string) $bookable->id,
+                'date' => $row['date'],
+                'remaining' => $row['remaining'],
+                'cap' => $row['cap'],
+                'booked' => $row['booked'],
+                'start_time' => $bookable->start_time,
+                'end_time' => $bookable->end_time,
+                'day_of_week' => (int) $bookable->day_of_week,
+            ];
+
+            if ($bookable instanceof ScheduleSession) {
+                $option['session_name'] = $bookable->session_name;
+                $option['doctor'] = $bookable->doctor ? ['name' => $bookable->doctor->name] : null;
+                $option['chamber'] = $bookable->chamber ? ['name' => $bookable->chamber->name] : null;
+            } else {
+                $option['session_name'] = null;
+                $option['doctor'] = null;
+                $option['chamber'] = $bookable->chamber ? ['name' => $bookable->chamber->name] : null;
+            }
+
+            $options[] = $option;
+        }
+
+        return response()->json([
+            'options' => $options,
+            'has_open_dates' => $options !== [],
         ]);
     }
 

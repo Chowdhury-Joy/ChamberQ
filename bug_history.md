@@ -702,3 +702,21 @@
  <root_cause>The TV link used `TenancyUrl::publicAbsolute()`, which prefers the tenant's first Domain row (`nusraturmi.localhost`) without the dev server's port. That URL targets port 80, not `:8000`, while path tenancy lives under `127.0.0.1:8000/{tenant}/…`.</root_cause>
  <prevention_rule>Waiting-room Open/Copy links on path tenancy must use `TenancyUrl::screenBookmarkUrl()` (current request host + `/{tenant}/screen/{id}`), not `publicAbsolute()`. Reserve `publicAbsolute()` for SMS/WhatsApp and custom-domain production bookmarks.</prevention_rule>
 </bug>
+
+## 2026-08-11T16:03:15+0600
+
+<bug>
+ <category>CRO</category>
+ <symptom>When the next sitting for a schedule was full (or every sitting in the coming weeks), the booking wizard showed grey **Full** cards and patients could not book a later open date — even when seats existed weeks ahead.</symptom>
+ <root_cause>The schedule step only called `GET /api/bookings/availability` for the **next** occurrence of each weekly sitting. A full next Saturday disabled the card before the patient ever reached the date picker on the identity step.</root_cause>
+ <prevention_rule>The public wizard must offer open dates across the full booking window via `openDatesFor()` / `GET /api/bookings/open-dates`, not gate booking on a single next-weekday snapshot per schedule card.</prevention_rule>
+</bug>
+
+## 2026-08-11T16:24:47+0600
+
+<bug>
+ <category>CRO</category>
+ <symptom>On the new "When can you come?" step, tapping a date card did nothing useful — patients could not move on, and only the first card looked selectable.</symptom>
+ <root_cause>`selectOpenDate` called `rebuildFlow()` which dropped `step-when` once `bookableId` and `prefilledDate` were set, then `nextStep()` could not advance because the current index was already past the shortened flow. The earliest card also used `.selected`, which made other dates look disabled.</root_cause>
+ <prevention_rule>Never rebuild the wizard flow in a way that removes the step the patient is currently on before `nextStep()` runs — keep `step-when` in the flow like the type step, and reserve `.selected` for the card the patient actually tapped.</prevention_rule>
+</bug>

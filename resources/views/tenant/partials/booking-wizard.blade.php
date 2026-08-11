@@ -111,14 +111,12 @@
                     </div>
                 </div>
 
-                <!-- STEP 4: Session / Slot Selection -->
-                <div class="step" id="step-session" data-step-name="session">
-                    <h3 id="session-title">{{ __('Select a Schedule') }}</h3>
-                    <div class="selection-grid list-view" id="session-grid">
+                <!-- STEP: When can you come? (open dates only) -->
+                <div class="step" id="step-when" data-step-name="when">
+                    <h3 id="when-title">{{ __('When can you come?') }}</h3>
+                    <p class="text-muted" id="when-subtitle" style="margin-bottom:1rem;line-height:1.5;">{{ __('Only dates with seats left are shown, soonest first.') }}</p>
+                    <div class="selection-grid list-view" id="when-grid">
                         <!-- Populated by JS -->
-                    </div>
-                    <div class="btn-group">
-                        <button type="button" class="btn btn-back" onclick="prevStep()">{{ __('Back') }}</button>
                     </div>
                 </div>
 
@@ -157,10 +155,10 @@
                     </div>
                     
                     <div class="form-group" style="margin-top:1.5rem;">
-                        <label class="form-label" for="booking_date">{{ __('Booking Date') }}</label>
-                        <input type="date" name="booking_date" id="booking_date" class="form-control" required>
-                        <small class="text-muted" id="date-helper" style="display:block;margin-top:0.5rem"></small>
-                        <span class="field-error" id="date-error" role="alert" aria-live="polite" style="display:none"></span>
+                        <label class="form-label">{{ __('Appointment date') }}</label>
+                        <p id="chosenDateDisplay" class="form-control" style="background:#f8fafc;margin:0;"></p>
+                        <input type="hidden" name="booking_date" id="booking_date" required>
+                        <button type="button" class="btn btn-back" id="changeDateBtn" style="margin-top:0.75rem;padding:0.5rem 1rem;font-size:0.9rem;">{{ __('Change date') }}</button>
                     </div>
 
                     <div class="form-group">
@@ -174,14 +172,42 @@
                         <input type="tel" name="patient_phone" id="patient_phone" class="form-control"
                                inputmode="numeric" autocomplete="tel" maxlength="14"
                                placeholder="017XXXXXXXX" required>
-                        <small class="text-muted" style="display:block;margin-top:0.5rem">{{ __('Use the same number you will show at reception.') }}</small>
+                        <small class="text-muted" style="display:block;margin-top:0.5rem">{{ __('Bangladeshi mobile — 11 digits starting with 013–019. Same number you will show at reception.') }}</small>
                         <span class="field-error" id="phone-error" role="alert" aria-live="polite" style="display:none"></span>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="selection-card" style="display:flex;align-items:flex-start;gap:0.75rem;padding:1rem;cursor:pointer;">
+                            <input type="checkbox" name="different_whatsapp" id="different_whatsapp" value="1" style="width:1.25rem;height:1.25rem;margin-top:0.15rem;accent-color:var(--color-primary);">
+                            <span>
+                                <span class="sc-title" style="display:block;font-weight:600;">{{ __('I have a different WhatsApp number') }}</span>
+                                <span class="sc-sub text-muted" style="display:block;margin-top:0.25rem;font-size:0.9rem;">{{ __('Only if WhatsApp is not on the phone number above.') }}</span>
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="form-group hidden" id="whatsappPhoneGroup">
+                        <label class="form-label" for="whatsapp_phone">{{ __('WhatsApp Number') }}</label>
+                        <input type="tel" name="whatsapp_phone" id="whatsapp_phone" class="form-control"
+                               inputmode="numeric" autocomplete="tel" maxlength="14"
+                               placeholder="017XXXXXXXX">
+                        <span class="field-error" id="whatsapp-error" role="alert" aria-live="polite" style="display:none"></span>
                     </div>
 
                     <div class="form-group hidden" id="patientPickerGroup" aria-live="polite">
                         <p class="form-label" style="margin-bottom:0.75rem;font-weight:600;">{{ __('Who is this appointment for?') }}</p>
                         <div id="patientPickerOptions" class="patient-picker-options"></div>
                         <input type="hidden" name="patient_id" id="patient_id" value="">
+                    </div>
+
+                    <div class="form-group">
+                        <label class="selection-card" style="display:flex;align-items:flex-start;gap:0.75rem;padding:1rem;cursor:pointer;">
+                            <input type="checkbox" name="wants_earlier_date" id="wants_earlier_date" value="1" style="width:1.25rem;height:1.25rem;margin-top:0.15rem;accent-color:var(--color-primary);">
+                            <span>
+                                <span class="sc-title" style="display:block;font-weight:600;">{{ __('Tell me if an earlier date opens up') }}</span>
+                                <span class="sc-sub text-muted" style="display:block;margin-top:0.25rem;font-size:0.9rem;">{{ __('The clinic may message you on WhatsApp if a seat frees up before your appointment.') }}</span>
+                            </span>
+                        </label>
                     </div>
 
                     <div class="btn-group">
@@ -219,11 +245,14 @@
             canBookLab: @json($canBookLab),
             payAtClinic: @json(__('Pay at the clinic')),
             confirmLabel: @json(__('Confirm Booking')),
+            continueLabel: @json(__('Continue')),
             bookingLabel: @json(__('Booking…')),
             basePath: @json(rtrim(tenant_web_url(''), '/')),
             prefill: @json($prefill ?? []),
             phoneInvalid: @json(__('Please enter a valid Bangladeshi mobile number, for example 01712345678.')),
+            whatsappInvalid: @json(__('Please enter a valid Bangladeshi WhatsApp number, for example 01712345678.')),
             localeTag: @json(app()->getLocale() === 'bn' ? 'bn-BD' : 'en-GB'),
+            contactPhone: @json(filled($tenant->contact_phone ?? null) ? $tenant->contact_phone : null),
         };
 
         const i18n = {
@@ -251,13 +280,22 @@
             stepType: @json(__('Choose booking type')),
             stepChamber: @json(__('Pick location')),
             stepDoctor: @json(__('Pick doctor')),
-            stepSession: @json(__('Pick schedule')),
+            stepWhen: @json(__('Pick a date')),
             stepLabWindow: @json(__('Pick collection time')),
             stepLabTests: @json(__('Select tests')),
             stepIdentity: @json(__('Your details')),
             whoIsThisFor: @json(__('Who is this appointment for?')),
             someoneNew: @json(__('Someone new')),
             usingRecordOnFile: @json(__('We already have this patient on file — no need to type the name again.')),
+            whenCanYouCome: @json(__('When can you come?')),
+            whenSubtitle: @json(__('Only dates with seats left are shown, soonest first.')),
+            earliestAvailable: @json(__('Earliest available')),
+            seeMoreDates: @json(__('See more dates')),
+            showFewerDates: @json(__('Show fewer dates')),
+            noOpenDatesTitle: @json(__('No seats available soon')),
+            noOpenDatesBody: @json(__('Every date in the next two months is full or closed. Please call the clinic or try again later.')),
+            callClinic: @json(__('Call the clinic')),
+            seatsLeftShort: @json(__(':remaining seats left')),
         };
         
         let selectedPatientId = null;
@@ -287,6 +325,8 @@
 
         let flow = [];
         let availabilityCache = {};
+        let openDatesExpanded = false;
+        const initialVisibleDates = 5;
         
         function rebuildFlow() {
             flow = [];
@@ -324,9 +364,10 @@
                 @endif
             }
             
-            if (!state.bookableId) {
-                flow.push('step-session');
-            }
+            // Keep the when step in the flow after a date is picked. Dropping it
+            // (like we once did with the type step) shifted indices so nextStep
+            // never reached identity — cards looked dead and there was no Continue.
+            flow.push('step-when');
             
             if (state.type === 'lab') {
                 flow.push('step-lab-tests');
@@ -422,7 +463,7 @@
                 case 'step-type': return i18n.stepType;
                 case 'step-chamber': return i18n.stepChamber;
                 case 'step-doctor': return i18n.stepDoctor;
-                case 'step-session': return state.type === 'lab' ? i18n.stepLabWindow : i18n.stepSession;
+                case 'step-when': return state.type === 'lab' ? i18n.stepLabWindow : i18n.stepWhen;
                 case 'step-lab-tests': return i18n.stepLabTests;
                 case 'step-identity': return i18n.stepIdentity;
                 default: return '';
@@ -458,73 +499,155 @@
             renderProgress();
             
             const currentStepId = flow[currentStepIndex];
-            if (currentStepId === 'step-session') {
-                renderSessions();
+            if (currentStepId === 'step-when') {
+                renderOpenDates();
             } else if (currentStepId === 'step-identity') {
                 setupDateConstraint();
             }
         }
 
+        function goToWhenStep() {
+            state.bookableId = null;
+            state.prefilledDate = null;
+            openDatesExpanded = false;
+            rebuildFlow();
+            const whenIdx = flow.indexOf('step-when');
+            if (whenIdx >= 0) {
+                currentStepIndex = whenIdx;
+            }
+            showStep();
+        }
+
         function setupDateConstraint() {
             const dateInput = document.getElementById('booking_date');
-            const dateError = document.getElementById('date-error');
+            const dateDisplay = document.getElementById('chosenDateDisplay');
             const submitBtn = document.getElementById('submitBtn');
             const phoneError = document.getElementById('phone-error');
-            
-            const today = localToday();
-            dateInput.min = toLocalYmd(today);
-            const max = new Date(today);
-            max.setDate(max.getDate() + 60);
-            dateInput.max = toLocalYmd(max);
-            
-            const nextValid = nextAvailableDate(state.dayOfWeek, state.endTime, today);
-            const formatted = nextValid.toLocaleDateString(config.localeTag, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-            document.getElementById('date-helper').innerText = i18n.nextAvailable.replace(':date', formatted);
-            dateInput.value = toLocalYmd(nextValid);
+            const changeBtn = document.getElementById('changeDateBtn');
 
-            if (state.prefilledDate && state.prefilledDate >= dateInput.min && state.prefilledDate <= dateInput.max) {
-                dateInput.value = state.prefilledDate;
+            if (!state.prefilledDate) {
+                goToWhenStep();
+                return;
             }
-            
-            dateInput.onchange = () => {
-                validateDate();
-                refreshIdentityAvailability();
-                updateReviewSummary();
-            };
-            // Patients often type "017 1234 5678" or "017-1234-5678". Strip the
-            // separators as they go so the BD pattern check does not reject a
-            // number that is otherwise correct, keeping the caret in place.
+
+            dateInput.value = state.prefilledDate;
+            const d = new Date(state.prefilledDate + 'T00:00:00');
+            dateDisplay.textContent = d.toLocaleDateString(config.localeTag, {
+                weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+            });
+
+            if (changeBtn && !changeBtn.dataset.bound) {
+                changeBtn.dataset.bound = '1';
+                changeBtn.addEventListener('click', goToWhenStep);
+            }
+
             const phoneInput = document.getElementById('patient_phone');
             phoneInput.oninput = () => {
                 phoneError.style.display = 'none';
-                const before = phoneInput.value;
-                const cleaned = before.replace(/[^\d+]/g, '');
-                if (cleaned === before) {
-                    schedulePatientLookup();
-                    return;
-                }
-                const caret = phoneInput.selectionStart ?? before.length;
-                const head = before.slice(0, caret);
-                const removed = head.length - head.replace(/[^\d+]/g, '').length;
-                phoneInput.value = cleaned;
-                const pos = Math.max(0, caret - removed);
-                phoneInput.setSelectionRange(pos, pos);
+                stripPhoneSeparators(phoneInput);
+                updateConfirmEnabled();
                 schedulePatientLookup();
             };
-            phoneInput.onblur = () => schedulePatientLookup(true);
-            dateError.style.display = 'none';
+            phoneInput.onblur = () => {
+                validatePhoneField(phoneInput, phoneError);
+                schedulePatientLookup(true);
+                updateConfirmEnabled();
+            };
+
+            const nameInput = document.getElementById('patient_name');
+            nameInput.oninput = () => updateConfirmEnabled();
+
+            const differentWa = document.getElementById('different_whatsapp');
+            const waGroup = document.getElementById('whatsappPhoneGroup');
+            const waInput = document.getElementById('whatsapp_phone');
+            const waError = document.getElementById('whatsapp-error');
+            if (differentWa && !differentWa.dataset.bound) {
+                differentWa.dataset.bound = '1';
+                differentWa.addEventListener('change', () => {
+                    if (differentWa.checked) {
+                        waGroup.classList.remove('hidden');
+                    } else {
+                        waGroup.classList.add('hidden');
+                        waInput.value = '';
+                        waError.style.display = 'none';
+                    }
+                    updateConfirmEnabled();
+                });
+            }
+            if (waInput && !waInput.dataset.bound) {
+                waInput.dataset.bound = '1';
+                waInput.oninput = () => {
+                    waError.style.display = 'none';
+                    stripPhoneSeparators(waInput);
+                    updateConfirmEnabled();
+                };
+                waInput.onblur = () => {
+                    if (document.getElementById('different_whatsapp')?.checked) {
+                        validatePhoneField(waInput, waError, config.whatsappInvalid);
+                    }
+                    updateConfirmEnabled();
+                };
+            }
+
             phoneError.style.display = 'none';
             if (state.prefilledPhone) {
                 phoneInput.value = state.prefilledPhone;
                 if (isValidBdPhone(state.prefilledPhone)) schedulePatientLookup(true);
             }
             if (state.prefilledName) {
-                document.getElementById('patient_name').value = state.prefilledName;
+                nameInput.value = state.prefilledName;
             }
-            submitBtn.disabled = false;
             submitBtn.textContent = config.confirmLabel;
             updateReviewSummary();
             refreshIdentityAvailability();
+            updateConfirmEnabled();
+        }
+
+        function stripPhoneSeparators(input) {
+            const before = input.value;
+            const cleaned = before.replace(/[^\d+]/g, '');
+            if (cleaned === before) {
+                return;
+            }
+            const caret = input.selectionStart ?? before.length;
+            const head = before.slice(0, caret);
+            const removed = head.length - head.replace(/[^\d+]/g, '').length;
+            input.value = cleaned;
+            const pos = Math.max(0, caret - removed);
+            input.setSelectionRange(pos, pos);
+        }
+
+        function validatePhoneField(input, errorEl, message = null) {
+            const value = input.value.trim();
+            if (!value) {
+                errorEl.style.display = 'none';
+                return false;
+            }
+            if (!isValidBdPhone(value)) {
+                errorEl.innerText = message || config.phoneInvalid;
+                errorEl.style.display = 'block';
+                return false;
+            }
+            errorEl.style.display = 'none';
+            return true;
+        }
+
+        function identityFieldsComplete() {
+            const dateOk = Boolean(state.prefilledDate && document.getElementById('booking_date').value);
+            const phoneOk = isValidBdPhone(document.getElementById('patient_phone').value.trim());
+            const patientId = document.getElementById('patient_id').value;
+            const nameOk = Boolean(patientId) || document.getElementById('patient_name').value.trim().length > 0;
+            const differentWa = document.getElementById('different_whatsapp')?.checked;
+            const waOk = !differentWa || isValidBdPhone(document.getElementById('whatsapp_phone').value.trim());
+            return dateOk && phoneOk && nameOk && waOk;
+        }
+
+        function updateConfirmEnabled() {
+            const submitBtn = document.getElementById('submitBtn');
+            if (!submitBtn) return;
+            // Also respect live seat availability (refreshIdentityAvailability may disable).
+            const seatsOpen = !submitBtn.dataset.seatsClosed;
+            submitBtn.disabled = !identityFieldsComplete() || !seatsOpen;
         }
 
         function schedulePatientLookup(immediate = false) {
@@ -602,6 +725,7 @@
                 nameInput.placeholder = patientLabel || '';
                 nameHint.textContent = i18n.usingRecordOnFile;
                 nameHint.style.display = 'block';
+                updateConfirmEnabled();
                 return;
             }
 
@@ -609,6 +733,7 @@
             nameInput.required = true;
             nameInput.placeholder = '';
             nameHint.style.display = 'none';
+            updateConfirmEnabled();
         }
 
         function updateReviewSummary() {
@@ -650,39 +775,18 @@
                 seatsEl.textContent = label.text || '—';
                 seatsEl.className = 'seats-line ' + (label.className || '');
 
-                const dateOk = validateDate(true);
                 const open = info && info.available && !info.missing;
-                submitBtn.disabled = !dateOk || !open;
+                submitBtn.dataset.seatsClosed = open ? '' : '1';
+                updateConfirmEnabled();
             } catch (e) {
                 seatsEl.textContent = '';
-                submitBtn.disabled = !validateDate(true);
+                submitBtn.dataset.seatsClosed = '';
+                updateConfirmEnabled();
             }
         }
 
-        function validateDate(silent = false) {
-            const dateInput = document.getElementById('booking_date');
-            const dateError = document.getElementById('date-error');
-            const submitBtn = document.getElementById('submitBtn');
-            
-            if (!dateInput.value) {
-                if (!silent) dateError.style.display = 'none';
-                return false;
-            }
-            
-            const selected = new Date(dateInput.value + 'T00:00:00');
-            const selectedDay = selected.getDay();
-            
-            if (selectedDay !== state.dayOfWeek) {
-                const expected = dayLabels[state.dayOfWeek];
-                const got = dayLabels[selectedDay];
-                dateError.innerText = i18n.dateMismatch.replace(':got', got).replace(':expected', expected);
-                dateError.style.display = 'block';
-                if (!silent) submitBtn.disabled = true;
-                return false;
-            }
-
-            dateError.style.display = 'none';
-            return true;
+        function validateDate() {
+            return Boolean(state.prefilledDate && document.getElementById('booking_date').value);
         }
 
         function nextStep() {
@@ -697,6 +801,13 @@
                 currentStepIndex--;
                 if (flow[currentStepIndex] === 'step-type') {
                     state.type = null;
+                }
+                // Returning to the date list should offer every open date again,
+                // not only the session they just picked.
+                if (flow[currentStepIndex] === 'step-when') {
+                    state.bookableId = null;
+                    state.prefilledDate = null;
+                    openDatesExpanded = false;
                 }
                 showStep();
             }
@@ -729,195 +840,172 @@
             setTimeout(nextStep, 200);
         }
         
-        function selectBookable(id, dayOfWeek, meta = {}) {
-            state.bookableId = id;
-            state.dayOfWeek = dayOfWeek;
-            state.sessionName = meta.sessionName || null;
-            state.startTime = meta.startTime || null;
-            state.endTime = meta.endTime || null;
-            state.doctorName = meta.doctorName || null;
-            state.chamberName = meta.chamberName || null;
-            document.querySelectorAll('#session-grid .selection-card').forEach(el => el.classList.remove('selected'));
-            const card = document.querySelector(`#session-grid .selection-card[data-id="${id}"]`);
-            if (card) card.classList.add('selected');
+        function selectOpenDate(option, el) {
+            state.bookableId = String(option.bookable_id);
+            state.dayOfWeek = option.day_of_week;
+            state.prefilledDate = option.date;
+            state.sessionName = option.session_name || null;
+            state.startTime = option.start_time || null;
+            state.endTime = option.end_time || null;
+            state.doctorName = option.doctor?.name || null;
+            state.chamberName = option.chamber?.name || null;
+            markSelected('#when-grid', el);
             setTimeout(nextStep, 200);
         }
-        
-        async function renderSessions() {
-            const grid = document.getElementById('session-grid');
-            const title = document.getElementById('session-title');
+
+        async function fetchOpenDates(bookableType, ids) {
+            const params = new URLSearchParams();
+            params.set('bookable_type', bookableType);
+            ids.forEach(id => params.append('bookable_ids[]', id));
+
+            const response = await fetch(`${config.basePath}/api/bookings/open-dates?${params.toString()}`, {
+                headers: { 'Accept': 'application/json' },
+            });
+            if (!response.ok) throw new Error('open-dates failed');
+            const data = await response.json();
+            return data.options || [];
+        }
+
+        function formatOpenDateTitle(ymd) {
+            const d = new Date(ymd + 'T00:00:00');
+            return d.toLocaleDateString(config.localeTag, { weekday: 'long', day: 'numeric', month: 'short' });
+        }
+
+        function buildWhenCard(option, { highlight = false } = {}) {
+            const card = document.createElement('button');
+            card.type = 'button';
+            // Earliest gets a label badge only — not `.selected`, which made every
+            // other card look untappable until a real click marks one.
+            card.className = 'selection-card';
+            card.addEventListener('click', () => selectOpenDate(option, card));
+
+            const timeRange = `${formatTime(option.start_time)}–${formatTime(option.end_time)}`;
+
+            if (highlight) {
+                const badge = document.createElement('span');
+                badge.className = 'sc-sub';
+                badge.style.cssText = 'display:block;font-weight:600;margin-bottom:0.35rem;';
+                badge.textContent = i18n.earliestAvailable;
+                card.appendChild(badge);
+            }
+
+            const heading = document.createElement('span');
+            heading.className = 'sc-title';
+            heading.textContent = formatOpenDateTitle(option.date);
+
+            const meta = document.createElement('span');
+            meta.className = 'sc-sub';
+            const detailParts = [];
+            if (state.type !== 'lab' && option.session_name) {
+                detailParts.push(option.session_name);
+            }
+            detailParts.push(timeRange);
+            if (option.doctor?.name) detailParts.push(option.doctor.name);
+            if (option.chamber?.name) detailParts.push(option.chamber.name);
+            meta.textContent = detailParts.join(' · ');
+
+            const seatsEl = document.createElement('div');
+            seatsEl.className = 'seats';
+            seatsEl.textContent = i18n.seatsLeftShort.replace(':remaining', option.remaining);
+
+            card.append(heading, meta, seatsEl);
+
+            return card;
+        }
+
+        async function renderOpenDates() {
+            const grid = document.getElementById('when-grid');
+            const title = document.getElementById('when-title');
+            const subtitle = document.getElementById('when-subtitle');
             grid.replaceChildren();
-            
-            if (state.type === 'session') {
-                title.innerText = i18n.selectSchedule;
-                const filtered = sessionsData.filter(s => 
-                    (!state.chamberId || s.chamber_id == state.chamberId) && 
-                    (!state.doctorId || s.doctor_id == state.doctorId)
-                );
-                
-                if (filtered.length === 0) {
-                    const empty = document.createElement('div');
-                    empty.className = 'text-muted';
-                    empty.style.cssText = 'padding:1rem 0;line-height:1.5;';
-                    const heading = document.createElement('p');
-                    heading.style.cssText = 'margin:0 0 0.5rem;font-weight:600;color:#0f172a;';
-                    heading.textContent = i18n.noSchedulesTitle;
-                    const body = document.createElement('p');
-                    body.style.margin = '0';
-                    body.textContent = i18n.noSchedulesBody;
-                    empty.append(heading, body);
-                    grid.appendChild(empty);
-                    return;
+            title.textContent = i18n.whenCanYouCome;
+            subtitle.textContent = i18n.whenSubtitle;
+
+            const bookableType = state.type === 'lab' ? 'lab' : 'session';
+            const sourceData = state.type === 'lab' ? labSlotsData : sessionsData;
+            // Deep-link `?session=` locks the bookable; a normal browse must
+            // still list every open date for the chosen chamber/doctor.
+            const lockToSession = Boolean(state.typeLocked && state.bookableId && !state.prefilledDate);
+            const filtered = sourceData.filter(s => {
+                if (lockToSession && String(s.id) !== String(state.bookableId)) return false;
+                if (state.chamberId && s.chamber_id != state.chamberId) return false;
+                if (state.type !== 'lab' && state.doctorId && s.doctor_id != state.doctorId) return false;
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'text-muted';
+                empty.style.cssText = 'padding:1rem 0;line-height:1.5;';
+                const heading = document.createElement('p');
+                heading.style.cssText = 'margin:0 0 0.5rem;font-weight:600;color:#0f172a;';
+                heading.textContent = state.type === 'lab' ? i18n.noLabTitle : i18n.noSchedulesTitle;
+                const body = document.createElement('p');
+                body.style.margin = '0';
+                body.textContent = state.type === 'lab' ? i18n.noLabBody : i18n.noSchedulesBody;
+                empty.append(heading, body);
+                grid.appendChild(empty);
+                return;
+            }
+
+            grid.appendChild(document.createTextNode(i18n.checkingSeats));
+
+            let options = [];
+            try {
+                options = await fetchOpenDates(bookableType, filtered.map(s => s.id));
+            } catch (e) {
+                options = [];
+            }
+
+            grid.replaceChildren();
+
+            if (options.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'text-muted';
+                empty.style.cssText = 'padding:1rem 0;line-height:1.5;';
+                const heading = document.createElement('p');
+                heading.style.cssText = 'margin:0 0 0.5rem;font-weight:600;color:#0f172a;';
+                heading.textContent = i18n.noOpenDatesTitle;
+                const body = document.createElement('p');
+                body.style.margin = '0';
+                body.textContent = i18n.noOpenDatesBody;
+                empty.append(heading, body);
+                if (config.contactPhone) {
+                    const call = document.createElement('a');
+                    call.href = `tel:${config.contactPhone}`;
+                    call.className = 'btn';
+                    call.style.cssText = 'display:inline-block;margin-top:1rem;';
+                    call.textContent = `${i18n.callClinic}: ${config.contactPhone}`;
+                    empty.appendChild(call);
                 }
+                grid.appendChild(empty);
+                return;
+            }
 
-                // Group by next occurrence date so we can batch availability
-                const byDate = {};
-                filtered.forEach(s => {
-                    const ymd = toLocalYmd(nextAvailableDate(s.day_of_week, s.end_time));
-                    if (!byDate[ymd]) byDate[ymd] = [];
-                    byDate[ymd].push(s);
-                });
-
-                let itemsById = {};
-                try {
-                    for (const [ymd, list] of Object.entries(byDate)) {
-                        const chunk = await fetchAvailability('session', list.map(s => s.id), ymd);
-                        itemsById = { ...itemsById, ...chunk };
-                    }
-                } catch (e) {
-                    itemsById = {};
+            const visibleCount = openDatesExpanded ? options.length : Math.min(initialVisibleDates, options.length);
+            options.slice(0, visibleCount).forEach((option, idx) => {
+                const card = buildWhenCard(option, { highlight: idx === 0 });
+                if (
+                    state.prefilledDate
+                    && String(option.bookable_id) === String(state.bookableId)
+                    && option.date === state.prefilledDate
+                ) {
+                    card.classList.add('selected');
                 }
+                grid.appendChild(card);
+            });
 
-                filtered.forEach(s => {
-                    const tStart = formatTime(s.start_time);
-                    const tEnd = formatTime(s.end_time);
-                    const day = dayLabels[s.day_of_week] || '';
-                    const nextYmd = toLocalYmd(nextAvailableDate(s.day_of_week, s.end_time));
-                    const info = itemsById[String(s.id)];
-                    const seats = seatsLabel(info);
-                    const disabled = info && (info.blocked || info.remaining <= 0 || info.missing);
-
-                    const card = document.createElement('button');
-                    card.type = 'button';
-                    card.className = 'selection-card' + (disabled ? ' is-disabled' : '');
-                    card.dataset.id = String(s.id);
-                    if (disabled) {
-                        card.disabled = true;
-                    } else {
-                        card.addEventListener('click', () => selectBookable(String(s.id), s.day_of_week, {
-                            sessionName: s.session_name,
-                            startTime: s.start_time,
-                            endTime: s.end_time,
-                            doctorName: s.doctor?.name,
-                            chamberName: s.chamber?.name,
-                        }));
-                    }
-
-                    const heading = document.createElement('span');
-                    heading.className = 'sc-title';
-                    heading.textContent = s.session_name ?? '';
-
-                    const meta = document.createElement('span');
-                    meta.className = 'sc-sub';
-                    meta.textContent = `${day} • ${tStart} - ${tEnd}`;
-
-                    const detail = document.createElement('span');
-                    detail.className = 'sc-sub text-muted';
-                    detail.style.cssText = 'font-size:0.8rem; margin-top:0.5rem;';
-                    detail.textContent = i18n.doctorChamber
-                        .replace(':doctor', s.doctor?.name ?? '')
-                        .replace(':chamber', s.chamber?.name ?? '');
-
-                    const seatsEl = document.createElement('div');
-                    seatsEl.className = 'seats ' + (seats.className || '');
-                    const nextLabel = nextAvailableDate(s.day_of_week, s.end_time).toLocaleDateString(config.localeTag, { day: 'numeric', month: 'short' });
-                    seatsEl.textContent = seats.text
-                        ? `${seats.text} · ${i18n.nextDay.replace(':date', nextLabel)}`
-                        : i18n.nextDay.replace(':date', nextLabel);
-
-                    card.append(heading, meta, detail, seatsEl);
-                    grid.appendChild(card);
+            if (options.length > initialVisibleDates) {
+                const toggle = document.createElement('button');
+                toggle.type = 'button';
+                toggle.className = 'btn btn-back';
+                toggle.style.cssText = 'margin-top:0.75rem;width:100%;';
+                toggle.textContent = openDatesExpanded ? i18n.showFewerDates : i18n.seeMoreDates;
+                toggle.addEventListener('click', () => {
+                    openDatesExpanded = !openDatesExpanded;
+                    renderOpenDates();
                 });
-            } else {
-                title.innerText = i18n.selectLabWindow;
-                const filtered = labSlotsData.filter(s => 
-                    (!state.chamberId || s.chamber_id == state.chamberId)
-                );
-                
-                if (filtered.length === 0) {
-                    const empty = document.createElement('div');
-                    empty.className = 'text-muted';
-                    empty.style.cssText = 'padding:1rem 0;line-height:1.5;';
-                    const heading = document.createElement('p');
-                    heading.style.cssText = 'margin:0 0 0.5rem;font-weight:600;color:#0f172a;';
-                    heading.textContent = i18n.noLabTitle;
-                    const body = document.createElement('p');
-                    body.style.margin = '0';
-                    body.textContent = i18n.noLabBody;
-                    empty.append(heading, body);
-                    grid.appendChild(empty);
-                    return;
-                }
-
-                const byDate = {};
-                filtered.forEach(s => {
-                    const ymd = toLocalYmd(nextAvailableDate(s.day_of_week, s.end_time));
-                    if (!byDate[ymd]) byDate[ymd] = [];
-                    byDate[ymd].push(s);
-                });
-                let itemsById = {};
-                try {
-                    for (const [ymd, list] of Object.entries(byDate)) {
-                        const chunk = await fetchAvailability('lab', list.map(s => s.id), ymd);
-                        itemsById = { ...itemsById, ...chunk };
-                    }
-                } catch (e) {
-                    itemsById = {};
-                }
-                
-                filtered.forEach(s => {
-                    const tStart = formatTime(s.start_time);
-                    const tEnd = formatTime(s.end_time);
-                    const day = dayLabels[s.day_of_week];
-                    const chamberName = s.chamber ? s.chamber.name : i18n.mainLab;
-                    const info = itemsById[String(s.id)];
-                    const seats = seatsLabel(info);
-                    const disabled = info && (info.blocked || info.remaining <= 0 || info.missing);
-
-                    const card = document.createElement('button');
-                    card.type = 'button';
-                    card.className = 'selection-card' + (disabled ? ' is-disabled' : '');
-                    card.dataset.id = String(s.id);
-                    if (disabled) {
-                        card.disabled = true;
-                    } else {
-                        card.addEventListener('click', () => selectBookable(String(s.id), s.day_of_week, {
-                            sessionName: null,
-                            startTime: s.start_time,
-                            endTime: s.end_time,
-                            doctorName: null,
-                            chamberName,
-                        }));
-                    }
-
-                    const heading = document.createElement('span');
-                    heading.className = 'sc-title';
-                    heading.textContent = `${dayLabels[s.day_of_week] || ''}`;
-
-                    const meta = document.createElement('span');
-                    meta.className = 'sc-sub';
-                    meta.textContent = `${tStart} - ${tEnd} • ${chamberName}`;
-
-                    const seatsEl = document.createElement('div');
-                    seatsEl.className = 'seats ' + (seats.className || '');
-                    const nextLabel = nextAvailableDate(s.day_of_week, s.end_time).toLocaleDateString(config.localeTag, { day: 'numeric', month: 'short' });
-                    seatsEl.textContent = seats.text
-                        ? `${seats.text} · ${i18n.nextDay.replace(':date', nextLabel)}`
-                        : i18n.nextDay.replace(':date', nextLabel);
-
-                    card.append(heading, meta, seatsEl);
-                    grid.appendChild(card);
-                });
+                grid.appendChild(toggle);
             }
         }
         
@@ -966,6 +1054,25 @@
             if (!isValidBdPhone(phone)) {
                 phoneError.innerText = config.phoneInvalid;
                 phoneError.style.display = 'block';
+                updateConfirmEnabled();
+                return;
+            }
+
+            const differentWa = document.getElementById('different_whatsapp')?.checked;
+            const waInput = document.getElementById('whatsapp_phone');
+            const waError = document.getElementById('whatsapp-error');
+            if (differentWa) {
+                const wa = waInput.value.trim();
+                if (!isValidBdPhone(wa)) {
+                    waError.innerText = config.whatsappInvalid;
+                    waError.style.display = 'block';
+                    updateConfirmEnabled();
+                    return;
+                }
+            }
+
+            if (!identityFieldsComplete()) {
+                updateConfirmEnabled();
                 return;
             }
 
@@ -990,6 +1097,12 @@
                 document.querySelectorAll('input[name="lab_tests[]"]:checked').forEach(cb => {
                     formData.append('lab_tests[]', cb.value);
                 });
+            }
+            if (document.getElementById('wants_earlier_date')?.checked) {
+                formData.append('wants_earlier_date', '1');
+            }
+            if (differentWa && waInput.value.trim()) {
+                formData.append('whatsapp_phone', waInput.value.trim());
             }
             
             try {
@@ -1021,8 +1134,8 @@
                     msgEl.innerText = message;
                     msgEl.className = 'alert alert-error';
                     msgEl.style.display = 'block';
-                    submitBtn.disabled = false;
                     submitBtn.textContent = config.confirmLabel;
+                    updateConfirmEnabled();
 
                     // Rahim lost the last seat — refresh seats and mark Full
                     if (data.code === 'capacity' || data.code === 'blocked' || data.code === 'unavailable') {
@@ -1034,8 +1147,8 @@
                 msgEl.innerText = i18n.submitError;
                 msgEl.className = 'alert alert-error';
                 msgEl.style.display = 'block';
-                submitBtn.disabled = false;
                 submitBtn.textContent = config.confirmLabel;
+                updateConfirmEnabled();
             }
         });
 
@@ -1085,7 +1198,7 @@
 
         rebuildFlow();
 
-        if (state.bookableId && state.prefilledPhone) {
+        if (state.bookableId && state.prefilledDate && state.prefilledPhone) {
             const identityIdx = flow.indexOf('step-identity');
             if (identityIdx >= 0) {
                 currentStepIndex = identityIdx;

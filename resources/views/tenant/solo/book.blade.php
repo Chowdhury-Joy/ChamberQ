@@ -209,15 +209,34 @@
         .booking-review .seats-line { margin-top: 0.35rem; font-weight: 600; color: var(--color-primary); }
         .booking-review .seats-line.is-full, .booking-review .seats-line.is-closed { color: #b91c1c; }
 
+        /* Keep Back/Continue reachable without scrolling past a long date list.
+           Sticky (not fixed) so the bar settles inline on short steps. */
         .btn-group {
             display: flex;
             justify-content: space-between;
             align-items: center;
             gap: 0.75rem;
-            margin-top: 2rem;
+            position: sticky;
+            bottom: 0;
+            z-index: 20;
+            margin: 1.75rem -1.25rem 0;
+            padding: 0.85rem 1.25rem calc(0.85rem + env(safe-area-inset-bottom, 0px));
+            background: #ffffff;
+            box-shadow: 0 -8px 18px -14px rgba(15, 23, 42, 0.5);
             border-top: 1px solid #E6E6E6;
-            padding-top: 1.5rem;
-            flex-wrap: wrap;
+            flex-wrap: nowrap;
+        }
+        .btn-group .btn { padding-left: 1.25rem; padding-right: 1.25rem; }
+        .btn-group .btn-back { flex: 0 0 auto; }
+        .btn-group .btn-primary { flex: 1 1 auto; }
+
+        @media (min-width: 640px) {
+            .btn-group {
+                margin-left: -2.5rem;
+                margin-right: -2.5rem;
+                padding-left: 2.5rem;
+                padding-right: 2.5rem;
+            }
         }
         .btn {
             display: inline-flex;
@@ -250,25 +269,6 @@
             transition: background 0.15s ease;
         }
         .btn-back:hover { background: #F2F2F2; }
-
-        /* Phones: keep Back/Continue reachable without scrolling to the end of
-           a long step. Sticky (not fixed) so the bar settles inline on short
-           steps and never covers content. */
-        @media (max-width: 639.98px) {
-            .btn-group {
-                position: sticky;
-                bottom: 0;
-                z-index: 20;
-                margin: 1.75rem -1.25rem 0;
-                padding: 0.85rem 1.25rem calc(0.85rem + env(safe-area-inset-bottom));
-                background: #ffffff;
-                box-shadow: 0 -8px 18px -14px rgba(15, 23, 42, 0.5);
-                flex-wrap: nowrap;
-            }
-            .btn-group .btn { padding-left: 1.25rem; padding-right: 1.25rem; }
-            .btn-group .btn-back { flex: 0 0 auto; }
-            .btn-group .btn-primary { flex: 1 1 auto; }
-        }
 
         .progress-bar { display: flex; justify-content: center; gap: 0.5rem; margin-bottom: 0.65rem; }
         .progress-dot { width: 8px; height: 8px; border-radius: 50%; background: #E0E0E0; transition: all 0.3s; }

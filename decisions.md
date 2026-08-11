@@ -1317,3 +1317,61 @@
   <action>Clinic relational CMS: Departments and Blog posts as tenant tables with one list + one detail Blade each; doctor public profiles on `doctors`; homepage `service_matrix` / `health_insights` / `doctor_grid` read published rows. Solo homepage unchanged.</action>
   <reason>One template, many items — like Word styles vs copying paragraphs — and staff edit content once in Website admin.</reason>
 </decision>
+
+## 2026-08-11T12:14:33+0600
+<decision>
+  <category>CRO</category>
+  <context>Needed a reusable screen-share / meeting deck for experienced solo doctors (room already full), matching the teal Maestro proposal look — not the older navy Client/Established PowerPoint decks. Owner confirmed: generic leave-behind (not named doctor), slide format, plan name Maestro.</context>
+  <action>Shipped `docs/slides/build-maestro-experienced-solo-pitch.js` → `ChamberQ-Maestro-Experienced-Solo-Pitch.pptx` (13 slides): cover, who it’s for, friction, digital front desk, patient day, desk/consult, busy-day flow, Rx home, what we build, kept simple, Maestro investment (৳15,000 / ৳3,000), go-live, WhatsApp close (01818-614349). Teal palette from proposals (`#0C3A3B` / `#0F766E` / `#5EEAD4`). Framing: order and reputation, not “fill your room.”</action>
+  <reason>Experienced solos need the Maestro story without Clinic upsell or Rising Star distraction; proposal colours keep sales material on one brand language.</reason>
+</decision>
+
+<decision>
+  <category>Business_Logic</category>
+  <context>Marketing and agents still say “Solo” for the full one-doctor plan; proposals and Rising Star split already call that plan Maestro.</context>
+  <action>From 2026-08-11, in conversation and new sales material, call the full one-doctor product **Maestro** even when someone says “Solo.” Rising Star stays the limited lane; Clinic stays multi-doctor. Internal `solo` feature-flag / plan key in code is unchanged unless a later rename task migrates it.</action>
+  <reason>Stops two names for the same sticker (৳15k / ৳3k) and matches shipped Belle Vue proposals.</reason>
+</decision>
+
+## 2026-08-11T13:09:19+0600
+<decision>
+  <category>UI/UX</category>
+  <context>Maestro experienced-solo slide deck used Helvetica Neue for headlines; proposal HTML uses Bebas Neue for display titles and Helvetica Neue for body.</context>
+  <action>Rebuilt the deck with embedded Bebas Neue (`docs/proposals/assets/fonts/BebasNeue-Regular.ttf` via `pptx-embed-fonts`) for all headlines; body/eyebrows stay Helvetica Neue. Bebas is Regular-only — no faux bold.</action>
+  <reason>Matches the current proposal visual language so screen-share and leave-behind feel like the same brand.</reason>
+</decision>
+
+## 2026-08-11T13:35:18+0600
+<decision>
+  <category>UI/UX</category>
+  <context>Maestro deck still did not match proposal typography: Bebas titles were sentence-case, Helvetica Neue was named but not embedded, and the PPTX theme still defaulted to Calibri — Keynote often ignored the Bebas embed.</context>
+  <action>Rebuilt with (1) all Bebas display text forced uppercase + tight tracking like proposal CSS, (2) Bebas installed to ~/Library/Fonts for local Keynote, (3) Helvetica Neue Regular/Bold extracted at build time from the macOS TTC and embedded, (4) theme major/minor patched from Calibri to Bebas Neue / Helvetica Neue.</action>
+  <reason>Proposals look like proposals because titles are uppercase Bebas; the deck must do the same or it reads as a different brand.</reason>
+</decision>
+
+## 2026-08-11T16:03:15+0600
+
+<decision>
+ <category>CRO</category>
+ <context>Busy doctors can be fully booked for weeks ahead. The wizard only checked the next sitting per schedule; when that day was full the card went grey and patients could not reach later open dates — online booking looked closed when it was not.</context>
+ <action>Date-first booking step: `GET /api/bookings/open-dates` + `BookingService::openDatesFor()` scan the next 60 days in bulk (grouped counts, both cap modes) and the wizard shows only real open dates soonest-first (`step-when` replaces `step-session`). Identity step locks the chosen date with **Change date** back-link. Optional **Tell me if an earlier date opens up** sets `bookings.wants_earlier_date`; staff follow up from **Waiting for earlier date** in tenant admin (WhatsApp tap per row, no auto SMS).</action>
+  <reason>Patients book by when they can come, not by internal schedule names; skipping full weeks without a dead-end matches how full chambers actually work, and the waiting list captures value when someone cancels without burning SMS credits.</reason>
+</decision>
+
+## 2026-08-11T16:26:40+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The date-first step can list many open dates, so Back/Continue fell below the fold. Sticky was phone-only, and the when step had Back with no Continue.</context>
+ <action>Sticky `.btn-group` on solo and clinic book shells at all widths. Date step: tap a card to select, then sticky **Continue** (disabled until a date is picked); Back stays beside it.</action>
+  <reason>Long open-date lists are exactly when patients need the actions pinned; select-then-Continue lets them change their mind without jumping away.</reason>
+</decision>
+
+## 2026-08-11T16:33:43+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Date step felt busy with Back/Continue; details step allowed Confirm before name/phone were ready; some patients use WhatsApp on a different SIM than the reception phone.</context>
+ <action>Date step: tap a card to advance — no footer buttons. Details: **Confirm Booking** stays disabled until name (or household pick), a valid BD mobile (`01[3-9]` + 8 digits), and optional WhatsApp (same rule) when **I have a different WhatsApp number** is checked. Store nullable `bookings.whatsapp_phone`; staff WhatsApp links prefer it over `patient_phone`. Format check only — no OTP.</action>
+ <reason>Matches how patients actually book (pick a day, then fill details carefully) and keeps staff messaging on the number that actually rings WhatsApp.</reason>
+</decision>
