@@ -18,7 +18,7 @@ class ChamberResource extends Resource
 {
     protected static ?string $model = Chamber::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedMapPin;
 
     public static function canViewAny(): bool
     {

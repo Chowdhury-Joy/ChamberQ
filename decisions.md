@@ -1507,3 +1507,11 @@
   <action>Deliberately **not** imported. Recorded here so the next person does not find the file and assume it was an oversight.</action>
   <reason>Those edges are text-mined from the `interaction` free-text field of manufacturer marketing copy. They carry no severity grading, no mechanism, and no evidence level, and their recall depends on how a given company chose to write its label. A warning a doctor learns to dismiss is worse than no warning, and a *missing* warning presented by a system that claims to check interactions is worse still — the doctor stops checking themselves. Interaction checking needs a licensed clinical database (or DDInter 2.0, which does carry severity); until there is one, the product should not imply it has one.</reason>
 </decision>
+
+## 2026-08-12T00:50:43+0600
+<decision>
+  <category>UI/UX</category>
+  <context>Tenant admin sidebar reused the same rectangle-stack icon for Chambers, Schedule Sessions, Slot Blocks (and other resources), so items looked identical; the expanded labels also ate desk space during consult days.</context>
+  <action>Gave each nav item a unique related Heroicon (map pin / calendar days / no-symbol for the three that collided; likewise Doctors, Lab tests, Lab collection slots, Web pages). Enabled Filament `sidebarCollapsibleOnDesktop()` and seed the Alpine sidebar store closed on load so desktop shows icons only, with the item name on hover.</action>
+  <reason>Doctors scan the rail by shape during a busy sitting; identical icons force reading every label. Icon-only with hover names keeps the rail thin without hiding where things are.</reason>
+</decision>

@@ -6,6 +6,7 @@ use App\Filament\TenantAdmin\Widgets\TenantStatsOverview;
 use App\Filament\TenantAdmin\Widgets\TodayAppointmentsWidget;
 use Filament\Panel;
 use Filament\Support\Colors\Color;
+use Filament\View\PanelsRenderHook;
 use Filament\Widgets\AccountWidget;
 
 trait ConfiguresTenantAdminPanel
@@ -17,6 +18,7 @@ trait ConfiguresTenantAdminPanel
             ->viteTheme('resources/css/filament/tenantAdmin/theme.css')
             ->login()
             ->passwordReset()
+            ->sidebarCollapsibleOnDesktop()
             ->colors([
                 'primary' => Color::Blue,
             ])
@@ -28,6 +30,40 @@ trait ConfiguresTenantAdminPanel
                 TenantStatsOverview::class,
                 TodayAppointmentsWidget::class,
             ])
+            // Icon-only sidebar; item names appear as hover tooltips while collapsed.
+            ->renderHook(
+                PanelsRenderHook::HEAD_START,
+                fn (): string => <<<'HTML'
+                    <script>
+                        (() => {
+                            try {
+                                localStorage.setItem('isOpen', JSON.stringify(false));
+                                localStorage.setItem('isOpenDesktop', JSON.stringify(false));
+                                localStorage.setItem('_x_isOpen', JSON.stringify(false));
+                                localStorage.setItem('_x_isOpenDesktop', JSON.stringify(false));
+                            } catch (e) {}
+                        })();
+                    </script>
+                HTML
+            )
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn (): string => <<<'HTML'
+                    <script>
+                        document.addEventListener('alpine:initialized', () => {
+                            try {
+                                if (window.innerWidth < 1024) {
+                                    return;
+                                }
+                                const sidebar = window.Alpine?.store?.('sidebar');
+                                if (sidebar?.isOpen) {
+                                    sidebar.close();
+                                }
+                            } catch (e) {}
+                        }, { once: true });
+                    </script>
+                HTML
+            )
             ->renderHook(
                 'panels::head.end',
                 fn (): string => '<style>

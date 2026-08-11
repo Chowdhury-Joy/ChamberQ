@@ -19,7 +19,7 @@ class LabTestResource extends Resource
 {
     protected static ?string $model = LabTest::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentMagnifyingGlass;
 
     public static function canViewAny(): bool
     {

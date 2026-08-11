@@ -19,7 +19,7 @@ class WebPageResource extends Resource
 {
     protected static ?string $model = WebPage::class;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
+    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedGlobeAlt;
 
     protected static string|\UnitEnum|null $navigationGroup = 'Website';
 
