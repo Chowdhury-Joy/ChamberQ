@@ -49,8 +49,10 @@ class MyMedicines extends Page implements HasActions, HasTable
                 MedicineUsage::query()
                     ->where('user_id', auth()->id())
                     ->whereNull('hidden_at')
-                    ->orderByDesc('use_count')
-                    ->orderByDesc('last_used_at')
+                    // Alphabetical: this is a list the doctor curates, so it
+                    // must stay where they left it rather than reordering
+                    // itself from behaviour they cannot see.
+                    ->orderBy('medicine_name')
             )
             ->columns([
                 TextColumn::make('medicine_name')->label(__('Medicine'))->searchable(),
@@ -58,7 +60,6 @@ class MyMedicines extends Page implements HasActions, HasTable
                 TextColumn::make('last_dose')->label(__('Default dose')),
                 TextColumn::make('last_frequency')->label(__('Frequency')),
                 TextColumn::make('last_duration')->label(__('Duration')),
-                TextColumn::make('use_count')->label(__('Used')),
             ])
             ->recordActions([
                 Action::make('edit')
@@ -120,7 +121,7 @@ class MyMedicines extends Page implements HasActions, HasTable
                         TextInput::make('last_duration')->maxLength(80),
                     ])
                     ->action(function (array $data, MedicineService $medicineService): void {
-                        $medicineService->recordUsage(auth()->user(), [
+                        $medicineService->saveDoctorMedicine(auth()->user(), [
                             'medicine_name' => $medicineService->resolveMedicineNameFromFormState($data) ?? '',
                             'generic_name' => $data['generic_name'] ?? null,
                             'dose' => $data['last_dose'] ?? null,

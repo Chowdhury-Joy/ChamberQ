@@ -1375,3 +1375,135 @@
  <action>Date step: tap a card to advance — no footer buttons. Details: **Confirm Booking** stays disabled until name (or household pick), a valid BD mobile (`01[3-9]` + 8 digits), and optional WhatsApp (same rule) when **I have a different WhatsApp number** is checked. Store nullable `bookings.whatsapp_phone`; staff WhatsApp links prefer it over `patient_phone`. Format check only — no OTP.</action>
  <reason>Matches how patients actually book (pick a day, then fill details carefully) and keeps staff messaging on the number that actually rings WhatsApp.</reason>
 </decision>
+
+## 2026-08-11T20:14:29+0600
+<decision>
+  <category>UI/UX</category>
+  <context>Maestro deck cards mixed white-on-gray, mint-accent fills, and clay number badges — so slides did not feel like one brand next to Section 4 (prescription).</context>
+  <action>Unified content cards to Section 4 style: soft teal-gray fill (#F4F7F7), mint-edge border (#D7E3E2), soft shadow, mint markers with ink labels on white slides. Dark investment/close panels unchanged.</action>
+  <reason>One card language across the leave-behind matches the proposal “shared card” look and stops the deck reading like several templates glued together.</reason>
+</decision>
+
+## 2026-08-11T23:15:08+0600
+<decision>
+  <category>Code</category>
+  <context>Chamber restore upserted every table on the bare primary key across a shared database, then force-wrote `tenant_id` onto whatever row that id already belonged to. `users.id` is a plain auto-increment integer, so a chamber admin could hand in a ZIP reusing another chamber's — or the central Super Admin's — row id and have those rows rewritten into their own chamber. `BelongsToTenant` could not help: these are Query Builder writes and never reach Eloquent's guard.</context>
+  <action>`DataImportService::assertPayloadBelongsToScope()` runs before every upsert chunk and **throws** when any incoming primary key already belongs to a different tenant (or, in tenant scope, to a null-tenant central row). `prescription_items` carries no `tenant_id`, so it is checked through its parent prescription in both directions — the row it would overwrite and the prescription it would attach to.</action>
+  <reason>Refusing loudly beats skipping quietly: a backup containing somebody else's rows is corrupt or hostile, and a half-applied restore the admin cannot see is worse than a failed one they can. The whole import is one transaction, so the throw rolls everything back.</reason>
+</decision>
+
+<decision>
+  <category>Code</category>
+  <context>"Replace" restore wiped the chamber in its own committed transaction and then imported outside it, so any mid-import failure left the chamber emptied with nothing to roll it back. Separately, `TENANT_TABLES` listed `live_sessions` before `bookings` although `live_sessions.current_booking_id` is a foreign key to `bookings.id` — the list is read forwards to import and reversed to delete, so one wrong order broke both directions.</context>
+  <action>Wipe and import now share a single `DB::transaction`. `bookings` moved ahead of `live_sessions` in `TENANT_TABLES`, and the wipe nulls `live_sessions.current_booking_id` for the tenant before deleting anything.</action>
+  <reason>A restore must either land completely or change nothing. A chamber left empty because a restore half-ran is the worst outcome this feature can produce, and it is unrecoverable without an off-server backup that does not exist yet.</reason>
+</decision>
+
+<decision>
+  <category>Business_Logic</category>
+  <context>`VisitRecordService::saveForCompletedBooking()` gated medicine/condition learning on `$booking->status === 'completed'`. Both completion helpers save the notes while the booking is still `in_chamber` and close it on the next line, so the gate answered "not completed" on the only path a doctor actually presses — `condition_usages` and `medicine_usages` were never written by a real consult. The existing test passed because it called the service directly after setting the status by hand.</context>
+  <action>Added an explicit `bool $completingVisit = false` parameter, passed as `true` by `CompleteBookingWithVisitNotes::finish()` and `::completeCurrentSessionPatientWithoutAdvancing()`. The gate is now `$completingVisit || $booking->status === 'completed'`.</action>
+  <reason>Intent is passed in rather than inferred, because the mid-consult **Write prescription** button — which must NOT record usage, since the doctor may still change the prescription — is indistinguishable by status from the completion path at the moment of the save. Reordering to "complete first, then save" would have advanced the queue before the notes were written.</reason>
+</decision>
+
+<decision>
+  <category>Business_Logic</category>
+  <context>`LiveSessionService::markAbsent()` cancelled every non-terminal booking including the patient who was `in_chamber`, and returned nothing. `endSession()` already completed the mid-consult patient and returned the cancelled bookings so staff got a WhatsApp link per person. The asymmetry meant the *doctor-is-absent* path — where telling patients matters most, because every one of them would otherwise travel for nothing — was the one that told nobody.</context>
+  <action>`markAbsent()` now mirrors `endSession()`: completes `in_chamber`, cancels only waiting/called/skipped, clears the session's current-booking pointer, and returns the cancelled bookings. `LiveQueueControl::markAbsentAction()` names the count and the patients in its confirmation and populates `cancelledByEndSessionIds` so the existing **Tell cancelled patients** hand-off appears.</action>
+  <reason>A consult that already happened must not be recorded as a cancelled appointment — it discards the visit and any notes written during it. Cancelling silently is the failure the `endSession()` return value was introduced to prevent; the same rule has to hold on both paths.</reason>
+</decision>
+
+<decision>
+  <category>Business_Logic</category>
+  <context>`PatientService::mergePatients()` moved `bookings.patient_id` and then deleted the duplicate patient. `visit_records.patient_id` and `prescriptions.patient_id` are `nullOnDelete` foreign keys, so both were silently set to NULL. Consult Screen reads history by `patient_id`, so after a routine staff merge the doctor was told "no history" for a patient whose allergy note was still stored, with nothing pointing at it and no screen able to re-link it.</context>
+  <action>`repointPatientOwnedRows()` moves bookings, visit records and prescriptions in one transaction before the delete. `moveBookingToPatient()` likewise carries the booking's visit record and prescription with it. Migration `2026_08_11_130000_relink_orphaned_visit_records_and_prescriptions` repairs rows already orphaned in production.</action>
+  <reason>The backfill is deterministic, not guesswork: a visit record knows its booking and the old merge moved `bookings.patient_id` correctly, so the link is rebuilt from data that is already right. Only rows with `patient_id IS NULL` are touched.</reason>
+</decision>
+
+## 2026-08-11T23:24:42+0600
+<decision>
+  <category>UI/UX</category>
+  <context>The prescription is written in a Filament action modal (`writePrescription` / `completeVisit`) at the default `Width::FourExtraLarge` — a single-column stack of ten sections. On a desktop monitor the doctor scrolls past Vitals, Diagnosis, Clinical notes, Advice, Tests, Reports, Follow-up, Voice and Photo to reach anything, and the overlay hides the left column of Consult Screen — Last visit and Past visits — which is exactly what a doctor consults while prescribing. "Copy from last visit" is therefore a blind button: it passes the items as a JS payload and never shows which medicines they are.</context>
+  <action>At ≥1024px on Consult Screen, while a patient is `in_chamber`, the prescription becomes the page rather than a dialog over it: a sticky patient bar (identity, age/sex, visit count, allergy pill, inline weight/BP, Complete), then a 34/66 split — clinical column left (C/C, H/O, O/E, Dx, Inv, plus "you usually prescribe" and last-visit repeat), Rx table right, with Advice and Follow-up as a strip beneath it. Voice, photo and reports collapse to an icon row. The page is set to `MaxWidth::Full`; Filament's default caps content well below the viewport. Below 1024px, and on Daily Roster, Live Queue Control and staff prescription entry, the existing modal is unchanged.</action>
+  <reason>Desktop is where doctors write; the modal was a mobile-first shape applied to a screen with room to spare. Scoping the new pad to ≥1024px on one page contains the blast radius — no existing flow changes shape, and the sticky-bar / header-actions breakpoint pairing recorded in `bug_history.md` stays untouched. The owner chose this over keeping the current two-column layout and confining the pad to the right half: history you glance at is worth less than drug rows you type into, and the last-visit repeat line covers the common case.</reason>
+</decision>
+
+<decision>
+  <category>UI/UX</category>
+  <context>Each medicine is a Filament repeater card stacking brand, generic, dose chips, dose-other, frequency chips, frequency-other, duration chips and duration-other — roughly 300px of vertical space per drug. Two `bug_history.md` entries exist solely to fight that height: auto-collapsing finished rows, and scrolling the newly added row back into view. Every one of those fields is `->live()`, so each chip tap is a server round trip that rebuilds the whole options array for every row.</context>
+  <action>Medicines become a real table — one ~44px row per drug: index, medicine (brand on line one, generic and indication on line two), frequency, duration, timing, reorder handle, remove. The chips are not deleted; they become the *edit* state of a cell, shown on focus. A shorthand row sits at the bottom (`seclo 20 1+0+1 7d ac`, Enter to commit). Client-side state in one Alpine component, posted once on save, replacing the per-field Livewire round trips.</action>
+  <reason>Eight rows fit the vertical budget that one card consumes today, which makes the collapse and scroll-into-view hacks unnecessary rather than merely better-tuned. Removing `->live()` from the hot path removes both the latency and the per-row catalogue rebuild in the same change. Shorthand is table stakes in this market, not an innovation — a direct Bangladeshi competitor already ships `1+0+1`, `5d`, `af`.</reason>
+</decision>
+
+<decision>
+  <category>Business_Logic</category>
+  <context>`visit_records` carries one `clinical_notes` blob, captioned "whatever you would write on the left of a paper pad" — an accurate admission that the structure of a Bangladeshi prescription was skipped. `prescription_items` has no indication and no timing field, so "after food" — on essentially every prescription in the country, and the instruction patients most often get wrong — is unrepresentable and must be jammed into `duration` or dropped. `condition_usages` and `medicine_usages` learn independently; neither records what was prescribed *for* what.</context>
+  <action>Structure the record to match the pad: `visit_records` gains `chief_complaint`, `history`, `on_examination` (`clinical_notes` retained for existing rows); `prescription_items` gains `indication`, `timing`, `instructions`; `medicines` gains `indications`; a condition↔medicine co-occurrence dimension is added and backfilled from completed visits; `prescription_templates` + items are added. `timing` is stored as a key from a closed vocabulary (after food, before food, empty stomach, at night, with food), never as free text.</action>
+  <reason>You cannot automate off a blob. Structuring the left column is the prerequisite for diagnosis-predicts-prescription, complaint-predicts-indication and any safety check — not a separate nicety. The co-occurrence backfill needs no external data: every completed visit with a `condition_id` and a prescription is already a training row. Everything proposes and nothing commits — auto-filled values render as auto-filled and clear in one keystroke, extending the existing `_prefilled` / `medicine-prefill-hint` pattern.</reason>
+</decision>
+
+<decision>
+  <category>Business_Logic</category>
+  <context>Owner decision, 2026-08-11: dose timing must print in Bangla, with English kept as well. `App\Support\Bilingual` already renders fixed labels in both languages with the tenant's locale leading, and its docblock restricts that treatment to fixed labels — anything a human typed is stored in one language and passed through untouched.</context>
+  <action>Because `timing` is stored as a key from a closed vocabulary rather than free text, it qualifies as a fixed label and renders through `bilingual()` on the printed sheet — "After food / খাবারের পর" — alongside the existing bilingual headings. No parallel translation mechanism, and no per-doctor language toggle unless one is asked for later.</action>
+  <reason>Reusing the documented mechanism keeps one rule about what may be translated, instead of two that will drift. It also satisfies both halves of the request at once — the patient's family reads the Bangla, the pharmacist reads the English — which is the same reason the print sheet is bilingual today. This is the argument for storing timing as a key: free text could not have been translated at all.</reason>
+</decision>
+
+<decision>
+  <category>Code</category>
+  <context>Competitive review of the Indian and Bangladeshi market (HealthPlix, Eka Care, Doctors Canvas, PrescribeRx, ProtonEMR, Prescriber/MedicBD) plus the global ambient-scribe frontier. Two gaps outrank the pad redesign. The medicine catalogue is 460 CSV rows against a market where a competitor advertises 200,000 drugs, and `bug_history.md` already records both a specialist unable to find their own brands and a production launch with an empty `medicines` table. Separately, a direct Bangladeshi competitor is offline-first on RxDB, citing load shedding and unstable connections; ChamberQ is Livewire round trips end to end, so the pad stops working when the chamber's connection drops.</context>
+  <action>Build order: (1) catalogue depth, and prefill from the doctor's own `MedicineUsage` last dose/frequency/duration instead of the hardcoded `'1+1+1'` / `'5 days'`, wiring the picker to the already-written but entirely unconsumed `MedicineService::search()` — `/api/medicines/search` and `/api/conditions/search` have no front-end callers; (2) the desktop Rx pad above; (3) structured C/C, indication and timing; (4) templates and shorthand; (5) duplicate-generic and allergy checks at point of prescribing; (6) offline resilience; (7) voice-to-structured-draft. Multi-language beyond Bangla and English is explicitly out of scope — the owner ruled it unnecessary for this market. Drug-drug interaction checking requires a licensed database and will be bought or skipped, never hand-rolled.</action>
+  <reason>A doctor who cannot find their brand on the second patient abandons the tool, and no pad redesign survives that — so depth precedes polish. Stage 1 is also the smallest change with the largest per-drug saving and removes the per-row catalogue rebuild, so it pays for itself before any UI moves. The learning data is already being collected and then ignored at the one moment it would matter, which makes it the cheapest win available.</reason>
+</decision>
+
+## 2026-08-11T23:29:27+0600
+<decision>
+  <category>Business_Logic</category>
+  <context>Refines the stage 1 build order agreed earlier today. Prefilling from the doctor's own `MedicineUsage` was going to *replace* the catalogue as the source of prescription defaults. The owner corrected this: prefill must learn from the doctor but still come from the database. That exposed a gap — there is no database default for frequency or duration at all. `MedicinePickerFields::prescriptionMedicineSelect()` hardcodes `'1+1+1'` and `'5 days'` in PHP, and `data/medicine-list-draft.csv` has no such columns, so the only per-drug fact the catalogue can currently supply is `default_strength`.</context>
+  <action>Prefill resolves in three layers, stopping at the first hit: (1) the prescribing doctor's own history for that exact brand, (2) the catalogue row — `default_strength` plus new `default_frequency`, `default_duration` and `default_timing` columns on `medicines`, populated in the CSV, (3) blank. A hardcoded literal is never layer 3; a field with no catalogue default and no history is left empty for the doctor to fill.</action>
+  <reason>The catalogue is the floor and the doctor's habit is the refinement, so a doctor who has never prescribed a brand still gets a sensible starting point and a doctor who has gets their own. This is also a clinical correctness fix rather than plumbing: `'1+1+1'` is wrong for most drugs — a PPI is `1+0+0` before food, an antihistamine `0+0+1` at night — so a single global literal was mis-prefilling every drug it did not happen to suit. Leaving layer 3 blank rather than guessing keeps the existing principle that auto-filled values must be defensible; an empty box is honest, a wrong default gets signed.</reason>
+</decision>
+
+<decision>
+  <category>Business_Logic</category>
+  <context>`MedicineUsage` records only `last_dose`, `last_frequency` and `last_duration`, overwritten on every save. "Learning from the doctor" against a single last-value field means one atypical prescription permanently replaces the doctor's habitual pattern — a doctor who always writes Napa `1+0+1 · 5 days` but once writes `1+1+1 · 3 days` for a particular patient is prefilled with the outlier from then on, silently, on every subsequent patient.</context>
+  <action>Learning uses the most common value per doctor per brand, not the most recent: keep a small per-value tally alongside the existing counters and prefill the mode, falling back to `last_*` only to break a tie. `last_used_at` and `use_count` keep their present roles in search ranking.</action>
+  <reason>A prefill is a claim about what this doctor usually does, and "usually" is the mode, not the last sample. The failure mode of last-value learning is silent and compounding — it looks correct on the day it is set and is never obviously wrong afterwards — which makes it exactly the kind of thing that must be designed out rather than noticed later. Note for whoever builds this: free-text brands added via `createOptionUsing` have no catalogue row, so layer 2 does not exist for them and the doctor's history is the only source. That set of hand-added brands is also the best available signal of catalogue gaps and should drive stage 1 expansion.</reason>
+</decision>
+
+## 2026-08-11T23:44:17+0600
+<decision>
+  <category>Business_Logic</category>
+  <context>The app watched consultations and built a per-doctor profile from them: every completed visit bumped `medicine_usages` and `condition_usages`, and both pickers were ranked by those counters. Owner decision: doctors already curate their own shortlist in **My medicines**, so there is no reason for the app to infer one. **Supersedes the `completingVisit` decision recorded earlier today** — that fix made learning fire correctly on the real completion path; learning itself is now gone, so the parameter went with it.</context>
+  <action>Removed `VisitRecordService::recordUsagesFromSubmission()` and the `completingVisit` parameter; removed `ConditionService::recordUsage()` and its `usageBoostMap()`; removed `MedicineService::usageBoostMap()`. `MedicineService::recordUsage()` became `saveDoctorMedicine()` — called only from My medicines, and no longer touching `use_count` / `last_used_at`. Both the personal list and the diagnosis picker now order deterministically: My medicines A–Z, conditions by text-match score.</action>
+  <reason>A curated list a doctor can see and edit beats a silent one that reorders itself from behaviour they cannot inspect — and prescribing habits are exactly the kind of derived profile a clinical system should not accumulate without being asked. The doctor's own saved entries still rank above the shared catalogue on an equal match, because that is their explicit choice showing through, not inference.</reason>
+</decision>
+
+<decision>
+  <category>Code</category>
+  <context>With learning gone, `condition_usages` has no writer at all and `medicine_usages.use_count` / `last_used_at` are vestigial. Dropping either is irreversible on live clinical data.</context>
+  <action>No destructive migration. All reading and writing code was removed; the tables and columns stay as they are, still included in chamber backups. `ConditionUsage` keeps its model with a docblock stating it is retired and must not be re-pointed at without an owner decision.</action>
+  <reason>Removing the code is fully reversible; dropping the table is not. Historical rows cost nothing to keep and are the only record of what was learned before the switch. Schema cleanup can happen later as a deliberate, separate step.</reason>
+</decision>
+
+## 2026-08-12T00:01:07+0600
+<decision>
+  <category>Business_Logic</category>
+  <context>**Supersedes the 2026-08-10 curated-catalogue decision.** That entry chose ~460 verified-enough brands and explicitly rejected "a 24k MedEx dump", citing licensing risk, prescribing UX, patient safety (MedEx multi-form ambiguity — `ACE IV` vs `ACE 500 mg tablet`) and keeping third-party data out of the repo. The conflict was raised with the owner before any change; the owner reaffirmed — include the data regardless of the previous decision, on one condition: "as long as drug data is proven somehow". Also corrected in the same conversation: the two `bug_history.md` entries previously cited as evidence that 460 was too small are nothing of the kind — one was `resolvePrescribingDoctor()` returning null for clinic specialists, the other a production server where `medicines:load` was never run. Both were already fixed and neither concerned catalogue size.</context>
+  <action>The catalogue is now the full Bangladesh market: 24,491 SKUs across 16,029 brands, from **BDDrugBank v1.0.0** (Zenodo, DOI 10.5281/zenodo.20749707), which is **CC BY 4.0** and therefore redistributable with attribution — `data/ATTRIBUTION.md` carries it, as the licence requires. "Proven" is served two ways: the source is a citable academic deposit rather than a scrape, and `is_essential` is set from the Bangladesh NEML 2016 (597 generics) and WHO EML 2025 (642 generics), both shipped inside the same deposit. The hand-reviewed 460 is preserved verbatim as `data/medicine-curated-seed.csv` and **overrides the source wherever the two disagree**.</action>
+  <reason>The three objections the CC BY licence does not answer are addressed rather than ignored. **Dropdown UX**: the picker no longer holds a static option list at all — it is `getSearchResultsUsing()` over `MedicineService::search()`, capped at 20 ranked results, measured at 5–50 ms and one query. **Multi-form ambiguity**: safety moved from exclusion to ranking. Five priority tiers, with `tierBoost()` spreading 32 down to 0 — deliberately wider than the gap between a prefix and a substring text match — so a hand-verified tablet outranks an IV infusion of the same brand that matches the needle equally well. Nothing is hidden; only the order changes. **Repo hygiene**: the 3.8 MB derived CSV is committed, the 77 MB source archive is not, and the build script downloads it to `/tmp` on demand.</reason>
+</decision>
+
+<decision>
+  <category>Code</category>
+  <context>Keying the catalogue on `brand_name` alone — as the loader had always done via `updateOrCreate(['brand_name' => …])` — collapsed 24,491 source SKUs to 16,029 rows, silently discarding 8,656. The loss was not evenly spread: NAPA alone ships a 500 mg tablet, a 120 mg/5 ml syrup, 80 mg/ml paediatric drops, three suppository strengths and an IV infusion, and whichever row the CSV happened to list first won. Measured against the old curated set, syrups were 15 rows and paediatric drops 10 — the single biggest real gap in the catalogue, and precisely what brand-only keying would have thrown away again.</context>
+  <action>One catalogue row per **brand + strength + form**. `medicines.brand_name` was already indexed rather than unique, so no constraint had to change; the loader upserts on the triple and `medicines_sku_index` covers it. `Medicine::displayLabel()` now includes the form, because a 500 mg tablet and a 500 mg suppository of the same brand were otherwise the same string. The picker still offers **one entry per brand** (search dedupes on brand name), so the choice between a brand's forms lives on the dose chips — `doseOptionsForBrand()` lists every strength the brand ships in, each labelled with its form, tier-ordered so the verified adult strength leads.</action>
+  <reason>Syrups went from 15 to 2,743, drops from 10 to 1,237, inhalers from 1 to 168, distinct generics from 141 to 1,578. That — not the row count — was the actual deficiency: 362 of the old 460 rows were tablets, so a GP seeing a child had essentially nothing to prescribe. Putting the form choice on the dose chips rather than in the picker keeps the picker short while leaving the paediatric syrup one keystroke away instead of unreachable; `MedicinePickerTest::test_dose_options_offer_every_form_a_brand_ships_in` fails if that regresses, because the failure mode is silent — the doctor simply free-texts it and nobody learns.</reason>
+</decision>
+
+<decision>
+  <category>Code</category>
+  <context>The BDDrugBank deposit also ships `interaction_edges.csv` — 3,310 directed drug–drug interaction edges across 983 generics — which would be the cheapest possible route to the interaction checking that HealthPlix, Eka Care and Doctors Canvas all advertise.</context>
+  <action>Deliberately **not** imported. Recorded here so the next person does not find the file and assume it was an oversight.</action>
+  <reason>Those edges are text-mined from the `interaction` free-text field of manufacturer marketing copy. They carry no severity grading, no mechanism, and no evidence level, and their recall depends on how a given company chose to write its label. A warning a doctor learns to dismiss is worse than no warning, and a *missing* warning presented by a system that claims to check interactions is worse still — the doctor stops checking themselves. Interaction checking needs a licensed clinical database (or DDInter 2.0, which does carry severity); until there is one, the product should not imply it has one.</reason>
+</decision>

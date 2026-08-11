@@ -35,8 +35,13 @@ class MedicinePickerFields
 
                 $set('medicine_name', mb_strtoupper(trim($state)));
 
+                // A brand now has several SKUs. Order by tier so prefill takes
+                // the hand-verified adult strength, never whichever row the
+                // database happened to return first — which could be an IV
+                // infusion of the same brand.
                 $match = Medicine::query()
                     ->where('brand_name', mb_strtoupper(trim($state)))
+                    ->orderBy('priority')
                     ->first();
 
                 if (! $match) {
@@ -71,19 +76,30 @@ class MedicinePickerFields
 
         return Select::make('medicine_name')
             ->label($label)
-            ->placeholder(__('Choose from the list…'))
-            ->options(function (Get $get) use ($medicineService, $prescribingDoctor, $excludeSiblings): array {
+            ->placeholder(__('Type a brand or generic…'))
+            // Search-driven, not a static option list. The catalogue is 24,491
+            // SKUs; serialising it into Choices.js once per repeater row — which
+            // `options()` did — is megabytes of DOM per medicine and a full
+            // catalogue rebuild on every `live()` round trip. `search()` caps at
+            // MAX_RESULTS and ranks by tier, so what comes back is short and the
+            // doctor's own brands lead.
+            ->getSearchResultsUsing(function (string $search, Get $get) use ($medicineService, $prescribingDoctor, $excludeSiblings): array {
                 $exclude = $excludeSiblings
                     ? self::brandsSelectedOnOtherRepeaterRows($get)
                     : [];
 
-                return $medicineService->groupedSelectOptions(
-                    auth()->user(),
-                    $prescribingDoctor,
-                    $exclude,
-                );
+                return $medicineService
+                    ->search($search, auth()->user(), $prescribingDoctor)
+                    ->reject(fn (array $row): bool => in_array(
+                        mb_strtoupper($row['brand_name']),
+                        $exclude,
+                        true,
+                    ))
+                    ->mapWithKeys(fn (array $row): array => [$row['brand_name'] => $row['label']])
+                    ->all();
             })
             ->searchable()
+            ->searchDebounce(250)
             ->live()
             ->required()
             ->native(false)
@@ -101,7 +117,10 @@ class MedicinePickerFields
                 }
 
                 $brand = mb_strtoupper(trim($value));
-                $match = Medicine::query()->where('brand_name', $brand)->first();
+                $match = Medicine::query()
+                    ->where('brand_name', $brand)
+                    ->orderBy('priority')
+                    ->first();
 
                 return $match?->displayLabel() ?? $brand;
             });

@@ -50,138 +50,35 @@ class MedicineService
     }
 
     /**
-     * Grouped options for prescription / My medicines dropdowns.
+     * Bounded candidate rows for a search needle.
      *
-     * @param  list<string>  $excludeBrands  Uppercase brand names to omit (already on this prescription).
-     * @return array<string, array<string, string>>
-     */
-    public function groupedSelectOptions(
-        ?User $doctor,
-        ?Doctor $prescribingDoctor = null,
-        array $excludeBrands = [],
-    ): array {
-        $prescribingDoctor ??= $this->resolvePrescribingDoctor();
-        $practiceType = $prescribingDoctor?->practice_type ?? Doctor::PRACTICE_GENERAL;
-        $exclude = $this->normalizedBrandSet($excludeBrands);
-
-        $groups = [];
-
-        if ($doctor) {
-            $personal = $this->excludeBrandsFromOptions(
-                $this->personalMedicineOptions($doctor, $practiceType),
-                $exclude,
-            );
-
-            if ($personal !== []) {
-                $groups[__('Your medicines')] = $personal;
-            }
-        }
-
-        foreach ($this->catalogMedicinesForPracticeType($practiceType) as $category => $options) {
-            $filtered = $this->excludeBrandsFromOptions($options, $exclude);
-
-            if ($filtered !== []) {
-                $groups[$category] = $filtered;
-            }
-        }
-
-        return $groups;
-    }
-
-    /**
-     * @param  list<string>  $brands
-     * @return array<string, true>
-     */
-    private function normalizedBrandSet(array $brands): array
-    {
-        $set = [];
-
-        foreach ($brands as $brand) {
-            $normalized = mb_strtoupper(trim((string) $brand));
-
-            if ($normalized !== '') {
-                $set[$normalized] = true;
-            }
-        }
-
-        return $set;
-    }
-
-    /**
-     * @param  array<string, string>  $options
-     * @param  array<string, true>  $exclude
-     * @return array<string, string>
-     */
-    private function excludeBrandsFromOptions(array $options, array $exclude): array
-    {
-        if ($exclude === []) {
-            return $options;
-        }
-
-        return array_filter(
-            $options,
-            fn (string $label, string $brand): bool => ! isset($exclude[$brand]),
-            ARRAY_FILTER_USE_BOTH,
-        );
-    }
-
-    /**
+     * The catalogue is 24,491 SKUs. The previous implementation loaded every
+     * row into memory and filtered in PHP on each keystroke, per repeater row —
+     * which was survivable at 460 and is not at this size. Matching now happens
+     * in SQL, ordered by tier so the candidate window is filled with pinned and
+     * curated brands before the long tail, and only the window is hydrated.
+     *
+     * `practice_types` is a JSON column and cannot be filtered portably in SQL,
+     * so `visibleToPracticeType()` still runs in PHP — but over a few hundred
+     * rows rather than the whole table.
+     *
      * @return Collection<int, Medicine>
      */
-    public function catalogForPracticeType(?string $practiceType): Collection
+    public function catalogCandidates(string $needle, ?string $practiceType, int $window = 300): Collection
     {
+        $like = '%'.str_replace(['%', '_'], ['\%', '\_'], $needle).'%';
+
         return Medicine::query()
-            ->orderBy('category')
+            ->where(function ($query) use ($like): void {
+                $query->where('brand_name', 'like', $like)
+                    ->orWhere('generic_name', 'like', $like)
+                    ->orWhere('aliases', 'like', $like);
+            })
+            ->orderBy('priority')
             ->orderBy('brand_name')
+            ->limit($window)
             ->get()
             ->filter(fn (Medicine $medicine) => $medicine->visibleToPracticeType($practiceType));
-    }
-
-    /**
-     * @return array<string, array<string, string>>
-     */
-    private function catalogMedicinesForPracticeType(?string $practiceType): array
-    {
-        $grouped = [];
-
-        foreach ($this->catalogForPracticeType($practiceType) as $medicine) {
-            $category = filled($medicine->category) ? $medicine->category : __('General');
-            $grouped[$category][$medicine->brand_name] = $medicine->displayLabel();
-        }
-
-        return $grouped;
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    private function personalMedicineOptions(User $doctor, ?string $practiceType): array
-    {
-        $hidden = $this->hiddenNameSet($doctor);
-        $options = [];
-
-        foreach (MedicineUsage::query()
-            ->where('user_id', $doctor->id)
-            ->whereNull('hidden_at')
-            ->orderByDesc('use_count')
-            ->orderByDesc('last_used_at')
-            ->get() as $usage) {
-            $brand = $this->normalizeMedicineName($usage->medicine_name);
-
-            if (in_array($brand, $hidden, true)) {
-                continue;
-            }
-
-            $catalog = Medicine::query()->where('brand_name', $brand)->first();
-
-            if ($catalog && ! $catalog->visibleToPracticeType($practiceType)) {
-                continue;
-            }
-
-            $options[$brand] = $brand;
-        }
-
-        return $options;
     }
 
     /**
@@ -209,11 +106,10 @@ class MedicineService
         $prescribingDoctor ??= $this->resolvePrescribingDoctor();
         $practiceType = $prescribingDoctor?->practice_type ?? Doctor::PRACTICE_GENERAL;
 
-        $usageBoosts = $doctor ? $this->usageBoostMap($doctor) : [];
         $hiddenNames = $doctor ? $this->hiddenNameSet($doctor) : [];
 
-        $catalogMatches = $this->catalogForPracticeType($practiceType)
-            ->map(function (Medicine $medicine) use ($needle, $usageBoosts, $hiddenNames): ?array {
+        $catalogMatches = $this->catalogCandidates($needle, $practiceType)
+            ->map(function (Medicine $medicine) use ($needle, $hiddenNames): ?array {
                 if (in_array($this->normalizeMedicineName($medicine->brand_name), $hiddenNames, true)) {
                     return null;
                 }
@@ -224,8 +120,6 @@ class MedicineService
                     return null;
                 }
 
-                $usageBoost = $usageBoosts[$this->normalizeMedicineName($medicine->brand_name)] ?? 0;
-
                 return [
                     'id' => $medicine->id,
                     'medicine_id' => $medicine->id,
@@ -235,7 +129,7 @@ class MedicineService
                     'dose' => $medicine->default_strength,
                     'frequency' => null,
                     'duration' => null,
-                    'rank' => $matchScore + $usageBoost,
+                    'rank' => $matchScore + $this->tierBoost($medicine->priority),
                     'source' => 'catalog',
                 ];
             })
@@ -244,11 +138,29 @@ class MedicineService
         $usageMatches = collect();
 
         if ($doctor) {
-            $usageMatches = MedicineUsage::query()
+            $usages = MedicineUsage::query()
                 ->where('user_id', $doctor->id)
                 ->whereNull('hidden_at')
+                ->orderBy('medicine_name')
+                ->get();
+
+            // One lookup for every brand on the doctor's list, not one query
+            // per matching row inside the loop below. This runs on each
+            // keystroke of the prescribing search box, with a patient in the
+            // room, so the per-row query it replaces was the worst possible
+            // place for an N+1.
+            $catalogByBrand = Medicine::query()
+                ->whereIn(
+                    'brand_name',
+                    $usages->map(fn (MedicineUsage $usage) => $this->normalizeMedicineName($usage->medicine_name))
+                        ->unique()
+                        ->all(),
+                )
                 ->get()
-                ->map(function (MedicineUsage $usage) use ($needle, $usageBoosts, $practiceType): ?array {
+                ->keyBy(fn (Medicine $medicine) => $this->normalizeMedicineName($medicine->brand_name));
+
+            $usageMatches = $usages
+                ->map(function (MedicineUsage $usage) use ($needle, $practiceType, $catalogByBrand): ?array {
                     $normalized = $this->normalizeMedicineName($usage->medicine_name);
                     $matchScore = $this->matchScoreOnTerms([$normalized, mb_strtolower($usage->generic_name ?? '')], $needle);
 
@@ -256,13 +168,11 @@ class MedicineService
                         return null;
                     }
 
-                    $catalog = Medicine::query()->where('brand_name', $normalized)->first();
+                    $catalog = $catalogByBrand->get($normalized);
 
                     if ($catalog && ! $catalog->visibleToPracticeType($practiceType)) {
                         return null;
                     }
-
-                    $usageBoost = $usageBoosts[$normalized] ?? 0;
 
                     return [
                         'id' => self::FREE_TEXT_PREFIX.$normalized,
@@ -273,7 +183,11 @@ class MedicineService
                         'dose' => $usage->last_dose,
                         'frequency' => $usage->last_frequency,
                         'duration' => $usage->last_duration,
-                        'rank' => $matchScore + $usageBoost + 15,
+                        // The doctor's own saved entries stay ahead of the
+                        // catalogue on an equal text match — they chose these.
+                        // That is their curation showing through, not the app
+                        // guessing from past consultations.
+                        'rank' => $matchScore + 15,
                         'source' => 'usage',
                     ];
                 })
@@ -316,8 +230,7 @@ class MedicineService
         return MedicineUsage::query()
             ->where('user_id', $doctor->id)
             ->whereNull('hidden_at')
-            ->orderByDesc('use_count')
-            ->orderByDesc('last_used_at')
+            ->orderBy('medicine_name')
             ->limit($limit)
             ->pluck('medicine_name')
             ->map(fn (string $name) => mb_strtoupper($name))
@@ -325,9 +238,20 @@ class MedicineService
     }
 
     /**
+     * Add or update an entry on a doctor's own **My medicines** list.
+     *
+     * Only ever called from My medicines, where the doctor is deliberately
+     * saving a brand and its default dose / frequency / duration. Nothing
+     * writes here as a side effect of prescribing: the app does not watch
+     * consultations and infer a shortlist (owner decision, 2026-08-11).
+     *
+     * `use_count` and `last_used_at` are left untouched — they were the
+     * learning counters and no longer mean anything. The columns are still on
+     * the table, unused, so the data is not thrown away.
+     *
      * @param  array{medicine_name: string, generic_name?: ?string, dose?: ?string, frequency?: ?string, duration?: ?string}  $item
      */
-    public function recordUsage(User $doctor, array $item): MedicineUsage
+    public function saveDoctorMedicine(User $doctor, array $item): MedicineUsage
     {
         $name = $this->normalizeMedicineName($item['medicine_name']);
 
@@ -344,11 +268,30 @@ class MedicineService
         $usage->last_dose = filled($item['dose'] ?? null) ? trim((string) $item['dose']) : $usage->last_dose;
         $usage->last_frequency = filled($item['frequency'] ?? null) ? trim((string) $item['frequency']) : $usage->last_frequency;
         $usage->last_duration = filled($item['duration'] ?? null) ? trim((string) $item['duration']) : $usage->last_duration;
-        $usage->use_count = ($usage->use_count ?? 0) + 1;
-        $usage->last_used_at = now();
         $usage->save();
 
         return $usage;
+    }
+
+    /**
+     * How far a catalogue tier lifts a row above a same-strength match.
+     *
+     * This is what replaced leaving rows out of the catalogue entirely. A
+     * needle like "ace" matches a hand-verified 500 mg tablet and an IV
+     * infusion of the same brand equally well on text alone; the tier is what
+     * puts the tablet first. The spread (32 down to 0) is deliberately wider
+     * than the gap between a prefix match and a contains match (80 vs 60), so
+     * a pinned brand outranks a long-tail row that happens to match better.
+     */
+    public function tierBoost(?int $priority): int
+    {
+        return match ($priority) {
+            Medicine::TIER_PINNED => 32,
+            Medicine::TIER_CURATED => 24,
+            Medicine::TIER_ESSENTIAL => 16,
+            Medicine::TIER_SPECIALIST => 0,
+            default => 8,
+        };
     }
 
     public function normalizeMedicineName(string $name): string
@@ -397,22 +340,6 @@ class MedicineService
         }
 
         return $best;
-    }
-
-    /**
-     * @return array<string, int>
-     */
-    private function usageBoostMap(User $doctor): array
-    {
-        return MedicineUsage::query()
-            ->where('user_id', $doctor->id)
-            ->whereNull('hidden_at')
-            ->get()
-            ->mapWithKeys(fn (MedicineUsage $usage) => [
-                $this->normalizeMedicineName($usage->medicine_name) => ($usage->use_count * 5)
-                    + ($usage->last_used_at?->isAfter(now()->subDays(14)) ? 10 : 0),
-            ])
-            ->all();
     }
 
     /**

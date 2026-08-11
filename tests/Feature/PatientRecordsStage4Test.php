@@ -133,7 +133,9 @@ class PatientRecordsStage4Test extends TestCase
         $this->assertSame($this->condition->id, $record->condition_id);
         $this->assertNull($record->diagnosis_uncoded);
         $this->assertSame('Avoid spicy food', $record->advice);
-        $this->assertDatabaseHas('condition_usages', [
+        // Recording a diagnosis must not build a profile of this doctor's
+        // habits — automatic learning was removed 2026-08-11.
+        $this->assertDatabaseMissing('condition_usages', [
             'user_id' => $this->doctor->id,
             'condition_id' => $this->condition->id,
         ]);

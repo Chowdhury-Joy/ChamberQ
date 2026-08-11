@@ -1,11 +1,24 @@
 #!/usr/bin/env python3
 """
-Build ChamberQ curated medicine CSV (~450 Bangladesh brands).
+Build the ChamberQ medicine catalogue (full Bangladesh market, tiered).
 
-Build-time reference (not committed): BDDrugBank medex_merged.csv
-https://zenodo.org/records/20749707
+Supersedes the ~460-row curated build (see decisions.md, 2026-08-10 and the
+owner's override). Every brand marketed in Bangladesh is emitted; safety and
+usability come from the *priority tier*, not from leaving rows out.
 
-  python3 data/build-medicine-catalogue.py
+    tier 0  pinned      hand-verified household brands (strength/form checked)
+    tier 1  curated     the reviewed 460 seed, kept verbatim
+    tier 2  essential   generic on the Bangladesh NEML or the WHO EML
+    tier 3  standard    other outpatient forms
+    tier 4  specialist  parenteral, chemo, vaccines — real, but never the
+                        first thing a chamber doctor sees in a picker
+
+Source (CC BY 4.0, not committed — download once):
+    BDDrugBank v1.0.0, DOI 10.5281/zenodo.20749707
+    https://zenodo.org/records/20749707
+    unzip into /tmp/bddrugbank/
+
+    python3 data/build-medicine-catalogue.py
 """
 
 from __future__ import annotations
@@ -14,256 +27,106 @@ import argparse
 import csv
 import re
 import sys
-from collections import Counter, defaultdict
-from dataclasses import dataclass
+from collections import Counter
+from dataclasses import dataclass, field
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_SOURCE = Path("/tmp/bddrugbank/medex_merged.csv")
+SOURCE_DIR = Path("/tmp/bddrugbank")
+DEFAULT_SOURCE = SOURCE_DIR / "medex_merged.csv"
+DEFAULT_NEML = SOURCE_DIR / "bangladesh_neml_2016.csv"
+DEFAULT_WHO_EML = SOURCE_DIR / "who_eml_2025.csv"
+CURATED_SEED = ROOT / "data" / "medicine-curated-seed.csv"
 OUTPUT = ROOT / "data" / "medicine-list-draft.csv"
-MIN_ROWS = 430
-MAX_ROWS = 480
 
-# Must-keep household brands — full row when MedEx match is ambiguous.
-PINNED: list[dict[str, str]] = [
-    {"brand_name": "NAPA", "generic_name": "Paracetamol", "default_strength": "500 mg", "form": "tablet", "aliases": "napa|paracetamol", "category": "Analgesic", "practice_types": ""},
-    {"brand_name": "ACE", "generic_name": "Paracetamol", "default_strength": "500 mg", "form": "tablet", "aliases": "ace|paracetamol", "category": "Analgesic", "practice_types": ""},
-    {"brand_name": "MAXIM", "generic_name": "Paracetamol", "default_strength": "500 mg", "form": "tablet", "aliases": "maxim|paracetamol", "category": "Analgesic", "practice_types": ""},
-    {"brand_name": "DOLO", "generic_name": "Paracetamol", "default_strength": "500 mg", "form": "tablet", "aliases": "dolo|paracetamol", "category": "Analgesic", "practice_types": ""},
-    {"brand_name": "FEVASTIN", "generic_name": "Paracetamol", "default_strength": "500 mg", "form": "tablet", "aliases": "fevastin|paracetamol", "category": "Analgesic", "practice_types": ""},
-    {"brand_name": "NAPA EXTRA", "generic_name": "Paracetamol+Caffeine", "default_strength": "500 mg", "form": "tablet", "aliases": "napa extra", "category": "Analgesic", "practice_types": ""},
-    {"brand_name": "BRUFEN", "generic_name": "Ibuprofen", "default_strength": "400 mg", "form": "tablet", "aliases": "brufen|ibuprofen", "category": "Analgesic", "practice_types": ""},
-    {"brand_name": "SETRIL", "generic_name": "Cetirizine", "default_strength": "10 mg", "form": "tablet", "aliases": "setril|cetirizine", "category": "Allergy", "practice_types": ""},
-    {"brand_name": "CETZINE", "generic_name": "Cetirizine", "default_strength": "10 mg", "form": "tablet", "aliases": "cetzine|cetirizine", "category": "Allergy", "practice_types": ""},
-    {"brand_name": "OMEE", "generic_name": "Omeprazole", "default_strength": "20 mg", "form": "capsule", "aliases": "omee|omeprazole", "category": "GI", "practice_types": ""},
-    {"brand_name": "SERGEL", "generic_name": "Esomeprazole", "default_strength": "40 mg", "form": "capsule", "aliases": "sergel|esomeprazole", "category": "GI", "practice_types": ""},
-    {"brand_name": "NEXUM", "generic_name": "Esomeprazole", "default_strength": "40 mg", "form": "capsule", "aliases": "nexum|esomeprazole", "category": "GI", "practice_types": ""},
-    {"brand_name": "RISEK", "generic_name": "Rabeprazole", "default_strength": "20 mg", "form": "capsule", "aliases": "risek|rabeprazole", "category": "GI", "practice_types": ""},
-    {"brand_name": "DOMPER", "generic_name": "Domperidone", "default_strength": "10 mg", "form": "tablet", "aliases": "domper|domperidone", "category": "GI", "practice_types": ""},
-    {"brand_name": "MOTILIUM", "generic_name": "Domperidone", "default_strength": "10 mg", "form": "tablet", "aliases": "motilium", "category": "GI", "practice_types": ""},
-    {"brand_name": "BUSCOPAN", "generic_name": "Hyoscine butylbromide", "default_strength": "10 mg", "form": "tablet", "aliases": "buscopan", "category": "GI", "practice_types": ""},
-    {"brand_name": "IMODIUM", "generic_name": "Loperamide", "default_strength": "2 mg", "form": "tablet", "aliases": "imodium|loperamide", "category": "GI", "practice_types": ""},
-    {"brand_name": "AMOXIL", "generic_name": "Amoxicillin", "default_strength": "500 mg", "form": "capsule", "aliases": "amoxil|amoxicillin", "category": "Antibiotic", "practice_types": ""},
-    {"brand_name": "MOXACIL", "generic_name": "Amoxicillin", "default_strength": "500 mg", "form": "capsule", "aliases": "moxacil|amoxicillin", "category": "Antibiotic", "practice_types": ""},
-    {"brand_name": "AUGMENTIN", "generic_name": "Amoxicillin+Clavulanate", "default_strength": "625 mg", "form": "tablet", "aliases": "augmentin", "category": "Antibiotic", "practice_types": ""},
-    {"brand_name": "AZITH", "generic_name": "Azithromycin", "default_strength": "500 mg", "form": "tablet", "aliases": "azith|azithromycin", "category": "Antibiotic", "practice_types": ""},
-    {"brand_name": "CIPROX", "generic_name": "Ciprofloxacin", "default_strength": "500 mg", "form": "tablet", "aliases": "ciprox|ciprofloxacin", "category": "Antibiotic", "practice_types": ""},
-    {"brand_name": "METRO", "generic_name": "Metronidazole", "default_strength": "400 mg", "form": "tablet", "aliases": "metro|metronidazole", "category": "Antibiotic", "practice_types": ""},
-    {"brand_name": "FLAGYL", "generic_name": "Metronidazole", "default_strength": "400 mg", "form": "tablet", "aliases": "flagyl", "category": "Antibiotic", "practice_types": ""},
-    {"brand_name": "ENTAMIZOLE", "generic_name": "Metronidazole", "default_strength": "200 mg/5ml", "form": "syrup", "aliases": "entamizole", "category": "Antibiotic", "practice_types": ""},
-    {"brand_name": "ATEN", "generic_name": "Atenolol", "default_strength": "50 mg", "form": "tablet", "aliases": "aten|atenolol", "category": "Cardiac", "practice_types": ""},
-    {"brand_name": "AMLO", "generic_name": "Amlodipine", "default_strength": "5 mg", "form": "tablet", "aliases": "amlo|amlodipine", "category": "Cardiac", "practice_types": ""},
-    {"brand_name": "CONCOR", "generic_name": "Bisoprolol", "default_strength": "5 mg", "form": "tablet", "aliases": "concor|bisoprolol", "category": "Cardiac", "practice_types": ""},
-    {"brand_name": "LOSARTAN", "generic_name": "Losartan", "default_strength": "50 mg", "form": "tablet", "aliases": "losartan", "category": "Cardiac", "practice_types": ""},
-    {"brand_name": "TELMISAT", "generic_name": "Telmisartan", "default_strength": "40 mg", "form": "tablet", "aliases": "telmisat|telmisartan", "category": "Cardiac", "practice_types": ""},
-    {"brand_name": "ATORVA", "generic_name": "Atorvastatin", "default_strength": "20 mg", "form": "tablet", "aliases": "atorva|atorvastatin", "category": "Cardiac", "practice_types": ""},
-    {"brand_name": "ROSUVA", "generic_name": "Rosuvastatin", "default_strength": "10 mg", "form": "tablet", "aliases": "rosuva|rosuvastatin", "category": "Cardiac", "practice_types": ""},
-    {"brand_name": "CLOPILET", "generic_name": "Clopidogrel", "default_strength": "75 mg", "form": "tablet", "aliases": "clopilet|clopidogrel", "category": "Cardiac", "practice_types": ""},
-    {"brand_name": "ASPIRIN", "generic_name": "Aspirin", "default_strength": "75 mg", "form": "tablet", "aliases": "aspirin", "category": "Cardiac", "practice_types": ""},
-    {"brand_name": "WARF", "generic_name": "Warfarin", "default_strength": "5 mg", "form": "tablet", "aliases": "warf|warfarin", "category": "Cardiac", "practice_types": ""},
-    {"brand_name": "GLUFORMIN", "generic_name": "Metformin", "default_strength": "500 mg", "form": "tablet", "aliases": "gluformin|metformin", "category": "Diabetes", "practice_types": ""},
-    {"brand_name": "DIAMET", "generic_name": "Metformin", "default_strength": "500 mg", "form": "tablet", "aliases": "diamet|metformin", "category": "Diabetes", "practice_types": ""},
-    {"brand_name": "INSULATARD", "generic_name": "Insulin", "default_strength": "100 IU/ml", "form": "injection", "aliases": "insulatard|insulin", "category": "Diabetes", "practice_types": ""},
-    {"brand_name": "FOLIC ACID", "generic_name": "Folic acid", "default_strength": "5 mg", "form": "tablet", "aliases": "folic", "category": "Supplement", "practice_types": ""},
-    {"brand_name": "CALCIMAX", "generic_name": "Calcium", "default_strength": "500 mg", "form": "tablet", "aliases": "calcimax|calcium", "category": "Supplement", "practice_types": ""},
-    {"brand_name": "FEFOL", "generic_name": "Iron+Folic", "default_strength": "", "form": "tablet", "aliases": "fefol|iron", "category": "Supplement", "practice_types": ""},
-    {"brand_name": "ZINCOVIT", "generic_name": "Multivitamin", "default_strength": "", "form": "tablet", "aliases": "zincovit", "category": "Supplement", "practice_types": ""},
-    {"brand_name": "BECOSULES", "generic_name": "B complex", "default_strength": "", "form": "capsule", "aliases": "becosules", "category": "Supplement", "practice_types": ""},
-    {"brand_name": "NEUROBION", "generic_name": "B complex", "default_strength": "", "form": "tablet", "aliases": "neurobion", "category": "Supplement", "practice_types": ""},
-    {"brand_name": "ORS", "generic_name": "Oral rehydration salts", "default_strength": "", "form": "sachet", "aliases": "ors", "category": "Rehydration", "practice_types": ""},
-    {"brand_name": "ORSALINE", "generic_name": "Oral rehydration salts", "default_strength": "", "form": "sachet", "aliases": "orsaline", "category": "Rehydration", "practice_types": ""},
-    {"brand_name": "ORALYTE", "generic_name": "Oral rehydration salts", "default_strength": "", "form": "sachet", "aliases": "oralyte", "category": "Rehydration", "practice_types": ""},
-    {"brand_name": "SINAREST", "generic_name": "Paracetamol+Phenylephrine", "default_strength": "", "form": "tablet", "aliases": "sinarest", "category": "Cold", "practice_types": ""},
-    {"brand_name": "DECOLGEN", "generic_name": "Paracetamol+Chlorpheniramine", "default_strength": "", "form": "tablet", "aliases": "decolgen", "category": "Cold", "practice_types": ""},
-    {"brand_name": "MONTAIR", "generic_name": "Montelukast", "default_strength": "10 mg", "form": "tablet", "aliases": "montair|montelukast", "category": "Allergy", "practice_types": ""},
-    {"brand_name": "VENTOLIN", "generic_name": "Salbutamol", "default_strength": "100 mcg", "form": "inhaler", "aliases": "ventolin|salbutamol", "category": "Respiratory", "practice_types": ""},
-    {"brand_name": "BETNESOL", "generic_name": "Betamethasone", "default_strength": "0.5 mg", "form": "tablet", "aliases": "betnesol", "category": "Steroid", "practice_types": ""},
-    {"brand_name": "PREDNISOLONE", "generic_name": "Prednisolone", "default_strength": "5 mg", "form": "tablet", "aliases": "prednisolone", "category": "Steroid", "practice_types": ""},
-    {"brand_name": "CANDID", "generic_name": "Clotrimazole", "default_strength": "1%", "form": "cream", "aliases": "candid|clotrimazole", "category": "Dermatology", "practice_types": ""},
-    {"brand_name": "BETNOVATE", "generic_name": "Betamethasone", "default_strength": "0.1%", "form": "cream", "aliases": "betnovate", "category": "Dermatology", "practice_types": ""},
-    {"brand_name": "CLOBEGEN", "generic_name": "Clobetasol", "default_strength": "0.05%", "form": "cream", "aliases": "clobegen", "category": "Dermatology", "practice_types": ""},
-    {"brand_name": "FLUCONAZOLE", "generic_name": "Fluconazole", "default_strength": "150 mg", "form": "tablet", "aliases": "fluconazole", "category": "Antifungal", "practice_types": ""},
-    {"brand_name": "DIFLUCAN", "generic_name": "Fluconazole", "default_strength": "150 mg", "form": "tablet", "aliases": "diflucan", "category": "Antifungal", "practice_types": ""},
-    {"brand_name": "ORALDYNE", "generic_name": "Chlorhexidine", "default_strength": "0.12%", "form": "mouthwash", "aliases": "oraldyne", "category": "Dental", "practice_types": "dentist|general_physician"},
-    {"brand_name": "DENTOGEL", "generic_name": "Metronidazole", "default_strength": "1%", "form": "gel", "aliases": "dentogel", "category": "Dental", "practice_types": "dentist|general_physician"},
-    {"brand_name": "GYNOFAST", "generic_name": "Clotrimazole", "default_strength": "1%", "form": "cream", "aliases": "gynofast", "category": "Gynecology", "practice_types": "gynecologist|general_physician"},
+MIN_ROWS = 24000
+
+# One catalogue row per brand + strength + form, not per brand. NAPA alone
+# ships as a 500 mg tablet, a 120 mg/5 ml syrup, 80 mg/ml paediatric drops,
+# three suppository strengths and an IV infusion — collapsing those to one
+# row discards 8,656 SKUs across 5,862 brands, and the losses fall hardest on
+# exactly the syrups and drops a chamber GP needs for children.
+# `medicines.brand_name` is indexed, not unique, so this needs no constraint
+# change; the loader upserts on the same triple.
+def sku_key(brand: str, strength: str, form: str) -> tuple[str, str, str]:
+    return (brand, (strength or "").strip().lower(), (form or "").strip().lower())
+
+TIER_PINNED, TIER_CURATED, TIER_ESSENTIAL, TIER_STANDARD, TIER_SPECIALIST = 0, 1, 2, 3, 4
+
+# Forms a doctor cannot hand a patient in a chamber. Kept in the catalogue —
+# a hospital-linked doctor may genuinely need them — but demoted so they never
+# outrank an oral brand of the same name. This is the `ACE IV` vs
+# `ACE 500 mg tablet` ambiguity the curated build avoided by exclusion.
+PARENTERAL = re.compile(r"\b(iv|im|infusion|injection|parenteral|intrathecal|intravenous)\b", re.I)
+
+SPECIALIST_CLASS = re.compile(r"(cytotoxic|chemotherapy|vaccine|immunoglobulin|radiopharma)", re.I)
+
+# Coarse category for the long tail, matched against therapeutic_class in
+# order. The curated seed keeps its own reviewed category untouched.
+CATEGORY_RULES: list[tuple[str, str]] = [
+    (r"penicillin|cephalosporin|macrolide|quinolone|tetracycline|aminoglycoside|antibacterial|antibiotic|carbapenem|sulfonamide", "Antibiotic"),
+    (r"antifungal|mycoses", "Antifungal"),
+    (r"anthelmintic|antiprotozoal|antimalarial|amoebic", "Anthelmintic"),
+    (r"antiviral|antiretroviral", "Antiviral"),
+    (r"proton pump|antacid|anti-emetic|laxative|anti-diarrhoeal|ulcer|hepat|gastro", "GI"),
+    (r"antihistamine|leukotriene|allergy", "Allergy"),
+    (r"nsaid|analgesic|opioid|arthritis|gout|migraine", "Analgesic"),
+    (r"antihypertensive|angiotensin|beta.?blocker|calcium channel|statin|anti-anginal|diuretic|cardiac|anticoagulant|antiplatelet|heart", "Cardiac"),
+    (r"hypoglycemic|insulin|diabet", "Diabetes"),
+    (r"corticosteroid|glucocorticoid|steroid", "Steroid"),
+    (r"asthma|bronchodilator|respiratory|cough|expectorant|mucolytic", "Respiratory"),
+    (r"dermat|acne|psoriasis|eczema|topical|scabies", "Dermatology"),
+    (r"ophthalmic|eye|otic|ear|nasal|ent", "Eye/ENT"),
+    (r"anti-epileptic|antidepressant|antipsychotic|anxiolytic|hypnotic|sedative|psych|parkinson|dementia", "Psychiatry"),
+    (r"thyroid", "Thyroid"),
+    (r"urolog|prostat|erectile|urinary", "Urology"),
+    (r"contracept|oestrogen|estrogen|progest|obstetric|gynae|gynec|uterine", "Gynecology"),
+    (r"vitamin|mineral|supplement|nutrition|electrolyte", "Supplement"),
+    (r"rehydration|oral rehydration", "Rehydration"),
+    (r"muscle relaxant|musculoskeletal|spasm", "Musculoskeletal"),
+    (r"dental|oral hygiene|mouthwash", "Dental"),
+    (r"vaccine|immunoglobulin", "Vaccine"),
+    (r"cytotoxic|chemotherapy|oncolog|antineoplastic", "Oncology"),
 ]
 
-# Fill remaining slots by generic (needle, category, how many brands to add).
-GENERIC_FILL: list[tuple[str, str, int]] = [
-    ("paracetamol", "Analgesic", 12),
-    ("ibuprofen", "Analgesic", 8),
-    ("diclofenac", "Analgesic", 10),
-    ("mefenamic", "Analgesic", 6),
-    ("aceclofenac", "Analgesic", 6),
-    ("tramadol", "Analgesic", 4),
-    ("naproxen", "Analgesic", 4),
-    ("cetirizine", "Allergy", 10),
-    ("loratadine", "Allergy", 6),
-    ("fexofenadine", "Allergy", 6),
-    ("levocetirizine", "Allergy", 6),
-    ("desloratadine", "Allergy", 4),
-    ("montelukast", "Allergy", 4),
-    ("omeprazole", "GI", 10),
-    ("esomeprazole", "GI", 10),
-    ("rabeprazole", "GI", 6),
-    ("pantoprazole", "GI", 6),
-    ("domperidone", "GI", 6),
-    ("loperamide", "GI", 4),
-    ("hyoscine", "GI", 3),
-    ("aluminium hydroxide", "GI", 4),
-    ("amoxicillin", "Antibiotic", 12),
-    ("clavulanate", "Antibiotic", 6),
-    ("azithromycin", "Antibiotic", 10),
-    ("ciprofloxacin", "Antibiotic", 10),
-    ("metronidazole", "Antibiotic", 8),
-    ("cefixime", "Antibiotic", 8),
-    ("cefpodoxime", "Antibiotic", 6),
-    ("ceftriaxone", "Antibiotic", 6),
-    ("doxycycline", "Antibiotic", 6),
-    ("clarithromycin", "Antibiotic", 5),
-    ("levofloxacin", "Antibiotic", 5),
-    ("nitrofurantoin", "Antibiotic", 3),
-    ("cephalexin", "Antibiotic", 5),
-    ("atenolol", "Cardiac", 6),
-    ("amlodipine", "Cardiac", 12),
-    ("bisoprolol", "Cardiac", 4),
-    ("losartan", "Cardiac", 8),
-    ("telmisartan", "Cardiac", 8),
-    ("valsartan", "Cardiac", 6),
-    ("olmesartan", "Cardiac", 5),
-    ("hydrochlorothiazide", "Cardiac", 4),
-    ("furosemide", "Cardiac", 5),
-    ("spironolactone", "Cardiac", 4),
-    ("atorvastatin", "Cardiac", 10),
-    ("rosuvastatin", "Cardiac", 8),
-    ("clopidogrel", "Cardiac", 6),
-    ("isosorbide", "Cardiac", 3),
-    ("diltiazem", "Cardiac", 4),
-    ("metformin", "Diabetes", 12),
-    ("glibenclamide", "Diabetes", 5),
-    ("gliclazide", "Diabetes", 5),
-    ("glimepiride", "Diabetes", 5),
-    ("sitagliptin", "Diabetes", 4),
-    ("empagliflozin", "Diabetes", 3),
-    ("insulin", "Diabetes", 6),
-    ("folic acid", "Supplement", 5),
-    ("calcium", "Supplement", 8),
-    ("iron", "Supplement", 8),
-    ("vitamin d", "Supplement", 6),
-    ("zinc", "Supplement", 5),
-    ("multivitamin", "Supplement", 6),
-    ("oral rehydration", "Rehydration", 6),
-    ("saline", "Rehydration", 4),
-    ("ambroxol", "Cold", 8),
-    ("guaifenesin", "Cold", 5),
-    ("dextromethorphan", "Cold", 5),
-    ("phenylephrine", "Cold", 5),
-    ("salbutamol", "Respiratory", 10),
-    ("budesonide", "Respiratory", 5),
-    ("theophylline", "Respiratory", 3),
-    ("ipratropium", "Respiratory", 3),
-    ("betamethasone", "Steroid", 8),
-    ("prednisolone", "Steroid", 6),
-    ("dexamethasone", "Steroid", 5),
-    ("hydrocortisone", "Steroid", 5),
-    ("clotrimazole", "Dermatology", 8),
-    ("clobetasol", "Dermatology", 5),
-    ("mometasone", "Dermatology", 5),
-    ("fusidic", "Dermatology", 4),
-    ("permethrin", "Dermatology", 3),
-    ("adapalene", "Dermatology", 3),
-    ("fluconazole", "Antifungal", 6),
-    ("terbinafine", "Antifungal", 5),
-    ("ketoconazole", "Antifungal", 5),
-    ("itraconazole", "Antifungal", 3),
-    ("chlorhexidine", "Dental", 4),
-    ("clotrimazole", "Gynecology", 6),
-    ("norethisterone", "Gynecology", 4),
-    ("medroxyprogesterone", "Gynecology", 4),
-    ("levonorgestrel", "Gynecology", 3),
-    ("ethinylestradiol", "Gynecology", 6),
-    ("tranexamic", "Gynecology", 4),
-    ("paracetamol", "Pediatric", 8),
-    ("amoxicillin", "Pediatric", 6),
-    ("cefixime", "Pediatric", 5),
-    ("salbutamol", "Pediatric", 5),
-    ("cetirizine", "Pediatric", 4),
-    ("chloramphenicol", "Eye/ENT", 5),
-    ("ciprofloxacin", "Eye/ENT", 5),
-    ("tobramycin", "Eye/ENT", 4),
-    ("xylometazoline", "Eye/ENT", 5),
-    ("sertraline", "Psychiatry", 5),
-    ("escitalopram", "Psychiatry", 5),
-    ("amitriptyline", "Psychiatry", 4),
-    ("clonazepam", "Psychiatry", 5),
-    ("diazepam", "Psychiatry", 5),
-    ("carbamazepine", "Psychiatry", 5),
-    ("valproate", "Psychiatry", 5),
-    ("pregabalin", "Psychiatry", 5),
-    ("levothyroxine", "Thyroid", 6),
-    ("carbimazole", "Thyroid", 3),
-    ("tamsulosin", "Urology", 4),
-    ("finasteride", "Urology", 3),
-    ("sildenafil", "Urology", 3),
-    ("albendazole", "Anthelmintic", 5),
-    ("mebendazole", "Anthelmintic", 3),
-    ("thiocolchicoside", "Musculoskeletal", 4),
-    ("eperisone", "Musculoskeletal", 4),
-    ("baclofen", "Musculoskeletal", 3),
-]
-
-CATEGORY_TARGETS: dict[str, int] = {
-    "Analgesic": 38,
-    "Allergy": 28,
-    "GI": 38,
-    "Antibiotic": 48,
-    "Cardiac": 48,
-    "Diabetes": 28,
-    "Supplement": 28,
-    "Rehydration": 10,
-    "Cold": 22,
-    "Respiratory": 16,
-    "Steroid": 14,
-    "Dermatology": 24,
-    "Antifungal": 10,
-    "Dental": 8,
-    "Gynecology": 20,
-    "Pediatric": 18,
-    "Eye/ENT": 14,
-    "Psychiatry": 20,
-    "Thyroid": 8,
-    "Urology": 8,
-    "Anthelmintic": 8,
-    "Musculoskeletal": 10,
+PRACTICE_BY_CATEGORY = {
+    "Dental": "dentist|general_physician",
+    "Gynecology": "gynecologist|general_physician",
+    "Pediatric": "pediatrician|general_physician",
+    "Dermatology": "dermatologist|general_physician",
 }
 
-SKIP_BRAND = re.compile(
-    r"(^ORS\s+[A-Z]$|ORS\s+PLUS|PLUS\s+ORS|BLEOMYCIN|CHEMO|VACCINE|"
-    r"\bSR\b|\bXR\b|\bTR\b|\bDT\b|\bMUPS\b|\bDS\b|ENTERIC|INFUSION|"
-    r"INJECTION|SUPPOSITORY|DROPS|PEDIATRIC DROPS)",
-    re.I,
-)
-
 FORM_MAP = {
+    "powder for suspension": "syrup",
+    "oral suspension": "syrup",
+    "suspension": "syrup",
+    "oral solution": "solution",
+    "ophthalmic": "drops",
+    "eye drop": "drops",
+    "ear drop": "drops",
+    "nasal": "drops",
+    "drops": "drops",
+    "chewable": "tablet",
+    "enteric coated": "tablet",
+    "extended release": "tablet",
     "tablet": "tablet",
     "capsule": "capsule",
     "syrup": "syrup",
-    "suspension": "syrup",
-    "oral suspension": "syrup",
-    "powder for suspension": "syrup",
     "cream": "cream",
     "ointment": "ointment",
     "gel": "gel",
-    "injection": "injection",
+    "lotion": "lotion",
     "inhaler": "inhaler",
     "metered-dose": "inhaler",
     "dry powder": "inhaler",
+    "nebuliser": "inhaler",
     "sachet": "sachet",
     "powder": "sachet",
-    "drops": "drops",
-    "ophthalmic": "drops",
     "mouthwash": "mouthwash",
+    "suppository": "suppository",
+    "patch": "patch",
+    "infusion": "injection",
+    "injection": "injection",
     "solution": "solution",
 }
 
@@ -277,190 +140,263 @@ class MedRow:
     aliases: str
     category: str
     practice_types: str
+    indications: str = ""
+    manufacturer: str = ""
+    is_essential: int = 0
+    priority: int = TIER_STANDARD
+    _seen_forms: set[str] = field(default_factory=set, repr=False)
 
 
 def clean_brand(name: str) -> str:
-    return re.sub(r"\s+", " ", name.strip()).upper()
+    return re.sub(r"\s+", " ", (name or "").strip()).upper()
+
+
+def norm_generic(value: str) -> str:
+    return re.sub(r"[^a-z0-9+ ]", "", (value or "").strip().lower())
 
 
 def normalize_form(raw: str) -> str:
-    key = raw.strip().lower()
+    key = (raw or "").strip().lower()
     for needle, mapped in FORM_MAP.items():
         if needle in key:
             return mapped
     return "tablet"
 
 
-def strength_from_row(row: dict[str, str]) -> str:
-    return (row.get("strength") or "").strip()
+def category_for(therapeutic_class: str, generic: str) -> str:
+    haystack = f"{therapeutic_class} {generic}".lower()
+    for pattern, category in CATEGORY_RULES:
+        if re.search(pattern, haystack):
+            return category
+    return "Other"
+
+
+def practice_types_for(category: str) -> str:
+    return PRACTICE_BY_CATEGORY.get(category, "")
 
 
 def aliases_for(brand: str, generic: str) -> str:
     parts = {brand.lower()}
     if generic:
         parts.add(generic.lower())
-    return "|".join(sorted(parts))
+        # Search on the first word of a combination generic too, so
+        # "amoxicillin" finds "Amoxicillin + Clavulanic Acid".
+        head = re.split(r"[+/,]", generic)[0].strip().lower()
+        if head:
+            parts.add(head)
+    return "|".join(sorted(p for p in parts if p))
 
 
-def practice_types_for(category: str) -> str:
-    if category == "Dental":
-        return "dentist|general_physician"
-    if category == "Gynecology":
-        return "gynecologist|general_physician"
-    if category == "Pediatric":
-        return "pediatrician|general_physician"
-    return ""
+def short_indication(therapeutic_class: str, indications: str) -> str:
+    """
+    Picker subtitle. `therapeutic_class` is already concise and clinical
+    (median 34 chars, e.g. "Proton Pump Inhibitor"); the free-text
+    `indications` blob averages 638 characters of brand-prefixed marketing
+    prose, so it is only a fallback.
+    """
+    tc = re.sub(r"\s+", " ", (therapeutic_class or "").strip())
+    if tc:
+        return tc[:120]
+
+    text = re.sub(r"\s+", " ", (indications or "").strip())
+    if not text:
+        return ""
+    text = re.split(r"(?<=[.;])\s", text)[0]
+    return text[:120]
 
 
-def score_row(row: dict[str, str], category: str) -> int:
-    form = normalize_form(row.get("dosage_form") or "")
-    brand = clean_brand(row.get("name") or "")
-    strength = strength_from_row(row).lower()
-    score = 0
+def load_essential_generics(neml_path: Path, who_path: Path) -> set[str]:
+    essential: set[str] = set()
 
-    if SKIP_BRAND.search(brand):
-        return -100
+    if neml_path.is_file():
+        with neml_path.open(newline="", encoding="utf-8") as handle:
+            for row in csv.DictReader(handle):
+                value = norm_generic(row.get("neml_generic_norm") or "")
+                if value:
+                    essential.add(value)
 
-    if form in {"tablet", "capsule"}:
-        score += 20
-    elif form in {"syrup", "cream", "gel", "inhaler", "sachet", "drops", "mouthwash"}:
-        score += 12
-    elif form == "injection" and category in {"Diabetes", "Antibiotic"}:
-        score += 8
-    else:
-        score -= 15
+    if who_path.is_file():
+        with who_path.open(newline="", encoding="utf-8") as handle:
+            for row in csv.DictReader(handle):
+                value = norm_generic(row.get("inn_norm") or "")
+                if value:
+                    essential.add(value)
 
-    if category == "Pediatric" and form == "syrup":
-        score += 8
-    if category == "Rehydration" and ("ors" in brand.lower() or "saline" in brand.lower() or "rehydration" in (row.get("generic_name") or "").lower()):
-        score += 15
-    if category == "Eye/ENT" and form == "drops":
-        score += 10
-
-    # Prefer common strengths
-    if "500 mg" in strength:
-        score += 3
-    if "400 mg" in strength or "40 mg" in strength or "10 mg" in strength:
-        score += 2
-
-    if len(brand) <= 12:
-        score += 2
-
-    return score
+    return essential
 
 
-def row_to_med(row: dict[str, str], category: str) -> MedRow:
-    brand = clean_brand(row["name"])
-    generic = (row.get("generic_name") or "").strip()
-    return MedRow(
-        brand_name=brand,
-        generic_name=generic,
-        default_strength=strength_from_row(row),
-        form=normalize_form(row.get("dosage_form") or ""),
-        aliases=aliases_for(brand, generic),
-        category=category,
-        practice_types=practice_types_for(category),
-    )
+def load_curated_seed(path: Path) -> dict[tuple[str, str, str], MedRow]:
+    """The reviewed 460 — kept verbatim, never re-derived from the source."""
+    seed: dict[tuple[str, str, str], MedRow] = {}
 
-
-def pinned_to_med(data: dict[str, str]) -> MedRow:
-    return MedRow(
-        brand_name=clean_brand(data["brand_name"]),
-        generic_name=data["generic_name"],
-        default_strength=data.get("default_strength", ""),
-        form=data.get("form", "tablet"),
-        aliases=data.get("aliases", ""),
-        category=data["category"],
-        practice_types=data.get("practice_types", practice_types_for(data["category"])),
-    )
-
-
-def load_source(path: Path) -> list[dict[str, str]]:
     if not path.is_file():
-        print(f"Source not found: {path}", file=sys.stderr)
-        sys.exit(1)
+        print(f"Curated seed not found: {path}", file=sys.stderr)
+        return seed
+
     with path.open(newline="", encoding="utf-8") as handle:
-        return list(csv.DictReader(handle))
+        for row in csv.DictReader(handle):
+            brand = clean_brand(row.get("brand_name") or "")
+            if not brand:
+                continue
+            key = sku_key(brand, row.get("default_strength") or "", row.get("form") or "tablet")
+            seed[key] = MedRow(
+                brand_name=brand,
+                generic_name=(row.get("generic_name") or "").strip(),
+                default_strength=(row.get("default_strength") or "").strip(),
+                form=(row.get("form") or "tablet").strip(),
+                aliases=(row.get("aliases") or "").strip(),
+                category=(row.get("category") or "Other").strip(),
+                practice_types=(row.get("practice_types") or "").strip(),
+                priority=TIER_CURATED,
+            )
+
+    return seed
 
 
-def build_catalogue(source_path: Path) -> list[MedRow]:
-    source = load_source(source_path)
-    catalogue: dict[str, MedRow] = {}
+def tier_for(form: str, therapeutic_class: str, is_essential: bool, raw_form: str) -> int:
+    if PARENTERAL.search(raw_form) or SPECIALIST_CLASS.search(therapeutic_class or ""):
+        return TIER_SPECIALIST
+    if is_essential:
+        return TIER_ESSENTIAL
+    return TIER_STANDARD
 
-    for item in PINNED:
-        med = pinned_to_med(item)
-        catalogue[med.brand_name] = med
 
-    def category_count(category: str) -> int:
-        return sum(1 for med in catalogue.values() if med.category == category)
+def build_catalogue(source_path: Path, neml_path: Path, who_path: Path) -> list[MedRow]:
+    if not source_path.is_file():
+        print(f"Source not found: {source_path}", file=sys.stderr)
+        print("Download BDDrugBank v1.0.0 (CC BY 4.0) from", file=sys.stderr)
+        print("  https://zenodo.org/records/20749707", file=sys.stderr)
+        print(f"and unzip into {SOURCE_DIR}", file=sys.stderr)
+        sys.exit(1)
 
-    for category, target in CATEGORY_TARGETS.items():
-        needles = [(n, lim) for n, cat, lim in GENERIC_FILL if cat == category]
-        for needle, per_generic_limit in needles:
-            if category_count(category) >= target:
-                break
-            matches = []
-            for row in source:
-                generic = (row.get("generic_name") or "").lower()
-                brand = clean_brand(row.get("name") or "")
-                if brand in catalogue:
-                    continue
-                if needle not in generic:
-                    continue
-                score = score_row(row, category)
-                if score < 0:
-                    continue
-                matches.append((score, brand, row))
-            matches.sort(key=lambda item: (-item[0], item[1]))
-            added = 0
-            for _, _, row in matches:
-                if category_count(category) >= target:
-                    break
-                med = row_to_med(row, category)
-                if med.brand_name in catalogue:
-                    continue
-                catalogue[med.brand_name] = med
-                added += 1
-                if added >= per_generic_limit:
-                    break
+    essential = load_essential_generics(neml_path, who_path)
+    catalogue = load_curated_seed(CURATED_SEED)
 
-    ordered = sorted(catalogue.values(), key=lambda r: (r.category, r.brand_name))
-    return ordered
+    # Curated rows keep their reviewed values but still gain the new columns.
+    for med in catalogue.values():
+        med.is_essential = int(norm_generic(med.generic_name) in essential)
+
+    with source_path.open(newline="", encoding="utf-8") as handle:
+        for row in csv.DictReader(handle):
+            brand = clean_brand(row.get("name") or "")
+            if not brand:
+                continue
+
+            generic = (row.get("generic_name") or "").strip()
+            raw_form = row.get("dosage_form") or ""
+            form = normalize_form(raw_form)
+            strength = (row.get("strength") or "").strip()
+            therapeutic_class = (row.get("therapeutic_class") or "").strip()
+            is_essential = norm_generic(generic) in essential
+
+            key = sku_key(brand, strength, form)
+            existing = catalogue.get(key)
+
+            if existing is not None:
+                # A curated row wins on every reviewed field; the source only
+                # fills the columns curation never carried.
+                if not existing.indications:
+                    existing.indications = short_indication(therapeutic_class, row.get("indications") or "")
+                if not existing.manufacturer:
+                    existing.manufacturer = (row.get("manufacturer") or "").strip()
+                existing.is_essential = int(existing.is_essential or is_essential)
+                existing._seen_forms.add(form)
+                continue
+
+            catalogue[key] = MedRow(
+                brand_name=brand,
+                generic_name=generic,
+                default_strength=strength,
+                form=form,
+                aliases=aliases_for(brand, generic),
+                category=category_for(therapeutic_class, generic),
+                practice_types=practice_types_for(category_for(therapeutic_class, generic)),
+                indications=short_indication(therapeutic_class, row.get("indications") or ""),
+                manufacturer=(row.get("manufacturer") or "").strip(),
+                is_essential=int(is_essential),
+                priority=tier_for(form, therapeutic_class, is_essential, raw_form),
+                _seen_forms={form},
+            )
+
+    # A curated row whose strength/form was hand-corrected during review may
+    # not key-match any source SKU, so it would keep empty indications and
+    # manufacturer. Fill those from any source row sharing the brand.
+    by_brand: dict[str, tuple[str, str]] = {}
+    for med in catalogue.values():
+        if med.indications and med.brand_name not in by_brand:
+            by_brand[med.brand_name] = (med.indications, med.manufacturer)
+
+    for med in catalogue.values():
+        if not med.indications and med.brand_name in by_brand:
+            med.indications, manufacturer = by_brand[med.brand_name]
+            med.manufacturer = med.manufacturer or manufacturer
+
+    # Promote only the *curated* SKU of a pinned brand. NAPA 500 mg tablet
+    # becomes tier 0; NAPA syrup, drops and suppositories stay findable at
+    # their own tier rather than all seven outranking everything at once.
+    for med in catalogue.values():
+        if med.priority == TIER_CURATED and med.brand_name in PINNED_BRANDS:
+            med.priority = TIER_PINNED
+
+    return sorted(catalogue.values(), key=lambda r: (r.priority, r.category, r.brand_name))
+
+
+# Household brands whose strength/form were verified by hand during the
+# curated build. They stay tier 0 so an ambiguous source row can never
+# outrank the form a chamber doctor actually prescribes.
+PINNED_BRANDS = {
+    "NAPA", "ACE", "MAXIM", "DOLO", "FEVASTIN", "NAPA EXTRA", "BRUFEN",
+    "SETRIL", "CETZINE", "OMEE", "SERGEL", "NEXUM", "RISEK", "DOMPER",
+    "MOTILIUM", "BUSCOPAN", "IMODIUM", "AMOXIL", "MOXACIL", "AUGMENTIN",
+    "AZITH", "CIPROX", "METRO", "FLAGYL", "ENTAMIZOLE", "ATEN", "AMLO",
+    "CONCOR", "LOSARTAN", "TELMISAT", "ATORVA", "ROSUVA", "CLOPILET",
+    "ASPIRIN", "WARF", "GLUFORMIN", "DIAMET", "INSULATARD", "FOLIC ACID",
+    "CALCIMAX", "FEFOL", "ZINCOVIT", "BECOSULES", "NEUROBION", "ORS",
+    "ORSALINE", "ORALYTE", "SINAREST", "DECOLGEN", "MONTAIR", "VENTOLIN",
+    "BETNESOL", "PREDNISOLONE", "CANDID", "BETNOVATE", "CLOBEGEN",
+    "FLUCONAZOLE", "DIFLUCAN", "ORALDYNE", "DENTOGEL", "GYNOFAST",
+}
+
+HEADER = [
+    "brand_name", "generic_name", "default_strength", "form", "aliases",
+    "category", "practice_types", "indications", "manufacturer",
+    "is_essential", "priority",
+]
 
 
 def write_csv(rows: list[MedRow], path: Path) -> None:
     with path.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.writer(handle)
-        writer.writerow(
-            ["brand_name", "generic_name", "default_strength", "form", "aliases", "category", "practice_types"]
-        )
+        writer.writerow(HEADER)
         for row in rows:
-            writer.writerow(
-                [
-                    row.brand_name,
-                    row.generic_name,
-                    row.default_strength,
-                    row.form,
-                    row.aliases,
-                    row.category,
-                    row.practice_types,
-                ]
-            )
+            writer.writerow([
+                row.brand_name, row.generic_name, row.default_strength,
+                row.form, row.aliases, row.category, row.practice_types,
+                row.indications, row.manufacturer, row.is_essential, row.priority,
+            ])
 
 
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--source", type=Path, default=DEFAULT_SOURCE)
+    parser.add_argument("--neml", type=Path, default=DEFAULT_NEML)
+    parser.add_argument("--who-eml", type=Path, default=DEFAULT_WHO_EML)
     parser.add_argument("--output", type=Path, default=OUTPUT)
     args = parser.parse_args()
 
-    rows = build_catalogue(args.source)
+    rows = build_catalogue(args.source, args.neml, args.who_eml)
     write_csv(rows, args.output)
 
-    counts = Counter(r.category for r in rows)
+    tiers = Counter(r.priority for r in rows)
+    names = {
+        TIER_PINNED: "pinned", TIER_CURATED: "curated", TIER_ESSENTIAL: "essential",
+        TIER_STANDARD: "standard", TIER_SPECIALIST: "specialist",
+    }
     print(f"Wrote {len(rows)} medicines to {args.output}")
-    for category, count in sorted(counts.items(), key=lambda item: (-item[1], item[0])):
-        print(f"  {category}: {count}")
+    for tier in sorted(tiers):
+        print(f"  tier {tier} {names[tier]:11s} {tiers[tier]:6d}")
+    print(f"  essential-flagged      {sum(r.is_essential for r in rows):6d}")
+    print(f"  with indications       {sum(1 for r in rows if r.indications):6d}")
 
     return 0 if len(rows) >= MIN_ROWS else 1
 

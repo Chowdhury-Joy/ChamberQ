@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Condition;
-use App\Models\ConditionUsage;
 use App\Models\User;
 use Illuminate\Support\Collection;
 
@@ -14,7 +13,15 @@ class ConditionService
     public const MAX_RESULTS = 20;
 
     /**
-     * @return Collection<int, array{id: string, code: string, name: string, label: string, match_score: int, usage_boost: int}>
+     * Coded conditions matching the query, best text match first.
+     *
+     * Deliberately does not rank by what this doctor has diagnosed before: the
+     * app does not learn from consultations (owner decision, 2026-08-11). The
+     * `$doctor` argument is kept so callers and the route signature are
+     * unchanged, and so a future *explicitly curated* shortlist has an obvious
+     * place to hook in.
+     *
+     * @return Collection<int, array{id: string, code: string, name: string, label: string}>
      */
     public function search(string $query, ?User $doctor = null): Collection
     {
@@ -24,19 +31,15 @@ class ConditionService
             return collect();
         }
 
-        $usageBoosts = $doctor ? $this->usageBoostMap($doctor) : [];
-
         return Condition::query()
             ->orderBy('name')
             ->get()
-            ->map(function (Condition $condition) use ($needle, $usageBoosts) {
+            ->map(function (Condition $condition) use ($needle) {
                 $matchScore = $this->matchScore($condition, $needle);
 
                 if ($matchScore === 0) {
                     return null;
                 }
-
-                $usageBoost = $usageBoosts[$condition->id] ?? 0;
 
                 return [
                     'id' => $condition->id,
@@ -44,12 +47,11 @@ class ConditionService
                     'name' => $condition->name,
                     'label' => $condition->name,
                     'match_score' => $matchScore,
-                    'usage_boost' => $usageBoost,
-                    'rank' => $matchScore + $usageBoost,
                 ];
             })
             ->filter()
-            ->sortByDesc('rank')
+            // Ties keep the alphabetical order the query already applied.
+            ->sortByDesc('match_score')
             ->take(self::MAX_RESULTS)
             ->values()
             ->map(fn (array $row) => [
@@ -98,21 +100,6 @@ class ConditionService
         ];
     }
 
-    public function recordUsage(User $doctor, Condition $condition): ConditionUsage
-    {
-        $usage = ConditionUsage::query()->firstOrNew([
-            'tenant_id' => tenant('id'),
-            'user_id' => $doctor->id,
-            'condition_id' => $condition->id,
-        ]);
-
-        $usage->use_count = ($usage->use_count ?? 0) + 1;
-        $usage->last_used_at = now();
-        $usage->save();
-
-        return $usage;
-    }
-
     private function normalizeQuery(string $query): string
     {
         return mb_strtolower(trim($query));
@@ -135,17 +122,4 @@ class ConditionService
         return $best;
     }
 
-    /**
-     * @return array<string, int>
-     */
-    private function usageBoostMap(User $doctor): array
-    {
-        return ConditionUsage::query()
-            ->where('user_id', $doctor->id)
-            ->get()
-            ->mapWithKeys(fn (ConditionUsage $usage) => [
-                $usage->condition_id => ($usage->use_count * 5) + ($usage->last_used_at?->isAfter(now()->subDays(14)) ? 10 : 0),
-            ])
-            ->all();
-    }
 }

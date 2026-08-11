@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\Condition;
+use App\Models\ConditionUsage;
 use App\Models\Domain;
 use App\Models\Tenant;
 use App\Models\User;
@@ -90,11 +91,16 @@ class PatientRecordsStage3Test extends TestCase
         $this->assertTrue($this->conditionService->search('cold', $this->doctor)->isNotEmpty());
     }
 
-    public function test_frequent_conditions_rank_higher(): void
+    /**
+     * The diagnosis picker ranks on how well the text matches, and nothing
+     * else. It used to boost whatever this doctor had coded most often;
+     * automatic learning was removed on 2026-08-11 (owner decision), so an
+     * exact match must win regardless of any historical usage rows.
+     */
+    public function test_conditions_rank_on_text_match_not_past_usage(): void
     {
         tenancy()->initialize($this->tenant);
 
-        $gastritis = Condition::query()->where('code', 'SLD-GI-001')->firstOrFail();
         $peptic = Condition::create([
             'code' => 'SLD-GI-002',
             'name' => 'Peptic disorder',
@@ -102,16 +108,22 @@ class PatientRecordsStage3Test extends TestCase
             'category' => 'Gastrointestinal',
         ]);
 
-        for ($i = 0; $i < 5; $i++) {
-            $this->conditionService->recordUsage($this->doctor, $peptic);
-        }
+        // Historical rows from before learning was removed must not sway it.
+        ConditionUsage::create([
+            'tenant_id' => $this->tenant->id,
+            'user_id' => $this->doctor->id,
+            'condition_id' => $peptic->id,
+            'use_count' => 50,
+            'last_used_at' => now(),
+        ]);
 
-        $this->conditionService->recordUsage($this->doctor, $gastritis);
+        $results = $this->conditionService->search('gastritis', $this->doctor);
 
-        $results = $this->conditionService->search('dis', $this->doctor);
-
-        $this->assertGreaterThanOrEqual(2, $results->count());
-        $this->assertSame('SLD-GI-002', $results->first()['code']);
+        $this->assertSame(
+            'SLD-GI-001',
+            $results->first()['code'],
+            'The best text match wins; a heavily used condition does not jump the queue',
+        );
     }
 
     public function test_uncoded_free_text_path(): void

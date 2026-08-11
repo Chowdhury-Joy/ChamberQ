@@ -90,7 +90,17 @@ class VisitNotesFormSchema
     public const DOSE_PRESETS = ['500 mg', '10 mg', '20 mg', '40 mg', '400 mg', '5 mg', '50 mg'];
 
     /**
-     * Dose chip options for a selected brand — catalogue strength only, plus Other.
+     * Dose chips for a selected brand — **every** strength the brand ships in.
+     *
+     * The catalogue holds one row per brand + strength + form, so NAPA is a
+     * 500 mg tablet, a 120 mg/5 ml syrup, 80 mg/ml paediatric drops and three
+     * suppository strengths. The picker deliberately offers one entry per
+     * brand (search dedupes on brand name), which would strand every form
+     * except the top-ranked one — so the choice between them lives here, on
+     * the chips the doctor already uses to set the dose.
+     *
+     * Ordered by tier, so the hand-verified adult strength leads and the
+     * paediatric syrup is one chip away rather than untypeable.
      *
      * @return array<string, string>
      */
@@ -102,18 +112,29 @@ class VisitNotesFormSchema
             return ['other' => __('Other')];
         }
 
-        $strength = Medicine::query()
+        $strengths = Medicine::query()
             ->where('brand_name', $brand)
-            ->value('default_strength');
+            ->whereNotNull('default_strength')
+            ->orderBy('priority')
+            ->orderBy('default_strength')
+            ->pluck('form', 'default_strength');
 
-        if (blank($strength)) {
+        if ($strengths->isEmpty()) {
             return ['other' => __('Other')];
         }
 
-        return [
-            $strength => $strength,
-            'other' => __('Other'),
-        ];
+        $options = [];
+
+        foreach ($strengths as $strength => $form) {
+            // "120 mg/5 ml syrup" rather than a bare number: two strengths of
+            // the same brand in different forms are not interchangeable, and
+            // the dose is what carries that onto the printed script.
+            $options[$strength] = filled($form) ? $strength.' '.$form : $strength;
+        }
+
+        $options['other'] = __('Other');
+
+        return $options;
     }
 
     /**

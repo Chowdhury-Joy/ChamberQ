@@ -3,7 +3,6 @@
 namespace App\Services;
 
 use App\Models\Booking;
-use App\Models\Condition;
 use App\Models\Patient;
 use App\Models\Prescription;
 use App\Models\PrescriptionItem;
@@ -26,6 +25,10 @@ class VisitRecordService
     /**
      * Save optional visit notes when a doctor completes a booking.
      * Returns null when every field was left blank (honest "no notes" state).
+     *
+     * Nothing is inferred from what gets prescribed here. Doctors curate their
+     * own shortlist in **My medicines**; the app does not watch consultations
+     * and build one for them (owner decision, 2026-08-11).
      *
      * @param  array<string, mixed>  $data
      */
@@ -82,10 +85,6 @@ class VisitRecordService
             );
 
             $this->syncPrescription($visitRecord, $doctor, $data);
-
-            if ($booking->status === 'completed') {
-                $this->recordUsagesFromSubmission($doctor, $data, $diagnosis);
-            }
 
             return $visitRecord->fresh(['condition', 'prescription.items']);
         });
@@ -300,34 +299,6 @@ class VisitRecordService
                 'frequency' => $this->nullableString($item['frequency'] ?? null),
                 'duration' => $this->nullableString($item['duration'] ?? null),
                 'sort_order' => $index,
-            ]);
-        }
-    }
-
-    /**
-     * @param  array<string, mixed>  $data
-     * @param  array{coded: bool, condition_id: ?string, name: ?string}  $diagnosis
-     */
-    private function recordUsagesFromSubmission(User $doctor, array $data, array $diagnosis): void
-    {
-        if ($diagnosis['coded'] && filled($diagnosis['condition_id'])) {
-            $this->conditionService->recordUsage(
-                $doctor,
-                Condition::query()->findOrFail($diagnosis['condition_id'])
-            );
-        }
-
-        foreach ($data['prescription_items'] ?? [] as $item) {
-            if (blank($item['medicine_name'] ?? null)) {
-                continue;
-            }
-
-            $this->medicineService->recordUsage($doctor, [
-                'medicine_name' => $item['medicine_name'],
-                'generic_name' => $item['generic_name'] ?? null,
-                'dose' => $item['dose'] ?? null,
-                'frequency' => $item['frequency'] ?? null,
-                'duration' => $item['duration'] ?? null,
             ]);
         }
     }

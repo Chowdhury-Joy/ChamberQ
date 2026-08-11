@@ -51,12 +51,20 @@ class LoadMedicinesCommand extends Command
         $updated = 0;
         $brandsInCsv = [];
 
+        // 24k upserts is 24k round trips on the default connection; one
+        // transaction turns that from minutes into seconds and makes a failed
+        // import leave the catalogue untouched rather than half-replaced.
+        DB::beginTransaction();
+
         while (($row = fgetcsv($handle)) !== false) {
             if (count($row) < 2 || trim($row[0]) === '') {
                 continue;
             }
 
-            [$brand, $generic, $strength, $form, $aliasesRaw, $category, $practiceTypesRaw] = array_pad($row, 7, null);
+            [
+                $brand, $generic, $strength, $form, $aliasesRaw, $category,
+                $practiceTypesRaw, $indications, $manufacturer, $isEssential, $priority,
+            ] = array_pad($row, 11, null);
 
             $normalizedBrand = mb_strtoupper(trim($brand));
             $brandsInCsv[] = $normalizedBrand;
@@ -89,15 +97,26 @@ class LoadMedicinesCommand extends Command
                 }
             }
 
+            // Keyed on the SKU triple, not the brand: NAPA is a 500 mg tablet,
+            // a 120 mg/5 ml syrup, 80 mg/ml drops, three suppositories and an
+            // IV infusion. Upserting on brand alone collapsed those to one row
+            // and silently dropped 8,656 SKUs across the catalogue — mostly the
+            // syrups and drops a chamber GP needs for children.
             $medicine = Medicine::query()->updateOrCreate(
-                ['brand_name' => $normalizedBrand],
                 [
-                    'generic_name' => filled($generic) ? trim($generic) : null,
+                    'brand_name' => $normalizedBrand,
                     'default_strength' => filled($strength) ? trim($strength) : null,
                     'form' => filled($form) ? trim($form) : null,
+                ],
+                [
+                    'generic_name' => filled($generic) ? trim($generic) : null,
                     'aliases' => $aliases,
                     'category' => filled($category) ? trim($category) : null,
                     'practice_types' => $practiceTypes,
+                    'indications' => filled($indications) ? trim($indications) : null,
+                    'manufacturer' => filled($manufacturer) ? trim($manufacturer) : null,
+                    'is_essential' => (bool) (int) ($isEssential ?? 0),
+                    'priority' => (int) ($priority ?? Medicine::TIER_STANDARD),
                 ]
             );
 
@@ -107,6 +126,8 @@ class LoadMedicinesCommand extends Command
                 $updated++;
             }
         }
+
+        DB::commit();
 
         fclose($handle);
 
