@@ -8,6 +8,7 @@ use App\Models\Chamber;
 use App\Models\Doctor;
 use App\Models\LabCollectionSlot;
 use App\Models\Patient;
+use App\Models\Prescription;
 use App\Models\ScheduleSession;
 use App\Services\BookingService;
 use Illuminate\Http\Request;
@@ -149,12 +150,22 @@ class BookingController extends Controller
             'lab_tests.*' => 'integer',
             'wants_earlier_date' => 'nullable|boolean',
             'whatsapp_phone' => ['nullable', 'string', 'regex:/^(?:\+?88)?01[3-9]\d{8}$/'],
+            // Absent from older clients → treat as opted in (matches checkbox default).
+            'share_clinical_history' => 'nullable|boolean',
+            // Optional BD NID — never required; blank skips validation length.
+            'nid' => ['nullable', 'string', 'max:20'],
         ], [
             'booking_date.after_or_equal' => __('Please choose today or a future date.'),
             'booking_date.before_or_equal' => __('Please choose a date within the next 60 days.'),
             'patient_phone.regex' => __('Please enter a valid Bangladeshi mobile number, for example 01712345678.'),
             'whatsapp_phone.regex' => __('Please enter a valid Bangladeshi WhatsApp number, for example 01712345678.'),
         ]);
+
+        if (filled($validated['nid'] ?? null) && ! \App\Support\BdNid::isValid($validated['nid'])) {
+            throw ValidationException::withMessages([
+                'nid' => __('Please enter a valid NID (10 or 13 digits), or leave it blank.'),
+            ]);
+        }
 
         // findOrFail runs through the tenant global scope, so an id belonging to
         // another tenant 404s rather than resolving.
@@ -193,6 +204,10 @@ class BookingController extends Controller
                 $chosenPatient?->id,
                 (bool) ($validated['wants_earlier_date'] ?? false),
                 $validated['whatsapp_phone'] ?? null,
+                array_key_exists('share_clinical_history', $validated)
+                    ? filter_var($validated['share_clinical_history'], FILTER_VALIDATE_BOOLEAN)
+                    : true,
+                $validated['nid'] ?? null,
             );
         } catch (BookingUnavailableException $e) {
             // Only this exception type is safe to echo back to an anonymous
@@ -346,10 +361,17 @@ class BookingController extends Controller
         ]);
     }
 
+    /**
+     * How many recent prescriptions the portal lists as a backup when staff
+     * forget to send the SMS/WhatsApp link.
+     */
+    public const PORTAL_PRESCRIPTION_LIMIT = 2;
+
     public function portal(Request $request)
     {
         $phone = $request->query('phone');
         $bookings = collect();
+        $prescriptions = collect();
         $error = null;
 
         if (filled($phone)) {
@@ -369,6 +391,18 @@ class BookingController extends Controller
                     ->latest()
                     ->take(10)
                     ->get();
+
+                // Durable backup for the expiring /p/{token} link: up to two
+                // prescriptions that actually have medicines, newest first.
+                $prescriptions = Prescription::query()
+                    ->whereHas('items')
+                    ->whereHas('visitRecord.booking', function ($query) use ($variants) {
+                        $query->whereIn('patient_phone', $variants);
+                    })
+                    ->with(['items', 'visitRecord.booking', 'patient'])
+                    ->latest()
+                    ->take(self::PORTAL_PRESCRIPTION_LIMIT)
+                    ->get();
             }
         }
 
@@ -376,6 +410,7 @@ class BookingController extends Controller
         // follows the Clireo design, solo keeps its own locked look.
         return view(tenant()?->isSoloDoctor() ? 'tenant.solo.portal.index' : 'tenant.portal.index', [
             'bookings' => $bookings,
+            'prescriptions' => $prescriptions,
             'phone' => $phone,
             'error' => $error,
         ]);

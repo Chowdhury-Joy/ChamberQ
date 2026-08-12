@@ -226,9 +226,10 @@ And accept that some will never be written. Four visits with two notes is far be
 
 ### Who may read notes
 
-- **Only doctors.** Not staff, not a non-clinical account owner.
-- **Never the seller.** Nothing about patient records appears in the central panel.
-- **Never the patient-facing pages.** Not the ticket, not the lookup page.
+- **Doctors on Consult Screen** in the chamber that created the notes, and — when the patient left **Share with other ChamberQ doctors** on — treating doctors at other ChamberQ chambers for the same phone + name.
+- **Never the seller / Super Admin patient browser.** Nothing about individual patient records appears in the central panel (research stays counts-only).
+- **Never the patient-facing pages** for the full clinical file (ticket stays non-clinical; portal prescription access is a separate, phone-gated exception).
+- **Never voice notes or prescription photos** across chambers.
 
 ---
 
@@ -422,7 +423,7 @@ Draft wording. **Not legal advice** — have it reviewed before it becomes bindi
 >
 > These statistics are counts only. They never include a patient's name, phone number, address, or any other detail that could identify them, and they never include an individual patient's records. We do not publish figures for any group small enough that an individual could be recognised.
 >
-> We do not sell or share individual patient records. Your patients' records belong to your practice, and only you and your doctors can see them. Our staff cannot view patient records, prescriptions or clinical notes through the system.
+> We do not sell individual patient records to third parties. Within ChamberQ, when a patient leaves sharing switched on at booking (the default), other ChamberQ doctors who later see that same patient may view their clinical notes, vitals and prescriptions — not voice recordings or prescription photos — so care can continue across chambers. Your practice staff and doctors still hold day-to-day control of records created in your chamber. Our platform staff and marketers cannot browse individual patient records, prescriptions or clinical notes through the system.
 >
 > You may opt out of contributing to these statistics at any time, without any change to your subscription or service.
 
@@ -430,6 +431,6 @@ Draft wording. **Not legal advice** — have it reviewed before it becomes bindi
 
 **The opt-out is deliberate.** It costs you very little — few will use it — and it converts the clause from something a doctor might resent into something they chose. A doctor who finds out later that they could not refuse is the one who tells other doctors.
 
-**The "our staff cannot view records" line is a promise you must keep.** It rules out a casual "log in as this doctor" support button. If you ever build one, this wording has to change first.
+**The "platform staff cannot browse records" line is a promise you must keep.** It rules out a casual "log in as this doctor" support button. Cross-chamber clinical share is only for treating ChamberQ doctors when the patient left sharing on — not for marketers or Super Admin browsing. If you ever build a support impersonation button, this wording has to change first.
 
 **Say it at signup, in plain Bangla as well as English.** A clause nobody read is worth little if it is ever challenged, and doctors talk to each other more than they read agreements.

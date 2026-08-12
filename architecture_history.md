@@ -378,3 +378,10 @@
 
 ## 2026-08-12T15:23:59+0600
 - Daily Roster gained Mark Late (table header → `LiveSessionService::markDelay()`), keeping the Live Queue Control Session-actions entry; optional WhatsApp hand-off and SMS cost warning match the queue screen.
+
+## 2026-08-13T01:35:49+0600
+- Cross-chamber clinical share (Option B): `patients.share_clinical_history` + booking/walk-in checkbox (default ON); `CrossTenantClinicalHistoryService` + `SharedClinicalVisit` load other ChamberQ chambers' visit notes/Rx (no media) by phone+name with short TTL cache; Consult Screen shows Other ChamberQ clinics + merged vitals/warnings; Appendix B privacy copy updated.
+
+## 2026-08-13T01:59:39+0600
+- Optional patient NID (`patients.nid`, `BdNid`): booking/walk-in/Patients form; resolve and cross-chamber share match NID first then phone+name; never on tickets/SMS.
+

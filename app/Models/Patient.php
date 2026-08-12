@@ -15,6 +15,7 @@ class Patient extends Model
     protected $fillable = [
         'name',
         'phone',
+        'nid',
         'date_of_birth',
         'age',
         'age_recorded_at',
@@ -22,12 +23,14 @@ class Patient extends Model
         'allergies',
         'conditions',
         'medicines',
+        'share_clinical_history',
     ];
 
     protected $casts = [
         'date_of_birth' => 'date',
         'age_recorded_at' => 'date',
         'age' => 'integer',
+        'share_clinical_history' => 'boolean',
     ];
 
     public function bookings(): HasMany

@@ -162,5 +162,18 @@
     "For your next booking:": "For your next booking:",
     "Break in progress": "Break in progress",
     "Estimated resume:": "Estimated resume:",
-    "Now calling you": "Now calling you"
+    "Now calling you": "Now calling you",
+    "Share my health records with other ChamberQ doctors I visit": "Share my health records with other ChamberQ doctors I visit",
+    "Visit notes and prescriptions can help the next ChamberQ doctor treat you safely. Voice notes and photos stay private to this clinic. You can untick this anytime.": "Visit notes and prescriptions can help the next ChamberQ doctor treat you safely. Voice notes and photos stay private to this clinic. You can untick this anytime.",
+    "Share health records with other ChamberQ doctors": "Share health records with other ChamberQ doctors",
+    "Visit notes and prescriptions can help the next ChamberQ doctor treat this patient safely. Voice notes and photos stay in this clinic.": "Visit notes and prescriptions can help the next ChamberQ doctor treat this patient safely. Voice notes and photos stay in this clinic.",
+    "From another ChamberQ clinic": "From another ChamberQ clinic",
+    "Other ChamberQ clinics": "Other ChamberQ clinics",
+    "NID number (optional)": "NID number (optional)",
+    "10 or 13 digits": "10 or 13 digits",
+    "Helps doctors find your records if you change your phone number. Leave blank if you prefer.": "Helps doctors find your records if you change your phone number. Leave blank if you prefer.",
+    "From the national ID card — helps reconnect records if the phone number changes.": "From the national ID card — helps reconnect records if the phone number changes.",
+    "National ID — not shown on tickets or SMS. Used to reconnect records when the phone number changes.": "National ID — not shown on tickets or SMS. Used to reconnect records when the phone number changes.",
+    "Please enter a valid NID (10 or 13 digits), or leave it blank.": "Please enter a valid NID (10 or 13 digits), or leave it blank.",
+    "NID": "NID"
 }

@@ -1523,3 +1523,45 @@
   <action>Kept Mark Late on Live Queue Control. Added the same action on Daily Roster (table header): pick session when more than one runs today, pick delay minutes, same `LiveSessionService::markDelay()` path, same SMS cost warning and optional WhatsApp "Tell waiting patients" hand-off. Hidden once that session is already active/paused/delayed/finished.</action>
   <reason>Daily Roster is where staff already look in the morning (walk-ins, who is booked). Putting Mark Late there matches "doctor called — stuck in traffic" without opening the queue runner screen. One service path keeps outdoor screen, ticket delay banner, and SMS behaviour identical from either door.</reason>
 </decision>
+
+## 2026-08-13T01:16:27+0600
+<decision>
+  <category>Business_Logic</category>
+  <context>Owner unlocked cross-chamber patient sharing after reviewing Singapore (opt-out national file) vs India (opt-in consent). Patients are expected to agree in almost all cases; a new phone currently creates a disconnected patient file with no staff prompt. The previous rule was that records stay inside one practice and other ChamberQ doctors never see individual clinical data.</context>
+  <action>Override the practice-only records rule for ChamberQ-to-ChamberQ clinical continuity. On booking, add a checkbox (default ON): patient opts to share their details with other ChamberQ doctors — scope is everyone on the platform (any ChamberQ chamber/doctor the patient later visits), not limited to the same clinic. Sharing is consent-gated by that checkbox (can be unticked), not silent. Super Admin / marketers still do not browse individual patient files; Research data stays counts-only. Signup/privacy copy (including patient-records-plan Appendix B “records belong to your practice”) must be rewritten before this ships to patients. Exact shared payload (basic demographics vs full visit notes/Rx) and the cross-tenant identity model are implementation follow-ups — default intent is clinical continuity for treating doctors, not a public directory.</action>
+  <reason>Owner explicit unlock (“unlock it. share with everyone”) after confirming default-ticked booking consent matches real chamber behaviour (patients almost always say yes). India-style one-tap consent is preferred over Singapore-style silent national open access; “everyone” means any ChamberQ treating doctor, not platform staff. Continuity across chambers and SIM changes is a product bet the owner is willing to take against the earlier practice-silo promise.</reason>
+</decision>
+
+## 2026-08-13T01:29:48+0600
+<decision>
+  <category>Business_Logic</category>
+  <context>Owner chose Option B for cross-chamber share payload after unlocking ChamberQ-to-ChamberQ clinical continuity.</context>
+  <action>Shared payload is the full clinical file: demographics, allergies/conditions/medicines on the patient row, visit notes (including C/C, H/O, O/E, diagnosis, vitals, advice, tests), and prescriptions/medicine lines. Voice notes and prescription photos are never shared across chambers. Identity for v1 is normalized phone + normalized name. Booking checkbox defaults ON; untick revokes on that patient row. Consult Screen may show other chambers’ visits only when the current patient’s share flag is true and matching remote patients also have share on. Index + short TTL cache required so the Consult Screen 3s poll does not re-query every tick.</action>
+  <reason>Owner selected full-file continuity over a basic safety pack; excluding media keeps cross-tenant URLs and private disk objects out of foreign chambers while still giving the treating doctor the paper-folder equivalent.</reason>
+</decision>
+
+## 2026-08-13T01:16:27+0600
+<decision>
+  <category>Business_Logic</category>
+  <context>Owner unlocked cross-chamber patient sharing after reviewing Singapore (opt-out national file) vs India (opt-in consent). Patients are expected to agree in almost all cases; a new phone currently creates a disconnected patient file with no staff prompt. The previous rule was that records stay inside one practice and other ChamberQ doctors never see individual clinical data.</context>
+  <action>Override the practice-only records rule for ChamberQ-to-ChamberQ clinical continuity. On booking, add a checkbox (default ON): patient opts to share their details with other ChamberQ doctors — scope is everyone on the platform (any ChamberQ chamber/doctor the patient later visits), not limited to the same clinic. Sharing is consent-gated by that checkbox (can be unticked), not silent. Super Admin / marketers still do not browse individual patient files; Research data stays counts-only. Signup/privacy copy (including patient-records-plan Appendix B “records belong to your practice”) must be rewritten before this ships to patients. Exact shared payload (basic demographics vs full visit notes/Rx) and the cross-tenant identity model are implementation follow-ups — default intent is clinical continuity for treating doctors, not a public directory.</action>
+  <reason>Owner explicit unlock (“unlock it. share with everyone”) after confirming default-ticked booking consent matches real chamber behaviour (patients almost always say yes). India-style one-tap consent is preferred over Singapore-style silent national open access; “everyone” means any ChamberQ treating doctor, not platform staff. Continuity across chambers and SIM changes is a product bet the owner is willing to take against the earlier practice-silo promise.</reason>
+</decision>
+
+## 2026-08-13T01:29:48+0600
+<decision>
+  <category>Business_Logic</category>
+  <context>Owner chose Option B for cross-chamber share payload after unlocking ChamberQ-to-ChamberQ clinical continuity.</context>
+  <action>Shared payload is the full clinical file: demographics, allergies/conditions/medicines on the patient row, visit notes (including C/C, H/O, O/E, diagnosis, vitals, advice, tests), and prescriptions/medicine lines. Voice notes and prescription photos are never shared across chambers. Identity for v1 is normalized phone + normalized name. Booking checkbox defaults ON; untick revokes on that patient row. Consult Screen may show other chambers’ visits only when the current patient’s share flag is true and matching remote patients also have share on. Index + short TTL cache required so the Consult Screen 3s poll does not re-query every tick.</action>
+  <reason>Owner selected full-file continuity over a basic safety pack; excluding media keeps cross-tenant URLs and private disk objects out of foreign chambers while still giving the treating doctor the paper-folder equivalent.</reason>
+</decision>
+
+
+## 2026-08-13T01:59:39+0600
+<decision>
+  <category>Business_Logic</category>
+  <context>Cross-chamber share and same-chamber continuity break when a patient changes SIM; phone+name alone cannot reconnect them. Owner chose optional NID rather than a required national ID field.</context>
+  <action>Add nullable `patients.nid` (10 or 13 digits, normalized via `BdNid`). Optional on online booking and walk-in; staff can fill it on the Patients form from the card. Match order: NID first when present, else phone + name. Never put NID on tickets or SMS (bookings still denormalize only name/phone). Unique per tenant when set. Cross-tenant clinical share uses the same NID-first rule.</action>
+  <reason>Optional keeps booking conversion high; NID is the durable key for SIM changes and cross-chamber continuity without government verification in v1.</reason>
+</decision>
+

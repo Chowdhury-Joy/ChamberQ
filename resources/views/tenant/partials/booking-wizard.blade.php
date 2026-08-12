@@ -177,6 +177,15 @@
                     </div>
 
                     <div class="form-group">
+                        <label class="form-label" for="patient_nid">{{ __('NID number (optional)') }}</label>
+                        <input type="text" name="nid" id="patient_nid" class="form-control"
+                               inputmode="numeric" autocomplete="off" maxlength="17"
+                               placeholder="{{ __('10 or 13 digits') }}">
+                        <small class="text-muted" style="display:block;margin-top:0.5rem">{{ __('Helps doctors find your records if you change your phone number. Leave blank if you prefer.') }}</small>
+                        <span class="field-error" id="nid-error" role="alert" aria-live="polite" style="display:none"></span>
+                    </div>
+
+                    <div class="form-group">
                         <label class="selection-card" style="display:flex;align-items:flex-start;gap:0.75rem;padding:1rem;cursor:pointer;">
                             <input type="checkbox" name="different_whatsapp" id="different_whatsapp" value="1" style="width:1.25rem;height:1.25rem;margin-top:0.15rem;accent-color:var(--color-primary);">
                             <span>
@@ -206,6 +215,16 @@
                             <span>
                                 <span class="sc-title" style="display:block;font-weight:600;">{{ __('Tell me if an earlier date opens up') }}</span>
                                 <span class="sc-sub text-muted" style="display:block;margin-top:0.25rem;font-size:0.9rem;">{{ __('The clinic may message you on WhatsApp if a seat frees up before your appointment.') }}</span>
+                            </span>
+                        </label>
+                    </div>
+
+                    <div class="form-group">
+                        <label class="selection-card" style="display:flex;align-items:flex-start;gap:0.75rem;padding:1rem;cursor:pointer;">
+                            <input type="checkbox" name="share_clinical_history" id="share_clinical_history" value="1" checked style="width:1.25rem;height:1.25rem;margin-top:0.15rem;accent-color:var(--color-primary);">
+                            <span>
+                                <span class="sc-title" style="display:block;font-weight:600;">{{ __('Share my health records with other ChamberQ doctors I visit') }}</span>
+                                <span class="sc-sub text-muted" style="display:block;margin-top:0.25rem;font-size:0.9rem;">{{ __('Visit notes and prescriptions can help the next ChamberQ doctor treat you safely. Voice notes and photos stay private to this clinic. You can untick this anytime.') }}</span>
                             </span>
                         </label>
                     </div>
@@ -1100,6 +1119,16 @@
             }
             if (document.getElementById('wants_earlier_date')?.checked) {
                 formData.append('wants_earlier_date', '1');
+            }
+            // Always send — unchecked checkboxes are omitted from FormData, and
+            // the server would treat absence as "default ON".
+            formData.append(
+                'share_clinical_history',
+                document.getElementById('share_clinical_history')?.checked ? '1' : '0',
+            );
+            const nidValue = document.getElementById('patient_nid')?.value.trim();
+            if (nidValue) {
+                formData.append('nid', nidValue);
             }
             if (differentWa && waInput.value.trim()) {
                 formData.append('whatsapp_phone', waInput.value.trim());

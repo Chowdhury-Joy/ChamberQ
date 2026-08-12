@@ -24,6 +24,11 @@ class PatientsTable
                 TextColumn::make('phone')
                     ->searchable()
                     ->sortable(),
+                TextColumn::make('nid')
+                    ->label(__('NID'))
+                    ->placeholder('—')
+                    ->toggleable(isToggledHiddenByDefault: true)
+                    ->searchable(),
                 TextColumn::make('bookings_count')
                     ->counts('bookings')
                     ->label(__('Visits'))

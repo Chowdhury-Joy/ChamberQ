@@ -206,5 +206,18 @@
     "For your next booking:": "পরবর্তী বুকিং এর জন্য:",
     "Break in progress": "বিরতি চলছে",
     "Estimated resume:": "আনুমানিক শুরু:",
-    "Now calling you": "আপনাকে ডাকা হচ্ছে"
+    "Now calling you": "আপনাকে ডাকা হচ্ছে",
+    "Share my health records with other ChamberQ doctors I visit": "আমি অন্যান্য ChamberQ ডাক্তারদের সাথে আমার স্বাস্থ্য রেকর্ড শেয়ার করতে চাই",
+    "Visit notes and prescriptions can help the next ChamberQ doctor treat you safely. Voice notes and photos stay private to this clinic. You can untick this anytime.": "ভিজিট নোট ও প্রেসক্রিপশন পরবর্তী ChamberQ ডাক্তারকে নিরাপদে চিকিৎসা করতে সাহায্য করতে পারে। ভয়েস নোট ও ছবি এই ক্লিনিকেই থাকবে। যেকোনো সময় টিক সরিয়ে দিতে পারেন।",
+    "Share health records with other ChamberQ doctors": "অন্যান্য ChamberQ ডাক্তারদের সাথে স্বাস্থ্য রেকর্ড শেয়ার করুন",
+    "Visit notes and prescriptions can help the next ChamberQ doctor treat this patient safely. Voice notes and photos stay in this clinic.": "ভিজিট নোট ও প্রেসক্রিপশন পরবর্তী ChamberQ ডাক্তারকে নিরাপদে চিকিৎসা করতে সাহায্য করতে পারে। ভয়েস নোট ও ছবি এই ক্লিনিকেই থাকবে।",
+    "From another ChamberQ clinic": "অন্য ChamberQ ক্লিনিক থেকে",
+    "Other ChamberQ clinics": "অন্যান্য ChamberQ ক্লিনিক",
+    "NID number (optional)": "এনআইডি নম্বর (ঐচ্ছিক)",
+    "10 or 13 digits": "১০ বা ১৩ সংখ্যা",
+    "Helps doctors find your records if you change your phone number. Leave blank if you prefer.": "ফোন নম্বর বদলালে ডাক্তার আপনার রেকর্ড খুঁজে পাবেন। না দিলেও সমস্যা নেই।",
+    "From the national ID card — helps reconnect records if the phone number changes.": "জাতীয় পরিচয়পত্র থেকে — ফোন নম্বর বদলালে রেকর্ড জোড়া লাগাতে সাহায্য করে।",
+    "National ID — not shown on tickets or SMS. Used to reconnect records when the phone number changes.": "জাতীয় পরিচয়পত্র — টিকেট বা এসএমএসে দেখানো হয় না। ফোন নম্বর বদলালে রেকর্ড জোড়া লাগাতে ব্যবহার হয়।",
+    "Please enter a valid NID (10 or 13 digits), or leave it blank.": "সঠিক এনআইডি দিন (১০ বা ১৩ সংখ্যা), অথবা খালি রাখুন।",
+    "NID": "এনআইডি"
 }

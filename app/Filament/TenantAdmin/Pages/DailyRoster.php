@@ -25,6 +25,7 @@ use App\Services\VisitRecordService;
 use Filament\Notifications\Notification;
 use App\Models\LabCollectionSlot;
 use App\Models\ScheduleSession;
+use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -343,6 +344,19 @@ class DailyRoster extends Page implements HasTable, HasForms
                             ->extraInputAttributes(['name' => 'patient_name'])
                             ->autocomplete('name')
                             ->required(),
+                        TextInput::make('nid')
+                            ->label(__('NID number (optional)'))
+                            ->helperText(__('From the national ID card — helps reconnect records if the phone number changes.'))
+                            ->maxLength(17)
+                            ->rule(fn () => function (string $attribute, mixed $value, \Closure $fail): void {
+                                if (filled($value) && ! \App\Support\BdNid::isValid((string) $value)) {
+                                    $fail(__('Please enter a valid NID (10 or 13 digits), or leave it blank.'));
+                                }
+                            }),
+                        Checkbox::make('share_clinical_history')
+                            ->label(__('Share health records with other ChamberQ doctors'))
+                            ->helperText(__('Visit notes and prescriptions can help the next ChamberQ doctor treat this patient safely. Voice notes and photos stay in this clinic.'))
+                            ->default(true),
                         Select::make('bookable')
                             ->label(__('Session'))
                             // Resolved names, never raw ids: two sessions both
@@ -371,6 +385,12 @@ class DailyRoster extends Page implements HasTable, HasForms
                             [],
                             true,
                             $patientId,
+                            false,
+                            null,
+                            array_key_exists('share_clinical_history', $data)
+                                ? (bool) $data['share_clinical_history']
+                                : true,
+                            $data['nid'] ?? null,
                         );
                     })
                     ->successNotificationTitle(__('Walk-in added to today\'s queue.'))

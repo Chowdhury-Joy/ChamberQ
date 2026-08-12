@@ -121,6 +121,8 @@ class BookingService
         ?string $patientId = null,
         bool $wantsEarlierDate = false,
         ?string $whatsappPhone = null,
+        ?bool $shareClinicalHistory = null,
+        ?string $nid = null,
     ): Booking {
         $patientPhone = $this->normalizeBdPhone($patientPhone);
         $whatsappPhone = filled($whatsappPhone) ? $this->normalizeBdPhone($whatsappPhone) : null;
@@ -128,7 +130,7 @@ class BookingService
             $whatsappPhone = null;
         }
 
-        $booking = DB::transaction(function () use ($bookable, $bookingDate, $patientName, $patientPhone, $labTestIds, $patientId, $wantsEarlierDate, $whatsappPhone) {
+        $booking = DB::transaction(function () use ($bookable, $bookingDate, $patientName, $patientPhone, $labTestIds, $patientId, $wantsEarlierDate, $whatsappPhone, $shareClinicalHistory, $nid) {
             $tenant = tenant();
             $capMode = $tenant->slot_cap_mode ?? 'per_session';
             if ($capMode === 'per_day') {
@@ -170,6 +172,8 @@ class BookingService
                 $patientPhone,
                 $patientName,
                 $patientId,
+                $shareClinicalHistory,
+                $nid,
             );
 
             $duplicateQuery = Booking::where('bookable_type', get_class($lockedBookable))

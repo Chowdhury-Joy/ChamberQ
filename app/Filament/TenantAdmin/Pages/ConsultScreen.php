@@ -11,8 +11,10 @@ use App\Models\VisitRecord;
 use App\Filament\TenantAdmin\Concerns\AppliesVisitNotesDrafts;
 use App\Filament\TenantAdmin\Support\CompleteBookingWithVisitNotes;
 use App\Filament\TenantAdmin\Support\VisitNotesFormSchema;
+use App\Services\CrossTenantClinicalHistoryService;
 use App\Services\LiveSessionService;
 use App\Services\VisitRecordService;
+use App\Support\SharedClinicalVisit;
 use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
@@ -57,6 +59,8 @@ class ConsultScreen extends Page implements HasActions
             $this->currentBooking,
             $this->currentPatient,
             $this->visitHistory,
+            $this->sharedVisitHistory,
+            $this->sharedClinicalWarnings,
             $this->lastVisitRecord,
             $this->catchUpCount,
             $this->catchUpBookings,
@@ -130,6 +134,60 @@ class ConsultScreen extends Page implements HasActions
         }
 
         return $query->limit(20)->get();
+    }
+
+    /**
+     * Completed visits from other ChamberQ chambers for the same person
+     * when share is on. Cached inside the service so the 3s poll is cheap.
+     *
+     * @return \Illuminate\Support\Collection<int, SharedClinicalVisit>
+     */
+    public function getSharedVisitHistoryProperty(): \Illuminate\Support\Collection
+    {
+        $patient = $this->currentPatient;
+
+        if (! $patient) {
+            return collect();
+        }
+
+        return app(CrossTenantClinicalHistoryService::class)->sharedVisitsFor(
+            $patient,
+            auth()->id(),
+        );
+    }
+
+    /**
+     * @return array{allergies: list<string>, conditions: list<string>, medicines: list<string>}
+     */
+    public function getSharedClinicalWarningsProperty(): array
+    {
+        $patient = $this->currentPatient;
+
+        if (! $patient) {
+            return ['allergies' => [], 'conditions' => [], 'medicines' => []];
+        }
+
+        $matches = app(CrossTenantClinicalHistoryService::class)->matchingSharedPatients(
+            $patient,
+            auth()->id(),
+        );
+
+        $pick = function (string $field) use ($matches, $patient): array {
+            $local = trim((string) ($patient->{$field} ?? ''));
+
+            return $matches
+                ->map(fn (Patient $other) => trim((string) ($other->{$field} ?? '')))
+                ->filter(fn (string $value) => $value !== '' && strcasecmp($value, $local) !== 0)
+                ->unique(fn (string $value) => mb_strtolower($value))
+                ->values()
+                ->all();
+        };
+
+        return [
+            'allergies' => $pick('allergies'),
+            'conditions' => $pick('conditions'),
+            'medicines' => $pick('medicines'),
+        ];
     }
 
     /**

@@ -6,7 +6,10 @@
         $tenant = tenant();
         $isClinic = $tenant?->isClinic() ?? false;
         $visitHistory = $this->visitHistory;
+        $sharedVisitHistory = $this->sharedVisitHistory;
+        $sharedClinicalWarnings = $this->sharedClinicalWarnings;
         $lastVisitRecord = $this->lastVisitRecord;
+        $hasSharedWarnings = collect($sharedClinicalWarnings)->flatten()->isNotEmpty();
         $canViewNotes = auth()->user()?->canViewVisitNotes() ?? false;
         $canWriteNotes = auth()->user()?->canRecordVisitNotes() ?? false;
         $catchUpCount = $this->catchUpCount;
@@ -230,6 +233,13 @@
         .dark .cs-status-dot.has-notes { background-color: color-mix(in srgb, var(--success-500) 20%, transparent); color: var(--success-300); }
         .cs-status-dot.no-notes { background-color: var(--gray-200); color: var(--gray-600); }
         .dark .cs-status-dot.no-notes { background-color: var(--gray-800); color: var(--gray-400); }
+        .cs-status-dot.external { background-color: var(--info-100); color: var(--info-800); }
+        .dark .cs-status-dot.external { background-color: color-mix(in srgb, var(--info-500) 20%, transparent); color: var(--info-300); }
+        .cs-shared-meds {
+            margin-top: 0.5rem; font-size: 0.8125rem; color: var(--gray-700);
+            display: flex; flex-direction: column; gap: 0.25rem;
+        }
+        .dark .cs-shared-meds { color: var(--gray-300); }
         .cs-visit-transcript {
             margin-top: 0.5rem; font-size: 0.8125rem; color: var(--gray-600);
             display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
@@ -320,31 +330,49 @@
                     </x-filament::section>
                 </div>
 
-                @if ($patient?->hasClinicalWarnings())
+                @if ($patient?->hasClinicalWarnings() || $hasSharedWarnings)
                     <div class="cs-block--warnings">
                         <x-filament::section>
                             <x-slot name="heading">
                                 <span style="color: var(--warning-700);">{{ __('Warnings') }}</span>
                             </x-slot>
                             <div class="cs-warning-grid">
-                                @if (filled($patient->allergies))
+                                @if (filled($patient?->allergies))
                                     <div class="cs-warning-item">
                                         <div class="cs-warning-label">{{ __('Allergies') }}</div>
                                         <div class="cs-warning-value">{{ $patient->allergies }}</div>
                                     </div>
                                 @endif
-                                @if (filled($patient->conditions))
+                                @foreach ($sharedClinicalWarnings['allergies'] as $allergy)
+                                    <div class="cs-warning-item">
+                                        <div class="cs-warning-label">{{ __('Allergies') }} · {{ __('From another ChamberQ clinic') }}</div>
+                                        <div class="cs-warning-value">{{ $allergy }}</div>
+                                    </div>
+                                @endforeach
+                                @if (filled($patient?->conditions))
                                     <div class="cs-warning-item">
                                         <div class="cs-warning-label">{{ __('Ongoing conditions') }}</div>
                                         <div class="cs-warning-value">{{ $patient->conditions }}</div>
                                     </div>
                                 @endif
-                                @if (filled($patient->medicines))
+                                @foreach ($sharedClinicalWarnings['conditions'] as $condition)
+                                    <div class="cs-warning-item">
+                                        <div class="cs-warning-label">{{ __('Ongoing conditions') }} · {{ __('From another ChamberQ clinic') }}</div>
+                                        <div class="cs-warning-value">{{ $condition }}</div>
+                                    </div>
+                                @endforeach
+                                @if (filled($patient?->medicines))
                                     <div class="cs-warning-item">
                                         <div class="cs-warning-label">{{ __('Current medicines') }}</div>
                                         <div class="cs-warning-value">{{ $patient->medicines }}</div>
                                     </div>
                                 @endif
+                                @foreach ($sharedClinicalWarnings['medicines'] as $medicine)
+                                    <div class="cs-warning-item">
+                                        <div class="cs-warning-label">{{ __('Current medicines') }} · {{ __('From another ChamberQ clinic') }}</div>
+                                        <div class="cs-warning-value">{{ $medicine }}</div>
+                                    </div>
+                                @endforeach
                             </div>
                         </x-filament::section>
                     </div>
@@ -507,6 +535,25 @@
                             @endif
                         </x-filament::section>
                     </div>
+
+                    @if ($sharedVisitHistory->isNotEmpty())
+                        <div class="cs-block--shared-visits">
+                            <x-filament::section>
+                                <x-slot name="heading">{{ __('Other ChamberQ clinics') }}</x-slot>
+                                <div class="cs-visits">
+                                    @foreach ($sharedVisitHistory as $sharedVisit)
+                                        @php
+                                            $visitRecord = $sharedVisit->visitRecord;
+                                            $hasNotes = $sharedVisit->hasNotes();
+                                        @endphp
+                                        <div class="cs-visit-card">
+                                            <div class="cs-visit-top">
+                                                <div class="cs-visit-meta">
+                                                    <span class="cs-visit-date">{{ $sharedVisit->bookingDate->translatedFormat('j M Y') }}</span>
+                                                    <span class="cs-visit-doctor">{{ $sharedVisit->sourceLabel }}</span>
+                                                    @if ($sharedVisit->doctorName)
+                                                        <span class="cs-visit-doctor">{{ $sharedVisit->doctorName }}</span>
+                                                    @endif
                 @endif
             </div>
 

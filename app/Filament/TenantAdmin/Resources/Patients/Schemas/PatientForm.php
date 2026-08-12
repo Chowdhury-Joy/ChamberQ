@@ -21,6 +21,22 @@ class PatientForm
                 ->required()
                 ->maxLength(20)
                 ->rule('regex:/^01[3-9]\d{8}$/'),
+            TextInput::make('nid')
+                ->label(__('NID number (optional)'))
+                ->helperText(__('National ID — not shown on tickets or SMS. Used to reconnect records when the phone number changes.'))
+                ->maxLength(17)
+                ->dehydrateStateUsing(fn (?string $state): ?string => \App\Support\BdNid::normalize($state))
+                ->rule(fn () => function (string $attribute, mixed $value, \Closure $fail): void {
+                    if (filled($value) && ! \App\Support\BdNid::isValid((string) $value)) {
+                        $fail(__('Please enter a valid NID (10 or 13 digits), or leave it blank.'));
+                    }
+                })
+                ->unique(
+                    ignoreRecord: true,
+                    modifyRuleUsing: fn (\Illuminate\Validation\Rules\Unique $rule) => $rule
+                        ->where('tenant_id', tenant('id'))
+                        ->whereNotNull('nid'),
+                ),
             DatePicker::make('date_of_birth')
                 ->label(__('Date of birth'))
                 ->maxDate(now()),
