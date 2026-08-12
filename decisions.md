@@ -1515,3 +1515,11 @@
   <action>Gave each nav item a unique related Heroicon (map pin / calendar days / no-symbol for the three that collided; likewise Doctors, Lab tests, Lab collection slots, Web pages). Enabled Filament `sidebarCollapsibleOnDesktop()` and seed the Alpine sidebar store closed on load so desktop shows icons only, with the item name on hover.</action>
   <reason>Doctors scan the rail by shape during a busy sitting; identical icons force reading every label. Icon-only with hover names keeps the rail thin without hiding where things are.</reason>
 </decision>
+
+## 2026-08-12T15:23:59+0600
+<decision>
+  <category>UI/UX</category>
+  <context>Staff needed to tell waiting patients the doctor was running late, but Mark Late lived only under Live Queue Control → Session actions. That felt like they had to start the queue first, even though Mark Late actually works before Start.</context>
+  <action>Kept Mark Late on Live Queue Control. Added the same action on Daily Roster (table header): pick session when more than one runs today, pick delay minutes, same `LiveSessionService::markDelay()` path, same SMS cost warning and optional WhatsApp "Tell waiting patients" hand-off. Hidden once that session is already active/paused/delayed/finished.</action>
+  <reason>Daily Roster is where staff already look in the morning (walk-ins, who is booked). Putting Mark Late there matches "doctor called — stuck in traffic" without opening the queue runner screen. One service path keeps outdoor screen, ticket delay banner, and SMS behaviour identical from either door.</reason>
+</decision>

@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-11T16:03:15+0600
+Last Updated: 2026-08-12T15:23:59+0600
 
 ## Full Site Map
 
@@ -152,8 +152,14 @@ The one patient-facing route that shows prescription content. Deliberately outsi
 
 ### Open clinic day → run queue
 - **Trigger:** Session day starts.
-- **Steps:** Queue runner (staff or doctor per Branding **Who runs the queue**) → Live Queue Control → session auto-selected when today has only one, else pick from the dropdown/session cards → **Open screen / Copy link** once onto the waiting-room TV (stable URL, no date — bookmark and reuse every day for that session) → Start → Call → Patient arrived → Complete. A no-response patient is skipped from the current-call card (twice, then no-show); any waiting or skipped patient can be called out of turn via **Call now** on their row (unavailable while someone is in the chamber). Mark Late, Pause, Resume, Cancel session and Finish/End session all live behind the header's **Session actions** menu; **New Walk-In** is the standalone header action. Doctor opens **Consult Screen** for auto-updating patient context (no search).
+- **Steps:** Queue runner (staff or doctor per Branding **Who runs the queue**) → Live Queue Control → session auto-selected when today has only one, else pick from the dropdown/session cards → **Open screen / Copy link** once onto the waiting-room TV (stable URL, no date — bookmark and reuse every day for that session) → Start → Call → Patient arrived → Complete. A no-response patient is skipped from the current-call card (twice, then no-show); any waiting or skipped patient can be called out of turn via **Call now** on their row (unavailable while someone is in the chamber). Mark Late, Pause, Resume, Cancel session and Finish/End session all live behind the header's **Session actions** menu; **New Walk-In** is the standalone header action. **Mark Late** is also on **Daily Roster** (table header) so staff can warn waiting patients before opening Live Queue Control or pressing Start — same delay SMS / WhatsApp hand-off. Doctor opens **Consult Screen** for auto-updating patient context (no search).
 - **Success:** Outdoor screen matches control panel; consult screen shows the patient in chamber; the summary strip's waiting count and projected finish time match the table.
+
+### Tell waiting patients the doctor is late
+- **Trigger:** Doctor will arrive late (call from traffic, emergency, etc.) and patients are already booked for today.
+- **Steps:** Queue runner → **Daily Roster** → **Mark Late** → pick session (auto-filled when only one) → pick delay (15–120 min) → confirm (shows SMS credit cost when late SMS is on). Or the same action under Live Queue Control → **Session actions** → **Mark Late** (no need to press Start). If late WhatsApp is on, **Tell waiting patients** appears for tap-to-send `wa.me` links.
+- **Data/systems touched:** `live_sessions` (status `delayed`, `delay_minutes`), waiting/called/skipped `bookings`, optional `SendDoctorLateNotices` SMS, patient ticket delay banner.
+- **Success:** Patients see/hear the delay; session is marked delayed until Start clears it; SMS wallet only charged when late SMS is enabled.
 
 ### Doctor consult (doctor role)
 - **Trigger:** Patient called into chamber (`live_sessions.current_booking_id` set).

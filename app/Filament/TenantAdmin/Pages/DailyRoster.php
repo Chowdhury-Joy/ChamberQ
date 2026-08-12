@@ -13,6 +13,8 @@ use Filament\Actions\Action;
 use App\Filament\TenantAdmin\Support\CompleteBookingWithVisitNotes;
 use App\Filament\TenantAdmin\Support\VisitNotesFormSchema;
 use App\Models\Booking;
+use App\Models\Doctor;
+use App\Models\LiveSession;
 use App\Models\Patient;
 use Carbon\Carbon;
 use App\Services\BookingService;
@@ -23,6 +25,7 @@ use App\Services\VisitRecordService;
 use Filament\Notifications\Notification;
 use App\Models\LabCollectionSlot;
 use App\Models\ScheduleSession;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Utilities\Get;
@@ -35,6 +38,17 @@ class DailyRoster extends Page implements HasTable, HasForms
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-document-text';
 
     protected string $view = 'filament.tenant-admin.pages.daily-roster';
+
+    /**
+     * Waiting bookings after the last "Mark Late", for optional WhatsApp
+     * hand-off when that doctor's doctor_late WhatsApp preference is on.
+     *
+     * @var list<int|string>
+     */
+    public array $delayedNotifyBookingIds = [];
+
+    /** Minutes from the last Mark Late, used in WhatsApp copy. */
+    public int $delayedNotifyMinutes = 0;
 
     public static function canAccess(): bool
     {
@@ -150,6 +164,117 @@ class DailyRoster extends Page implements HasTable, HasForms
                     }),
             ])
             ->headerActions([
+                // Same Mark Late path as Live Queue Control — here so staff can
+                // tell waiting patients the doctor is delayed without opening
+                // the queue screen or pressing Start. Only before the session
+                // is running (no live row, or still scheduled).
+                Action::make('markLate')
+                    ->label(__('Mark Late'))
+                    ->color('warning')
+                    ->icon('heroicon-o-clock')
+                    ->visible(fn (): bool => (auth()->user()?->canOperateQueueControls() ?? false)
+                        && static::markableSessionOptions() !== [])
+                    ->form([
+                        Select::make('schedule_session_id')
+                            ->label(__('Session'))
+                            ->options(fn (): array => static::markableSessionOptions())
+                            ->default(function (): ?int {
+                                $ids = array_keys(static::markableSessionOptions());
+
+                                return count($ids) === 1 ? (int) $ids[0] : null;
+                            })
+                            ->required()
+                            ->native(false)
+                            ->live(),
+                        Select::make('delay_minutes')
+                            ->label(__('Delay Duration'))
+                            ->options([
+                                15 => '15 minutes',
+                                30 => '30 minutes',
+                                45 => '45 minutes',
+                                60 => '1 hour',
+                                90 => '1.5 hours',
+                                120 => '2 hours',
+                            ])
+                            ->required(),
+                        Placeholder::make('sms_cost')
+                            ->label('')
+                            ->content(fn (Get $get): string => static::markLateCostWarningFor(
+                                $get('schedule_session_id') ? (int) $get('schedule_session_id') : null,
+                            ) ?? '')
+                            ->visible(fn (Get $get): bool => filled($get('schedule_session_id'))
+                                && static::markLateCostWarningFor(
+                                    $get('schedule_session_id') ? (int) $get('schedule_session_id') : null,
+                                ) !== null),
+                    ])
+                    ->action(function (array $data): void {
+                        $scheduleSessionId = (int) $data['schedule_session_id'];
+
+                        // Re-check: the form options can go stale if someone
+                        // started the session in another tab.
+                        if (! array_key_exists($scheduleSessionId, static::markableSessionOptions())) {
+                            Notification::make()
+                                ->warning()
+                                ->title(__('That session has already started'))
+                                ->body(__('Open Live Queue Control to manage it.'))
+                                ->send();
+
+                            return;
+                        }
+
+                        $scheduleSession = ScheduleSession::with('doctor')->findOrFail($scheduleSessionId);
+
+                        // toDateString(), not the Carbon — same firstOrCreate
+                        // trap as LiveQueueControl::markLateAction().
+                        $liveSession = LiveSession::firstOrCreate([
+                            'tenant_id' => tenant('id'),
+                            'schedule_session_id' => $scheduleSession->id,
+                            'session_date' => Carbon::today()->toDateString(),
+                        ], [
+                            'status' => 'delayed',
+                        ]);
+
+                        $bookings = app(LiveSessionService::class)->markDelay(
+                            $liveSession,
+                            (int) $data['delay_minutes'],
+                        );
+
+                        $this->delayedNotifyMinutes = (int) $data['delay_minutes'];
+                        $doctor = $scheduleSession->doctor;
+                        $this->delayedNotifyBookingIds = ($doctor?->wantsWhatsapp(Doctor::NOTIFY_DOCTOR_LATE) ?? false)
+                            ? $bookings->pluck('id')->all()
+                            : [];
+
+                        Notification::make()->title(__('Session Delayed'))->success()->send();
+                    }),
+
+                Action::make('notifyDelayed')
+                    ->label(__('Tell waiting patients'))
+                    ->icon('heroicon-o-chat-bubble-left-right')
+                    ->color('warning')
+                    ->modalHeading(__('Doctor is running late'))
+                    ->modalSubmitAction(false)
+                    ->modalCancelActionLabel(__('Done'))
+                    ->modalContent(function (): \Illuminate\Contracts\View\View {
+                        $bookings = Booking::whereIn('id', $this->delayedNotifyBookingIds)
+                            ->orderBy('serial_number')
+                            ->get();
+                        $minutes = $this->delayedNotifyMinutes;
+
+                        return view('filament.tenant-admin.slot-block-notify', [
+                            'bookings' => $bookings,
+                            'stage' => Doctor::NOTIFY_DOCTOR_LATE,
+                            'messages' => $bookings->mapWithKeys(fn (Booking $booking) => [
+                                $booking->id => __('Hello :name, the doctor is running :minutes minutes late. Your serial is :serial.', [
+                                    'name' => $booking->patient_name,
+                                    'minutes' => $minutes,
+                                    'serial' => $booking->serial_number,
+                                ]),
+                            ])->all(),
+                        ]);
+                    })
+                    ->visible(fn (): bool => $this->delayedNotifyBookingIds !== []),
+
                 Action::make('manageQueue')
                     ->label('Manage Live Queue')
                     ->icon('heroicon-o-queue-list')
@@ -311,5 +436,98 @@ class DailyRoster extends Page implements HasTable, HasForms
         }
 
         return $options;
+    }
+
+    /**
+     * Today's schedule sessions that can still be marked late — same rule as
+     * Live Queue Control: no live row yet, or the live row is still scheduled.
+     *
+     * @return array<int, string>
+     */
+    protected static function markableSessionOptions(): array
+    {
+        $todayDow = Carbon::today()->dayOfWeek;
+        $todayDate = Carbon::today()->toDateString();
+
+        $sessions = ScheduleSession::with(['doctor', 'chamber'])
+            ->where('day_of_week', $todayDow)
+            ->orderBy('start_time')
+            ->get();
+
+        if ($sessions->isEmpty()) {
+            return [];
+        }
+
+        $liveBySession = LiveSession::query()
+            ->whereIn('schedule_session_id', $sessions->pluck('id'))
+            ->where('session_date', $todayDate)
+            ->get()
+            ->keyBy('schedule_session_id');
+
+        $options = [];
+
+        foreach ($sessions as $session) {
+            $live = $liveBySession->get($session->id);
+
+            if ($live && $live->status !== 'scheduled') {
+                continue;
+            }
+
+            $options[$session->id] = sprintf(
+                '%s — %s (%s, %s–%s)',
+                $session->doctor?->name ?? __('Unknown doctor'),
+                $session->chamber?->name ?? __('Unknown chamber'),
+                $session->session_name,
+                Carbon::parse($session->start_time)->format('g:i A'),
+                Carbon::parse($session->end_time)->format('g:i A'),
+            );
+        }
+
+        return $options;
+    }
+
+    /**
+     * What Mark Late is about to spend for one session — same wording as Live
+     * Queue Control. Null when late SMS is off or nobody is waiting.
+     */
+    protected static function markLateCostWarningFor(?int $scheduleSessionId): ?string
+    {
+        if (! $scheduleSessionId) {
+            return null;
+        }
+
+        $session = ScheduleSession::with('doctor')->find($scheduleSessionId);
+        $doctor = $session?->doctor;
+
+        if (! $doctor?->wantsSms(Doctor::NOTIFY_DOCTOR_LATE)) {
+            return null;
+        }
+
+        $waiting = Booking::query()
+            ->where('bookable_type', ScheduleSession::class)
+            ->where('bookable_id', $scheduleSessionId)
+            ->where('booking_date', Carbon::today()->toDateString())
+            ->whereIn('status', ['waiting', 'called', 'skipped'])
+            ->count();
+
+        if ($waiting === 0) {
+            return null;
+        }
+
+        $balance = (int) (tenant()->sms_balance ?? 0);
+
+        $warning = __('This texts :count waiting patient(s) and uses :count SMS credit(s). Balance after: :left.', [
+            'count' => $waiting,
+            'left' => max(0, $balance - $waiting),
+        ]);
+
+        if ($balance < $waiting) {
+            $warning .= ' '.__('Only :balance credit(s) left, so the last :short patient(s) will not get a text.', [
+                'balance' => $balance,
+                'short' => $waiting - $balance,
+            ]);
+        }
+
+        return $warning;
     }
 }
