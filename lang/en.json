@@ -175,5 +175,12 @@
     "From the national ID card — helps reconnect records if the phone number changes.": "From the national ID card — helps reconnect records if the phone number changes.",
     "National ID — not shown on tickets or SMS. Used to reconnect records when the phone number changes.": "National ID — not shown on tickets or SMS. Used to reconnect records when the phone number changes.",
     "Please enter a valid NID (10 or 13 digits), or leave it blank.": "Please enter a valid NID (10 or 13 digits), or leave it blank.",
-    "NID": "NID"
+    "NID": "NID",
+    "Name": "Name",
+    "Phone": "Phone",
+    "NID (optional)": "NID (optional)",
+    "Different WhatsApp": "Different WhatsApp",
+    "Who for?": "Who for?",
+    "Share with other ChamberQ doctors": "Share with other ChamberQ doctors",
+    "Change": "Change"
 }

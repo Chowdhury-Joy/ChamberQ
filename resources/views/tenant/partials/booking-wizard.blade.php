@@ -144,88 +144,70 @@
                     </div>
                 </div>
 
-                <!-- STEP 6: Identity & Date -->
+                <!-- Identity & date -->
                 <div class="step" id="step-identity" data-step-name="identity">
-                    <h3>{{ __('Patient Details') }}</h3>
+                    <h3>{{ __('Your details') }}</h3>
 
                     <div class="booking-review" id="bookingReview" aria-live="polite">
                         <div id="reviewSummary"></div>
-                        <div class="seats-line" id="reviewSeats"></div>
-                        <div style="margin-top:0.35rem;color:#64748b;font-size:0.9rem;">{{ __('Pay at the clinic') }}</div>
-                    </div>
-                    
-                    <div class="form-group" style="margin-top:1.5rem;">
-                        <label class="form-label">{{ __('Appointment date') }}</label>
-                        <p id="chosenDateDisplay" class="form-control" style="background:#f8fafc;margin:0;"></p>
-                        <input type="hidden" name="booking_date" id="booking_date" required>
-                        <button type="button" class="btn btn-back" id="changeDateBtn" style="margin-top:0.75rem;padding:0.5rem 1rem;font-size:0.9rem;">{{ __('Change date') }}</button>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label" for="patient_name">{{ __('Patient Name') }}</label>
-                        <input type="text" name="patient_name" id="patient_name" class="form-control" autocomplete="name" required>
-                        <small class="text-muted" id="patientNameHint" style="display:none;margin-top:0.5rem"></small>
+                    <div class="form-group field-row" style="margin-top:1rem;">
+                        <div class="field-float field-float--filled" style="flex:1;min-width:0;">
+                            <p id="chosenDateDisplay" class="form-control field-display"></p>
+                            <span class="field-float-label">{{ __('Date') }}</span>
+                            <input type="hidden" name="booking_date" id="booking_date" required>
+                        </div>
+                        <button type="button" class="btn btn-back btn-change-date" id="changeDateBtn">{{ __('Change') }}</button>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label" for="patient_phone">{{ __('Phone Number') }}</label>
+                    <div class="form-group field-float">
+                        <input type="text" name="patient_name" id="patient_name" class="form-control" autocomplete="name" placeholder=" " required>
+                        <label class="field-float-label" for="patient_name">{{ __('Name') }}</label>
+                        <small class="text-muted" id="patientNameHint" style="display:none;margin-top:0.4rem"></small>
+                    </div>
+
+                    <div class="form-group field-float">
                         <input type="tel" name="patient_phone" id="patient_phone" class="form-control"
                                inputmode="numeric" autocomplete="tel" maxlength="14"
-                               placeholder="017XXXXXXXX" required>
-                        <small class="text-muted" style="display:block;margin-top:0.5rem">{{ __('Bangladeshi mobile — 11 digits starting with 013–019. Same number you will show at reception.') }}</small>
+                               placeholder=" " required>
+                        <label class="field-float-label" for="patient_phone">{{ __('Phone') }}</label>
                         <span class="field-error" id="phone-error" role="alert" aria-live="polite" style="display:none"></span>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label" for="patient_nid">{{ __('NID number (optional)') }}</label>
+                    <div class="form-group field-float">
                         <input type="text" name="nid" id="patient_nid" class="form-control"
                                inputmode="numeric" autocomplete="off" maxlength="17"
-                               placeholder="{{ __('10 or 13 digits') }}">
-                        <small class="text-muted" style="display:block;margin-top:0.5rem">{{ __('Helps doctors find your records if you change your phone number. Leave blank if you prefer.') }}</small>
+                               placeholder=" ">
+                        <label class="field-float-label" for="patient_nid">{{ __('NID (optional)') }}</label>
                         <span class="field-error" id="nid-error" role="alert" aria-live="polite" style="display:none"></span>
                     </div>
 
                     <div class="form-group">
-                        <label class="selection-card" style="display:flex;align-items:flex-start;gap:0.75rem;padding:1rem;cursor:pointer;">
-                            <input type="checkbox" name="different_whatsapp" id="different_whatsapp" value="1" style="width:1.25rem;height:1.25rem;margin-top:0.15rem;accent-color:var(--color-primary);">
-                            <span>
-                                <span class="sc-title" style="display:block;font-weight:600;">{{ __('I have a different WhatsApp number') }}</span>
-                                <span class="sc-sub text-muted" style="display:block;margin-top:0.25rem;font-size:0.9rem;">{{ __('Only if WhatsApp is not on the phone number above.') }}</span>
-                            </span>
+                        <label class="booking-check" style="display:flex;align-items:center;gap:0.65rem;cursor:pointer;">
+                            <input type="checkbox" name="different_whatsapp" id="different_whatsapp" value="1" style="width:1.15rem;height:1.15rem;accent-color:var(--color-primary);">
+                            <span style="font-weight:600;">{{ __('Different WhatsApp') }}</span>
                         </label>
                     </div>
 
-                    <div class="form-group hidden" id="whatsappPhoneGroup">
-                        <label class="form-label" for="whatsapp_phone">{{ __('WhatsApp Number') }}</label>
+                    <div class="form-group field-float hidden" id="whatsappPhoneGroup">
                         <input type="tel" name="whatsapp_phone" id="whatsapp_phone" class="form-control"
                                inputmode="numeric" autocomplete="tel" maxlength="14"
-                               placeholder="017XXXXXXXX">
+                               placeholder=" ">
+                        <label class="field-float-label" for="whatsapp_phone">{{ __('WhatsApp') }}</label>
                         <span class="field-error" id="whatsapp-error" role="alert" aria-live="polite" style="display:none"></span>
                     </div>
 
                     <div class="form-group hidden" id="patientPickerGroup" aria-live="polite">
-                        <p class="form-label" style="margin-bottom:0.75rem;font-weight:600;">{{ __('Who is this appointment for?') }}</p>
+                        <p class="form-label" style="margin-bottom:0.75rem;font-weight:600;">{{ __('Who for?') }}</p>
                         <div id="patientPickerOptions" class="patient-picker-options"></div>
                         <input type="hidden" name="patient_id" id="patient_id" value="">
                     </div>
 
                     <div class="form-group">
-                        <label class="selection-card" style="display:flex;align-items:flex-start;gap:0.75rem;padding:1rem;cursor:pointer;">
-                            <input type="checkbox" name="wants_earlier_date" id="wants_earlier_date" value="1" style="width:1.25rem;height:1.25rem;margin-top:0.15rem;accent-color:var(--color-primary);">
-                            <span>
-                                <span class="sc-title" style="display:block;font-weight:600;">{{ __('Tell me if an earlier date opens up') }}</span>
-                                <span class="sc-sub text-muted" style="display:block;margin-top:0.25rem;font-size:0.9rem;">{{ __('The clinic may message you on WhatsApp if a seat frees up before your appointment.') }}</span>
-                            </span>
-                        </label>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="selection-card" style="display:flex;align-items:flex-start;gap:0.75rem;padding:1rem;cursor:pointer;">
-                            <input type="checkbox" name="share_clinical_history" id="share_clinical_history" value="1" checked style="width:1.25rem;height:1.25rem;margin-top:0.15rem;accent-color:var(--color-primary);">
-                            <span>
-                                <span class="sc-title" style="display:block;font-weight:600;">{{ __('Share my health records with other ChamberQ doctors I visit') }}</span>
-                                <span class="sc-sub text-muted" style="display:block;margin-top:0.25rem;font-size:0.9rem;">{{ __('Visit notes and prescriptions can help the next ChamberQ doctor treat you safely. Voice notes and photos stay private to this clinic. You can untick this anytime.') }}</span>
-                            </span>
+                        <label class="booking-check" style="display:flex;align-items:center;gap:0.65rem;cursor:pointer;">
+                            <input type="checkbox" name="share_clinical_history" id="share_clinical_history" value="1" checked style="width:1.15rem;height:1.15rem;accent-color:var(--color-primary);">
+                            <span style="font-weight:600;">{{ __('Share with other ChamberQ doctors') }}</span>
                         </label>
                     </div>
 
@@ -262,7 +244,6 @@
             doctorIds: @json($doctors->pluck('id')->map(fn ($id) => (string) $id)->values()),
             canBookConsultation: @json($canBookConsultation),
             canBookLab: @json($canBookLab),
-            payAtClinic: @json(__('Pay at the clinic')),
             confirmLabel: @json(__('Confirm Booking')),
             continueLabel: @json(__('Continue')),
             bookingLabel: @json(__('Booking…')),
@@ -284,9 +265,6 @@
             noLabTitle: @json(__('No lab slots available')),
             noLabBody: @json(__('There are no collection windows for this location. Please go back or contact the clinic.')),
             doctorChamber: @json(__('Doctor: :doctor | Chamber: :chamber')),
-            seatsLeft: @json(__(':remaining of :cap left')),
-            full: @json(__('Full')),
-            closed: @json(__('Closed')),
             nextDay: @json(__('next :date')),
             checkingSeats: @json(__('Checking seats…')),
             labCollection: @json(__(':day collection')),
@@ -314,7 +292,6 @@
             noOpenDatesTitle: @json(__('No seats available soon')),
             noOpenDatesBody: @json(__('Every date in the next two months is full or closed. Please call the clinic or try again later.')),
             callClinic: @json(__('Call the clinic')),
-            seatsLeftShort: @json(__(':remaining seats left')),
         };
         
         let selectedPatientId = null;
@@ -443,16 +420,6 @@
 
         function formatTime(t) {
             return String(t || '').substring(0, 5);
-        }
-
-        function seatsLabel(info) {
-            if (!info || info.missing) return { text: '', className: '' };
-            if (info.blocked) return { text: i18n.closed, className: 'is-closed' };
-            if (info.remaining <= 0) return { text: i18n.full, className: 'is-full' };
-            return {
-                text: i18n.seatsLeft.replace(':remaining', info.remaining).replace(':cap', info.cap),
-                className: '',
-            };
         }
 
         async function fetchAvailability(bookableType, ids, dateYmd) {
@@ -738,10 +705,10 @@
                 // We only know this person's initials, so the name field is
                 // stood down rather than filled with a mask. Disabled inputs
                 // are not submitted, and the server takes the name from the id.
-                nameInput.value = '';
+                nameInput.value = patientLabel || ' ';
                 nameInput.disabled = true;
                 nameInput.required = false;
-                nameInput.placeholder = patientLabel || '';
+                nameInput.placeholder = ' ';
                 nameHint.textContent = i18n.usingRecordOnFile;
                 nameHint.style.display = 'block';
                 updateConfirmEnabled();
@@ -750,7 +717,8 @@
 
             nameInput.disabled = false;
             nameInput.required = true;
-            nameInput.placeholder = '';
+            nameInput.value = '';
+            nameInput.placeholder = ' ';
             nameHint.style.display = 'none';
             updateConfirmEnabled();
         }
@@ -779,26 +747,17 @@
         }
 
         async function refreshIdentityAvailability() {
-            const seatsEl = document.getElementById('reviewSeats');
             const submitBtn = document.getElementById('submitBtn');
             const dateInput = document.getElementById('booking_date');
             if (!state.bookableId || !dateInput.value) return;
 
-            seatsEl.textContent = i18n.checkingSeats;
-            seatsEl.className = 'seats-line';
-
             try {
                 const items = await fetchAvailability(state.type === 'lab' ? 'lab' : 'session', [state.bookableId], dateInput.value);
                 const info = items[String(state.bookableId)];
-                const label = seatsLabel(info);
-                seatsEl.textContent = label.text || '—';
-                seatsEl.className = 'seats-line ' + (label.className || '');
-
                 const open = info && info.available && !info.missing;
                 submitBtn.dataset.seatsClosed = open ? '' : '1';
                 updateConfirmEnabled();
             } catch (e) {
-                seatsEl.textContent = '';
                 submitBtn.dataset.seatsClosed = '';
                 updateConfirmEnabled();
             }
@@ -923,11 +882,7 @@
             if (option.chamber?.name) detailParts.push(option.chamber.name);
             meta.textContent = detailParts.join(' · ');
 
-            const seatsEl = document.createElement('div');
-            seatsEl.className = 'seats';
-            seatsEl.textContent = i18n.seatsLeftShort.replace(':remaining', option.remaining);
-
-            card.append(heading, meta, seatsEl);
+            card.append(heading, meta);
 
             return card;
         }
@@ -1116,9 +1071,6 @@
                 document.querySelectorAll('input[name="lab_tests[]"]:checked').forEach(cb => {
                     formData.append('lab_tests[]', cb.value);
                 });
-            }
-            if (document.getElementById('wants_earlier_date')?.checked) {
-                formData.append('wants_earlier_date', '1');
             }
             // Always send — unchecked checkboxes are omitted from FormData, and
             // the server would treat absence as "default ON".

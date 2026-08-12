@@ -1565,3 +1565,26 @@
   <reason>Optional keeps booking conversion high; NID is the durable key for SIM changes and cross-chamber continuity without government verification in v1.</reason>
 </decision>
 
+## 2026-08-13T02:05:58+0600
+<decision>
+  <category>UI/UX</category>
+  <context>The book-appointment identity step felt long: long field labels, helper paragraphs under phone/NID/WhatsApp/share, and an earlier-date waitlist checkbox most patients would not use.</context>
+  <action>Simplified the identity step to short labels (Date, Name, Phone, NID optional, Different WhatsApp, Who for?, Share with other ChamberQ doctors), removed helper copy under those fields, removed the WhatsApp “only if…” line and the share explanation, and removed **Tell me if an earlier date opens up** from the wizard. API/`wants_earlier_date` and the staff Waiting for earlier date page remain for legacy flagged bookings.</action>
+  <reason>Fewer words and fewer choices on the last booking step reduce friction before Confirm; earlier-date follow-up was staff-heavy and not worth the patient UI cost.</reason>
+</decision>
+
+## 2026-08-13T02:08:02+0600
+<decision>
+  <category>UI/UX</category>
+  <context>Seat counts (“15 left”) and “Pay at the clinic” on the booking details step added noise without helping the patient choose.</context>
+  <action>Removed seat-count badges from open-date cards and the identity review block, and removed “Pay at the clinic”. Capacity is still checked before Confirm (button stays disabled if the day filled); payment remains at chamber by product policy, just not restated on this step.</action>
+  <reason>Keep the last booking screen focused on name/phone only.</reason>
+</decision>
+
+## 2026-08-13T02:12:11+0600
+<decision>
+  <category>UI/UX</category>
+  <context>Booking details fields felt tall, and separate labels above each box made the last step feel sparse.</context>
+  <action>Shorter inputs (~42px) with floating labels inside Name / Phone / NID / WhatsApp / Date; Change stays beside Date.</action>
+  <reason>Looks more like a compact phone form and puts less scrolling between date and Confirm.</reason>
+</decision>

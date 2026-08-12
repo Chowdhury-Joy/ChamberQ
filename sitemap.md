@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-12T15:23:59+0600
+Last Updated: 2026-08-13T02:12:11+0600
 
 ## Full Site Map
 
@@ -113,7 +113,7 @@ The one patient-facing route that shows prescription content. Deliberately outsi
 
 ### Patient → book serial → ticket
 1. Open `/{slug}/` or custom domain home — see doctor brand + Book CTA. On clinic-tier sites the Book Appointment CTA now also sits in the header nav (desktop) and the mobile drawer, per the Clireo design port; solo keeps its locked layout.
-2. Book flow — chamber/doctor when needed, then **When can you come?** (only dates with seats left, soonest first; earliest option highlighted). Patient details step shows the locked date with **Change date**; optional **Tell me if an earlier date opens up**. If the number is known, choose **Who is this appointment for?** inline — masked initials (`F. R., 34`); picking one stands the name field down. Clinic hero form can POST name/phone into the session first.
+2. Book flow — chamber/doctor when needed, then **When can you come?** (only dates with seats left, soonest first; earliest option highlighted). **Your details** step: short floating labels (Date / Name / Phone / NID optional / Different WhatsApp / Share with other ChamberQ doctors), locked date with **Change** beside it. If the number is known, choose **Who for?** inline — masked initials (`F. R., 34`); picking one stands the name field down. Clinic hero form can POST name/phone into the session first.
 3. Submit → ticket at `…/bookings/{uuid}`. Goal: proof of serial; share via WhatsApp/copy, or Print / Save as PDF for a paper or file copy.
 4. Optional: PWA install scoped to tenant path or custom domain.
 
@@ -198,10 +198,10 @@ The one patient-facing route that shows prescription content. Deliberately outsi
 - **Success:** List + detail pages live; homepage teasers match without duplicating cards in the page builder.
 
 ### Earlier-date waiting list (staff — ops)
-- **Trigger:** A patient booked online and ticked **Tell me if an earlier date opens up**, or staff want to contact those patients when a seat frees up.
+- **Trigger:** Legacy bookings still flagged `wants_earlier_date` (the public wizard no longer offers the opt-in), or staff want to contact those patients when a seat frees up.
 - **Steps:** Tenant admin → **Operations** → **Waiting for earlier date** — review future flagged bookings (soonest booked date first) → tap **WhatsApp** per row to message that patient (staff-tapped; no automatic SMS).
 - **Data/systems touched:** `bookings.wants_earlier_date`, `bookings.booking_date`, patient name/phone on the booking row.
-- **Success:** Staff can reach patients who asked to move earlier without hunting through the full roster.
+- **Success:** Staff can reach patients who previously asked to move earlier without hunting through the full roster.
 
 ### Block a date — vacation / holiday / doctor away (admin/doctor)
 - **Trigger:** The clinic, a chamber, or one doctor will not sit on a given date.

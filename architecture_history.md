@@ -385,3 +385,8 @@
 ## 2026-08-13T01:59:39+0600
 - Optional patient NID (`patients.nid`, `BdNid`): booking/walk-in/Patients form; resolve and cross-chamber share match NID first then phone+name; never on tickets/SMS.
 
+## 2026-08-13T02:05:58+0600
+- Booking identity step simplified: short labels, no earlier-date opt-in or helper copy under WhatsApp/share/phone/NID.
+
+## 2026-08-13T02:08:02+0600
+- Booking wizard no longer shows seat counts or “Pay at the clinic” on date/identity steps; capacity still enforced silently.

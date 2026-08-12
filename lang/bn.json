@@ -219,5 +219,11 @@
     "From the national ID card — helps reconnect records if the phone number changes.": "জাতীয় পরিচয়পত্র থেকে — ফোন নম্বর বদলালে রেকর্ড জোড়া লাগাতে সাহায্য করে।",
     "National ID — not shown on tickets or SMS. Used to reconnect records when the phone number changes.": "জাতীয় পরিচয়পত্র — টিকেট বা এসএমএসে দেখানো হয় না। ফোন নম্বর বদলালে রেকর্ড জোড়া লাগাতে ব্যবহার হয়।",
     "Please enter a valid NID (10 or 13 digits), or leave it blank.": "সঠিক এনআইডি দিন (১০ বা ১৩ সংখ্যা), অথবা খালি রাখুন।",
-    "NID": "এনআইডি"
+    "NID": "এনআইডি",
+    "Name": "নাম",
+    "NID (optional)": "এনআইডি (ঐচ্ছিক)",
+    "Different WhatsApp": "আলাদা হোয়াটসঅ্যাপ",
+    "Who for?": "কার জন্য?",
+    "Share with other ChamberQ doctors": "অন্য ChamberQ ডাক্তারদের সাথে শেয়ার",
+    "Change": "পরিবর্তন"
 }

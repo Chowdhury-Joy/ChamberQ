@@ -246,23 +246,75 @@
         }
         .patient-picker-btn-new { font-style: italic; color: var(--muted); }
 
-        .form-group { margin-bottom: 1.5rem; }
-        .form-label { display: block; margin-bottom: 0.5rem; font-weight: 600; color: var(--ink-deep); font-size: 0.8rem; }
+        .form-group { margin-bottom: 0.85rem; }
+        .form-label { display: block; margin-bottom: 0.35rem; font-weight: 600; color: var(--ink-deep); font-size: 0.8rem; }
         .form-control {
             width: 100%;
-            padding: 0.85rem 1rem;
+            padding: 0.55rem 0.85rem;
+            min-height: 42px;
             border-radius: 10px;
             border: 1px solid var(--line);
             background: #fafbfc;
             color: var(--ink-deep);
             font-family: inherit;
-            font-size: 1rem;
+            font-size: 0.95rem;
             box-sizing: border-box;
         }
         .form-control:focus {
             outline: none;
             border-color: var(--ink);
             box-shadow: 0 0 0 3px color-mix(in srgb, var(--brand) 18%, transparent);
+        }
+        .field-row {
+            display: flex;
+            align-items: stretch;
+            gap: 0.65rem;
+        }
+        .btn-change-date {
+            flex: 0 0 auto;
+            min-height: 42px;
+            padding: 0.4rem 0.85rem;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            align-self: stretch;
+        }
+        .field-float {
+            position: relative;
+        }
+        .field-float > .form-control {
+            padding: 1.05rem 0.85rem 0.35rem;
+            min-height: 42px;
+        }
+        .field-float .field-float-label {
+            position: absolute;
+            left: 0.85rem;
+            top: 50%;
+            transform: translateY(-50%);
+            margin: 0;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: var(--muted);
+            pointer-events: none;
+            transition: top 0.12s ease, transform 0.12s ease, font-size 0.12s ease;
+            line-height: 1;
+        }
+        .field-float > .form-control:focus ~ .field-float-label,
+        .field-float > .form-control:not(:placeholder-shown) ~ .field-float-label,
+        .field-float > .form-control:disabled ~ .field-float-label,
+        .field-float--filled > .field-float-label {
+            top: 0.4rem;
+            transform: none;
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: var(--muted);
+        }
+        .field-display {
+            margin: 0;
+            display: flex;
+            align-items: flex-end;
+            padding-bottom: 0.4rem !important;
+            background: color-mix(in srgb, var(--ink) 4%, var(--white));
+            line-height: 1.25;
         }
         .text-muted { color: var(--muted); }
     </style>

@@ -309,23 +309,75 @@
         }
         .patient-picker-btn-new { font-style: italic; color: #64748b; }
 
-        .form-group { margin-bottom: 1.5rem; }
-        .form-label { display: block; margin-bottom: 0.5rem; font-weight: 500; color: #0f172a; }
+        .form-group { margin-bottom: 0.85rem; }
+        .form-label { display: block; margin-bottom: 0.35rem; font-weight: 500; color: #0f172a; }
         .form-control {
             width: 100%;
-            padding: 0.85rem 1rem;
-            border-radius: 0.75rem;
+            padding: 0.55rem 0.85rem;
+            min-height: 42px;
+            border-radius: 0.65rem;
             border: 1px solid #E0E0E0;
             background: #ffffff;
             color: #0f172a;
             font-family: inherit;
-            font-size: 1rem;
+            font-size: 0.95rem;
             box-sizing: border-box;
         }
         .form-control:focus {
             outline: none;
             border-color: var(--color-primary);
             box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
+        }
+        .field-row {
+            display: flex;
+            align-items: stretch;
+            gap: 0.65rem;
+        }
+        .btn-change-date {
+            flex: 0 0 auto;
+            min-height: 42px;
+            padding: 0.4rem 0.85rem;
+            font-size: 0.85rem;
+            white-space: nowrap;
+            align-self: stretch;
+        }
+        .field-float {
+            position: relative;
+        }
+        .field-float > .form-control {
+            padding: 1.05rem 0.85rem 0.35rem;
+            min-height: 42px;
+        }
+        .field-float .field-float-label {
+            position: absolute;
+            left: 0.85rem;
+            top: 50%;
+            transform: translateY(-50%);
+            margin: 0;
+            font-size: 0.95rem;
+            font-weight: 500;
+            color: #64748b;
+            pointer-events: none;
+            transition: top 0.12s ease, transform 0.12s ease, font-size 0.12s ease;
+            line-height: 1;
+        }
+        .field-float > .form-control:focus ~ .field-float-label,
+        .field-float > .form-control:not(:placeholder-shown) ~ .field-float-label,
+        .field-float > .form-control:disabled ~ .field-float-label,
+        .field-float--filled > .field-float-label {
+            top: 0.4rem;
+            transform: none;
+            font-size: 0.68rem;
+            font-weight: 600;
+            color: #64748b;
+        }
+        .field-display {
+            margin: 0;
+            display: flex;
+            align-items: flex-end;
+            padding-bottom: 0.4rem !important;
+            background: #f8fafc;
+            line-height: 1.25;
         }
         .text-muted { color: #64748b; }
 
