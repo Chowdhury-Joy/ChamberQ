@@ -19,6 +19,7 @@ trait ConfiguresTenantAdminPanel
             ->login()
             ->passwordReset()
             ->sidebarCollapsibleOnDesktop()
+            ->databaseNotifications()
             ->colors([
                 'primary' => Color::Blue,
             ])
@@ -45,6 +46,10 @@ trait ConfiguresTenantAdminPanel
                         })();
                     </script>
                 HTML
+            )
+            ->renderHook(
+                PanelsRenderHook::BODY_START,
+                fn (): string => view('filament.tenant-admin.components.offline-shell')->render()
             )
             ->renderHook(
                 PanelsRenderHook::BODY_END,

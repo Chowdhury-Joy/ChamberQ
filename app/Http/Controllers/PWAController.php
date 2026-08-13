@@ -83,9 +83,9 @@ class PWAController extends Controller
         $scopePrefixJs = json_encode(rtrim($scopePrefix, '/') ?: '');
 
         $sw = <<<JS
-const CACHE_NAME = 'clinic-shell-v3';
+const CACHE_NAME = 'clinic-shell-v4';
 const SCOPE_PREFIX = {$scopePrefixJs};
-const PRECACHE = ['/css/theme.css'];
+const PRECACHE = ['/css/theme.css', '/js/chamberq-offline.js'];
 
 self.addEventListener('install', event => {
     event.waitUntil((async () => {
