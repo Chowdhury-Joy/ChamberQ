@@ -21,9 +21,9 @@ use Illuminate\Support\Facades\URL;
 use Tests\TestCase;
 
 /**
- * The patient's shared copy is a deliberate, narrow exception to "patient-facing
- * pages never show prescriptions" — it must stay scoped to one prescription's
- * medicines and must never become a way into the rest of the record.
+ * The patient's shared copy is a full clinical pad (diagnosis, notes, meds,
+ * chamber). Portal phone lookup is the durable backup; /p/{token} still
+ * expires after SHARE_LINK_EXPIRY_HOURS. Voice notes and photos stay off.
  */
 class PrescriptionShareLinkTest extends TestCase
 {
@@ -186,10 +186,10 @@ class PrescriptionShareLinkTest extends TestCase
     {
         $this->get($this->shareUrl())
             ->assertOk()
-            ->assertSee('Prescription / ব্যবস্থাপত্র', escape: false)
             ->assertSee('Patient / রোগী', escape: false)
             ->assertSee('Date / তারিখ', escape: false)
-            ->assertSee('Reg. No. / রেজি. নং', escape: false);
+            ->assertSee('Reg. No. / রেজি. নং', escape: false)
+            ->assertSee(\App\Support\Bilingual::label('Please bring this prescription when you visit again.'), escape: false);
 
         tenancy()->initialize($this->tenant);
         $printUrl = 'http://rx-share.localhost/prescriptions/'.$this->prescription->id.'/print';
@@ -197,23 +197,25 @@ class PrescriptionShareLinkTest extends TestCase
 
         $this->actingAs($this->doctor)->get($printUrl)
             ->assertOk()
-            ->assertSee('Prescription / ব্যবস্থাপত্র', escape: false)
             ->assertSee('Patient / রোগী', escape: false)
             ->assertSee('Age / বয়স', escape: false)
-            ->assertSee('Female / মহিলা', escape: false);
+            ->assertSee('Female / মহিলা', escape: false)
+            ->assertSee('Diagnosis / রোগ নির্ণয়', escape: false);
     }
 
-    public function test_shared_copy_never_carries_the_diagnosis_or_chamber_contact(): void
+    public function test_shared_copy_includes_diagnosis_and_chamber_contact(): void
     {
         $url = $this->shareUrl();
 
         $this->get($url)
             ->assertOk()
-            ->assertDontSee('SECRETDIAGNOSISNAME')
-            ->assertDontSee('SECRETTESTSADVISED')
-            ->assertDontSee('SECRETREPORTSSEEN')
-            ->assertDontSee('SECRETCHAMBERADDRESS')
-            ->assertDontSee('0299999999');
+            ->assertSee('SECRETDIAGNOSISNAME')
+            ->assertSee('SECRETTESTSADVISED')
+            ->assertSee('SECRETCHAMBERADDRESS')
+            ->assertSee('0299999999')
+            // Reports the patient brought stay off the patient copy — they are
+            // chamber paperwork, not something the patient needs on their phone.
+            ->assertDontSee('SECRETREPORTSSEEN');
     }
 
     /**

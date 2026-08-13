@@ -469,6 +469,117 @@ class MedicinePickerTest extends TestCase
         $this->assertSame('500 mg', array_key_first($options));
     }
 
+    public function test_dose_options_only_ever_offer_strengths_the_brand_actually_ships(): void
+    {
+        tenancy()->initialize($this->tenant);
+
+        Medicine::create([
+            'brand_name' => 'NAPA',
+            'generic_name' => 'Paracetamol',
+            'default_strength' => '120 mg/5 ml',
+            'form' => 'syrup',
+            'aliases' => ['napa'],
+            'category' => 'Analgesic',
+        ]);
+
+        $options = app(MedicineService::class)->doseOptionsForBrand('napa');
+
+        $this->assertSame(
+            [
+                ['value' => '120 mg/5 ml', 'label' => '120 mg/5 ml syrup'],
+                ['value' => '500 mg', 'label' => '500 mg tablet'],
+            ],
+            $options,
+        );
+
+        // The desk used to show a fixed 500/10/20/40/5 mg list for every drug,
+        // so it offered a 5 mg NAPA no manufacturer makes while hiding the
+        // syrup that exists. Nothing outside the catalogue may appear here.
+        $this->assertNotContains('5 mg', array_column($options, 'value'));
+    }
+
+    public function test_a_brand_with_no_catalogue_row_offers_no_dose_chips_rather_than_a_guess(): void
+    {
+        tenancy()->initialize($this->tenant);
+
+        // A brand the doctor typed himself. Silence is the honest answer: the
+        // app has no idea what strengths it comes in.
+        $this->assertSame([], app(MedicineService::class)->doseOptionsForBrand('SOMETHING HAND TYPED'));
+        $this->assertSame([], app(MedicineService::class)->doseOptionsForBrand(null));
+    }
+
+    public function test_both_dose_pickers_read_the_same_catalogue_lookup(): void
+    {
+        tenancy()->initialize($this->tenant);
+
+        // The Filament repeater's options are the service list plus "Other".
+        // If these two ever diverge, one surface starts offering a strength
+        // the other refuses.
+        $service = app(MedicineService::class)->doseOptionsForBrand('NAPA');
+        $form = VisitNotesFormSchema::doseOptionsForBrand('NAPA');
+
+        $this->assertSame(
+            array_column($service, 'label', 'value') + ['other' => 'Other'],
+            $form,
+        );
+    }
+
+    public function test_api_doses_requires_doctor_login_and_returns_catalogue_strengths(): void
+    {
+        $url = 'http://medicine-picker.localhost/api/medicines/doses?brand=napa';
+
+        $this->getJson($url)->assertUnauthorized();
+
+        tenancy()->initialize($this->tenant);
+
+        Medicine::query()->where('brand_name', 'NAPA')->update([
+            'default_frequency' => '1+1+1',
+            'default_duration' => '3 days',
+            'default_timing' => 'after_food',
+        ]);
+
+        $this->actingAs($this->doctor)
+            ->getJson($url)
+            ->assertOk()
+            ->assertJsonPath('brand', 'NAPA')
+            ->assertJsonPath('options.0.value', '500 mg')
+            ->assertJsonPath('options.0.label', '500 mg tablet')
+            ->assertJsonPath('defaults.frequency', '1+1+1')
+            ->assertJsonPath('defaults.duration', '3 days')
+            ->assertJsonPath('defaults.timing', 'after_food');
+    }
+
+    public function test_brand_dosing_defaults_prefer_the_sku_that_actually_has_them(): void
+    {
+        tenancy()->initialize($this->tenant);
+
+        Medicine::query()->where('brand_name', 'NAPA')->update([
+            'default_frequency' => '1+1+1',
+            'default_duration' => '3 days',
+            'default_timing' => 'after_food',
+            'priority' => 0,
+        ]);
+
+        // Drops ship without a starter pattern; the tablet does. Collapsing to
+        // "whatever row came last" used to hand the pad empty frequency cells.
+        Medicine::create([
+            'brand_name' => 'NAPA',
+            'generic_name' => 'Paracetamol',
+            'default_strength' => '80 mg/ml',
+            'form' => 'drops',
+            'aliases' => ['napa'],
+            'category' => 'Analgesic',
+            'priority' => 2,
+        ]);
+
+        $defaults = app(MedicineService::class)->brandDosingDefaults('NAPA');
+
+        $this->assertSame('500 mg', $defaults['dose']);
+        $this->assertSame('1+1+1', $defaults['frequency']);
+        $this->assertSame('3 days', $defaults['duration']);
+        $this->assertSame('after_food', $defaults['timing']);
+    }
+
     public function test_search_ranks_a_pinned_brand_above_a_parenteral_sku_of_the_same_name(): void
     {
         tenancy()->initialize($this->tenant);

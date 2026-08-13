@@ -303,7 +303,15 @@ class VisitVitalsTest extends TestCase
             ->assertSee('OSARTIL');
     }
 
-    public function test_patient_share_shows_vitals_but_not_diagnosis_notes_or_tests(): void
+    /**
+     * The patient share page carries the same pad the doctor prints.
+     *
+     * This deliberately reverses the earlier rule that kept diagnosis, clinical
+     * notes and tests off the patient copy (owner decision, 2026-08-12): the
+     * patient's own prescription — and a referral made from it — reads better
+     * complete. Voice notes and photographed slips remain doctor-only.
+     */
+    public function test_patient_share_shows_the_same_pad_as_the_doctor_print(): void
     {
         tenancy()->initialize($this->tenant);
 
@@ -316,10 +324,11 @@ class VisitVitalsTest extends TestCase
             ->assertSee('170/100')
             ->assertSee('58.5 kg')
             ->assertSee('OSARTIL')
-            ->assertDontSee('SECRETDIAGNOSISFIBROID')
-            ->assertDontSee('Diagnosed fibroid uterus. P/A/E: NAD.')
-            ->assertDontSee('SECRETTESTSADVISED')
-            ->assertDontSee('SECRETCHAMBERADDRESS');
+            ->assertSee('SECRETDIAGNOSISFIBROID')
+            ->assertSee('Diagnosed fibroid uterus. P/A/E: NAD.')
+            ->assertSee('SECRETTESTSADVISED')
+            // Letterhead is part of the pad, so the chamber now appears too.
+            ->assertSee('SECRETCHAMBERADDRESS');
     }
 
     private function seedVisitWithPrescription(): VisitRecord

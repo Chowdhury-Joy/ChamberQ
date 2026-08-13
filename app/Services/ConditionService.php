@@ -21,7 +21,11 @@ class ConditionService
      * unchanged, and so a future *explicitly curated* shortlist has an obvious
      * place to hook in.
      *
-     * @return Collection<int, array{id: string, code: string, name: string, label: string}>
+     * Each row carries its starter advice and investigations so the pad can
+     * offer them the moment a diagnosis is picked, without a second request
+     * mid-consult.
+     *
+     * @return Collection<int, array{id: string, code: string, name: string, label: string, advice: ?string, tests: ?string}>
      */
     public function search(string $query, ?User $doctor = null): Collection
     {
@@ -46,6 +50,8 @@ class ConditionService
                     'code' => $condition->code,
                     'name' => $condition->name,
                     'label' => $condition->name,
+                    'advice' => $condition->adviceForLocale(),
+                    'tests' => $condition->default_tests,
                     'match_score' => $matchScore,
                 ];
             })
@@ -59,6 +65,8 @@ class ConditionService
                 'code' => $row['code'],
                 'name' => $row['name'],
                 'label' => $row['label'],
+                'advice' => $row['advice'],
+                'tests' => $row['tests'],
             ]);
     }
 

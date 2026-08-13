@@ -4,7 +4,9 @@ namespace App\Filament\TenantAdmin\Support;
 
 use App\Models\Doctor;
 use App\Models\Medicine;
+use App\Models\MedicineUsage;
 use App\Services\MedicineService;
+use App\Support\PrescriptionTiming;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Utilities\Get;
@@ -33,34 +35,69 @@ class MedicinePickerFields
                     return;
                 }
 
-                $set('medicine_name', mb_strtoupper(trim($state)));
+                $brand = mb_strtoupper(trim($state));
+                $set('medicine_name', $brand);
 
                 // A brand now has several SKUs. Order by tier so prefill takes
                 // the hand-verified adult strength, never whichever row the
                 // database happened to return first — which could be an IV
                 // infusion of the same brand.
                 $match = Medicine::query()
-                    ->where('brand_name', mb_strtoupper(trim($state)))
+                    ->where('brand_name', $brand)
                     ->orderBy('priority')
                     ->first();
 
-                if (! $match) {
+                // Layer 1: whatever this doctor saved on My medicines for this
+                // brand. It is read before the catalogue and can stand alone —
+                // a hand-added brand has no catalogue row at all.
+                $saved = auth()->user()
+                    ? MedicineUsage::query()
+                        ->where('user_id', auth()->id())
+                        ->where('medicine_name', $brand)
+                        ->whereNull('hidden_at')
+                        ->first()
+                    : null;
+
+                if (! $match && ! $saved) {
                     return;
                 }
 
                 if (blank($get('generic_name'))) {
-                    $set('generic_name', $match->generic_name);
+                    $set('generic_name', $saved?->generic_name ?? $match?->generic_name);
                 }
                 if (blank($get('dose'))) {
-                    $prefill = VisitNotesFormSchema::prefillDoseFromStrength($match->default_strength);
+                    $prefill = VisitNotesFormSchema::prefillDoseFromStrength(
+                        $saved?->last_dose ?? $match?->default_strength
+                    );
                     $set('dose', $prefill['dose']);
                     $set('dose_other', $prefill['dose_other']);
                 }
-                if (blank($get('frequency'))) {
-                    $set('frequency', '1+1+1');
+
+                // Frequency and duration used to be `'1+1+1'` and `'5 days'`,
+                // hardcoded here and applied to every drug alike — wrong for a
+                // PPI, wrong for an antihistamine, wrong for anything taken
+                // long term. They now come from the same two layers as the
+                // dose, and stay blank when neither layer has an answer.
+                foreach ([
+                    ['frequency', $saved?->last_frequency ?? $match?->default_frequency, VisitNotesFormSchema::FREQUENCY_PRESETS],
+                    ['duration', $saved?->last_duration ?? $match?->default_duration, VisitNotesFormSchema::DURATION_PRESETS],
+                ] as [$field, $value, $presets]) {
+                    if (filled($get($field)) || blank($value)) {
+                        continue;
+                    }
+
+                    // A value the chips cannot show has to land in the "other"
+                    // box, or it would look set while rendering as nothing.
+                    if (in_array($value, $presets, true)) {
+                        $set($field, $value);
+                    } else {
+                        $set($field, 'other');
+                        $set($field.'_other', $value);
+                    }
                 }
-                if (blank($get('duration'))) {
-                    $set('duration', '5 days');
+
+                if (blank($get('timing'))) {
+                    $set('timing', PrescriptionTiming::normalize($saved?->last_timing ?? $match?->default_timing));
                 }
 
                 $set('_prefilled', true);

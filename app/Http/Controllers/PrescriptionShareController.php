@@ -3,21 +3,20 @@
 namespace App\Http\Controllers;
 
 use App\Models\Prescription;
+use App\Support\BdPhone;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 /**
- * The patient's own copy of one prescription, opened from the SMS or WhatsApp
- * link the doctor sends before the patient leaves the chamber.
+ * The patient's own copy of one prescription.
  *
- * Deliberately unauthenticated — an unguessable, expiring token is the gate.
- * The view is scoped to this prescription's medicines, dosing advice, follow-up,
- * and visit vitals (weight / BP) — vitals travel with a referral (e.g. to a
- * cardiologist). Diagnosis, clinical notes, tests, reports, voice and photos
- * stay off this page. See the decisions in `decisions.md`.
+ * Opened from:
+ * - the SMS/WhatsApp short link (`/p/{token}`, expires 48h)
+ * - the legacy signed share URL
+ * - the portal phone-gated route (durable backup if staff forget to send)
  *
- * Two entry points reach the same view: `showByToken()` is the short `/p/{token}`
- * link now sent, and `show()` is the older temporary-signed URL, kept alive only
- * until the links already in patients' phones have expired.
+ * Full clinical pad: diagnosis, notes, investigations, medicines, advice,
+ * follow-up, chamber letterhead. Voice notes and prescription photos stay off.
  */
 class PrescriptionShareController extends Controller
 {
@@ -33,7 +32,7 @@ class PrescriptionShareController extends Controller
             ->where('share_token_expires_at', '>', now())
             ->firstOrFail();
 
-        return $this->render($prescription);
+        return $this->render($prescription, showExpiryFootnote: true);
     }
 
     /**
@@ -41,26 +40,76 @@ class PrescriptionShareController extends Controller
      */
     public function show(Prescription $prescription): View
     {
-        return $this->render($prescription);
+        return $this->render($prescription, showExpiryFootnote: true);
     }
 
-    private function render(Prescription $prescription): View
+    /**
+     * Portal backup: anyone who can look up the booking phone can open this
+     * prescription. Phone must match the booking that owns the visit.
+     */
+    public function showFromPortal(Request $request, Prescription $prescription): View
     {
-        // visitRecord is loaded for the booking date and for vitals only —
-        // diagnosis / clinical notes / tests are never passed into the view.
-        $prescription->load(['items', 'patient', 'visitRecord.booking']);
+        $phone = $request->query('phone');
 
-        ['doctor' => $doctor] = $prescription->resolveDoctorChamber();
+        $validator = validator(
+            ['phone' => $phone],
+            ['phone' => ['required', 'string', 'regex:/^(?:\+?88)?01[3-9]\d{8}$/']],
+        );
+
+        if ($validator->fails()) {
+            abort(404);
+        }
+
+        $prescription->loadMissing(['visitRecord.booking', 'items']);
+
+        $bookingPhone = $prescription->visitRecord?->booking?->patient_phone;
+        if (blank($bookingPhone)) {
+            abort(404);
+        }
+
+        // Same gate as portal lookup: any common BD prefix spelling of the
+        // number that booked this visit is enough.
+        $normalizedBooking = BdPhone::normalize($bookingPhone);
+        $allowed = collect(BdPhone::lookupVariants((string) $phone))
+            ->map(fn (string $v) => BdPhone::normalize($v))
+            ->push(BdPhone::normalize((string) $phone))
+            ->filter()
+            ->unique()
+            ->all();
+
+        if ($normalizedBooking === '' || ! in_array($normalizedBooking, $allowed, true)) {
+            abort(404);
+        }
+
+        if ($prescription->items->isEmpty()) {
+            abort(404);
+        }
+
+        return $this->render($prescription, showExpiryFootnote: false);
+    }
+
+    private function render(Prescription $prescription, bool $showExpiryFootnote): View
+    {
+        $prescription->load([
+            'items',
+            'patient',
+            'visitRecord.booking',
+            'visitRecord.condition',
+        ]);
+
+        ['doctor' => $doctor, 'chamber' => $chamber] = $prescription->resolveDoctorChamber();
 
         $visit = $prescription->visitRecord;
 
         return view('tenant.prescriptions.share', [
             'prescription' => $prescription,
+            'visitRecord' => $visit,
             'patient' => $prescription->patient,
             'booking' => $visit?->booking,
             'doctor' => $doctor,
-            'weightLabel' => $visit?->weightLabel(),
-            'bloodPressureLabel' => $visit?->bloodPressureLabel(),
+            'chamber' => $chamber,
+            'tenant' => tenant(),
+            'showExpiryFootnote' => $showExpiryFootnote,
         ]);
     }
 }

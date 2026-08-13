@@ -145,7 +145,7 @@
                 {{ __('Patient Access Portal') }}
             </h1>
             <p class="mx-auto mt-3 max-w-md text-center text-sm leading-relaxed text-slate-600">
-                {{ __('Enter your mobile phone number to look up your appointments, queue tickets, and lab test status.') }}
+                {{ __('Enter your mobile phone number to look up your appointments, queue tickets, prescriptions, and lab test status.') }}
             </p>
 
             <form action="{{ tenant_web_url('/portal') }}" method="GET" class="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -172,6 +172,42 @@
 
         @if(filled($phone) && empty($error))
             <div class="mx-auto max-w-4xl">
+                @if(($prescriptions ?? collect())->isNotEmpty())
+                    <h2 class="font-display text-2xl text-slate-900 sm:text-3xl">
+                        {{ __('Your prescriptions') }}
+                    </h2>
+                    <div class="mt-6 mb-10 space-y-4">
+                        @foreach($prescriptions as $prescription)
+                            @php
+                                $rxBooking = $prescription->visitRecord?->booking;
+                                $rxDate = $rxBooking?->booking_date ?? $prescription->created_at;
+                            @endphp
+                            <div class="flex flex-col justify-between gap-4 rounded-2xl border p-5 sm:flex-row sm:items-center sm:p-6" style="background-color: #FAFAFA; border-color: #E0E0E0;">
+                                <div>
+                                    <div class="mb-1 flex flex-wrap items-center gap-2">
+                                        <span class="rounded-full px-2.5 py-0.5 text-xs font-bold" style="background-color: color-mix(in srgb, var(--color-primary) 14%, white); color: var(--color-primary);">
+                                            {{ __('Prescription') }}
+                                        </span>
+                                        @if ($rxDate)
+                                            <span class="text-xs text-slate-400">{{ $rxDate->format('M d, Y') }}</span>
+                                        @endif
+                                    </div>
+                                    <h3 class="text-base font-semibold text-slate-900">{{ $prescription->patient?->name ?? $rxBooking?->patient_name }}</h3>
+                                    <p class="mt-1 text-xs text-slate-500">
+                                        {{ trans_choice(':count medicine|:count medicines', $prescription->items->count(), ['count' => $prescription->items->count()]) }}
+                                    </p>
+                                </div>
+                                <a
+                                    href="{{ tenant_web_route('prescriptions.portal', ['prescription' => $prescription, 'phone' => $phone], absolute: false) }}"
+                                    class="solo-cta-outline text-sm"
+                                >
+                                    {{ __('View prescription') }}
+                                </a>
+                            </div>
+                        @endforeach
+                    </div>
+                @endif
+
                 <h2 class="font-display text-2xl text-slate-900 sm:text-3xl">
                     {{ __('Search Results for') }} “{{ $phone }}”
                 </h2>

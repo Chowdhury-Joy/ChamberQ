@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Models\Condition;
 use App\Models\Medicine;
 use Illuminate\Support\Facades\Schema;
 
@@ -156,6 +157,24 @@ class ProductionReadiness
 
                     return Medicine::query()->count() === 0
                         ? 'The medicine catalogue is empty. Prescription pickers will show no brands until `medicines:load` is run — migrations alone do not import the CSV.'
+                        : null;
+                },
+            ],
+            [
+                'severity' => self::SEVERITY_BLOCKER,
+                'key' => 'CONDITION_CATALOGUE',
+                'fix' => 'php artisan catalogues:load (or conditions:load) after every migrate on a new server',
+                'detect' => function (): ?string {
+                    if (! app()->environment('production')) {
+                        return null;
+                    }
+
+                    if (! Schema::hasTable('conditions')) {
+                        return null;
+                    }
+
+                    return Condition::query()->count() === 0
+                        ? 'The diagnosis catalogue is empty. Every diagnosis will be recorded as uncoded free text — no coded history, no diagnosis packs, no advice presets — until `conditions:load` is run.'
                         : null;
                 },
             ],

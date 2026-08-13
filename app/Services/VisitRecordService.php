@@ -71,7 +71,12 @@ class VisitRecordService
                     'weight_kg' => $data['weight_kg'] ?? null,
                     'bp_systolic' => $data['bp_systolic'] ?? null,
                     'bp_diastolic' => $data['bp_diastolic'] ?? null,
+                    'pulse_bpm' => $data['pulse_bpm'] ?? null,
+                    'spo2_percent' => $data['spo2_percent'] ?? null,
                     'clinical_notes' => $this->nullableString($data['clinical_notes'] ?? null),
+                    'chief_complaint' => $this->nullableString($data['chief_complaint'] ?? null),
+                    'history' => $this->nullableString($data['history'] ?? null),
+                    'on_examination' => $this->nullableString($data['on_examination'] ?? null),
                     'advice' => $this->nullableString($data['advice'] ?? null),
                     'tests_advised' => $this->nullableString($data['tests_advised'] ?? null),
                     'reports_seen' => $this->nullableString($data['reports_seen'] ?? null),
@@ -185,7 +190,7 @@ class VisitRecordService
             return true;
         }
 
-        foreach (['advice', 'tests_advised', 'reports_seen', 'clinical_notes', 'voice_path', 'voice_transcript', 'follow_up_note'] as $field) {
+        foreach (['advice', 'tests_advised', 'reports_seen', 'clinical_notes', 'chief_complaint', 'history', 'on_examination', 'voice_path', 'voice_transcript', 'follow_up_note'] as $field) {
             if (filled($data[$field] ?? null)) {
                 return true;
             }
@@ -193,7 +198,9 @@ class VisitRecordService
 
         if (($data['weight_kg'] ?? null) !== null
             || ($data['bp_systolic'] ?? null) !== null
-            || ($data['bp_diastolic'] ?? null) !== null) {
+            || ($data['bp_diastolic'] ?? null) !== null
+            || ($data['pulse_bpm'] ?? null) !== null
+            || ($data['spo2_percent'] ?? null) !== null) {
             return true;
         }
 
@@ -295,9 +302,14 @@ class VisitRecordService
                 'prescription_id' => $prescription->id,
                 'medicine_name' => $this->medicineService->normalizeMedicineName((string) $item['medicine_name']),
                 'generic_name' => $this->nullableString($item['generic_name'] ?? null),
+                'indication' => $this->nullableString($item['indication'] ?? null),
                 'dose' => $this->nullableString($item['dose'] ?? null),
                 'frequency' => $this->nullableString($item['frequency'] ?? null),
                 'duration' => $this->nullableString($item['duration'] ?? null),
+                'timing' => \App\Support\PrescriptionTiming::normalize(
+                    is_string($item['timing'] ?? null) ? $item['timing'] : null
+                ),
+                'instructions' => $this->nullableString($item['instructions'] ?? null),
                 'sort_order' => $index,
             ]);
         }

@@ -16,11 +16,37 @@ class Condition extends Model
         'aliases',
         'category',
         'icd10_unverified',
+        'default_advice',
+        'default_tests',
     ];
 
     protected $casts = [
         'aliases' => 'array',
     ];
+
+    /**
+     * Starter advice in the language the doctor is currently reading.
+     *
+     * Falls back to English rather than returning nothing: a doctor on a
+     * Bangla panel is still better served by advice he can edit than by an
+     * empty box.
+     */
+    public function adviceForLocale(?string $locale = null): ?string
+    {
+        if (blank($this->default_advice)) {
+            return null;
+        }
+
+        $decoded = json_decode((string) $this->default_advice, true);
+
+        if (! is_array($decoded)) {
+            return (string) $this->default_advice;
+        }
+
+        $locale ??= app()->getLocale();
+
+        return $decoded[$locale] ?? $decoded['en'] ?? reset($decoded) ?: null;
+    }
 
     public function usages(): HasMany
     {

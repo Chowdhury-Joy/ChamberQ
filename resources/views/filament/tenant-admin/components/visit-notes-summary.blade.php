@@ -21,6 +21,27 @@
         </div>
     @endif
 
+    @if (filled($record->chief_complaint))
+        <div class="cs-summary-panel__row">
+            <span class="cs-summary-panel__label">{{ __('C/C') }}</span>
+            <span>{{ $record->chief_complaint }}</span>
+        </div>
+    @endif
+
+    @if (filled($record->history))
+        <div class="cs-summary-panel__row">
+            <span class="cs-summary-panel__label">{{ __('H/O') }}</span>
+            <span>{{ $record->history }}</span>
+        </div>
+    @endif
+
+    @if (filled($record->on_examination))
+        <div class="cs-summary-panel__row">
+            <span class="cs-summary-panel__label">{{ __('O/E') }}</span>
+            <span>{{ $record->on_examination }}</span>
+        </div>
+    @endif
+
     @if (filled($record->clinical_notes))
         <div class="cs-summary-panel__row">
             <span class="cs-summary-panel__label">{{ __('Clinical notes') }}</span>
@@ -35,7 +56,7 @@
         </div>
         <ul class="cs-summary-panel__list">
             @foreach ($items as $item)
-                <li>{{ $item->medicine_name }} — {{ collect([$item->dose, $item->frequency, $item->duration])->filter()->implode(', ') }}</li>
+                <li>{{ $item->medicine_name }} — {{ collect([$item->dose, $item->frequency, $item->duration, $item->timingLabel()])->filter()->implode(', ') }}</li>
             @endforeach
         </ul>
     @endif
@@ -49,7 +70,7 @@
 
     @if (filled($record->tests_advised))
         <div class="cs-summary-panel__row">
-            <span class="cs-summary-panel__label">{{ __('Tests advised') }}</span>
+            <span class="cs-summary-panel__label">{{ __('Inv') }}</span>
             <span>{{ $record->tests_advised }}</span>
         </div>
     @endif

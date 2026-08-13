@@ -380,30 +380,36 @@ class CompleteVisitCallNextSplitTest extends TestCase
             ->assertSee('Send via WhatsApp');
     }
 
-    public function test_medicine_usage_is_recorded_only_when_visit_is_completed(): void
+    /**
+     * Completing a visit must not build a behavioural profile of the doctor.
+     *
+     * Automatic learning was removed on 2026-08-11 by owner decision: doctors
+     * curate **My medicines** explicitly, and the app does not infer a
+     * shortlist from what gets prescribed. The prescription itself is still
+     * saved — only the side-effect writes are gone.
+     */
+    public function test_completing_a_visit_does_not_record_medicine_usage(): void
     {
-        tenancy()->initialize($this->tenant);
+        $this->actingAsDoctorOnPanel();
 
-        app(\App\Services\VisitRecordService::class)->saveForCompletedBooking($this->first, $this->doctor, [
-            'prescription_items' => [
-                ['medicine_name' => 'SERGEL', 'dose' => '40 mg', 'frequency' => '1+0+1', 'duration' => '14 days'],
-            ],
-        ]);
+        Livewire::test(ConsultScreen::class)
+            ->callAction('completeVisit', data: [
+                'prescription_items' => [
+                    ['medicine_name' => 'SERGEL', 'dose' => '40 mg', 'frequency' => '1+0+1', 'duration' => '14 days'],
+                ],
+            ]);
 
-        $this->assertSame(0, \App\Models\MedicineUsage::query()->count());
+        $this->assertSame('completed', $this->first->fresh()->status);
 
-        $this->first->update(['status' => 'completed', 'completed_at' => now()]);
+        // The prescription is still written — this is not a regression in
+        // saving, only in silently learning.
+        $this->assertDatabaseHas('prescription_items', ['medicine_name' => 'SERGEL']);
 
-        app(\App\Services\VisitRecordService::class)->saveForCompletedBooking($this->first->fresh(), $this->doctor, [
-            'prescription_items' => [
-                ['medicine_name' => 'SERGEL', 'dose' => '40 mg', 'frequency' => '1+0+1', 'duration' => '14 days'],
-            ],
-        ]);
-
-        $this->assertDatabaseHas('medicine_usages', [
-            'user_id' => $this->doctor->id,
-            'medicine_name' => 'SERGEL',
-        ]);
+        $this->assertSame(
+            0,
+            \App\Models\MedicineUsage::query()->count(),
+            'Prescribing must not add anything to the doctor\'s personal list',
+        );
     }
 
     /**

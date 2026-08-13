@@ -19,6 +19,7 @@ class MedicineUsage extends Model
         'last_dose',
         'last_frequency',
         'last_duration',
+        'last_timing',
         'use_count',
         'last_used_at',
         'hidden_at',

@@ -8,6 +8,7 @@ use App\Models\Medicine;
 use App\Models\MedicineUsage;
 use App\Models\ScheduleSession;
 use App\Models\User;
+use App\Support\PrescriptionTiming;
 use Illuminate\Support\Collection;
 
 class MedicineService
@@ -88,12 +89,19 @@ class MedicineService
      *     brand_name: string,
      *     label: string,
      *     generic_name: ?string,
+     *     class_hint: ?string,
      *     dose: ?string,
      *     frequency: ?string,
      *     duration: ?string,
+     *     timing: ?string,
      *     rank: int,
      *     source: string
      * }>
+     *
+     * Every row arrives with the whole line already resolved through the
+     * three prefill layers — the doctor's own saved default, then the
+     * catalogue's per-drug default, then null. Null reaches the pad as an
+     * empty cell, never as a guess.
      */
     public function search(string $query, ?User $doctor = null, ?Doctor $prescribingDoctor = null): Collection
     {
@@ -126,9 +134,11 @@ class MedicineService
                     'brand_name' => mb_strtoupper($medicine->brand_name),
                     'label' => $medicine->displayLabel(),
                     'generic_name' => $medicine->generic_name,
+                    'class_hint' => $medicine->indications,
                     'dose' => $medicine->default_strength,
-                    'frequency' => null,
-                    'duration' => null,
+                    'frequency' => $medicine->default_frequency,
+                    'duration' => $medicine->default_duration,
+                    'timing' => $medicine->default_timing,
                     'rank' => $matchScore + $this->tierBoost($medicine->priority),
                     'source' => 'catalog',
                 ];
@@ -156,8 +166,13 @@ class MedicineService
                         ->unique()
                         ->all(),
                 )
+                ->orderBy('priority')
                 ->get()
-                ->keyBy(fn (Medicine $medicine) => $this->normalizeMedicineName($medicine->brand_name));
+                // Several SKUs share one brand (NAPA tablet / syrup / drops).
+                // keyBy() alone kept the *last* row — often drops with no
+                // dosing defaults — so My-medicines fallback wiped frequency.
+                ->groupBy(fn (Medicine $medicine) => $this->normalizeMedicineName($medicine->brand_name))
+                ->map(fn ($rows) => $this->preferCatalogueRow($rows));
 
             $usageMatches = $usages
                 ->map(function (MedicineUsage $usage) use ($needle, $practiceType, $catalogByBrand): ?array {
@@ -179,10 +194,17 @@ class MedicineService
                         'medicine_id' => $usage->medicine_id,
                         'brand_name' => mb_strtoupper($usage->medicine_name),
                         'label' => mb_strtoupper($usage->medicine_name),
-                        'generic_name' => $usage->generic_name,
-                        'dose' => $usage->last_dose,
-                        'frequency' => $usage->last_frequency,
-                        'duration' => $usage->last_duration,
+                        'generic_name' => $usage->generic_name ?? $catalog?->generic_name,
+                        'class_hint' => $catalog?->indications,
+                        // Layer 1 then layer 2, field by field: the doctor's
+                        // saved entry wins where he set something, and the
+                        // catalogue fills the cells he left alone. Resolving
+                        // per field rather than per row means saving a dose
+                        // does not wipe the frequency he never touched.
+                        'dose' => $usage->last_dose ?? $catalog?->default_strength,
+                        'frequency' => $usage->last_frequency ?? $catalog?->default_frequency,
+                        'duration' => $usage->last_duration ?? $catalog?->default_duration,
+                        'timing' => $usage->last_timing ?? $catalog?->default_timing,
                         // The doctor's own saved entries stay ahead of the
                         // catalogue on an equal text match — they chose these.
                         // That is their curation showing through, not the app
@@ -196,8 +218,20 @@ class MedicineService
 
         return $catalogMatches
             ->concat($usageMatches)
+            ->groupBy(fn (array $row) => $this->normalizeMedicineName($row['brand_name']))
+            // One row per brand, and where the doctor has saved his own line
+            // for it, that is the row. Among catalogue SKUs, prefer the one
+            // that actually carries frequency / duration / timing — otherwise
+            // NAPA drops (no defaults) could beat the tablet line and leave
+            // the pad empty after a pick.
+            ->map(function ($rows) {
+                $preferred = $rows->firstWhere('source', 'usage')
+                    ?? $rows->sortByDesc(fn (array $row): int => $this->searchRowCompleteness($row))->first();
+
+                return [...$preferred, 'rank' => (int) $rows->max('rank')];
+            })
+            ->values()
             ->sortByDesc('rank')
-            ->unique(fn (array $row) => $this->normalizeMedicineName($row['brand_name']))
             ->take(self::MAX_RESULTS)
             ->values()
             ->map(fn (array $row) => [
@@ -206,11 +240,121 @@ class MedicineService
                 'brand_name' => $row['brand_name'],
                 'label' => $row['label'],
                 'generic_name' => $row['generic_name'],
+                'class_hint' => $row['class_hint'] ?? null,
                 'dose' => $row['dose'],
                 'frequency' => $row['frequency'],
                 'duration' => $row['duration'],
+                'timing' => $row['timing'] ?? null,
                 'source' => $row['source'],
             ]);
+    }
+
+    /**
+     * Every strength a brand actually ships in, ordered by tier.
+     *
+     * The catalogue holds one row per brand + strength + form and the pickers
+     * dedupe to one row per brand, so without this the only reachable dose is
+     * whichever SKU won the search. It is the single source for both dose
+     * pickers: the Filament repeater (through
+     * `VisitNotesFormSchema::doseOptionsForBrand()`) and the desktop Rx desk
+     * (through `GET /api/medicines/doses`). A brand with no catalogue row —
+     * one the doctor typed himself — returns an empty list, which both
+     * surfaces render as "type it yourself" rather than as a guess.
+     *
+     * The label carries the form because 500 mg tablet and 500 mg suppository
+     * are not interchangeable; the value stays the bare strength, which is
+     * what prints.
+     *
+     * @return list<array{value: string, label: string}>
+     */
+    public function doseOptionsForBrand(?string $brandName): array
+    {
+        $brand = $this->normalizeMedicineName((string) $brandName);
+
+        if ($brand === '') {
+            return [];
+        }
+
+        return Medicine::query()
+            ->where('brand_name', $brand)
+            ->whereNotNull('default_strength')
+            ->orderBy('priority')
+            ->orderBy('default_strength')
+            ->pluck('form', 'default_strength')
+            ->map(fn (?string $form, string $strength): array => [
+                'value' => $strength,
+                'label' => filled($form) ? $strength.' '.$form : $strength,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
+     * The brand's usual frequency / duration / timing — from the catalogue
+     * SKU that actually has them, not from whichever form happened to load
+     * last (drops and injections often have none).
+     *
+     * @return array{dose: ?string, frequency: ?string, duration: ?string, timing: ?string}
+     */
+    public function brandDosingDefaults(?string $brandName): array
+    {
+        $empty = ['dose' => null, 'frequency' => null, 'duration' => null, 'timing' => null];
+        $brand = $this->normalizeMedicineName((string) $brandName);
+
+        if ($brand === '') {
+            return $empty;
+        }
+
+        $row = $this->preferCatalogueRow(
+            Medicine::query()->where('brand_name', $brand)->orderBy('priority')->get()
+        );
+
+        if (! $row) {
+            return $empty;
+        }
+
+        return [
+            'dose' => $row->default_strength,
+            'frequency' => $row->default_frequency,
+            'duration' => $row->default_duration,
+            'timing' => $row->default_timing,
+        ];
+    }
+
+    /**
+     * @param  \Illuminate\Support\Collection<int, Medicine>  $rows
+     */
+    private function preferCatalogueRow($rows): ?Medicine
+    {
+        if ($rows->isEmpty()) {
+            return null;
+        }
+
+        return $rows
+            ->sortBy([
+                fn (Medicine $medicine): int => -$this->catalogueCompleteness($medicine),
+                fn (Medicine $medicine): int => (int) $medicine->priority,
+            ])
+            ->first();
+    }
+
+    private function catalogueCompleteness(Medicine $medicine): int
+    {
+        return (int) filled($medicine->default_strength)
+            + (int) filled($medicine->default_frequency)
+            + (int) filled($medicine->default_duration)
+            + (int) filled($medicine->default_timing);
+    }
+
+    /**
+     * @param  array{dose?: ?string, frequency?: ?string, duration?: ?string, timing?: ?string}  $row
+     */
+    private function searchRowCompleteness(array $row): int
+    {
+        return (int) filled($row['dose'] ?? null)
+            + (int) filled($row['frequency'] ?? null)
+            + (int) filled($row['duration'] ?? null)
+            + (int) filled($row['timing'] ?? null);
     }
 
     /**
@@ -249,7 +393,7 @@ class MedicineService
      * learning counters and no longer mean anything. The columns are still on
      * the table, unused, so the data is not thrown away.
      *
-     * @param  array{medicine_name: string, generic_name?: ?string, dose?: ?string, frequency?: ?string, duration?: ?string}  $item
+     * @param  array{medicine_name: string, generic_name?: ?string, dose?: ?string, frequency?: ?string, duration?: ?string, timing?: ?string}  $item
      */
     public function saveDoctorMedicine(User $doctor, array $item): MedicineUsage
     {
@@ -268,6 +412,9 @@ class MedicineService
         $usage->last_dose = filled($item['dose'] ?? null) ? trim((string) $item['dose']) : $usage->last_dose;
         $usage->last_frequency = filled($item['frequency'] ?? null) ? trim((string) $item['frequency']) : $usage->last_frequency;
         $usage->last_duration = filled($item['duration'] ?? null) ? trim((string) $item['duration']) : $usage->last_duration;
+        $usage->last_timing = PrescriptionTiming::normalize(
+            is_string($item['timing'] ?? null) ? $item['timing'] : null
+        ) ?? $usage->last_timing;
         $usage->save();
 
         return $usage;

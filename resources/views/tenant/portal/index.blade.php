@@ -206,7 +206,7 @@
             <div class="portal-lookup">
                 <h1>{{ __('Patient Access Portal') }}</h1>
                 <p class="portal-lead">
-                    {{ __('Enter your mobile phone number to look up your appointments, queue tickets, and lab test status.') }}
+                    {{ __('Enter your mobile phone number to look up your appointments, queue tickets, prescriptions, and lab test status.') }}
                 </p>
 
                 <form class="portal-form" action="{{ tenant_web_url('/portal') }}" method="GET">
@@ -232,6 +232,38 @@
 
             @if(filled($phone) && empty($error))
                 <div class="portal-results">
+                    @if(($prescriptions ?? collect())->isNotEmpty())
+                        <h2>{{ __('Your prescriptions') }}</h2>
+                        <div class="portal-list" style="margin-bottom: 2.5rem;">
+                            @foreach($prescriptions as $prescription)
+                                @php
+                                    $rxBooking = $prescription->visitRecord?->booking;
+                                    $rxDate = $rxBooking?->booking_date ?? $prescription->created_at;
+                                @endphp
+                                <div class="portal-card">
+                                    <div>
+                                        <div class="portal-card-meta">
+                                            <span class="portal-chip">{{ __('Prescription') }}</span>
+                                            @if ($rxDate)
+                                                <span class="portal-date">{{ $rxDate->format('M d, Y') }}</span>
+                                            @endif
+                                        </div>
+                                        <h3>{{ $prescription->patient?->name ?? $rxBooking?->patient_name }}</h3>
+                                        <p class="portal-phone">
+                                            {{ trans_choice(':count medicine|:count medicines', $prescription->items->count(), ['count' => $prescription->items->count()]) }}
+                                        </p>
+                                    </div>
+                                    <a
+                                        class="btn btn-ghost"
+                                        href="{{ tenant_web_route('prescriptions.portal', ['prescription' => $prescription, 'phone' => $phone], absolute: false) }}"
+                                    >
+                                        {{ __('View prescription') }}
+                                    </a>
+                                </div>
+                            @endforeach
+                        </div>
+                    @endif
+
                     <h2>{{ __('Search Results for') }} “{{ $phone }}”</h2>
 
                     @if($bookings->isEmpty())

@@ -77,9 +77,9 @@ class Prescription extends Model
     public const SHARE_TOKEN_LENGTH = 10;
 
     /**
-     * Unguessable, expiring link to this one prescription's patient-facing
-     * view. Carries no login and reaches no other clinical data — see the
-     * 2026-08-07 decision in `decisions.md`.
+     * Unguessable, expiring SMS/WhatsApp link to this prescription's patient
+     * pad. Portal phone lookup is the durable backup when staff forget to send
+     * it — see decisions.md 2026-08-12.
      */
     public function shareUrl(): string
     {

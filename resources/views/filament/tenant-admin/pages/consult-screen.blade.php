@@ -12,7 +12,6 @@
         $hasSharedWarnings = collect($sharedClinicalWarnings)->flatten()->isNotEmpty();
         $canViewNotes = auth()->user()?->canViewVisitNotes() ?? false;
         $canWriteNotes = auth()->user()?->canRecordVisitNotes() ?? false;
-        $catchUpCount = $this->catchUpCount;
         $displayName = $patient?->name ?? $booking?->patient_name;
         $initials = $displayName
             ? \Illuminate\Support\Str::of($displayName)->explode(' ')->filter()->map(fn ($part) => mb_substr($part, 0, 1))->take(2)->implode('')
@@ -25,17 +24,6 @@
         radii) rather than assumed arbitrary Tailwind utilities.
     --}}
     <style>
-        .cs-banner {
-            display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
-            gap: 0.75rem; padding: 0.875rem 1.125rem; margin-bottom: 1.25rem;
-            border: 1px solid var(--warning-300); border-radius: 0.75rem;
-            background-color: var(--warning-50); color: var(--warning-900);
-        }
-        .dark .cs-banner { border-color: var(--warning-600); background-color: color-mix(in srgb, var(--warning-950) 60%, transparent); color: var(--warning-100); }
-        .cs-banner-text { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; font-weight: 500; }
-        .cs-banner-icon { width: 1.125rem; height: 1.125rem; flex-shrink: 0; color: var(--warning-600); }
-        .dark .cs-banner-icon { color: var(--warning-400); }
-
         .cs-empty { padding: 3.5rem 1.5rem; text-align: center; }
         .cs-empty-icon {
             width: 3rem; height: 3rem; margin: 0 auto 1rem; color: var(--gray-300);
@@ -60,6 +48,7 @@
             .cs-block--done { order: 4; }
             .cs-block--last-visit { order: 5; }
             .cs-block--past-visits { order: 6; }
+            .cs-block--shared-visits { order: 6; }
             .cs-block--lab { order: 7; }
         }
 
@@ -246,23 +235,15 @@
         }
         .dark .cs-visit-transcript { color: var(--gray-400); }
         .cs-visit-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.625rem; margin-top: 0.625rem; }
-    </style>
 
-    @if ($canViewNotes && $catchUpCount > 0)
-        <div class="cs-banner">
-            <span class="cs-banner-text">
-                <x-filament::icon icon="heroicon-o-clock" class="cs-banner-icon" />
-                {{ __(':count patients today without notes', ['count' => $catchUpCount]) }}
-            </span>
-            <x-filament::button
-                size="sm"
-                color="warning"
-                wire:click="mountAction('catchUpNotes')"
-            >
-                {{ __('Fill in now') }}
-            </x-filament::button>
-        </div>
-    @endif
+        /* Desktop Rx pad — full desk at ≥1024 while the patient is in chamber. */
+        .cs-rx-desk-shell { display: none; }
+        @media (min-width: 1024px) {
+            .cs-rx-desk-shell.is-active { display: block; }
+            .cs-layout.is-desk-active { display: none !important; }
+            .cs-sticky-actions.is-desk-active { display: none !important; }
+        }
+    </style>
 
     @if (! $liveSession || ! $booking)
         <x-filament::section>
@@ -273,6 +254,19 @@
                 </div>
                 <p class="cs-empty-body">
                     {{ __('When staff or you call the next patient, their record appears here automatically — no search needed.') }}
+                </p>
+                <p class="cs-empty-hint">
+                    {{ __('Seeing patients away from the chamber, or the line is down? Pack a bag on Visiting / camp first.') }}
+                    @php
+                        try {
+                            $visitingUrl = \App\Filament\TenantAdmin\Pages\VisitingDay::getUrl();
+                        } catch (\Throwable $e) {
+                            $visitingUrl = null;
+                        }
+                    @endphp
+                    @if ($visitingUrl)
+                        <a href="{{ $visitingUrl }}" style="font-weight: 600; text-decoration: underline;">{{ __('Visiting / camp') }}</a>
+                    @endif
                 </p>
                 @if (auth()->user()?->canOperateQueueControls())
                     <p class="cs-empty-hint">
@@ -286,7 +280,29 @@
             </div>
         </x-filament::section>
     @else
-        <div class="cs-layout">
+        @php
+            $showRxDesk = $canWriteNotes && $booking->status === 'in_chamber';
+        @endphp
+
+        @if ($showRxDesk)
+            {{-- The desk's own sticky bar already carries Complete visit, and at
+                 this width the page header shows the same action — two Complete
+                 visit buttons on one screen. The header is the one that goes:
+                 the desk bar sits with Preview / Save & print / Save only, which
+                 is the order the doctor works in. Same reasoning as the phone
+                 rule above, which hides the header in favour of the thumb strip. --}}
+            <style>
+                @media (min-width: 1024px) {
+                    .fi-header-actions-ctn { display: none; }
+                }
+            </style>
+
+            <div class="cs-rx-desk-shell is-active">
+                @include('filament.tenant-admin.components.rx-desk')
+            </div>
+        @endif
+
+        <div class="cs-layout {{ $showRxDesk ? 'is-desk-active' : '' }}">
             <div class="cs-layout__side">
                 {{-- Patient header --}}
                 <div class="cs-block--header">
@@ -554,6 +570,59 @@
                                                     @if ($sharedVisit->doctorName)
                                                         <span class="cs-visit-doctor">{{ $sharedVisit->doctorName }}</span>
                                                     @endif
+                                                </div>
+                                                <span class="cs-status-dot external">{{ __('From another ChamberQ clinic') }}</span>
+                                            </div>
+                                            @if ($hasNotes && $sharedVisit->diagnosisLabel())
+                                                <div class="cs-field" style="margin-top:0.5rem;">
+                                                    <div class="cs-field-label">{{ __('Diagnosis') }}</div>
+                                                    <div class="cs-diagnosis">{{ $sharedVisit->diagnosisLabel() }}</div>
+                                                </div>
+                                            @endif
+                                            @if (filled($visitRecord?->clinical_notes))
+                                                <div class="cs-field" style="margin-top:0.5rem;">
+                                                    <div class="cs-field-label">{{ __('Clinical notes') }}</div>
+                                                    <div class="cs-field-value">{{ $visitRecord->clinical_notes }}</div>
+                                                </div>
+                                            @endif
+                                            @if (filled($visitRecord?->chief_complaint))
+                                                <div class="cs-field" style="margin-top:0.5rem;">
+                                                    <div class="cs-field-label">{{ __('Chief complaint') }}</div>
+                                                    <div class="cs-field-value">{{ $visitRecord->chief_complaint }}</div>
+                                                </div>
+                                            @endif
+                                            @if (filled($visitRecord?->advice))
+                                                <div class="cs-field" style="margin-top:0.5rem;">
+                                                    <div class="cs-field-label">{{ __('Advice') }}</div>
+                                                    <div class="cs-field-value">{{ $visitRecord->advice }}</div>
+                                                </div>
+                                            @endif
+                                            @if ($visitRecord?->vitalsSummary())
+                                                <div class="cs-field" style="margin-top:0.5rem;">
+                                                    <div class="cs-field-label">{{ __('Vitals') }}</div>
+                                                    <div class="cs-field-value">{{ $visitRecord->vitalsSummary() }}</div>
+                                                </div>
+                                            @endif
+                                            @if ($sharedVisit->medicines !== [])
+                                                <div class="cs-shared-meds">
+                                                    @foreach ($sharedVisit->medicines as $med)
+                                                        <div>
+                                                            <strong>{{ $med['brand'] }}</strong>
+                                                            @if (filled($med['dose'])) — {{ $med['dose'] }} @endif
+                                                            @if (filled($med['frequency'])) · {{ $med['frequency'] }} @endif
+                                                            @if (filled($med['duration'])) · {{ $med['duration'] }} @endif
+                                                        </div>
+                                                    @endforeach
+                                                </div>
+                                            @elseif (! $hasNotes)
+                                                <p class="cs-muted" style="margin-top:0.5rem;">{{ __('No notes recorded') }}</p>
+                                            @endif
+                                        </div>
+                                    @endforeach
+                                </div>
+                            </x-filament::section>
+                        </div>
+                    @endif
                 @endif
             </div>
 
@@ -654,7 +723,7 @@
         </div>
 
         @if (auth()->user()?->canOperateQueueControls())
-            <div class="cs-sticky-actions">
+            <div class="cs-sticky-actions cq-freeze-queue {{ $showRxDesk ? 'is-desk-active' : '' }}">
                 @if ($booking->status === 'called')
                     <x-filament::button class="cs-sticky-actions__btn" color="success" wire:click="mountAction('patientArrived')">
                         {{ __('Patient arrived') }}

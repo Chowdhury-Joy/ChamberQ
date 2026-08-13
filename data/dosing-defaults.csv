@@ -1,0 +1,225 @@
+## ChamberQ starter dosing defaults
+## ------------------------------------------------------------------------
+## No drug database anywhere carries "how to prescribe this". BDDrugBank is a
+## product list (brand, strength, form, manufacturer); even licensed clinical
+## databases such as MIMS leave the dose to the prescriber, which is why the
+## mature systems built on them ship a per-doctor "save as my default" button
+## instead of an imported dosing table. This file is the one place a starting
+## point is written down, so the pad is useful on the very first patient
+## rather than after a week of teaching it.
+##
+## WHAT THESE ARE
+## A common adult outpatient starting pattern per generic -- the pattern, not
+## the dose. Nothing here is weight-based, and the strength still comes from
+## the catalogue. Paediatric, renal, hepatic and pregnancy adjustments are out
+## of scope: the doctor is the one who knows the patient.
+##
+## WHY THIS IS SAFE TO SHIP ON
+##  - It only pre-fills a row the doctor is already writing, and only cells he
+##    has left empty. Every cell stays editable and clears in one keystroke.
+##  - The doctor's own saved default always wins over this file.
+##  - It replaces a single hardcoded '1+1+1' / '5 days' that was applied to
+##    every drug alike -- a PPI is 1+0+0 before food, an antihistamine 0+0+1 at
+##    night. Anything class-appropriate is strictly safer than that literal.
+##  - Only oral forms (tablet, capsule, syrup, sachet) are touched, and a
+##    combination product never inherits a single-ingredient default.
+##
+## HOW TO EDIT
+##   Change any value and re-run  php artisan dosing-defaults:load
+##   To stop a drug being pre-filled at all, put  hold  in the `hold` column;
+##   that field then stays blank in the pad. Blank is honest -- the doctor
+##   fills it himself.
+##
+## ALLOWED VALUES (anything else is rejected by the loader, not stored)
+##   default_frequency  1+0+0 | 0+1+0 | 0+0+1 | 1+0+1 | 1+1+1 | 1/2+0+1/2 | SOS
+##   default_duration   3 days | 5 days | 7 days | 10 days | 14 days | 1 month | Continue
+##   default_timing     after_food | before_food | empty_stomach | at_night | with_food
+##
+## `Continue` means a long-term medicine with no stop date on the pad.
+## Blank in any column = no default; the doctor fills that cell himself.
+generic_name,default_frequency,default_duration,default_timing,hold,note
+# --- Acid / stomach -------------------------------------------------------
+Omeprazole,1+0+0,1 month,before_food,,PPI: once daily before breakfast
+Esomeprazole,1+0+0,1 month,before_food,,
+Pantoprazole,1+0+0,1 month,before_food,,
+Rabeprazole,1+0+0,1 month,before_food,,
+Lansoprazole,1+0+0,1 month,before_food,,
+Dexlansoprazole,1+0+0,1 month,before_food,,
+Famotidine,1+0+1,14 days,before_food,,H2 blocker
+Sucralfate,1+1+1,14 days,before_food,,Taken on an empty stomach before meals
+Rebamipide,1+1+1,14 days,after_food,,
+Domperidone,1+1+1,5 days,before_food,,Prokinetic: 15-30 min before meals
+Itopride,1+1+1,14 days,before_food,,
+Metoclopramide,1+1+1,3 days,before_food,,
+Ondansetron,1+1+1,3 days,,,
+Hyoscine butylbromide,SOS,,,,Antispasmodic as needed for colic
+Drotaverine,1+1+1,3 days,after_food,,
+Mebeverine,1+0+1,14 days,before_food,,IBS: 20 min before meals
+Trimebutine,1+1+1,14 days,before_food,,
+Ursodeoxycholic acid,1+0+1,1 month,after_food,,
+Lactulose,0+0+1,7 days,at_night,,
+Ispaghula husk,0+0+1,1 month,at_night,,With a full glass of water
+Bisacodyl,0+0+1,3 days,at_night,,
+# --- Pain / fever / inflammation -----------------------------------------
+Paracetamol,1+1+1,3 days,after_food,,
+Ibuprofen,1+1+1,5 days,after_food,,NSAID: always after food
+Naproxen,1+0+1,5 days,after_food,,
+Diclofenac,1+0+1,5 days,after_food,,
+Aceclofenac,1+0+1,5 days,after_food,,
+Etoricoxib,1+0+0,5 days,after_food,,
+Indomethacin,1+0+1,5 days,after_food,,
+Mefenamic acid,1+1+1,3 days,after_food,,
+Tramadol,1+0+1,3 days,after_food,,
+Tizanidine,0+0+1,5 days,at_night,,Muscle relaxant: sedating
+Eperisone,1+1+1,7 days,after_food,,
+Baclofen,1+1+1,7 days,after_food,,
+Colchicine,1+0+1,3 days,after_food,,Acute gout
+Allopurinol,1+0+0,Continue,after_food,,Long-term urate lowering
+Febuxostat,1+0+0,Continue,after_food,,
+# --- Allergy / skin -------------------------------------------------------
+Cetirizine,0+0+1,7 days,at_night,,Sedating: night dose
+Levocetirizine,0+0+1,7 days,at_night,,
+Fexofenadine,1+0+0,7 days,,,Non-sedating
+Loratadine,1+0+0,7 days,,,
+Desloratadine,0+0+1,7 days,at_night,,
+Rupatadine,0+0+1,7 days,at_night,,
+Bilastine,1+0+0,7 days,empty_stomach,,One hour before or two hours after food
+Ebastine,0+0+1,7 days,at_night,,
+Ketotifen,0+0+1,1 month,at_night,,
+Hydroxyzine,0+0+1,7 days,at_night,,
+Chlorpheniramine,0+0+1,5 days,at_night,,
+Montelukast,0+0+1,1 month,at_night,,
+Prednisolone,1+0+0,5 days,after_food,,Short course: morning dose
+Deflazacort,1+0+0,5 days,after_food,,
+Isotretinoin,1+0+0,1 month,after_food,,Absorption needs food
+# --- Antibiotics ----------------------------------------------------------
+Amoxicillin,1+1+1,7 days,after_food,,
+Amoxicillin + Clavulanic acid,1+0+1,7 days,after_food,,
+Ampicillin,1+1+1,7 days,empty_stomach,,
+Flucloxacillin,1+1+1,7 days,empty_stomach,,
+Cephradine,1+1+1,7 days,after_food,,
+Cephalexin,1+1+1,7 days,after_food,,
+Cefuroxime,1+0+1,7 days,after_food,,Absorption improves with food
+Cefixime,1+0+1,7 days,after_food,,
+Cefpodoxime,1+0+1,7 days,after_food,,
+Cefaclor,1+1+1,7 days,after_food,,
+Azithromycin,1+0+0,3 days,empty_stomach,,
+Clarithromycin,1+0+1,7 days,after_food,,
+Erythromycin,1+1+1,7 days,before_food,,
+Ciprofloxacin,1+0+1,7 days,after_food,,Avoid with milk or antacid
+Levofloxacin,1+0+0,7 days,after_food,,
+Moxifloxacin,1+0+0,5 days,after_food,,
+Ofloxacin,1+0+1,5 days,after_food,,
+Doxycycline,1+0+1,7 days,after_food,,Sit upright with plenty of water
+Metronidazole,1+1+1,7 days,after_food,,No alcohol
+Tinidazole,1+0+1,3 days,after_food,,
+Nitrofurantoin,1+0+1,5 days,after_food,,
+Sulphamethoxazole + Trimethoprim,1+0+1,5 days,after_food,,Cotrimoxazole
+Clindamycin,1+1+1,7 days,after_food,,
+Linezolid,1+0+1,7 days,after_food,,
+# --- Antifungal / antiviral / worms ---------------------------------------
+Fluconazole,1+0+0,7 days,,,
+Itraconazole,1+0+1,14 days,after_food,,Needs an acidic stomach and food
+Terbinafine,1+0+0,14 days,after_food,,
+Griseofulvin,1+0+0,1 month,after_food,,Fatty food improves absorption
+Ketoconazole,1+0+0,14 days,after_food,,
+Valacyclovir,1+1+1,5 days,,,
+Albendazole,1+0+0,3 days,after_food,,
+Ivermectin,1+0+0,3 days,empty_stomach,,
+# --- Diabetes -------------------------------------------------------------
+Metformin,1+0+1,Continue,after_food,,After food to limit GI upset
+Glimepiride,1+0+0,Continue,before_food,,Before breakfast
+Gliclazide,1+0+0,Continue,before_food,,
+Glibenclamide,1+0+0,Continue,before_food,,
+Sitagliptin,1+0+0,Continue,,,
+Vildagliptin,1+0+1,Continue,,,
+Linagliptin,1+0+0,Continue,,,
+Empagliflozin,1+0+0,Continue,,,
+Dapagliflozin,1+0+0,Continue,,,
+Pioglitazone,1+0+0,Continue,,,
+# --- Blood pressure / heart -----------------------------------------------
+Amlodipine,1+0+0,Continue,,,
+Nifedipine,1+0+0,Continue,after_food,,
+Losartan,1+0+0,Continue,,,
+Olmesartan,1+0+0,Continue,,,
+Telmisartan,1+0+0,Continue,,,
+Valsartan,1+0+0,Continue,,,
+Irbesartan,1+0+0,Continue,,,
+Ramipril,1+0+0,Continue,,,
+Enalapril,1+0+1,Continue,,,
+Lisinopril,1+0+0,Continue,,,
+Bisoprolol,1+0+0,Continue,,,
+Metoprolol,1+0+1,Continue,after_food,,
+Atenolol,1+0+0,Continue,,,
+Carvedilol,1+0+1,Continue,after_food,,
+Nebivolol,1+0+0,Continue,,,
+Propranolol,1+0+1,Continue,after_food,,
+Hydrochlorothiazide,1+0+0,Continue,,,Morning dose: avoid night diuresis
+Indapamide,1+0+0,Continue,,,
+Furosemide,1+0+0,Continue,,,Morning dose
+Spironolactone,1+0+0,Continue,after_food,,
+Isosorbide mononitrate,1+0+0,Continue,,,
+Ivabradine,1+0+1,Continue,after_food,,
+Digoxin,1+0+0,Continue,,,
+# --- Lipids / clotting ----------------------------------------------------
+Atorvastatin,0+0+1,Continue,at_night,,
+Rosuvastatin,0+0+1,Continue,at_night,,
+Simvastatin,0+0+1,Continue,at_night,,
+Fenofibrate,1+0+0,Continue,after_food,,
+Aspirin,0+0+1,Continue,after_food,,Low-dose antiplatelet
+Clopidogrel,1+0+0,Continue,after_food,,
+Rivaroxaban,1+0+0,Continue,after_food,,
+Warfarin,0+0+1,Continue,at_night,,Dose follows INR: review before signing
+# --- Chest / airway -------------------------------------------------------
+Doxofylline,1+0+1,14 days,after_food,,
+Theophylline,1+0+1,14 days,after_food,,
+Ambroxol,1+1+1,5 days,after_food,,
+Bromhexine,1+1+1,5 days,after_food,,
+Guaifenesin,1+1+1,5 days,after_food,,
+Dextromethorphan,1+1+1,5 days,,,
+Levodropropizine,1+1+1,5 days,,,
+Acetylcysteine,1+0+1,7 days,after_food,,
+# --- Thyroid / hormones ---------------------------------------------------
+Levothyroxine,1+0+0,Continue,empty_stomach,,30 min before breakfast
+Carbimazole,1+0+1,Continue,after_food,,
+# --- Mind / nerves --------------------------------------------------------
+Amitriptyline,0+0+1,1 month,at_night,,
+Nortriptyline,0+0+1,1 month,at_night,,
+Sertraline,1+0+0,1 month,after_food,,
+Escitalopram,1+0+0,1 month,after_food,,
+Fluoxetine,1+0+0,1 month,after_food,,
+Duloxetine,1+0+0,1 month,after_food,,
+Mirtazapine,0+0+1,1 month,at_night,,
+Alprazolam,0+0+1,7 days,at_night,,Short course only
+Clonazepam,0+0+1,7 days,at_night,,
+Bromazepam,0+0+1,7 days,at_night,,
+Gabapentin,0+0+1,1 month,at_night,,
+Pregabalin,0+0+1,1 month,at_night,,
+Olanzapine,0+0+1,1 month,at_night,,
+Quetiapine,0+0+1,1 month,at_night,,
+Risperidone,0+0+1,1 month,at_night,,
+Betahistine,1+1+1,14 days,after_food,,
+Flunarizine,0+0+1,1 month,at_night,,
+Cinnarizine,1+1+1,7 days,after_food,,
+Levetiracetam,1+0+1,Continue,,,
+Sodium valproate,1+0+1,Continue,after_food,,
+Carbamazepine,1+0+1,Continue,after_food,,
+# --- Urology --------------------------------------------------------------
+Tamsulosin,0+0+1,Continue,after_food,,Take after the same meal each day
+Finasteride,1+0+0,Continue,,,
+Dutasteride,1+0+0,Continue,,,
+Solifenacin,1+0+0,1 month,,,
+Sildenafil,SOS,,empty_stomach,,One hour before, not with a heavy meal
+Potassium citrate,1+1+1,1 month,after_food,,
+# --- Women's health -------------------------------------------------------
+Tranexamic acid,1+1+1,3 days,after_food,,
+Norethisterone,1+0+1,10 days,after_food,,
+Progesterone,0+0+1,14 days,at_night,,
+# --- Vitamins / supplements -----------------------------------------------
+Ferrous fumarate + Folic acid,1+0+0,1 month,after_food,,Iron: vitamin C helps absorption
+Folic acid,1+0+0,1 month,after_food,,
+Calcium + Vitamin D3,1+0+1,1 month,after_food,,
+Vitamin B complex,1+0+1,1 month,after_food,,
+Vitamin C,1+0+0,1 month,after_food,,
+Zinc,0+0+1,14 days,after_food,,
+Multivitamin,1+0+0,1 month,after_food,,

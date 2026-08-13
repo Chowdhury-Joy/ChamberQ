@@ -1,0 +1,222 @@
+ingredient_a,ingredient_b,severity,effect,action,source
+aceclofenac,citalopram,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+aceclofenac,escitalopram,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+aceclofenac,fluoxetine,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+aceclofenac,lithium,serious,Lithium levels rise; risk of lithium toxicity,"Avoid, or monitor lithium levels closely",Reduced renal lithium clearance
+aceclofenac,methotrexate,serious,Methotrexate excretion reduced; risk of marrow suppression,"Avoid, especially at higher methotrexate doses",Reduced renal clearance of methotrexate
+aceclofenac,paroxetine,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+aceclofenac,sertraline,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+aceclofenac,warfarin,avoid,Greatly increased risk of gastrointestinal and other bleeding,Avoid. Use paracetamol for pain instead,Antiplatelet/anticoagulant additive bleeding risk
+allopurinol,azathioprine,avoid,Severe marrow suppression,Avoid; if unavoidable the thiopurine dose must be cut to about a quarter,Xanthine oxidase inhibition blocks thiopurine breakdown
+allopurinol,mercaptopurine,avoid,Severe marrow suppression,Avoid; if unavoidable the thiopurine dose must be cut to about a quarter,Xanthine oxidase inhibition blocks thiopurine breakdown
+amiloride,enalapril,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+amiloride,irbesartan,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+amiloride,lisinopril,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+amiloride,losartan,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+amiloride,olmesartan,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+amiloride,perindopril,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+amiloride,ramipril,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+amiloride,spironolactone,avoid,Risk of dangerously high potassium,Avoid the combination,Additive potassium retention
+amiloride,telmisartan,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+amiloride,valsartan,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+aminophylline,ciprofloxacin,serious,Theophylline levels rise; risk of seizures and arrhythmia,Reduce theophylline dose or choose another antibiotic,CYP1A2 inhibition
+aminophylline,clarithromycin,serious,Theophylline levels rise; risk of seizures and arrhythmia,Reduce theophylline dose or choose another antibiotic,CYP1A2 inhibition
+aminophylline,erythromycin,serious,Theophylline levels rise; risk of seizures and arrhythmia,Reduce theophylline dose or choose another antibiotic,CYP1A2 inhibition
+amiodarone,digoxin,serious,Digoxin levels rise; risk of digoxin toxicity,Halve the digoxin dose and monitor,Reduced digoxin clearance / P-glycoprotein inhibition
+amiodarone,warfarin,serious,Anticoagulant effect increased for weeks after starting,Reduce warfarin dose and monitor INR,CYP2C9 inhibition
+aspirin,citalopram,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+aspirin,escitalopram,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+aspirin,fluoxetine,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+aspirin,methotrexate,serious,Methotrexate excretion reduced; risk of marrow suppression,"Avoid, especially at higher methotrexate doses",Reduced renal clearance of methotrexate
+aspirin,paroxetine,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+aspirin,sertraline,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+aspirin,warfarin,avoid,Greatly increased risk of gastrointestinal and other bleeding,Avoid. Use paracetamol for pain instead,Antiplatelet/anticoagulant additive bleeding risk
+atenolol,diltiazem,serious,"Risk of severe bradycardia, heart block and heart failure",Avoid the combination; amlodipine is safer with a beta blocker,Additive negative chronotropic and inotropic effect
+atenolol,verapamil,serious,"Risk of severe bradycardia, heart block and heart failure",Avoid the combination; amlodipine is safer with a beta blocker,Additive negative chronotropic and inotropic effect
+atorvastatin,clarithromycin,serious,Statin levels rise sharply; risk of muscle damage and rhabdomyolysis,Pause the statin for the antibiotic/antifungal course,CYP3A4 inhibition
+atorvastatin,erythromycin,serious,Statin levels rise sharply; risk of muscle damage and rhabdomyolysis,Pause the statin for the antibiotic/antifungal course,CYP3A4 inhibition
+atorvastatin,fluconazole,serious,Statin levels rise sharply; risk of muscle damage and rhabdomyolysis,Pause the statin for the antibiotic/antifungal course,CYP3A4 inhibition
+atorvastatin,itraconazole,serious,Statin levels rise sharply; risk of muscle damage and rhabdomyolysis,Pause the statin for the antibiotic/antifungal course,CYP3A4 inhibition
+atorvastatin,ketoconazole,serious,Statin levels rise sharply; risk of muscle damage and rhabdomyolysis,Pause the statin for the antibiotic/antifungal course,CYP3A4 inhibition
+azithromycin,warfarin,serious,Anticoagulant effect increased; INR can rise sharply,Check INR within a few days if co-prescribing is unavoidable,CYP-mediated inhibition of warfarin metabolism
+bisoprolol,diltiazem,serious,"Risk of severe bradycardia, heart block and heart failure",Avoid the combination; amlodipine is safer with a beta blocker,Additive negative chronotropic and inotropic effect
+bisoprolol,verapamil,serious,"Risk of severe bradycardia, heart block and heart failure",Avoid the combination; amlodipine is safer with a beta blocker,Additive negative chronotropic and inotropic effect
+calcium,levothyroxine,serious,Levothyroxine absorption reduced,Separate the doses by at least four hours,Chelation in the gut
+calcium carbonate,levothyroxine,serious,Levothyroxine absorption reduced,Separate the doses by at least four hours,Chelation in the gut
+carbamazepine,clarithromycin,serious,Anticonvulsant levels rise; risk of toxicity,"Monitor for drowsiness, ataxia and nausea",CYP3A4 inhibition
+carbamazepine,erythromycin,serious,Anticonvulsant levels rise; risk of toxicity,"Monitor for drowsiness, ataxia and nausea",CYP3A4 inhibition
+carbamazepine,fluconazole,serious,Anticonvulsant levels rise; risk of toxicity,"Monitor for drowsiness, ataxia and nausea",CYP3A4 inhibition
+carbamazepine,itraconazole,serious,Anticonvulsant levels rise; risk of toxicity,"Monitor for drowsiness, ataxia and nausea",CYP3A4 inhibition
+carbamazepine,ketoconazole,serious,Anticonvulsant levels rise; risk of toxicity,"Monitor for drowsiness, ataxia and nausea",CYP3A4 inhibition
+carbamazepine,tramadol,serious,Tramadol effect reduced and seizure risk increased,Choose a different analgesic,Enzyme induction plus additive seizure risk
+carvedilol,diltiazem,serious,"Risk of severe bradycardia, heart block and heart failure",Avoid the combination; amlodipine is safer with a beta blocker,Additive negative chronotropic and inotropic effect
+carvedilol,verapamil,serious,"Risk of severe bradycardia, heart block and heart failure",Avoid the combination; amlodipine is safer with a beta blocker,Additive negative chronotropic and inotropic effect
+ciprofloxacin,theophylline,serious,Theophylline levels rise; risk of seizures and arrhythmia,Reduce theophylline dose or choose another antibiotic,CYP1A2 inhibition
+ciprofloxacin,warfarin,serious,Anticoagulant effect increased; INR can rise sharply,Check INR within a few days if co-prescribing is unavoidable,CYP-mediated inhibition of warfarin metabolism
+citalopram,clopidogrel,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+citalopram,diclofenac,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+citalopram,etoricoxib,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+citalopram,ibuprofen,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+citalopram,ketorolac,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+citalopram,linezolid,serious,Risk of serotonin syndrome,"Avoid, or counsel on agitation, tremor and fever",Additive serotonergic effect
+citalopram,mefenamic acid,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+citalopram,naproxen,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+citalopram,sumatriptan,serious,Risk of serotonin syndrome,"Avoid, or counsel on agitation, tremor and fever",Additive serotonergic effect
+citalopram,tramadol,serious,Risk of serotonin syndrome,"Avoid, or counsel on agitation, tremor and fever",Additive serotonergic effect
+citalopram,warfarin,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+clarithromycin,digoxin,serious,Digoxin levels rise; risk of digoxin toxicity,Halve the digoxin dose and monitor,Reduced digoxin clearance / P-glycoprotein inhibition
+clarithromycin,phenytoin,serious,Anticonvulsant levels rise; risk of toxicity,"Monitor for drowsiness, ataxia and nausea",CYP3A4 inhibition
+clarithromycin,simvastatin,serious,Statin levels rise sharply; risk of muscle damage and rhabdomyolysis,Pause the statin for the antibiotic/antifungal course,CYP3A4 inhibition
+clarithromycin,theophylline,serious,Theophylline levels rise; risk of seizures and arrhythmia,Reduce theophylline dose or choose another antibiotic,CYP1A2 inhibition
+clarithromycin,warfarin,serious,Anticoagulant effect increased; INR can rise sharply,Check INR within a few days if co-prescribing is unavoidable,CYP-mediated inhibition of warfarin metabolism
+clopidogrel,escitalopram,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+clopidogrel,esomeprazole,serious,Antiplatelet effect of clopidogrel reduced,Prefer pantoprazole or an H2 blocker for gastric cover,CYP2C19 inhibition reduces clopidogrel activation
+clopidogrel,fluoxetine,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+clopidogrel,omeprazole,serious,Antiplatelet effect of clopidogrel reduced,Prefer pantoprazole or an H2 blocker for gastric cover,CYP2C19 inhibition reduces clopidogrel activation
+clopidogrel,paroxetine,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+clopidogrel,sertraline,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+co-trimoxazole,methotrexate,avoid,Severe marrow suppression; both are folate antagonists,Avoid the combination,Additive antifolate effect
+diclofenac,escitalopram,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+diclofenac,fluoxetine,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+diclofenac,lithium,serious,Lithium levels rise; risk of lithium toxicity,"Avoid, or monitor lithium levels closely",Reduced renal lithium clearance
+diclofenac,methotrexate,serious,Methotrexate excretion reduced; risk of marrow suppression,"Avoid, especially at higher methotrexate doses",Reduced renal clearance of methotrexate
+diclofenac,paroxetine,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+diclofenac,sertraline,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+diclofenac,warfarin,avoid,Greatly increased risk of gastrointestinal and other bleeding,Avoid. Use paracetamol for pain instead,Antiplatelet/anticoagulant additive bleeding risk
+digoxin,erythromycin,serious,Digoxin levels rise; risk of digoxin toxicity,Halve the digoxin dose and monitor,Reduced digoxin clearance / P-glycoprotein inhibition
+digoxin,furosemide,serious,Diuretic-induced low potassium increases digoxin toxicity,Monitor potassium,Hypokalaemia potentiates digoxin
+digoxin,hydrochlorothiazide,serious,Diuretic-induced low potassium increases digoxin toxicity,Monitor potassium,Hypokalaemia potentiates digoxin
+digoxin,indapamide,serious,Diuretic-induced low potassium increases digoxin toxicity,Monitor potassium,Hypokalaemia potentiates digoxin
+digoxin,itraconazole,serious,Digoxin levels rise; risk of digoxin toxicity,Halve the digoxin dose and monitor,Reduced digoxin clearance / P-glycoprotein inhibition
+digoxin,verapamil,serious,Digoxin levels rise; risk of digoxin toxicity,Halve the digoxin dose and monitor,Reduced digoxin clearance / P-glycoprotein inhibition
+diltiazem,metoprolol,serious,"Risk of severe bradycardia, heart block and heart failure",Avoid the combination; amlodipine is safer with a beta blocker,Additive negative chronotropic and inotropic effect
+diltiazem,propranolol,serious,"Risk of severe bradycardia, heart block and heart failure",Avoid the combination; amlodipine is safer with a beta blocker,Additive negative chronotropic and inotropic effect
+enalapril,eplerenone,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+enalapril,irbesartan,avoid,Dual blockade of the renin-angiotensin system without added benefit,"Use one or the other, not both",Combined RAS blockade increases renal failure and hyperkalaemia
+enalapril,lithium,serious,Lithium levels rise; risk of lithium toxicity,"Avoid, or monitor lithium levels closely",Reduced renal lithium clearance
+enalapril,losartan,avoid,Dual blockade of the renin-angiotensin system without added benefit,"Use one or the other, not both",Combined RAS blockade increases renal failure and hyperkalaemia
+enalapril,olmesartan,avoid,Dual blockade of the renin-angiotensin system without added benefit,"Use one or the other, not both",Combined RAS blockade increases renal failure and hyperkalaemia
+enalapril,potassium chloride,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+enalapril,spironolactone,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+enalapril,telmisartan,avoid,Dual blockade of the renin-angiotensin system without added benefit,"Use one or the other, not both",Combined RAS blockade increases renal failure and hyperkalaemia
+enalapril,valsartan,avoid,Dual blockade of the renin-angiotensin system without added benefit,"Use one or the other, not both",Combined RAS blockade increases renal failure and hyperkalaemia
+eplerenone,irbesartan,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+eplerenone,lisinopril,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+eplerenone,losartan,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+eplerenone,olmesartan,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+eplerenone,perindopril,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+eplerenone,ramipril,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+eplerenone,telmisartan,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+eplerenone,valsartan,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+erythromycin,phenytoin,serious,Anticonvulsant levels rise; risk of toxicity,"Monitor for drowsiness, ataxia and nausea",CYP3A4 inhibition
+erythromycin,simvastatin,serious,Statin levels rise sharply; risk of muscle damage and rhabdomyolysis,Pause the statin for the antibiotic/antifungal course,CYP3A4 inhibition
+erythromycin,theophylline,serious,Theophylline levels rise; risk of seizures and arrhythmia,Reduce theophylline dose or choose another antibiotic,CYP1A2 inhibition
+erythromycin,warfarin,serious,Anticoagulant effect increased; INR can rise sharply,Check INR within a few days if co-prescribing is unavoidable,CYP-mediated inhibition of warfarin metabolism
+escitalopram,etoricoxib,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+escitalopram,ibuprofen,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+escitalopram,ketorolac,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+escitalopram,linezolid,serious,Risk of serotonin syndrome,"Avoid, or counsel on agitation, tremor and fever",Additive serotonergic effect
+escitalopram,mefenamic acid,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+escitalopram,naproxen,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+escitalopram,sumatriptan,serious,Risk of serotonin syndrome,"Avoid, or counsel on agitation, tremor and fever",Additive serotonergic effect
+escitalopram,tramadol,serious,Risk of serotonin syndrome,"Avoid, or counsel on agitation, tremor and fever",Additive serotonergic effect
+escitalopram,warfarin,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+etoricoxib,fluoxetine,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+etoricoxib,lithium,serious,Lithium levels rise; risk of lithium toxicity,"Avoid, or monitor lithium levels closely",Reduced renal lithium clearance
+etoricoxib,methotrexate,serious,Methotrexate excretion reduced; risk of marrow suppression,"Avoid, especially at higher methotrexate doses",Reduced renal clearance of methotrexate
+etoricoxib,paroxetine,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+etoricoxib,sertraline,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+etoricoxib,warfarin,avoid,Greatly increased risk of gastrointestinal and other bleeding,Avoid. Use paracetamol for pain instead,Antiplatelet/anticoagulant additive bleeding risk
+ferrous fumarate,levothyroxine,serious,Levothyroxine absorption reduced,Separate the doses by at least four hours,Chelation in the gut
+ferrous sulfate,levothyroxine,serious,Levothyroxine absorption reduced,Separate the doses by at least four hours,Chelation in the gut
+fluconazole,phenytoin,serious,Anticonvulsant levels rise; risk of toxicity,"Monitor for drowsiness, ataxia and nausea",CYP3A4 inhibition
+fluconazole,simvastatin,serious,Statin levels rise sharply; risk of muscle damage and rhabdomyolysis,Pause the statin for the antibiotic/antifungal course,CYP3A4 inhibition
+fluconazole,warfarin,serious,Anticoagulant effect increased; INR can rise sharply,Check INR within a few days if co-prescribing is unavoidable,CYP-mediated inhibition of warfarin metabolism
+fluoxetine,ibuprofen,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+fluoxetine,ketorolac,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+fluoxetine,linezolid,serious,Risk of serotonin syndrome,"Avoid, or counsel on agitation, tremor and fever",Additive serotonergic effect
+fluoxetine,mefenamic acid,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+fluoxetine,naproxen,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+fluoxetine,sumatriptan,serious,Risk of serotonin syndrome,"Avoid, or counsel on agitation, tremor and fever",Additive serotonergic effect
+fluoxetine,tramadol,serious,Risk of serotonin syndrome,"Avoid, or counsel on agitation, tremor and fever",Additive serotonergic effect
+fluoxetine,warfarin,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+hydrochlorothiazide,lithium,serious,Lithium levels rise; risk of lithium toxicity,"Avoid, or monitor lithium levels closely",Reduced renal lithium clearance
+ibuprofen,lithium,serious,Lithium levels rise; risk of lithium toxicity,"Avoid, or monitor lithium levels closely",Reduced renal lithium clearance
+ibuprofen,methotrexate,serious,Methotrexate excretion reduced; risk of marrow suppression,"Avoid, especially at higher methotrexate doses",Reduced renal clearance of methotrexate
+ibuprofen,paroxetine,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+ibuprofen,sertraline,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+ibuprofen,warfarin,avoid,Greatly increased risk of gastrointestinal and other bleeding,Avoid. Use paracetamol for pain instead,Antiplatelet/anticoagulant additive bleeding risk
+indapamide,lithium,serious,Lithium levels rise; risk of lithium toxicity,"Avoid, or monitor lithium levels closely",Reduced renal lithium clearance
+irbesartan,lisinopril,avoid,Dual blockade of the renin-angiotensin system without added benefit,"Use one or the other, not both",Combined RAS blockade increases renal failure and hyperkalaemia
+irbesartan,lithium,serious,Lithium levels rise; risk of lithium toxicity,"Avoid, or monitor lithium levels closely",Reduced renal lithium clearance
+irbesartan,perindopril,avoid,Dual blockade of the renin-angiotensin system without added benefit,"Use one or the other, not both",Combined RAS blockade increases renal failure and hyperkalaemia
+irbesartan,potassium chloride,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+irbesartan,ramipril,avoid,Dual blockade of the renin-angiotensin system without added benefit,"Use one or the other, not both",Combined RAS blockade increases renal failure and hyperkalaemia
+irbesartan,spironolactone,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+iron,levothyroxine,serious,Levothyroxine absorption reduced,Separate the doses by at least four hours,Chelation in the gut
+itraconazole,phenytoin,serious,Anticonvulsant levels rise; risk of toxicity,"Monitor for drowsiness, ataxia and nausea",CYP3A4 inhibition
+itraconazole,simvastatin,serious,Statin levels rise sharply; risk of muscle damage and rhabdomyolysis,Pause the statin for the antibiotic/antifungal course,CYP3A4 inhibition
+ketoconazole,phenytoin,serious,Anticonvulsant levels rise; risk of toxicity,"Monitor for drowsiness, ataxia and nausea",CYP3A4 inhibition
+ketoconazole,simvastatin,serious,Statin levels rise sharply; risk of muscle damage and rhabdomyolysis,Pause the statin for the antibiotic/antifungal course,CYP3A4 inhibition
+ketorolac,lithium,serious,Lithium levels rise; risk of lithium toxicity,"Avoid, or monitor lithium levels closely",Reduced renal lithium clearance
+ketorolac,methotrexate,serious,Methotrexate excretion reduced; risk of marrow suppression,"Avoid, especially at higher methotrexate doses",Reduced renal clearance of methotrexate
+ketorolac,paroxetine,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+ketorolac,sertraline,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+ketorolac,warfarin,avoid,Greatly increased risk of gastrointestinal and other bleeding,Avoid. Use paracetamol for pain instead,Antiplatelet/anticoagulant additive bleeding risk
+linezolid,paroxetine,serious,Risk of serotonin syndrome,"Avoid, or counsel on agitation, tremor and fever",Additive serotonergic effect
+linezolid,sertraline,serious,Risk of serotonin syndrome,"Avoid, or counsel on agitation, tremor and fever",Additive serotonergic effect
+lisinopril,lithium,serious,Lithium levels rise; risk of lithium toxicity,"Avoid, or monitor lithium levels closely",Reduced renal lithium clearance
+lisinopril,losartan,avoid,Dual blockade of the renin-angiotensin system without added benefit,"Use one or the other, not both",Combined RAS blockade increases renal failure and hyperkalaemia
+lisinopril,olmesartan,avoid,Dual blockade of the renin-angiotensin system without added benefit,"Use one or the other, not both",Combined RAS blockade increases renal failure and hyperkalaemia
+lisinopril,potassium chloride,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+lisinopril,spironolactone,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+lisinopril,telmisartan,avoid,Dual blockade of the renin-angiotensin system without added benefit,"Use one or the other, not both",Combined RAS blockade increases renal failure and hyperkalaemia
+lisinopril,valsartan,avoid,Dual blockade of the renin-angiotensin system without added benefit,"Use one or the other, not both",Combined RAS blockade increases renal failure and hyperkalaemia
+lithium,losartan,serious,Lithium levels rise; risk of lithium toxicity,"Avoid, or monitor lithium levels closely",Reduced renal lithium clearance
+lithium,mefenamic acid,serious,Lithium levels rise; risk of lithium toxicity,"Avoid, or monitor lithium levels closely",Reduced renal lithium clearance
+lithium,naproxen,serious,Lithium levels rise; risk of lithium toxicity,"Avoid, or monitor lithium levels closely",Reduced renal lithium clearance
+lithium,olmesartan,serious,Lithium levels rise; risk of lithium toxicity,"Avoid, or monitor lithium levels closely",Reduced renal lithium clearance
+lithium,perindopril,serious,Lithium levels rise; risk of lithium toxicity,"Avoid, or monitor lithium levels closely",Reduced renal lithium clearance
+lithium,ramipril,serious,Lithium levels rise; risk of lithium toxicity,"Avoid, or monitor lithium levels closely",Reduced renal lithium clearance
+lithium,telmisartan,serious,Lithium levels rise; risk of lithium toxicity,"Avoid, or monitor lithium levels closely",Reduced renal lithium clearance
+lithium,valsartan,serious,Lithium levels rise; risk of lithium toxicity,"Avoid, or monitor lithium levels closely",Reduced renal lithium clearance
+losartan,perindopril,avoid,Dual blockade of the renin-angiotensin system without added benefit,"Use one or the other, not both",Combined RAS blockade increases renal failure and hyperkalaemia
+losartan,potassium chloride,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+losartan,ramipril,avoid,Dual blockade of the renin-angiotensin system without added benefit,"Use one or the other, not both",Combined RAS blockade increases renal failure and hyperkalaemia
+losartan,spironolactone,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+mefenamic acid,methotrexate,serious,Methotrexate excretion reduced; risk of marrow suppression,"Avoid, especially at higher methotrexate doses",Reduced renal clearance of methotrexate
+mefenamic acid,paroxetine,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+mefenamic acid,sertraline,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+mefenamic acid,warfarin,avoid,Greatly increased risk of gastrointestinal and other bleeding,Avoid. Use paracetamol for pain instead,Antiplatelet/anticoagulant additive bleeding risk
+methotrexate,naproxen,serious,Methotrexate excretion reduced; risk of marrow suppression,"Avoid, especially at higher methotrexate doses",Reduced renal clearance of methotrexate
+methotrexate,sulfamethoxazole,avoid,Severe marrow suppression; both are folate antagonists,Avoid the combination,Additive antifolate effect
+methotrexate,trimethoprim,avoid,Severe marrow suppression; both are folate antagonists,Avoid the combination,Additive antifolate effect
+metoprolol,verapamil,serious,"Risk of severe bradycardia, heart block and heart failure",Avoid the combination; amlodipine is safer with a beta blocker,Additive negative chronotropic and inotropic effect
+metronidazole,warfarin,serious,Anticoagulant effect increased; INR can rise sharply,Check INR within a few days if co-prescribing is unavoidable,CYP-mediated inhibition of warfarin metabolism
+naproxen,paroxetine,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+naproxen,sertraline,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+naproxen,warfarin,avoid,Greatly increased risk of gastrointestinal and other bleeding,Avoid. Use paracetamol for pain instead,Antiplatelet/anticoagulant additive bleeding risk
+olmesartan,perindopril,avoid,Dual blockade of the renin-angiotensin system without added benefit,"Use one or the other, not both",Combined RAS blockade increases renal failure and hyperkalaemia
+olmesartan,potassium chloride,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+olmesartan,ramipril,avoid,Dual blockade of the renin-angiotensin system without added benefit,"Use one or the other, not both",Combined RAS blockade increases renal failure and hyperkalaemia
+olmesartan,spironolactone,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+paroxetine,sumatriptan,serious,Risk of serotonin syndrome,"Avoid, or counsel on agitation, tremor and fever",Additive serotonergic effect
+paroxetine,tramadol,serious,Risk of serotonin syndrome,"Avoid, or counsel on agitation, tremor and fever",Additive serotonergic effect
+paroxetine,warfarin,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+perindopril,potassium chloride,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+perindopril,spironolactone,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+perindopril,telmisartan,avoid,Dual blockade of the renin-angiotensin system without added benefit,"Use one or the other, not both",Combined RAS blockade increases renal failure and hyperkalaemia
+perindopril,valsartan,avoid,Dual blockade of the renin-angiotensin system without added benefit,"Use one or the other, not both",Combined RAS blockade increases renal failure and hyperkalaemia
+potassium chloride,ramipril,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+potassium chloride,spironolactone,avoid,Risk of dangerously high potassium,Avoid the combination,Additive potassium retention
+potassium chloride,telmisartan,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+potassium chloride,valsartan,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+propranolol,verapamil,serious,"Risk of severe bradycardia, heart block and heart failure",Avoid the combination; amlodipine is safer with a beta blocker,Additive negative chronotropic and inotropic effect
+ramipril,spironolactone,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+ramipril,telmisartan,avoid,Dual blockade of the renin-angiotensin system without added benefit,"Use one or the other, not both",Combined RAS blockade increases renal failure and hyperkalaemia
+ramipril,valsartan,avoid,Dual blockade of the renin-angiotensin system without added benefit,"Use one or the other, not both",Combined RAS blockade increases renal failure and hyperkalaemia
+sertraline,sumatriptan,serious,Risk of serotonin syndrome,"Avoid, or counsel on agitation, tremor and fever",Additive serotonergic effect
+sertraline,tramadol,serious,Risk of serotonin syndrome,"Avoid, or counsel on agitation, tremor and fever",Additive serotonergic effect
+sertraline,warfarin,serious,Increased risk of gastrointestinal bleeding,"Consider gastric protection, or an alternative analgesic",SSRIs impair platelet aggregation
+spironolactone,telmisartan,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention
+spironolactone,valsartan,serious,Risk of dangerously high potassium,Check potassium and renal function; avoid in renal impairment,Additive potassium retention

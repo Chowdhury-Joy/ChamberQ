@@ -11,6 +11,7 @@ use App\Models\VisitRecord;
 use App\Services\ConditionService;
 use App\Services\MedicineService;
 use App\Services\VisitMediaService;
+use App\Support\PrescriptionTiming;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Hidden;
@@ -80,8 +81,23 @@ class VisitNotesFormSchema
 
     public const BP_DIASTOLIC_MAX = 150;
 
-    /** @var list<string> */
-    public const FREQUENCY_PRESETS = ['1+0+1', '1+1+1', '0+0+1', '1+0+0', '½+0+½'];
+    public const PULSE_MIN = 30;
+
+    public const PULSE_MAX = 250;
+
+    public const SPO2_MIN = 50;
+
+    public const SPO2_MAX = 100;
+
+    /**
+     * `0+1+0` and `SOS` joined the closed set when per-drug defaults arrived:
+     * a midday-only dose and an as-needed analgesic or antacid are both
+     * ordinary here, and without a chip for them the default would have had to
+     * be left blank on drugs where the pattern is the whole point.
+     *
+     * @var list<string>
+     */
+    public const FREQUENCY_PRESETS = ['1+0+1', '1+1+1', '0+0+1', '1+0+0', '0+1+0', '½+0+½', 'SOS'];
 
     /** @var list<string> */
     public const DURATION_PRESETS = ['3 days', '5 days', '7 days', '10 days', '14 days', '1 month', 'Continue'];
@@ -102,34 +118,19 @@ class VisitNotesFormSchema
      * Ordered by tier, so the hand-verified adult strength leads and the
      * paediatric syrup is one chip away rather than untypeable.
      *
+     * The strengths themselves come from `MedicineService::doseOptionsForBrand()`,
+     * which the desktop Rx desk also reads through `GET /api/medicines/doses`.
+     * One lookup for both surfaces: a second copy of this query is how the
+     * desk ended up offering a hardcoded 5 mg for every drug.
+     *
      * @return array<string, string>
      */
     public static function doseOptionsForBrand(?string $brandName): array
     {
-        $brand = mb_strtoupper(trim((string) $brandName));
-
-        if ($brand === '') {
-            return ['other' => __('Other')];
-        }
-
-        $strengths = Medicine::query()
-            ->where('brand_name', $brand)
-            ->whereNotNull('default_strength')
-            ->orderBy('priority')
-            ->orderBy('default_strength')
-            ->pluck('form', 'default_strength');
-
-        if ($strengths->isEmpty()) {
-            return ['other' => __('Other')];
-        }
-
         $options = [];
 
-        foreach ($strengths as $strength => $form) {
-            // "120 mg/5 ml syrup" rather than a bare number: two strengths of
-            // the same brand in different forms are not interchangeable, and
-            // the dose is what carries that onto the printed script.
-            $options[$strength] = filled($form) ? $strength.' '.$form : $strength;
+        foreach (app(MedicineService::class)->doseOptionsForBrand($brandName) as $option) {
+            $options[$option['value']] = $option['label'];
         }
 
         $options['other'] = __('Other');
@@ -147,6 +148,36 @@ class VisitNotesFormSchema
         }
 
         return ['dose' => $defaultStrength, 'dose_other' => null];
+    }
+
+    /**
+     * The H/O a chamber already holds, ready to seed the box.
+     *
+     * `patients.conditions` and `patients.medicines` are captured once at
+     * registration and then re-typed into H/O at every single visit. This is
+     * the cheapest automation in the pad because the data was already there;
+     * nothing is inferred, it is just carried across.
+     *
+     * Returns an empty string rather than null so the caller can seed
+     * unconditionally, and never touches a box the doctor has written in.
+     */
+    public static function historySeedFromPatient(?Patient $patient): string
+    {
+        if (! $patient) {
+            return '';
+        }
+
+        $parts = [];
+
+        if (filled($patient->conditions)) {
+            $parts[] = trim($patient->conditions);
+        }
+
+        if (filled($patient->medicines)) {
+            $parts[] = __('On').': '.trim($patient->medicines);
+        }
+
+        return implode(' · ', $parts);
     }
 
     /**
@@ -171,7 +202,12 @@ class VisitNotesFormSchema
             'weight_kg' => $record->weight_kg,
             'bp_systolic' => $record->bp_systolic,
             'bp_diastolic' => $record->bp_diastolic,
+            'pulse_bpm' => $record->pulse_bpm,
+            'spo2_percent' => $record->spo2_percent,
             'clinical_notes' => $record->clinical_notes,
+            'chief_complaint' => $record->chief_complaint,
+            'history' => $record->history,
+            'on_examination' => $record->on_examination,
             'advice' => $record->advice,
             'tests_advised' => $record->tests_advised,
             'reports_seen' => $record->reports_seen,
@@ -189,6 +225,9 @@ class VisitNotesFormSchema
                         $item->dose,
                         $item->frequency,
                         $item->duration,
+                        $item->indication,
+                        $item->timing,
+                        $item->instructions,
                     ))
                     ->values()
                     ->all()
@@ -248,15 +287,38 @@ class VisitNotesFormSchema
                 return [
                     'medicine_name' => $medicineService->resolveMedicineNameFromFormState($item),
                     'generic_name' => $item['generic_name'] ?? null,
+                    'indication' => filled($item['indication'] ?? null) ? trim((string) $item['indication']) : null,
                     'dose' => $dose,
                     'frequency' => $frequency,
                     'duration' => $duration,
+                    'timing' => PrescriptionTiming::normalize(
+                        is_string($item['timing'] ?? null) ? $item['timing'] : null
+                    ),
+                    'instructions' => filled($item['instructions'] ?? null) ? trim((string) $item['instructions']) : null,
                 ];
             })
             ->all();
 
         $data['prescription_items'] = $items;
         $data = self::normalizeVitals($data);
+        $data = self::normalizePadFields($data);
+
+        return $data;
+    }
+
+    /**
+     * Trim structured left-pad fields. Empty strings become null so
+     * `submissionHasContent` and honest "no notes" stay accurate.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public static function normalizePadFields(array $data): array
+    {
+        foreach (['chief_complaint', 'history', 'on_examination', 'clinical_notes'] as $field) {
+            $value = trim((string) ($data[$field] ?? ''));
+            $data[$field] = $value === '' ? null : $value;
+        }
 
         return $data;
     }
@@ -298,6 +360,20 @@ class VisitNotesFormSchema
 
         $data['bp_systolic'] = $systolic;
         $data['bp_diastolic'] = $diastolic;
+
+        $pulse = is_numeric($data['pulse_bpm'] ?? null) ? (int) $data['pulse_bpm'] : null;
+        $data['pulse_bpm'] = ($pulse !== null
+            && $pulse >= self::PULSE_MIN
+            && $pulse <= self::PULSE_MAX)
+            ? $pulse
+            : null;
+
+        $spo2 = is_numeric($data['spo2_percent'] ?? null) ? (int) $data['spo2_percent'] : null;
+        $data['spo2_percent'] = ($spo2 !== null
+            && $spo2 >= self::SPO2_MIN
+            && $spo2 <= self::SPO2_MAX)
+            ? $spo2
+            : null;
 
         $notes = trim((string) ($data['clinical_notes'] ?? ''));
         $data['clinical_notes'] = $notes === '' ? null : $notes;
@@ -342,6 +418,9 @@ class VisitNotesFormSchema
                     $item->dose,
                     $item->frequency,
                     $item->duration,
+                    $item->indication,
+                    $item->timing,
+                    $item->instructions,
                 ))
                 ->values()
                 ->all()
@@ -358,7 +437,7 @@ class VisitNotesFormSchema
                 ->viewData(['patient' => $patient])
                 ->columnSpanFull()
                 ->visible(fn (): bool => $patient?->hasClinicalWarnings() ?? false),
-            self::prescriptionSection($prescribingDoctor, $lastItems),
+            self::prescriptionSection($prescribingDoctor, $lastItems, $patient?->allergies),
             self::vitalsSection(),
             Section::make(__('Diagnosis'))
                 ->schema([
@@ -398,17 +477,37 @@ class VisitNotesFormSchema
                         ->native(false),
                 ])
                 ->columns(1),
-            Textarea::make('clinical_notes')
-                ->label(__('Clinical notes'))
-                ->helperText(__('Chief complaint, exam findings, measurements — whatever you would write on the left of a paper pad.'))
-                ->rows(3)
+            Textarea::make('chief_complaint')
+                ->label(__('C/C'))
+                ->helperText(__('Chief complaint — what brought the patient in.'))
+                ->rows(2)
                 ->columnSpanFull(),
+            Textarea::make('history')
+                ->label(__('H/O'))
+                ->helperText(__('History — HTN, DM, asthma, prior surgery, etc.'))
+                ->rows(2)
+                ->columnSpanFull(),
+            Textarea::make('on_examination')
+                ->label(__('O/E'))
+                ->helperText(__('On examination — findings beyond weight and blood pressure.'))
+                ->rows(2)
+                ->columnSpanFull(),
+            Textarea::make('clinical_notes')
+                ->label(__('Earlier clinical notes'))
+                ->helperText(__('From visits written before C/C, H/O and O/E were separate fields. Left as-is; new writing goes in the boxes above.'))
+                ->rows(2)
+                ->columnSpanFull()
+                ->visible(fn (Get $get): bool => filled($get('clinical_notes'))
+                    && blank($get('chief_complaint'))
+                    && blank($get('history'))
+                    && blank($get('on_examination'))),
             Textarea::make('advice')
                 ->label(__('Advice'))
                 ->rows(2)
                 ->columnSpanFull(),
             Textarea::make('tests_advised')
-                ->label(__('Tests advised'))
+                ->label(__('Inv'))
+                ->helperText(__('Investigations / tests advised.'))
                 ->rows(2)
                 ->columnSpanFull(),
             Textarea::make('reports_seen')
@@ -488,7 +587,10 @@ class VisitNotesFormSchema
     /**
      * @param  list<array<string, mixed>>  $lastItems
      */
-    private static function prescriptionSection(?Doctor $prescribingDoctor, array $lastItems = []): Section
+
+
+
+    private static function prescriptionSection(?Doctor $prescribingDoctor, array $lastItems = [], ?string $patientAllergies = null): Section
     {
         return Section::make(__('Prescription'))
             ->schema([
@@ -537,6 +639,12 @@ class VisitNotesFormSchema
                         'class' => 'cs-rx-medicines',
                         'x-on:'.self::MEDICINE_ADDED_EVENT.'.window' => '$nextTick(() => { const rows = $el.querySelectorAll(\'.fi-fo-repeater-item\'); rows[rows.length - 1]?.scrollIntoView({ block: \'center\' }); })',
                     ]),
+                View::make('filament.tenant-admin.components.rx-safety-warnings')
+                    ->viewData(fn (Get $get): array => [
+                        'allergies' => $patientAllergies,
+                        'items' => $get('prescription_items') ?? [],
+                    ])
+                    ->columnSpanFull(),
             ])
             ->columnSpanFull();
     }
@@ -611,6 +719,22 @@ class VisitNotesFormSchema
                         'max' => $outOfRange,
                         'required_with' => $bothOrNeither,
                     ]),
+                TextInput::make('pulse_bpm')
+                    ->label(__('Pulse'))
+                    ->numeric()
+                    ->minValue(self::PULSE_MIN)
+                    ->maxValue(self::PULSE_MAX)
+                    ->inputMode('numeric')
+                    ->placeholder('78')
+                    ->suffix('/min'),
+                TextInput::make('spo2_percent')
+                    ->label(__('SpO₂'))
+                    ->numeric()
+                    ->minValue(self::SPO2_MIN)
+                    ->maxValue(self::SPO2_MAX)
+                    ->inputMode('numeric')
+                    ->placeholder('98')
+                    ->suffix('%'),
             ])
             ->columns(3);
     }
@@ -695,6 +819,10 @@ class VisitNotesFormSchema
                 ->label(__('Generic name'))
                 ->placeholder(__('e.g. Paracetamol'))
                 ->maxLength(120),
+            TextInput::make('indication')
+                ->label(__('Indication'))
+                ->placeholder(__('e.g. Pain'))
+                ->maxLength(160),
             ToggleButtons::make('dose')
                 ->label(__('Dose'))
                 ->options(fn (Get $get): array => self::doseOptionsForBrand($get('medicine_name')))
@@ -729,8 +857,21 @@ class VisitNotesFormSchema
                 ->label(__('Duration (other)'))
                 ->maxLength(80)
                 ->visible(fn (Get $get): bool => $get('duration') === 'other'),
+            ToggleButtons::make('timing')
+                ->label(__('Timing'))
+                ->options(collect(PrescriptionTiming::labels())
+                    ->mapWithKeys(fn (string $label, string $key) => [$key => __($label)])
+                    ->all())
+                ->inline()
+                ->nullable(),
+            TextInput::make('instructions')
+                ->label(__('Instructions'))
+                ->placeholder(__('Optional extra line for the patient'))
+                ->maxLength(255),
         ];
     }
+
+
 
     private static function inferRelativeFollowUp(?\Carbon\CarbonInterface $date): ?string
     {
@@ -811,25 +952,66 @@ class VisitNotesFormSchema
     /**
      * @return array<string, mixed>
      */
+    /**
+     * @param  bool  $table  Table mode stores each value verbatim. The stacked
+     *                       layout splits it into a preset chip plus an "other"
+     *                       box, so a non-preset value becomes the `'other'`
+     *                       sentinel with the real text alongside — feeding that
+     *                       to a free-text cell would put the literal word
+     *                       "other" in the dose column.
+     */
     public static function prescriptionItemStateFromStored(
         ?string $medicineName,
         ?string $genericName,
         ?string $dose,
         ?string $frequency,
         ?string $duration,
+        ?string $indication = null,
+        ?string $timing = null,
+        ?string $instructions = null,
     ): array {
         $brand = filled($medicineName) ? mb_strtoupper(trim($medicineName)) : null;
 
         return [
             'medicine_name' => $brand,
             'generic_name' => $genericName,
+            'indication' => $indication,
             'dose' => self::isDosePreset($dose) ? $dose : (filled($dose) ? 'other' : null),
             'dose_other' => self::isDosePreset($dose) ? null : $dose,
             'frequency' => self::isFrequencyPreset($frequency) ? $frequency : (filled($frequency) ? 'other' : null),
             'frequency_other' => self::isFrequencyPreset($frequency) ? null : $frequency,
             'duration' => self::isDurationPreset($duration) ? $duration : (filled($duration) ? 'other' : null),
             'duration_other' => self::isDurationPreset($duration) ? null : $duration,
+            'timing' => PrescriptionTiming::normalize($timing),
+            'instructions' => $instructions,
             '_prefilled' => false,
         ];
+    }
+
+    /**
+     * Flat medicine rows for the desktop Alpine Rx desk (resolved dose/frequency/
+     * duration strings, not the modal's chip "other" split).
+     *
+     * @return list<array<string, mixed>>
+     */
+    public static function deskItemsFromRecord(?VisitRecord $record): array
+    {
+        if (! $record?->prescription) {
+            return [];
+        }
+
+        return $record->prescription->items
+            ->map(fn (\App\Models\PrescriptionItem $item): array => [
+                'medicine_name' => $item->medicine_name,
+                'generic_name' => $item->generic_name,
+                'indication' => $item->indication,
+                'dose' => $item->dose,
+                'frequency' => $item->frequency,
+                'duration' => $item->duration,
+                'timing' => $item->timing,
+                'instructions' => $item->instructions,
+            ])
+            ->values()
+            ->all();
     }
 }
