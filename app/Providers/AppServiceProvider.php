@@ -4,6 +4,7 @@ namespace App\Providers;
 
 use App\Contracts\SmsGateway;
 use App\Http\Responses\FilamentLoginResponse;
+use App\Support\RuntimeDirectories;
 use App\Support\TenancyUrl;
 use App\Services\Sms\HttpSmsGateway;
 use App\Services\Sms\LogSmsGateway;
@@ -22,6 +23,8 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        RuntimeDirectories::ensure();
+
         // Filament's stock login redirect targets `Panel::getUrl()`, which falls
         // back to the raw path pattern — `/{tenant}/admin` for the path panel.
         $this->app->bind(LoginResponseContract::class, FilamentLoginResponse::class);
@@ -43,6 +46,11 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         Route::pattern('tenant', TenancyUrl::tenantSlugPattern());
+
+        // Hero/video FileUpload allows 20 MB; Livewire's default temp rule is 12 MB.
+        config([
+            'livewire.temporary_file_upload.rules' => ['required', 'file', 'max:20480'],
+        ]);
 
         $this->recoverExpiredGuestPagesSilently();
     }

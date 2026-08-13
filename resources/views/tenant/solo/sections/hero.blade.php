@@ -38,11 +38,11 @@
             </div>
         </div>
 
-        <div class="solo-fade-up-delay overflow-hidden rounded-2xl bg-slate-100 lg:min-h-[584px]">
+        <div class="solo-fade-up-delay aspect-square w-full overflow-hidden rounded-2xl bg-slate-100 lg:self-center">
             <img
                 src="{{ $image }}"
                 alt="{{ $headlineAlt }}"
-                class="h-full min-h-[320px] w-full object-cover object-top sm:min-h-[420px] lg:min-h-[584px]"
+                class="h-full w-full object-cover object-center"
             >
         </div>
     </div>
