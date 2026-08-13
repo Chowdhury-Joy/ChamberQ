@@ -28,6 +28,8 @@ class SmsMessage extends Model
 
     public const PURPOSE_PRESCRIPTION = 'prescription';
 
+    public const PURPOSE_FOLLOW_UP = 'follow_up';
+
     protected $fillable = [
         'tenant_id',
         'booking_id',

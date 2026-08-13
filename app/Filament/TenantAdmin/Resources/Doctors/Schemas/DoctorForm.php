@@ -60,6 +60,12 @@ class DoctorForm
                 TextInput::make('registration_number')
                     ->label(__('BM&DC registration number'))
                     ->maxLength(80),
+                TextInput::make('default_fee_taka')
+                    ->label(__('Default consultation fee (৳)'))
+                    ->helperText(__('Suggested when staff collect at the desk. They can change it per patient. Not an online payment.'))
+                    ->numeric()
+                    ->minValue(0)
+                    ->suffix('৳'),
                 Fieldset::make(__('Website profile'))
                     ->visible(fn (): bool => ! tenant()?->isSoloDoctor())
                     ->columns(2)
@@ -124,6 +130,14 @@ class DoctorForm
                             ->label(__('Prescription — WhatsApp'))
                             ->helperText(__('Shows Send via WhatsApp after the visit. Free; staff must tap.'))
                             ->default(true),
+                        Toggle::make('notify_channels.'.Doctor::NOTIFY_FOLLOW_UP.'.sms')
+                            ->label(__('Follow-up reminder — SMS'))
+                            ->helperText(__('Automatic text 3 days before the follow-up date. 1 credit each.'))
+                            ->default(true),
+                        Toggle::make('notify_channels.'.Doctor::NOTIFY_FOLLOW_UP.'.whatsapp')
+                            ->label(__('Follow-up reminder — WhatsApp'))
+                            ->helperText(__('Queues a staff confirm list each morning. Free; staff or doctor must tap.'))
+                            ->default(false),
                     ]),
             ]);
     }

@@ -20,6 +20,7 @@ class Doctor extends Model
         'staff_may_enter_prescriptions',
         'qualifications',
         'registration_number',
+        'default_fee_taka',
         'public_slug',
         'public_title',
         'bio',
@@ -31,6 +32,7 @@ class Doctor extends Model
 
     protected $casts = [
         'staff_may_enter_prescriptions' => 'boolean',
+        'default_fee_taka' => 'integer',
         'show_on_website' => 'boolean',
         'website_sort_order' => 'integer',
         'notify_channels' => 'array',
@@ -75,6 +77,8 @@ class Doctor extends Model
 
     public const NOTIFY_PRESCRIPTION = 'prescription';
 
+    public const NOTIFY_FOLLOW_UP = 'follow_up';
+
     /**
      * Defaults match today's product behaviour so existing clinics keep the
      * same outbound mix until a doctor edits them.
@@ -88,6 +92,7 @@ class Doctor extends Model
             self::NOTIFY_DOCTOR_LATE => ['sms' => false, 'whatsapp' => false],
             self::NOTIFY_CANCELLATION => ['sms' => false, 'whatsapp' => true],
             self::NOTIFY_PRESCRIPTION => ['sms' => false, 'whatsapp' => true],
+            self::NOTIFY_FOLLOW_UP => ['sms' => true, 'whatsapp' => false],
         ];
     }
 

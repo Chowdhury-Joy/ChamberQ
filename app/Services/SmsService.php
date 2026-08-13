@@ -9,6 +9,7 @@ use App\Models\Prescription;
 use App\Models\ScheduleSession;
 use App\Models\SmsMessage;
 use App\Models\Tenant;
+use App\Models\VisitRecord;
 use App\Support\GsmText;
 use App\Support\TenancyUrl;
 use Illuminate\Support\Facades\DB;
@@ -121,6 +122,41 @@ class SmsService
             SmsMessage::PURPOSE_PRESCRIPTION,
             'sms.prescription_failed',
         );
+    }
+
+    /**
+     * Automatic follow-up reminder, 3 days before the visit date.
+     */
+    public function sendFollowUpReminder(Booking $booking, VisitRecord $visit, Doctor $doctor): ?SmsMessage
+    {
+        $body = $this->followUpReminderBody($booking, $visit, $doctor);
+
+        if (! $doctor->wantsSms(Doctor::NOTIFY_FOLLOW_UP)) {
+            return $this->record(
+                $booking,
+                SmsMessage::STATUS_SKIPPED_PREF_OFF,
+                body: $body,
+                purpose: SmsMessage::PURPOSE_FOLLOW_UP,
+            );
+        }
+
+        return $this->send(
+            $booking,
+            $body,
+            SmsMessage::PURPOSE_FOLLOW_UP,
+            'sms.follow_up_reminder_failed',
+        );
+    }
+
+    public function followUpReminderBody(Booking $booking, VisitRecord $visit, Doctor $doctor): string
+    {
+        $date = $visit->follow_up_date?->format('j M Y') ?? '';
+        $link = TenancyUrl::publicAbsolute((string) $booking->tenant_id, '/book');
+
+        return implode(' ', array_filter([
+            'Reminder: your follow-up with Dr '.$doctor->name.' is on '.$date.'.',
+            'Reply or book: '.$link,
+        ]));
     }
 
     public function topUp(Tenant $tenant, int $credits): void
@@ -238,6 +274,38 @@ class SmsService
             'Prescription for '.$booking->patient_name,
             $date !== '' ? 'from '.$date : null,
         ])).': '.$link;
+    }
+
+    /**
+     * Login OTP for the platform patient account. ChamberQ pays — never debit
+     * a doctor's SMS wallet, and never write a tenant-scoped sms_messages row.
+     */
+    public function sendPlatformOtp(string $phone, string $code): void
+    {
+        $body = GsmText::toSingleSegment(
+            'ChamberQ code: '.$code.'. Valid 5 min. Do not share this code.'
+        );
+
+        if (! config('sms.enabled')) {
+            Log::info('sms.platform_otp_skipped_disabled', [
+                'phone' => $this->internationalPhone($phone),
+            ]);
+
+            return;
+        }
+
+        $to = $this->internationalPhone($phone);
+
+        try {
+            $this->gateway->send($to, $body);
+        } catch (Throwable $e) {
+            Log::warning('sms.platform_otp_failed', [
+                'to' => $to,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw $e;
+        }
     }
 
     public function internationalPhone(string $phone): string

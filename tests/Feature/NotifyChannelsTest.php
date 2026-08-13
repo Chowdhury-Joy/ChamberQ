@@ -293,6 +293,8 @@ class NotifyChannelsTest extends TestCase
         $this->assertTrue($defaults[Doctor::NOTIFY_CANCELLATION]['whatsapp']);
         $this->assertFalse($defaults[Doctor::NOTIFY_PRESCRIPTION]['sms']);
         $this->assertTrue($defaults[Doctor::NOTIFY_PRESCRIPTION]['whatsapp']);
+        $this->assertTrue($defaults[Doctor::NOTIFY_FOLLOW_UP]['sms']);
+        $this->assertFalse($defaults[Doctor::NOTIFY_FOLLOW_UP]['whatsapp']);
     }
 
     public function test_null_notify_channels_merges_defaults(): void
