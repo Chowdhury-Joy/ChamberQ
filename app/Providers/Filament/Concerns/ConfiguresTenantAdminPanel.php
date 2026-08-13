@@ -72,26 +72,27 @@ trait ConfiguresTenantAdminPanel
             ->renderHook(
                 'panels::head.end',
                 fn (): string => '<style>
-                    /* High-visibility Collapse All / Expand All Action Pill Buttons */
+                    /* Collapse All / Expand All: gray outline, not primary */
                     .fi-fo-builder-header-actions,
                     .fi-fo-builder-header-actions button,
                     .fi-ac-action-btn {
                         font-weight: 700 !important;
                     }
+                    /* Collapse All / Expand All stay gray, not primary */
                     .fi-fo-builder-header-actions button {
                         background-color: transparent !important;
-                        color: #000000 !important;
+                        color: #52525b !important;
                         padding: 6px 14px !important;
                         border-radius: 6px !important;
                         font-size: 0.85rem !important;
-                        font-weight: 600 !important;
-                        border: 1px solid #000000 !important;
+                        font-weight: 500 !important;
+                        border: 1px solid #d4d4d8 !important;
                         box-shadow: none !important;
                         transition: all 0.15s ease !important;
                     }
                     .fi-fo-builder-header-actions button:hover {
                         background-color: #f4f4f5 !important;
-                        color: #000000 !important;
+                        color: #18181b !important;
                     }
                     /* High-visibility Add Section & Insert Between Buttons */
                     .fi-fo-builder-add-between-btn,

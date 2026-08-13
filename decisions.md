@@ -1926,3 +1926,12 @@
  <action>`RuntimeDirectories::ensure()` on app register creates the cache, session, view, Livewire tmp, and website-media folders at 0775. Livewire's temp upload cap matches the 20 MB video field. PHP-FPM upload limits are set in `public/.user.ini`.</action>
  <reason>A chmod someone must remember will be forgotten. Creating the folders at boot is the same class of fix as putting GSM flattening inside `SmsService::send()`.</reason>
 </decision>
+
+## 2026-08-13T11:15:22+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Opening a long Web Page in admin showed a wall of open fields. Staff needed a table of contents of closed lids, not extra public-site blocks.</context>
+ <action>Page sections and nested lists start collapsed. Closed labels are type plus headline (e.g. Hero — …). Block numbers off. Clone and drag-reorder stay on. Inner pages get gray Collapse all / Expand all and a narrower form (`max-w-5xl`); homepage (`/`) uses full width without those two buttons. Save changes sits at the bottom right, not sticky; closing the tab still warns if the form is dirty. No SEO or grid-vs-flex layout fields were added — ChamberQ does not have those.</action>
+ <reason>Like a packed moving-box list: each lid shows what is inside, and you only open the box you are packing. Public homepage blades stay locked.</reason>
+</decision>

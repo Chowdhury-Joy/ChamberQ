@@ -474,3 +474,6 @@
 
 ## 2026-08-13T10:46:29+0600
 - `RuntimeDirectories` creates writable `storage/framework/cache` and `livewire-tmp` on boot so PHP 8.4+ `tempnam()` does not fall back to `/tmp` and crash; Livewire temp uploads raised to 20 MB; `public/.user.ini` sets PHP upload limits.
+
+## 2026-08-13T11:15:22+0600
+- Web Pages admin editor: collapsed lids + type/headline labels (`PageBuilderChrome`); inner pages `max-w-5xl` with gray Collapse/Expand all; homepage full width; non-sticky Save changes + beforeunload unsaved alert.
