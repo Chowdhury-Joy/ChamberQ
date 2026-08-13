@@ -2179,3 +2179,21 @@
  <action>Restyle the live marketing homepage in the doctor-site design language without changing the sales story: same sections, copy, prices, WhatsApp CTAs, Maestro featured / Clinic beside / Rising Star hidden. Tokens, type, 1280px shell, square hero photo, Conditions-style cards, split FAQ, and one black About-style value band. Primary buttons stay ChamberQ blue (`#2563eb`). Locked solo patient homepage files were not edited. Find a doctor / Patient login pick up the shared `marketing.css` fonts and header.</action>
  <reason>Same rooms, new paint: the sales page should feel like a sample of the doctor website, not a second brand. Keeping WhatsApp, Maestro, and prices protects CRO; keeping ChamberQ blue (not the tenant sky `#30A9E5`) keeps product chrome distinct from a named doctor’s theme.</reason>
 </decision>
+
+## 2026-08-13T23:56:36+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The sales homepage had just been restyled to look like a doctor’s patient site (Instrument Serif, white hero, ChamberQ blue pills). The owner asked to use the ChamberQ proposal look instead — the teal cover, Bebas Neue headlines, and Helvetica Neue body that sales PDFs and the Maestro pitch already use.</context>
+ <action>Restyle the live marketing homepage (`/` plus shared Find/login chrome) to the proposal language without changing the sales story: same sections, copy, prices, WhatsApp CTAs, Maestro featured / Clinic beside / Rising Star hidden. Teal cover hero, uppercase Bebas Neue + Helvetica Neue, mint featured Maestro card, teal value band. `--mk-blue` on this page is proposal teal `#0f766e` (not `#2563eb`). Locked solo patient homepage files were not edited. This supersedes the 2026-08-13T23:47:28+0600 doctor-site marketing restyle for this surface.</action>
+ <reason>A doctor who already saw a ChamberQ proposal should land on a page that looks like that leave-behind, not like their own clinic site and not like a second brand. WhatsApp, Maestro, and prices stay so CRO is unchanged. Teal here is the sales identity; Filament admin can keep ChamberQ blue.</reason>
+</decision>
+
+## 2026-08-14T00:27:36+0600
+
+<decision>
+ <category>CRO</category>
+ <context>The live sales homepage still opened with a patient benefit (“Give patients their time back”) and walked the visitor through the family’s booking path. The buyer is a solo doctor. The Maestro pitch already leads with order, reputation, and time back in the consult — not patient wait as the headline.</context>
+ <action>Rewrite marketing homepage copy to speak to the doctor about their chamber: hero “Keep your chamber in order,” steps from front desk to consult, value as consult time / on-time sittings / your name travels. Same sections, prices, WhatsApp CTAs, Maestro featured / Clinic beside / Rising Star hidden. Find a doctor and Patient login stay in the nav as product doors. Locked solo patient homepage files were not edited. This supersedes the “same copy” part of the 2026-08-13T23:56:36+0600 restyle for this surface.</action>
+ <reason>A doctor scanning ChamberQ.com should feel spoken to, the way the proposal already does — not like they landed on a patient waiting-room page. Patient wait still appears as a chamber metric (2 hrs → 15 min), not as the story.</reason>
+</decision>

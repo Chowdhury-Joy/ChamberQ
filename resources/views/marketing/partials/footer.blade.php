@@ -2,7 +2,7 @@
     <div class="mk-wrap mk-footer-inner">
         <div>
             <p class="mk-footer-brand">{{ $product }}</p>
-            <p class="mk-footer-copy">Online serials, a live queue, and a calmer chamber — set up with you over WhatsApp.</p>
+            <p class="mk-footer-copy">Online serials, a live queue you control, and a calmer consult — set up with you over WhatsApp.</p>
             <p class="mk-footer-copy">&copy; {{ date('Y') }}, {{ $product }}</p>
         </div>
         <div>

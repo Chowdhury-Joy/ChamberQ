@@ -18,11 +18,11 @@
                 <p>We set up your chamber page, sessions, and branding with you over WhatsApp. You don’t need to be technical.</p>
             </details>
             <details>
-                <summary>Is it Bangla for patients?</summary>
-                <p>Yes — patients can use Bangla on the chamber site when you enable it. The sales chat with us can be in Bangla too.</p>
+                <summary>Can my chamber site be Bangla?</summary>
+                <p>Yes — you can enable Bangla on your chamber site. The sales chat with us can be in Bangla too.</p>
             </details>
             <details>
-                <summary>Do patients get SMS confirmations?</summary>
+                <summary>Can I send SMS confirmations?</summary>
                 <p>Yes — when your chamber has SMS credits. Top up a prepaid wallet (about ৳0.50 per confirmation). No free monthly allowance. WhatsApp ticket sharing stays free.</p>
             </details>
             <details>

@@ -3,9 +3,9 @@
         <div class="mk-section-head">
             <div>
                 <p class="mk-kicker">What really changes</p>
-                <h2 id="why-heading">Good care feels better<br><em>when the wait does too.</em></h2>
+                <h2 id="why-heading">The consult stays yours.<br><em>The queue stays calm.</em></h2>
             </div>
-            <p>Less admin for you. More respect for their time. A visit worth telling others about.</p>
+            <p>Fewer interruptions at the desk. A sitting that finishes on time. A chamber people recommend.</p>
         </div>
         <ul class="mk-value-list">
             @foreach(config('marketing.value_points') as $point)
@@ -24,7 +24,7 @@
                                 @elseif($loop->iteration === 2)
                                     <span class="mk-art-person"></span><span class="mk-art-progress"><i></i></span><b>08</b>
                                 @else
-                                    <span class="mk-art-bubble">“That was easy.”</span><span class="mk-art-hearts">♥ ♥</span>
+                                    <span class="mk-art-bubble">“Who is next?”</span><span class="mk-art-hearts">♥ ♥</span>
                                 @endif
                             </div>
                         @endif

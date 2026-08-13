@@ -32,12 +32,12 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="color-scheme" content="light only">
-    <meta name="theme-color" content="#ffffff">
-    <meta name="description" content="ChamberQ gives solo doctors a calmer chamber with online serials, live queues, and less waiting for every patient.">
-    <title>{{ $product }} — Give patients their time back</title>
+    <meta name="theme-color" content="#0c3a3b">
+    <meta name="description" content="ChamberQ for solo doctors: clearer serials, a live queue you control, and fewer interruptions in the consult. We set it up with you.">
+    <title>{{ $product }} — For your chamber practice</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=Instrument+Serif:ital@0;1&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="{{ asset('css/marketing.css') }}">
     <link rel="stylesheet" href="{{ asset('css/card-grid.css') }}">
 </head>

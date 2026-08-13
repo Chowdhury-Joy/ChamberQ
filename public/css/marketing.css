@@ -1,21 +1,21 @@
 :root {
-    --mk-ink: #0f172a;
-    --mk-muted: #475569;
-    --mk-line: #e0e0e0;
+    --mk-ink: #0f3d3e;
+    --mk-muted: #6b7280;
+    --mk-line: #e5e7eb;
     --mk-paper: #ffffff;
-    --mk-band: #fafafa;
-    --mk-teal: #0f172a;
-    --mk-teal-deep: #0f172a;
-    --mk-teal-soft: #f1f5f9;
-    --mk-coral: #2563eb;
-    --mk-coral-soft: #eff6ff;
-    --mk-blue: #2563eb;
-    --mk-blue-deep: #1d4ed8;
-    --mk-sun: #eff6ff;
-    --mk-radius-card: 1rem;
+    --mk-band: #f4f7f7;
+    --mk-teal: #0f766e;
+    --mk-teal-deep: #0c3a3b;
+    --mk-teal-soft: #ecf6f5;
+    --mk-coral: #0f766e;
+    --mk-coral-soft: #ecf6f5;
+    --mk-blue: #0f766e;
+    --mk-blue-deep: #0c3a3b;
+    --mk-sun: #5eead4;
+    --mk-radius-card: 10px;
     --mk-radius-pill: 9999px;
-    --mk-sans: 'DM Sans', system-ui, sans-serif;
-    --mk-display: 'Instrument Serif', Georgia, serif;
+    --mk-sans: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    --mk-display: "Bebas Neue", "Helvetica Neue", Helvetica, Arial, sans-serif;
     --mk-ease: cubic-bezier(0.22, 1, 0.36, 1);
     color-scheme: light;
 }
@@ -742,7 +742,7 @@ body.mk {
 }
 
 /* ==========================================================================
-   Doctor-site language (same rooms, new paint)
+   Proposal language (Maestro teal, Bebas Neue, Helvetica Neue)
    ========================================================================== */
 body.mk {
     background: #fff;
@@ -756,6 +756,7 @@ body.mk {
     font-family: var(--mk-display);
     font-weight: 400;
     letter-spacing: -0.02em;
+    text-transform: uppercase;
 }
 
 .mk h1 em,
@@ -763,7 +764,7 @@ body.mk {
 .mk h3 em {
     color: inherit;
     font-family: inherit;
-    font-style: italic;
+    font-style: normal;
     font-weight: inherit;
 }
 
@@ -808,14 +809,15 @@ body.mk {
     min-width: 0;
     color: var(--mk-ink);
     font-family: var(--mk-display);
-    font-size: 1.25rem;
+    font-size: 1.5rem;
     font-weight: 400;
-    letter-spacing: -0.02em;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
     text-decoration: none;
 }
 
 @media (min-width: 640px) {
-    .mk-nav-brand { font-size: 1.65rem; }
+    .mk-nav-brand { font-size: 1.85rem; }
 }
 
 .mk-logo-mark { display: none; }
@@ -927,6 +929,11 @@ body.mk {
 }
 
 /* —— Sections —— */
+.mk-hero,
+.mk-section {
+    scroll-margin-top: 6.5rem;
+}
+
 .mk-section {
     padding: 40px 0;
 }
@@ -947,26 +954,26 @@ body.mk {
 
 .mk-section-head h2 {
     color: var(--mk-ink);
-    font-size: 1.875rem;
+    font-size: 2rem;
     font-weight: 400;
     letter-spacing: -0.02em;
-    line-height: 1.1;
+    line-height: 1.05;
 }
 
 @media (min-width: 640px) {
-    .mk-section-head h2 { font-size: 2.25rem; }
+    .mk-section-head h2 { font-size: 2.5rem; }
 }
 
 @media (min-width: 1024px) {
-    .mk-section-head h2 { font-size: 2.75rem; }
+    .mk-section-head h2 { font-size: 3.25rem; }
 }
 
 .mk-kicker,
 .mk-eyebrow {
     margin: 0 0 0.85rem;
-    color: var(--mk-muted);
+    color: var(--mk-teal);
     font-size: 0.72rem;
-    font-weight: 600;
+    font-weight: 700;
     letter-spacing: 0.12em;
     text-transform: uppercase;
 }
@@ -980,7 +987,7 @@ body.mk {
 .mk-eyebrow span {
     width: 1.5rem;
     height: 2px;
-    background: var(--mk-blue);
+    background: var(--mk-sun);
 }
 
 .mk-section-head-split {
@@ -1005,12 +1012,13 @@ body.mk {
 .mk-section-head-light h2 { color: var(--mk-ink); }
 .mk-section-head-light .mk-kicker { color: var(--mk-muted); }
 
-/* —— Hero —— */
+/* —— Hero (proposal cover) —— */
 .mk-hero {
     position: relative;
-    overflow: visible;
-    padding: 32px 0;
-    background: #fff;
+    overflow: hidden;
+    padding: 40px 0 48px;
+    background: linear-gradient(135deg, #0a2f30 0%, #0f4a46 55%, #0c3d3a 100%);
+    color: #fff;
 }
 
 .mk-hero-copy {
@@ -1021,7 +1029,7 @@ body.mk {
 }
 
 @media (min-width: 1024px) {
-    .mk-hero-copy { min-height: 584px; }
+    .mk-hero-copy { min-height: 520px; }
 }
 
 .mk-hero-grid {
@@ -1032,20 +1040,29 @@ body.mk {
 .mk-hero h1 {
     max-width: none;
     margin: 0;
-    color: var(--mk-ink);
-    font-size: 2.85rem;
+    color: #fff;
+    font-size: 2.75rem;
     font-weight: 400;
     letter-spacing: -0.02em;
-    line-height: 1.05;
+    line-height: 0.95;
 }
 
 @media (min-width: 640px) {
-    .mk-hero h1 { font-size: 3rem; }
+    .mk-hero h1 { font-size: 3.5rem; }
+}
+
+.mk-hero h1::after {
+    content: '';
+    display: block;
+    width: 40px;
+    height: 2px;
+    background: var(--mk-sun);
+    margin: 1.35rem 0 0;
 }
 
 @media (min-width: 1024px) {
     .mk-hero {
-        padding: 32px 0 48px;
+        padding: 56px 0 64px;
     }
     .mk-hero-grid {
         grid-template-columns: 1fr 1fr;
@@ -1053,21 +1070,29 @@ body.mk {
         align-items: stretch;
     }
     .mk-hero h1 {
-        font-size: 5.5rem;
-        line-height: 0.98;
+        font-size: 5rem;
+        line-height: 0.92;
     }
+}
+
+.mk-hero .mk-eyebrow {
+    color: rgba(255, 255, 255, 0.78);
 }
 
 .mk-hero-lead {
     max-width: 36rem;
     margin: 1.5rem 0 0;
-    color: #475569;
-    font-size: 1.05rem;
-    line-height: 1.6;
+    color: rgba(255, 255, 255, 0.9);
+    font-size: 1.08rem;
+    line-height: 1.55;
 }
 
 .mk-hero-ctas {
     margin: 0;
+}
+
+.mk-hero .mk-link-quiet {
+    color: rgba(255, 255, 255, 0.88);
 }
 
 .mk-hero-visual {
@@ -1080,8 +1105,9 @@ body.mk {
     aspect-ratio: 1 / 1;
     width: 100%;
     overflow: hidden;
-    border-radius: 1rem;
-    background: #f1f5f9;
+    border-radius: 12px;
+    background: var(--mk-band);
+    border: 1px solid #d7e3e2;
 }
 
 .mk-hero-frame img,
@@ -1107,7 +1133,7 @@ body.mk {
     width: 100%;
     height: 100%;
     padding: 1rem;
-    background: #fafafa;
+    background: var(--mk-band);
     color: var(--mk-ink);
     font-size: 0.72rem;
     overflow: hidden;
@@ -1290,7 +1316,7 @@ body.mk {
 .mk-ui-patient small { margin-left: auto; color: var(--mk-blue); }
 .mk-ui-patient b { color: var(--mk-ink); }
 
-/* —— Before / after (quiet grey cards) —— */
+/* —— Before / after —— */
 .mk-compare {
     position: relative;
     background: #fff;
@@ -1310,10 +1336,16 @@ body.mk {
 .mk-compare-card.is-after,
 .mk-compare-after {
     padding: 0.5rem 0.5rem 1.15rem;
-    border: 1px solid #e0e0e0;
-    border-radius: 1rem;
-    background: #fafafa;
+    border: 1px solid var(--mk-line);
+    border-radius: var(--mk-radius-card);
+    background: var(--mk-band);
     color: var(--mk-ink);
+}
+
+.mk-compare-card.is-after,
+.mk-compare-after {
+    border-color: var(--mk-teal);
+    background: var(--mk-teal-soft);
 }
 
 .mk-compare-top {
@@ -1346,9 +1378,9 @@ body.mk {
     list-style: none;
     display: grid;
     gap: 0.4rem;
-    border-radius: 1rem;
-    background: #f2f2f2;
-    border: 1px solid #e6e6e6;
+    border-radius: var(--mk-radius-card);
+    background: #fff;
+    border: 1px solid var(--mk-line);
 }
 
 .mk-compare-card li,
@@ -1367,13 +1399,13 @@ body.mk {
 .mk-compare-card li::before { display: none; }
 .mk-compare-before li { opacity: 1; }
 .mk-compare-before li span { color: #94a3b8; font-weight: 700; }
-.mk-compare-after li span { color: #059669; font-weight: 800; }
+.mk-compare-after li span { color: var(--mk-teal); font-weight: 800; }
 
 /* —— Steps —— */
 .mk-step-card {
-    border: 1px solid #e0e0e0;
-    border-radius: 1rem;
-    background: #fafafa;
+    border: 1px solid var(--mk-line);
+    border-radius: var(--mk-radius-card);
+    background: var(--mk-band);
     box-shadow: none;
     overflow: hidden;
 }
@@ -1386,7 +1418,7 @@ body.mk {
 .mk-step-thumb {
     aspect-ratio: 16 / 11;
     padding: 0.5rem 0.5rem 0;
-    background: #f2f2f2;
+    background: #e8eeee;
 }
 
 .mk-step-thumb .mk-ui {
@@ -1419,9 +1451,9 @@ body.mk {
     font-weight: 400;
 }
 
-/* —— Value (black About-style band) —— */
+/* —— Value (proposal cover band) —— */
 .mk-value {
-    background: #000;
+    background: var(--mk-teal-deep);
     color: #fff;
 }
 
@@ -1431,7 +1463,7 @@ body.mk {
     color: #fff;
 }
 
-.mk-value .mk-kicker { color: rgba(255, 255, 255, 0.55); }
+.mk-value .mk-kicker { color: var(--mk-sun); }
 .mk-value .mk-section-head-split > p { color: rgba(255, 255, 255, 0.8); }
 
 .mk-value-layout {
@@ -1466,8 +1498,8 @@ body.mk {
 .mk-value-item:nth-child(2),
 .mk-value-item.is-main {
     border: 0;
-    border-radius: 1rem;
-    background: #1a1a1a;
+    border-radius: var(--mk-radius-card);
+    background: #0f4f4a;
     color: #fff;
     overflow: hidden;
 }
@@ -1475,7 +1507,7 @@ body.mk {
 .mk-value-thumb {
     position: relative;
     aspect-ratio: 16 / 9;
-    background: #111;
+    background: #0a2f30;
     overflow: hidden;
 }
 
@@ -1500,8 +1532,8 @@ body.mk {
     left: 22%;
     width: 4.5rem;
     height: 4.5rem;
-    background: #2563eb33;
-    color: #93c5fd;
+    background: rgba(94, 234, 212, 0.22);
+    color: var(--mk-sun);
     font-size: 1.5rem;
 }
 
@@ -1567,7 +1599,7 @@ body.mk {
     position: absolute;
     right: 17%;
     bottom: 18%;
-    color: #93c5fd;
+    color: var(--mk-sun);
     letter-spacing: 0.2rem;
 }
 
@@ -1595,15 +1627,15 @@ body.mk {
 
 .mk-plan {
     padding: 0.5rem 0.5rem 1.5rem;
-    border: 1px solid #e0e0e0;
-    border-radius: 1rem;
-    background: #fafafa;
+    border: 1px solid var(--mk-line);
+    border-radius: var(--mk-radius-card);
+    background: var(--mk-band);
     color: var(--mk-ink);
 }
 
 .mk-plan-featured {
-    border-color: color-mix(in srgb, var(--mk-blue) 45%, #e0e0e0);
-    background: #fafafa;
+    border-color: var(--mk-teal);
+    background: var(--mk-teal-soft);
     color: var(--mk-ink);
 }
 
@@ -1671,10 +1703,10 @@ body.mk {
 .mk-plan-list {
     margin: 1.15rem 0.5rem 1.35rem;
     padding: 0.4rem;
-    border-radius: 1rem;
-    background: #f2f2f2;
-    border: 1px solid #e6e6e6;
-    color: #1e293b;
+    border-radius: var(--mk-radius-card);
+    background: #fff;
+    border: 1px solid var(--mk-line);
+    color: #1a2332;
 }
 
 .mk-plan-list li {
@@ -1696,9 +1728,9 @@ body.mk {
 .mk-modules {
     margin-top: 2.5rem;
     padding: 1.5rem 1.25rem 1.65rem;
-    border: 1px solid #e0e0e0;
-    border-radius: 1rem;
-    background: #fafafa;
+    border: 1px solid var(--mk-line);
+    border-radius: var(--mk-radius-card);
+    background: var(--mk-band);
 }
 
 .mk-modules-title {
@@ -1776,13 +1808,13 @@ body.mk {
 }
 
 .mk-faq details {
-    border: 1px solid rgba(226, 232, 240, 0.8);
-    border-radius: 1rem;
-    background: rgba(248, 250, 252, 0.8);
+    border: 1px solid var(--mk-line);
+    border-radius: var(--mk-radius-card);
+    background: var(--mk-band);
     padding: 0;
 }
 
-.mk-faq details[open] { background: #f8fafc; }
+.mk-faq details[open] { background: var(--mk-teal-soft); }
 
 .mk-faq summary {
     position: relative;
@@ -1848,7 +1880,10 @@ body.mk {
 
 .mk-footer-brand {
     font-family: var(--mk-display);
-    font-size: 1.25rem;
+    font-size: 1.5rem;
+    font-weight: 400;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
     color: var(--mk-ink);
 }
 

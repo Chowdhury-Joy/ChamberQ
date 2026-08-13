@@ -3,9 +3,9 @@
         <div class="mk-section-head mk-section-head-split">
             <div>
                 <p class="mk-kicker">One simple flow</p>
-                <h2 id="how-heading">From “I need a doctor”<br>to <em>“I’m next.”</em></h2>
+                <h2 id="how-heading">From your front desk<br>to <em>your consult.</em></h2>
             </div>
-            <p>Six small steps. No app download, no patient account, no confusing setup.</p>
+            <p>Six steps you actually run. We set it up with you. No app for you to learn.</p>
         </div>
         <x-card-grid :count="count(config('marketing.steps'))">
             @foreach(config('marketing.steps') as $index => $step)
