@@ -92,6 +92,25 @@ class TieredFeatureTest extends TestCase
         $this->assertTrue($solo->fresh()->hasFeature('bangla_homepage'));
     }
 
+    public function test_product_modules_default_on_for_both_tiers(): void
+    {
+        $solo = Tenant::create(['id' => 'mod-solo', 'plan_tier' => 'solo']);
+        $clinic = Tenant::create(['id' => 'mod-clinic', 'plan_tier' => 'clinic']);
+
+        foreach ([$solo, $clinic] as $tenant) {
+            $this->assertTrue($tenant->hasFrontDoor());
+            $this->assertTrue($tenant->hasLiveQueue());
+            $this->assertTrue($tenant->hasPrescription());
+        }
+
+        $solo->update([
+            'feature_flags' => Tenant::featureFlagsWithModules([], [Tenant::MODULE_FRONT_DOOR]),
+        ]);
+        $this->assertTrue($solo->fresh()->hasFrontDoor());
+        $this->assertFalse($solo->fresh()->hasLiveQueue());
+        $this->assertFalse($solo->fresh()->hasPrescription());
+    }
+
     public function test_solo_max_chambers_is_five_and_clinic_is_unlimited(): void
     {
         $solo = Tenant::create(['id' => 'max-solo', 'plan_tier' => 'solo']);

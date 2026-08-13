@@ -815,9 +815,22 @@ body.mk {
     text-decoration: none;
 }
 
+.mk-nav-find {
+    margin-left: auto;
+    margin-right: 0.65rem;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--mk-teal);
+    text-decoration: none;
+    white-space: nowrap;
+}
+
+.mk-nav-find:hover { color: var(--mk-teal-deep); }
+
 @media (min-width: 720px) {
     .mk-nav-links { display: flex; }
     .mk-nav-cta { margin-left: 1.25rem; }
+    .mk-nav-find { display: none; }
 }
 
 .mk-btn {
@@ -1562,6 +1575,67 @@ body.mk {
 }
 
 .mk-plan-list { margin-block: 1.4rem 1.6rem; }
+
+.mk-modules {
+    margin-top: 2.5rem;
+    padding: 1.5rem 1.4rem 1.65rem;
+    border: 1px solid rgba(23, 51, 46, 0.12);
+    border-radius: 1rem;
+    background: #fff;
+}
+
+.mk-modules-title {
+    margin: 0 0 1rem;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--mk-ink);
+}
+
+.mk-modules-table-wrap {
+    overflow-x: auto;
+}
+
+.mk-modules-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+
+.mk-modules-table th,
+.mk-modules-table td {
+    padding: 0.65rem 0.5rem;
+    text-align: left;
+    border-bottom: 1px solid rgba(23, 51, 46, 0.1);
+}
+
+.mk-modules-table th:not(:first-child),
+.mk-modules-table td:not(:first-child) {
+    text-align: right;
+    white-space: nowrap;
+}
+
+.mk-modules-table th {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: rgba(23, 51, 46, 0.55);
+}
+
+.mk-modules-bundle td {
+    font-weight: 700;
+    border-bottom: 0;
+    padding-top: 0.85rem;
+}
+
+.mk-modules-note {
+    margin: 0.9rem 0 1.1rem;
+    font-size: 0.9rem;
+    color: rgba(23, 51, 46, 0.65);
+}
+
+.mk-modules-cta {
+    display: inline-flex;
+}
 
 /* FAQ/footer */
 .mk-faq details {

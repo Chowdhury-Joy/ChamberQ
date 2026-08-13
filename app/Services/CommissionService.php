@@ -22,7 +22,7 @@ class CommissionService
      */
     public function applyPricingToTenant(Tenant $tenant, ?DiscountCode $code = null, bool $countRedemption = false): Tenant
     {
-        $list = $this->planPricing->listPricesForTier((string) $tenant->plan_tier);
+        $list = $this->planPricing->listPricesForTenant($tenant);
         $amounts = $this->discountCalculator->calculate($list['setup'], $list['monthly'], $code);
 
         $tenant->fill([

@@ -129,9 +129,19 @@ class User extends Authenticatable implements FilamentUser, CanResetPasswordCont
         return $this->isAdmin();
     }
 
+    /** Desk cashbook — income collected and expenses paid. Admin, doctor, or staff. */
+    public function canManageCash(): bool
+    {
+        return in_array($this->role, [self::ROLE_ADMIN, self::ROLE_DOCTOR, self::ROLE_STAFF], true);
+    }
+
     /** Daily roster and queue-adjacent workflows — doctor or staff, not account owner. */
     public function canManageQueue(): bool
     {
+        if (! tenant()?->hasFrontDoor()) {
+            return false;
+        }
+
         return in_array($this->role, [self::ROLE_DOCTOR, self::ROLE_STAFF], true);
     }
 
@@ -156,19 +166,19 @@ class User extends Authenticatable implements FilamentUser, CanResetPasswordCont
     /** Auto-following consult screen — clinical view for doctors only. */
     public function canViewConsultScreen(): bool
     {
-        return $this->isDoctor();
+        return $this->isDoctor() && (tenant()?->hasPrescription() ?? false);
     }
 
     /** Visit notes, prescriptions, and clinical history — doctors only. */
     public function canViewVisitNotes(): bool
     {
-        return $this->isDoctor();
+        return $this->isDoctor() && (tenant()?->hasPrescription() ?? false);
     }
 
     /** Recording diagnosis / prescription on complete — doctors only. */
     public function canRecordVisitNotes(): bool
     {
-        return $this->isDoctor();
+        return $this->isDoctor() && (tenant()?->hasPrescription() ?? false);
     }
 
     /**
@@ -180,6 +190,10 @@ class User extends Authenticatable implements FilamentUser, CanResetPasswordCont
      */
     public function canEnterPrescriptionFor(?Doctor $prescribingDoctor): bool
     {
+        if (! tenant()?->hasPrescription()) {
+            return false;
+        }
+
         if ($this->canRecordVisitNotes()) {
             return true;
         }
@@ -194,6 +208,10 @@ class User extends Authenticatable implements FilamentUser, CanResetPasswordCont
     /** Live Queue Control — only the party configured to run the queue. */
     public function canAccessLiveQueueControl(): bool
     {
+        if (! tenant()?->hasLiveQueue()) {
+            return false;
+        }
+
         return $this->canOperateQueueControls();
     }
 
@@ -202,6 +220,10 @@ class User extends Authenticatable implements FilamentUser, CanResetPasswordCont
      */
     public function canOperateQueueControls(): bool
     {
+        if (! tenant()?->hasLiveQueue()) {
+            return false;
+        }
+
         if (! $this->canManageQueue()) {
             return false;
         }

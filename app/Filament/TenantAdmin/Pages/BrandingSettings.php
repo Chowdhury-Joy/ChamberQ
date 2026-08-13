@@ -137,6 +137,7 @@ class BrandingSettings extends Page implements HasForms
                     ]),
 
                 Fieldset::make(__('Live Queue Settings'))
+                    ->visible(fn (): bool => tenant()?->hasLiveQueue() ?? false)
                     ->schema([
                         TextInput::make('call_timeout_seconds')
                             ->label('Call Timeout (seconds)')
@@ -244,23 +245,7 @@ class BrandingSettings extends Page implements HasForms
         $tenant = tenant();
 
         if ($tenant) {
-            $announceMode = $data['call_announce_mode'] ?? \App\Models\Tenant::ANNOUNCE_CHIME_AND_VOICE;
-            $usesChime = in_array($announceMode, [
-                \App\Models\Tenant::ANNOUNCE_CHIME,
-                \App\Models\Tenant::ANNOUNCE_CHIME_AND_VOICE,
-            ], true);
-            $usesVoice = in_array($announceMode, [
-                \App\Models\Tenant::ANNOUNCE_VOICE,
-                \App\Models\Tenant::ANNOUNCE_CHIME_AND_VOICE,
-            ], true);
-
-            $preset = $data['call_audio_preset'] ?? $tenant->call_audio_preset ?? 'chime';
-            $customPath = $data['call_audio_path'] ?? $tenant->call_audio_path;
-            if (is_array($customPath)) {
-                $customPath = $customPath[0] ?? null;
-            }
-
-            $tenant->update([
+            $payload = [
                 'name' => $data['name'],
                 'tagline' => $data['tagline'],
                 'logo_url' => $data['logo_url'],
@@ -270,19 +255,42 @@ class BrandingSettings extends Page implements HasForms
                 'contact_phone' => $data['contact_phone'],
                 'whatsapp_number' => $data['whatsapp_number'],
                 'default_locale' => $data['default_locale'],
-                'call_timeout_seconds' => $data['call_timeout_seconds'],
-                'estimated_time_buffer_minutes' => $data['estimated_time_buffer_minutes'],
-                'eta_model' => $data['eta_model'],
-                'first_n_patients' => $data['first_n_patients'],
-                'first_n_arrival_offset_minutes' => $data['first_n_arrival_offset_minutes'],
-                'queue_runner' => $data['queue_runner'] ?? \App\Models\Tenant::QUEUE_RUNNER_STAFF,
-                'call_announce_mode' => $announceMode,
-                'call_announce_locale' => $usesVoice ? ($data['call_announce_locale'] ?? 'en') : ($tenant->call_announce_locale ?? 'en'),
-                'call_audio_preset' => $usesChime ? $preset : ($tenant->call_audio_preset ?? 'chime'),
-                'call_audio_path' => $usesChime
-                    ? ($preset === 'custom' ? $customPath : null)
-                    : $tenant->call_audio_path,
-            ]);
+            ];
+
+            if ($tenant->hasLiveQueue()) {
+                $announceMode = $data['call_announce_mode'] ?? \App\Models\Tenant::ANNOUNCE_CHIME_AND_VOICE;
+                $usesChime = in_array($announceMode, [
+                    \App\Models\Tenant::ANNOUNCE_CHIME,
+                    \App\Models\Tenant::ANNOUNCE_CHIME_AND_VOICE,
+                ], true);
+                $usesVoice = in_array($announceMode, [
+                    \App\Models\Tenant::ANNOUNCE_VOICE,
+                    \App\Models\Tenant::ANNOUNCE_CHIME_AND_VOICE,
+                ], true);
+
+                $preset = $data['call_audio_preset'] ?? $tenant->call_audio_preset ?? 'chime';
+                $customPath = $data['call_audio_path'] ?? $tenant->call_audio_path;
+                if (is_array($customPath)) {
+                    $customPath = $customPath[0] ?? null;
+                }
+
+                $payload = array_merge($payload, [
+                    'call_timeout_seconds' => $data['call_timeout_seconds'],
+                    'estimated_time_buffer_minutes' => $data['estimated_time_buffer_minutes'],
+                    'eta_model' => $data['eta_model'],
+                    'first_n_patients' => $data['first_n_patients'],
+                    'first_n_arrival_offset_minutes' => $data['first_n_arrival_offset_minutes'],
+                    'queue_runner' => $data['queue_runner'] ?? \App\Models\Tenant::QUEUE_RUNNER_STAFF,
+                    'call_announce_mode' => $announceMode,
+                    'call_announce_locale' => $usesVoice ? ($data['call_announce_locale'] ?? 'en') : ($tenant->call_announce_locale ?? 'en'),
+                    'call_audio_preset' => $usesChime ? $preset : ($tenant->call_audio_preset ?? 'chime'),
+                    'call_audio_path' => $usesChime
+                        ? ($preset === 'custom' ? $customPath : null)
+                        : $tenant->call_audio_path,
+                ]);
+            }
+
+            $tenant->update($payload);
 
             Notification::make()
                 ->title(__('Branding settings updated successfully.'))

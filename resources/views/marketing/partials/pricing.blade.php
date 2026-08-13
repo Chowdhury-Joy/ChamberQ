@@ -3,7 +3,7 @@
         <div class="mk-section-head mk-section-head-split">
             <div>
                 <p class="mk-kicker">No mystery pricing</p>
-                <h2 id="pricing-heading">Start small.<br><em>Feel the difference.</em></h2>
+                <h2 id="pricing-heading">Start with what you need.<br><em>Add more when ready.</em></h2>
             </div>
             <p>We set everything up with you. No technical team, long contract, or payment gateway needed.</p>
         </div>
@@ -25,7 +25,7 @@
                     @endforeach
                 </ul>
                 <a class="mk-btn mk-btn-primary" href="{{ $soloWa }}" target="_blank" rel="noopener noreferrer">
-                    Choose Solo <span>→</span>
+                    Choose Maestro <span>→</span>
                 </a>
             </article>
 
@@ -49,5 +49,55 @@
                 </a>
             </article>
         </x-card-grid>
+
+        @php
+            $modules = config('marketing.modules', []);
+            $frontDoor = $modules['front_door'] ?? ['setup' => 7500, 'monthly' => 1000];
+            $prescription = $modules['prescription'] ?? ['setup' => 2500, 'monthly' => 0];
+            $liveQueue = $modules['live_queue'] ?? ['setup' => 7500, 'monthly' => 2000];
+            $bundle = $modules['bundle_all'] ?? ['setup' => 15000, 'monthly' => 3000];
+            $modulesWa = $wa('Hi — I\'m a solo doctor. I want to pick ChamberQ modules (website / prescription / queue).'.$refSuffix);
+        @endphp
+
+        <div class="mk-modules">
+            <h3 class="mk-modules-title">Or pick modules (one doctor)</h3>
+            <div class="mk-modules-table-wrap">
+                <table class="mk-modules-table">
+                    <thead>
+                        <tr>
+                            <th scope="col">What you want</th>
+                            <th scope="col">Setup</th>
+                            <th scope="col">Monthly</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>Website + booking</td>
+                            <td>{{ $taka((int) $frontDoor['setup']) }}</td>
+                            <td>{{ $taka((int) $frontDoor['monthly']) }}</td>
+                        </tr>
+                        <tr>
+                            <td>+ Prescription</td>
+                            <td>+{{ $taka((int) $prescription['setup']) }}</td>
+                            <td>+{{ $taka((int) $prescription['monthly']) }}</td>
+                        </tr>
+                        <tr>
+                            <td>+ Live queue</td>
+                            <td>+{{ $taka((int) $liveQueue['setup']) }}</td>
+                            <td>+{{ $taka((int) $liveQueue['monthly']) }}</td>
+                        </tr>
+                        <tr class="mk-modules-bundle">
+                            <td>All three = Maestro</td>
+                            <td>{{ $taka((int) $bundle['setup']) }}</td>
+                            <td>{{ $taka((int) $bundle['monthly']) }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            <p class="mk-modules-note">SMS confirmations optional (prepaid credits). Walk-ins included with website.</p>
+            <a class="mk-btn mk-btn-secondary mk-modules-cta" href="{{ $modulesWa }}" target="_blank" rel="noopener noreferrer">
+                Tell us which pieces you need <span>→</span>
+            </a>
+        </div>
     </div>
 </section>

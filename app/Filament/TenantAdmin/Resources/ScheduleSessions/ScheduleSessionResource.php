@@ -22,7 +22,13 @@ class ScheduleSessionResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return auth()->user()?->canManageOps() ?? false;
+        return (auth()->user()?->canManageOps() ?? false)
+            && (tenant()?->hasFrontDoor() ?? false);
+    }
+
+    public static function shouldRegisterNavigation(): bool
+    {
+        return static::canViewAny();
     }
 
     public static function form(Schema $schema): Schema

@@ -5,6 +5,7 @@ namespace App\Filament\SuperAdmin\Resources\Tenants\Pages;
 use App\Filament\SuperAdmin\Resources\Tenants\TenantResource;
 use App\Filament\SuperAdmin\Support\TenantBackupActions;
 use App\Models\DiscountCode;
+use App\Models\Tenant;
 use App\Services\CommissionService;
 use App\Services\SmsService;
 use Filament\Actions\Action;
@@ -18,11 +19,36 @@ class EditTenant extends EditRecord
 {
     protected static string $resource = TenantResource::class;
 
+    protected function mutateFormDataBeforeFill(array $data): array
+    {
+        $tenant = $this->record;
+        $data['product_modules'] = $tenant instanceof Tenant
+            ? $tenant->enabledProductModules()
+            : Tenant::productModules();
+
+        // Module keys are edited via product_modules — keep KeyValue for add-ons only.
+        $flags = is_array($data['feature_flags'] ?? null) ? $data['feature_flags'] : [];
+        foreach (Tenant::productModules() as $module) {
+            unset($flags[$module]);
+        }
+        $data['feature_flags'] = $flags;
+
+        return $data;
+    }
+
     protected function mutateFormDataBeforeSave(array $data): array
     {
         if (! empty($data['marketer_id']) && empty($data['referred_at']) && ! $this->record->referred_at) {
             $data['referred_at'] = now();
         }
+
+        $modules = $data['product_modules'] ?? $this->record->enabledProductModules();
+        unset($data['product_modules']);
+
+        $data['feature_flags'] = Tenant::featureFlagsWithModules(
+            is_array($data['feature_flags'] ?? null) ? $data['feature_flags'] : [],
+            is_array($modules) ? $modules : Tenant::productModules(),
+        );
 
         return $data;
     }
@@ -35,7 +61,7 @@ class EditTenant extends EditRecord
         // again, and that second save re-syncs `$model->changes` — so asking
         // afterwards whether the marketer changed returns false, and the partner
         // silently loses their setup commission.
-        $pricingChanged = $tenant->wasChanged(['plan_tier', 'discount_code_id']);
+        $pricingChanged = $tenant->wasChanged(['plan_tier', 'discount_code_id', 'feature_flags']);
         $discountChanged = $tenant->wasChanged('discount_code_id');
         $marketerChanged = $tenant->wasChanged('marketer_id');
 

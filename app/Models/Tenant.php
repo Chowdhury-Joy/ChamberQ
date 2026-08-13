@@ -26,6 +26,36 @@ class Tenant extends BaseTenant
     /** Max chambers on Solo when multiple_chambers is enabled. Clinic has no cap. */
     public const SOLO_MAX_CHAMBERS = 5;
 
+    /**
+     * Sellable product modules (independent of Solo/Clinic size tier).
+     * Stored in `feature_flags`; absent key = on (existing chambers keep full product).
+     */
+    public const MODULE_FRONT_DOOR = 'front_door';
+
+    public const MODULE_LIVE_QUEUE = 'live_queue';
+
+    public const MODULE_PRESCRIPTION = 'prescription';
+
+    /** @return list<string> */
+    public static function productModules(): array
+    {
+        return [
+            self::MODULE_FRONT_DOOR,
+            self::MODULE_LIVE_QUEUE,
+            self::MODULE_PRESCRIPTION,
+        ];
+    }
+
+    /** @return array<string, string> */
+    public static function productModuleOptions(): array
+    {
+        return [
+            self::MODULE_FRONT_DOOR => 'Front door — website + online booking + day list (ticket shows sitting window, not come-around)',
+            self::MODULE_LIVE_QUEUE => 'Live queue — outdoor TV, Call next, live ticket updates + come-around time',
+            self::MODULE_PRESCRIPTION => 'Prescription — consult pad, digital Rx, medicines, follow-ups',
+        ];
+    }
+
     public const ETA_SCHEDULE_GUESS = 'schedule_guess';
 
     public const ETA_LIVE_AVERAGE = 'live_average';
@@ -273,7 +303,13 @@ class Tenant extends BaseTenant
             // Filament KeyValue stores string "true"/"false"; (bool)"false" === true.
             return filter_var($flags[$feature], FILTER_VALIDATE_BOOLEAN);
         }
-        
+
+        // Product modules default ON so existing tenants keep the full product
+        // until Super Admin explicitly unchecks one.
+        if (in_array($feature, self::productModules(), true)) {
+            return true;
+        }
+
         // Fall back to tier defaults
         return match ($this->plan_tier) {
             'solo' => match ($feature) {
@@ -292,6 +328,51 @@ class Tenant extends BaseTenant
             },
             default => false,
         };
+    }
+
+    public function hasFrontDoor(): bool
+    {
+        return $this->hasFeature(self::MODULE_FRONT_DOOR);
+    }
+
+    public function hasLiveQueue(): bool
+    {
+        return $this->hasFeature(self::MODULE_LIVE_QUEUE);
+    }
+
+    public function hasPrescription(): bool
+    {
+        return $this->hasFeature(self::MODULE_PRESCRIPTION);
+    }
+
+    /**
+     * Merge Super Admin module checkboxes into feature_flags without wiping
+     * add-ons (lab_tests, bangla_homepage, …).
+     *
+     * @param  list<string>  $enabledModules
+     * @param  array<string, mixed>|null  $existingFlags
+     * @return array<string, mixed>
+     */
+    public static function featureFlagsWithModules(?array $existingFlags, array $enabledModules): array
+    {
+        $flags = is_array($existingFlags) ? $existingFlags : [];
+
+        foreach (self::productModules() as $module) {
+            $flags[$module] = in_array($module, $enabledModules, true);
+        }
+
+        return $flags;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function enabledProductModules(): array
+    {
+        return array_values(array_filter(
+            self::productModules(),
+            fn (string $module): bool => $this->hasFeature($module),
+        ));
     }
 
     public function isClinic(): bool
@@ -325,6 +406,10 @@ class Tenant extends BaseTenant
      */
     public function acceptsBookings(): bool
     {
+        if (! $this->hasFrontDoor()) {
+            return false;
+        }
+
         return ! in_array($this->billing_status, [
             'past_due',
             'suspended',

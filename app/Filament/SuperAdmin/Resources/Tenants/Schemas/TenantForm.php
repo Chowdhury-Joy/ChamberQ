@@ -3,10 +3,12 @@
 namespace App\Filament\SuperAdmin\Resources\Tenants\Schemas;
 
 use App\Models\DiscountCode;
+use App\Models\Tenant;
 use App\Services\DiscountCalculator;
 use App\Services\PlanPricingService;
 use Filament\Forms\Components\Placeholder;
 use Filament\Schemas\Components\Fieldset;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\KeyValue;
 use Filament\Forms\Components\Repeater;
@@ -88,7 +90,8 @@ class TenantForm
                                 'clinic' => 'Clinic',
                             ])
                             ->default('solo')
-                            ->required(),
+                            ->required()
+                            ->live(),
                         Select::make('slot_cap_mode')
                             ->label(__('Slot Cap Mode'))
                             ->helperText(__('Per session: each schedule has its own daily cap. Per doctor & chamber: all that doctor’s sessions at one chamber share one daily cap.'))
@@ -116,6 +119,19 @@ class TenantForm
                             ->default(0)
                             ->helperText(__('Prepaid confirmation credits. Top up with the header action on edit, or set here.'))
                             ->required(),
+                    ]),
+
+                Fieldset::make(__('Product modules'))
+                    ->schema([
+                        CheckboxList::make('product_modules')
+                            ->label(__('Included for this client'))
+                            ->helperText(__('Front door ৳7,500 + ৳1,000/mo · Prescription ৳2,500 setup (৳0/mo) · Live queue ৳7,500 + ৳2,000/mo · All three ৳15,000 + ৳3,000/mo. SMS is optional. Solo pricing follows these boxes; Clinic uses Clinic list price.'))
+                            ->options(Tenant::productModuleOptions())
+                            ->default(Tenant::productModules())
+                            ->columns(1)
+                            ->required()
+                            ->live()
+                            ->columnSpanFull(),
                     ]),
 
                 Fieldset::make(__('Referral & Discount'))
@@ -147,7 +163,11 @@ class TenantForm
                             ->label(__('Amount preview'))
                             ->content(function (Get $get): string {
                                 $tier = (string) ($get('plan_tier') ?: 'solo');
-                                $list = app(PlanPricingService::class)->listPricesForTier($tier);
+                                $modules = $get('product_modules');
+                                if (! is_array($modules) || $modules === []) {
+                                    $modules = Tenant::productModules();
+                                }
+                                $list = app(PlanPricingService::class)->listPricesForModules($tier, $modules);
                                 $code = $get('discount_code_id')
                                     ? DiscountCode::find($get('discount_code_id'))
                                     : null;
@@ -205,7 +225,7 @@ class TenantForm
                     ->schema([
                         KeyValue::make('feature_flags')
                             ->label(__('Feature Flags'))
-                            ->helperText(__('Paid add-on example: bangla_homepage = true. Other keys: lab_tests, multiple_doctors, multiple_chambers.'))
+                            ->helperText(__('Paid add-ons and size overrides only (not the modules above). Example: bangla_homepage = true. Other keys: lab_tests, multiple_doctors, multiple_chambers.'))
                             ->keyLabel('Feature')
                             ->valueLabel('Enabled (true/false)')
                             ->keyPlaceholder('e.g. bangla_homepage')

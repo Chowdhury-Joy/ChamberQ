@@ -6,9 +6,11 @@ use App\Filament\TenantAdmin\Resources\WebPages\Pages\CreateWebPage;
 use App\Filament\TenantAdmin\Resources\WebPages\Pages\EditWebPage;
 use App\Filament\TenantAdmin\Resources\WebPages\Pages\ListWebPages;
 use App\Filament\TenantAdmin\Resources\WebPages\Tables\WebPagesTable;
+use App\Filament\TenantAdmin\Support\PublicMediaFields;
 use App\Models\WebPage;
 use BackedEnum;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
@@ -30,7 +32,8 @@ class WebPageResource extends Resource
         /** @var \App\Models\User|null $user */
         $user = auth()->user();
 
-        return $user?->canManageContent() ?? false;
+        return ($user?->canManageContent() ?? false)
+            && (tenant()?->hasFrontDoor() ?? false);
     }
 
     public static function canCreate(): bool
@@ -130,7 +133,7 @@ class WebPageResource extends Resource
                                 Forms\Components\TextInput::make('secondary_cta_text')->default('Our Services'),
                                 Forms\Components\TextInput::make('secondary_cta_link')->default('#services'),
                                 Forms\Components\TextInput::make('emergency_phone')->label('Emergency Hotline (shown below hero)')->placeholder('017XXXXXXXX'),
-                                Forms\Components\TextInput::make('image_url')->label('Hero Image URL')->placeholder('https://images.unsplash.com/...'),
+                                self::heroImageUpload(),
                             ]),
 
                         // 2. Text-Based Trust Bar
@@ -248,26 +251,52 @@ class WebPageResource extends Resource
                                 Forms\Components\TextInput::make('email')->placeholder('contact@clinic.com'),
                             ]),
 
-                        // 8. Video Showcase Gallery (Max 10 videos)
+                        // 8. Latest Educational Videos (Max 10)
                         Forms\Components\Builder\Block::make('video_gallery')
-                            ->label('Video Showcase Gallery (Max 10 Videos)')
+                            ->label('Latest Educational Videos (Max 10)')
                             ->schema([
-                                Forms\Components\TextInput::make('heading')->default('Video Showcase & Patient Guides'),
+                                Forms\Components\TextInput::make('heading')->default('Latest Educational Videos'),
                                 Forms\Components\TextInput::make('follow_text')->label('Follow CTA label')->default('Follow for More'),
                                 Forms\Components\TextInput::make('follow_url')->label('Follow CTA URL')->placeholder('https://www.youtube.com/@...'),
                                 Forms\Components\Repeater::make('videos')
+                                    ->label('Videos')
                                     ->columns(2)
                                     ->maxItems(10)
                                     ->schema([
-                                        Forms\Components\TextInput::make('title')->required(),
+                                        Forms\Components\TextInput::make('title')
+                                            ->required()
+                                            ->columnSpanFull(),
                                         Forms\Components\Select::make('type')
+                                            ->label('Media')
                                             ->options([
-                                                'link' => 'External Social Link (YouTube / Facebook / Instagram)',
-                                                'upload' => 'Direct Video Upload (< 20MB)',
+                                                'link' => 'YouTube / Facebook / Instagram link',
+                                                'upload' => 'Upload a video from this computer (up to 20 MB)',
                                             ])
-                                            ->default('link'),
-                                        Forms\Components\TextInput::make('video_url')->label('Video URL')->placeholder('https://www.youtube.com/watch?v=...'),
-                                        Forms\Components\TextInput::make('thumbnail_url')->label('Custom Thumbnail Image URL')->placeholder('https://...'),
+                                            ->default('link')
+                                            ->live()
+                                            ->columnSpanFull(),
+                                        Forms\Components\TextInput::make('video_url')
+                                            ->label('Video link')
+                                            ->placeholder('https://www.youtube.com/watch?v=...')
+                                            ->visible(fn (Get $get): bool => ($get('type') ?? 'link') !== 'upload')
+                                            ->dehydrated(fn (Get $get): bool => ($get('type') ?? 'link') !== 'upload')
+                                            ->columnSpanFull(),
+                                        PublicMediaFields::video(
+                                            'uploaded_video',
+                                            'webpage-videos',
+                                            'Video file',
+                                            'MP4, WebM, or MOV, up to 20 MB. Patients tap the card to watch.',
+                                        )
+                                            ->visible(fn (Get $get): bool => $get('type') === 'upload')
+                                            ->required(fn (Get $get): bool => $get('type') === 'upload')
+                                            ->dehydrated(fn (Get $get): bool => $get('type') === 'upload')
+                                            ->columnSpanFull(),
+                                        PublicMediaFields::image(
+                                            'thumbnail_url',
+                                            'webpage-video-thumbs',
+                                            'Cover image',
+                                            'The still photo on the card (same look as Latest Educational Videos). JPG, PNG, or WebP, up to 4 MB.',
+                                        )->columnSpanFull(),
                                     ]),
                             ]),
 
@@ -473,6 +502,16 @@ class WebPageResource extends Resource
                     ])
                     ->columnSpanFull(),
             ]);
+    }
+
+    private static function heroImageUpload(): Forms\Components\FileUpload
+    {
+        return PublicMediaFields::image(
+            'image_url',
+            'webpage-hero',
+            'Hero image',
+            'Upload a photo from this computer (JPG, PNG, or WebP, up to 4 MB). An older pasted link still works until you replace it.',
+        )->columnSpan(2);
     }
 
     public static function table(Table $table): Table

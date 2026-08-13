@@ -22,7 +22,7 @@
         return '৳'.number_format($amount);
     };
 
-    $soloWa = $wa('Hi — I\'m a solo doctor interested in ChamberQ (Solo plan).'.$refSuffix);
+    $soloWa = $wa('Hi — I\'m a solo doctor interested in ChamberQ (Maestro — full package).'.$refSuffix);
     $clinicWa = $wa('Hi — I\'m interested in ChamberQ for our clinic (Clinic plan).'.$refSuffix);
     $generalWa = $wa('Hi — I\'m a solo doctor and want to know how ChamberQ can help my chamber.'.$refSuffix);
 @endphp

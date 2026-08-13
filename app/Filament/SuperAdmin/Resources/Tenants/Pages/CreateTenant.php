@@ -4,6 +4,7 @@ namespace App\Filament\SuperAdmin\Resources\Tenants\Pages;
 
 use App\Filament\SuperAdmin\Resources\Tenants\TenantResource;
 use App\Models\DiscountCode;
+use App\Models\Tenant;
 use App\Services\CommissionService;
 use App\Services\TenantUserBootstrapService;
 use Filament\Resources\Pages\CreateRecord;
@@ -16,7 +17,9 @@ class CreateTenant extends CreateRecord
     {
         parent::mount();
 
-        $prefill = [];
+        $prefill = [
+            'product_modules' => Tenant::productModules(),
+        ];
 
         if ($marketerId = session('referral.marketer_id')) {
             $prefill['marketer_id'] = $marketerId;
@@ -27,9 +30,7 @@ class CreateTenant extends CreateRecord
             $prefill['discount_code_id'] = $discountId;
         }
 
-        if ($prefill !== []) {
-            $this->form->fill($prefill);
-        }
+        $this->form->fill($prefill);
     }
 
     protected function mutateFormDataBeforeCreate(array $data): array
@@ -37,6 +38,14 @@ class CreateTenant extends CreateRecord
         if (! empty($data['marketer_id']) && empty($data['referred_at'])) {
             $data['referred_at'] = now();
         }
+
+        $modules = $data['product_modules'] ?? Tenant::productModules();
+        unset($data['product_modules']);
+
+        $data['feature_flags'] = Tenant::featureFlagsWithModules(
+            is_array($data['feature_flags'] ?? null) ? $data['feature_flags'] : [],
+            is_array($modules) ? $modules : Tenant::productModules(),
+        );
 
         // Not tenant columns — handled in afterCreate.
         unset($data['initial_doctor_email'], $data['initial_doctor_name']);

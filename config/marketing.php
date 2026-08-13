@@ -61,16 +61,18 @@ return [
 
     'plans' => [
         'solo' => [
-            'name' => 'Solo',
-            'tagline' => 'For one doctor, up to 5 chambers',
+            // Sales name: Maestro. Internal plan_tier key stays `solo`.
+            'name' => 'Maestro',
+            'tagline' => 'For one doctor, up to 5 chambers — full package',
+            // Full Solo/Maestro bundle (= all three modules). À la carte lives under `modules`.
             'setup' => (int) env('MARKETING_SOLO_SETUP', 15000),
             'monthly' => (int) env('MARKETING_SOLO_MONTHLY', 3000),
             'featured' => true,
             'features' => [
                 'One doctor, up to 5 locations',
-                'Branded patient site & online serial',
-                'Live queue & patient ticket',
-                'Prepaid SMS confirmations',
+                'Website + online booking',
+                'Live queue + outdoor TV',
+                'Digital prescription',
                 'We set it up with you',
             ],
         ],
@@ -84,9 +86,38 @@ return [
                 'Multiple doctors & chambers',
                 'Lab tests catalogue',
                 'Same patient experience, scaled',
-                'Prepaid SMS confirmations',
+                'Prepaid SMS confirmations (optional)',
                 'We set it up with you',
             ],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Product modules (Solo à la carte)
+    |--------------------------------------------------------------------------
+    |
+    | Unit prices when a client buys a subset. Selecting all three uses the
+    | bundle amounts (setup discount vs sum of units; monthly equals the sum).
+    | Clinic tier still uses `plans.clinic` list prices.
+    |
+    */
+    'modules' => [
+        'front_door' => [
+            'setup' => (int) env('MARKETING_MODULE_FRONT_DOOR_SETUP', 7500),
+            'monthly' => (int) env('MARKETING_MODULE_FRONT_DOOR_MONTHLY', 1000),
+        ],
+        'prescription' => [
+            'setup' => (int) env('MARKETING_MODULE_PRESCRIPTION_SETUP', 2500),
+            'monthly' => (int) env('MARKETING_MODULE_PRESCRIPTION_MONTHLY', 0),
+        ],
+        'live_queue' => [
+            'setup' => (int) env('MARKETING_MODULE_LIVE_QUEUE_SETUP', 7500),
+            'monthly' => (int) env('MARKETING_MODULE_LIVE_QUEUE_MONTHLY', 2000),
+        ],
+        'bundle_all' => [
+            'setup' => (int) env('MARKETING_SOLO_SETUP', 15000),
+            'monthly' => (int) env('MARKETING_SOLO_MONTHLY', 3000),
         ],
     ],
 
