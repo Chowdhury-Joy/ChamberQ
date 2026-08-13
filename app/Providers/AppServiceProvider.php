@@ -49,6 +49,7 @@ class AppServiceProvider extends ServiceProvider
 
         // Hero/video FileUpload allows 20 MB; Livewire's default temp rule is 12 MB.
         config([
+            'livewire.temporary_file_upload.disk' => 'livewire-tmp',
             'livewire.temporary_file_upload.rules' => ['required', 'file', 'max:20480'],
         ]);
 

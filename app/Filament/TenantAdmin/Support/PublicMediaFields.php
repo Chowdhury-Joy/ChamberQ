@@ -4,7 +4,6 @@ namespace App\Filament\TenantAdmin\Support;
 
 use App\Support\PublicStoredImage;
 use Filament\Forms\Components\FileUpload;
-use Illuminate\Support\Arr;
 use League\Flysystem\UnableToCheckFileExistence;
 
 final class PublicMediaFields
@@ -13,7 +12,6 @@ final class PublicMediaFields
     {
         return self::base($name, $directoryPrefix, $label, $helper)
             ->image()
-            ->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif'])
             ->maxSize(4096)
             ->imagePreviewHeight('16rem');
     }
@@ -52,14 +50,14 @@ final class PublicMediaFields
                 $diskPath = PublicStoredImage::toDiskPath($file) ?? $file;
 
                 try {
-                    if (! $component->getDisk()->exists($diskPath)) {
-                        return null;
+                    if ($component->getDisk()->exists($diskPath)) {
+                        return $component->getUploadedFile($diskPath, $storedFileNames);
                     }
                 } catch (UnableToCheckFileExistence) {
                     return null;
                 }
 
-                return $component->getUploadedFile($diskPath, $storedFileNames);
+                return null;
             })
             ->deleteUploadedFileUsing(function (FileUpload $component, string $file): void {
                 $diskPath = PublicStoredImage::toDiskPath($file);
@@ -67,13 +65,6 @@ final class PublicMediaFields
                 if ($diskPath && $component->getDisk()->exists($diskPath)) {
                     $component->getDisk()->delete($diskPath);
                 }
-            })
-            ->dehydrateStateUsing(function (mixed $state): ?string {
-                if (is_array($state)) {
-                    $state = Arr::first($state);
-                }
-
-                return PublicStoredImage::toPublicPath(is_string($state) ? $state : null);
             });
     }
 }

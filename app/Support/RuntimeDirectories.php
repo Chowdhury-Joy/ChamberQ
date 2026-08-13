@@ -40,5 +40,31 @@ final class RuntimeDirectories
                 @chmod($dir, 0775);
             }
         }
+
+        self::ensurePublicStorageLink();
+    }
+
+    /**
+     * `/storage/…` is public/storage → storage/app/public. A leftover symlink
+     * from another checkout (e.g. SolDoc) makes uploads vanish in the browser.
+     */
+    public static function ensurePublicStorageLink(): void
+    {
+        $link = public_path('storage');
+        $target = storage_path('app/public');
+
+        if (is_link($link)) {
+            $current = readlink($link);
+
+            if ($current === $target || realpath($link) === realpath($target)) {
+                return;
+            }
+
+            unlink($link);
+        } elseif (file_exists($link)) {
+            return;
+        }
+
+        @symlink($target, $link);
     }
 }

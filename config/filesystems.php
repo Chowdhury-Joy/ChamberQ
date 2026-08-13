@@ -47,6 +47,16 @@ return [
             'report' => false,
         ],
 
+        // Staging for Filament/Livewire FileUpload. Must stay off the tenancy
+        // disk suffix list so /livewire/upload-file always writes here, not
+        // into storage/tenant{id}/ which the uploader cannot see.
+        'livewire-tmp' => [
+            'driver' => 'local',
+            'root' => storage_path('app/private/livewire-tmp'),
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

@@ -100,6 +100,39 @@ class HeroImageUploadTest extends TestCase
         $this->assertSame('/book', $block['data']['cta_link']);
     }
 
+    public function test_relative_hero_upload_path_is_promoted_to_storage_url(): void
+    {
+        tenancy()->initialize($this->tenant);
+
+        $page = WebPage::create([
+            'title' => 'Home',
+            'slug' => '/',
+            'is_published' => true,
+            'content' => [[
+                'type' => 'hero',
+                'data' => [
+                    'headline' => 'Care',
+                    'image_url' => 'webpage-hero/hero-upload/photo.jpg',
+                ],
+            ]],
+        ]);
+
+        $this->assertSame(
+            '/storage/webpage-hero/hero-upload/photo.jpg',
+            $page->fresh()->content[0]['data']['image_url'],
+        );
+    }
+
+    public function test_public_disk_stays_web_visible_after_tenancy_starts(): void
+    {
+        tenancy()->initialize($this->tenant);
+
+        $path = str_replace('\\', '/', Storage::disk('public')->path('webpage-hero/probe.jpg'));
+
+        $this->assertStringContainsString('storage/app/public', $path);
+        $this->assertStringNotContainsString('storage/tenant', $path);
+    }
+
     public function test_uploaded_educational_video_is_copied_to_video_url_and_renders(): void
     {
         Storage::fake('public');

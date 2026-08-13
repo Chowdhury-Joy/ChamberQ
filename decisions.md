@@ -1927,6 +1927,15 @@
  <reason>A chmod someone must remember will be forgotten. Creating the folders at boot is the same class of fix as putting GSM flattening inside `SmsService::send()`.</reason>
 </decision>
 
+## 2026-08-13T11:00:26+0600
+
+<decision>
+ <category>Code</category>
+ <context>Website image upload looked like it worked in the admin picker, then the homepage stayed blank. Files were being written where the browser cannot see them, and a leftover shortcut still pointed at the old SolDoc folder.</context>
+ <action>Keep the `public` disk at `storage/app/public` (tenant id in the folder name, not a hidden tenant storage root). Stage Livewire picks on a `livewire-tmp` disk. Repair `public/storage` when it points elsewhere. Convert FileUpload paths to `/storage/…` only when the Web Page is saved.</action>
+ <reason>Like putting posters in the shop window instead of a locked back room: the file has to sit on the path the website already uses. Clinical photos stay on the private tenant disk.</reason>
+</decision>
+
 ## 2026-08-13T11:15:22+0600
 
 <decision>

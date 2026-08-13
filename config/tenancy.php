@@ -130,8 +130,9 @@ return [
         'suffix_base' => 'tenant',
         'disks' => [
             'local',
-            'public',
-            // 's3',
+            // `public` stays unsuffixed: website photos, call chimes, and
+            // `/storage/…` URLs all share storage/app/public (tenant id is in
+            // the folder name). Suffixing it hid uploads from the web server.
         ],
 
         /**

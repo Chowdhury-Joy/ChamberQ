@@ -900,3 +900,12 @@
  <root_cause>Laravel 12 writes facade cache via `tempnam()` into `storage/framework/cache`. PHP 8.4+ warns when that folder is missing or not writable and the file lands in `/tmp` instead; debug mode turns the warning into an unhandled exception. Livewire's upload folder `storage/app/private/livewire-tmp` was also missing, so FileUpload had nowhere to stage files.</root_cause>
  <prevention_rule>`RuntimeDirectories::ensure()` must run from `AppServiceProvider::register()` so cache, session, view, Livewire tmp, and public website-media folders exist and are writable before the first request. Do not rely on a human remembering `chmod`.</prevention_rule>
 </bug>
+
+## 2026-08-13T11:00:26+0600
+
+<bug>
+ <category>Code</category>
+ <symptom>Hero / educational-video image upload in Web Pages did not show on the site (or vanished after picking a file).</symptom>
+ <root_cause>Three stacked faults: (1) `public/storage` still pointed at the old SolDoc checkout, so `/storage/…` URLs never hit ChamberQ files; (2) stancl suffixed the `public` disk into `storage/tenant{id}/app/public`, which is not web-visible; (3) FileUpload `dehydrateStateUsing` rewrote Livewire's temp file into a `/storage/…` path before the file was stored, wiping the upload.</root_cause>
+ <prevention_rule>Website FileUpload stays on the unsuffixed `public` disk; Livewire stages on a dedicated `livewire-tmp` disk; `RuntimeDirectories` must recreate `public/storage` when it does not point at this app's `storage/app/public`; convert disk paths to `/storage/…` only on `WebPage` save, never while Livewire still holds a temp file.</prevention_rule>
+</bug>

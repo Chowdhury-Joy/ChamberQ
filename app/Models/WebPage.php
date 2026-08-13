@@ -47,6 +47,7 @@ class WebPage extends Model
                 }
 
                 $block = self::promoteUploadedVideos($block);
+                $block = PublicStoredImage::promoteBuilderBlock($block);
                 $content[$index] = SafeUrl::sanitizeBuilderBlock($block);
             }
 
