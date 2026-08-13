@@ -109,6 +109,20 @@ jobs:
           php artisan migrate:reset --no-interaction
           php artisan migrate --no-interaction
 
+      # A real deploy runs this straight after migrating (see composer.json's
+      # `setup`), and the readiness gate below treats an empty catalogue as a
+      # blocker. Without this step the gate is asserting a state no deployment
+      # actually ships in.
+      - name: Load the medicine and diagnosis catalogues
+        env:
+          DB_CONNECTION: mysql
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_DATABASE: soldoc_test
+          DB_USERNAME: root
+          DB_PASSWORD: ''
+        run: php artisan catalogues:load
+
       # Proves the gate can actually pass on a production-shaped config. A
       # deploy runs the same command without --strict; if this step ever fails,
       # the checklist has drifted from what a real deployment can satisfy and
