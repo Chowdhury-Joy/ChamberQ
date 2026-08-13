@@ -57,12 +57,11 @@ if (! function_exists('tenant_web_route')) {
 
 if (! function_exists('bilingual')) {
     /**
-     * A fixed label in Bangla and English at once, for prescription paperwork
-     * that is read by patients and clinicians who may not share a language.
-     * See \App\Support\Bilingual.
+     * A fixed label in Bangla (lead) and English (quiet), for prescription
+     * paperwork. See \App\Support\Bilingual.
      */
-    function bilingual(string $key): string
+    function bilingual(string $key): \Illuminate\Support\HtmlString
     {
-        return \App\Support\Bilingual::label($key);
+        return \App\Support\Bilingual::html($key);
     }
 }

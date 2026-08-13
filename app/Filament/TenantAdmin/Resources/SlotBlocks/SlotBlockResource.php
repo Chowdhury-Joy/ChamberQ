@@ -22,6 +22,8 @@ class SlotBlockResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedNoSymbol;
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Operations';
+
     public static function canViewAny(): bool
     {
         return (auth()->user()?->canManageOps() ?? false)

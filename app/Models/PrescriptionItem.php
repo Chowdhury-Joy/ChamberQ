@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Support\PrescriptionQuantity;
 use App\Support\PrescriptionTiming;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -38,8 +39,21 @@ class PrescriptionItem extends Model
         return PrescriptionTiming::displayLabel($this->timing);
     }
 
-    public function timingBilingualLabel(): ?string
+    /**
+     * Must stay HtmlString. A `?string` return type stringifies the markup,
+     * Blade then escapes it, and the patient sees `<span>` on the paper.
+     */
+    public function timingBilingualLabel(): \Illuminate\Support\HtmlString|string|null
     {
         return PrescriptionTiming::bilingualLabel($this->timing);
+    }
+
+    /**
+     * Doses this line adds up to, or null when frequency or duration cannot be
+     * multiplied out (`SOS`, `Continue`, anything free-typed).
+     */
+    public function totalDoses(): ?int
+    {
+        return PrescriptionQuantity::total($this->frequency, $this->duration);
     }
 }

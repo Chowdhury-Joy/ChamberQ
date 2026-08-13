@@ -31,6 +31,23 @@
         /* Buttons that are the main thing to press fill their card. */
         .lqc-actions { display: flex; flex-direction: column; gap: 0.5rem; }
         .lqc-actions .fi-btn { width: 100%; justify-content: center; }
+        /* Same Complete visit treatment as Consult Screen: solid green, white type. */
+        .cs-complete-visit-btn.fi-btn.fi-color-success {
+            background-color: var(--success-600, #16a34a);
+            color: #fff;
+            --text: #fff;
+            --hover-text: #fff;
+            --dark-text: #fff;
+            --dark-hover-text: #fff;
+        }
+        .cs-complete-visit-btn.fi-btn.fi-color-success:hover {
+            background-color: var(--success-500, #22c55e);
+            color: #fff;
+        }
+        .cs-complete-visit-btn.fi-btn.fi-color-success > .fi-icon,
+        .cs-complete-visit-btn.fi-btn.fi-color-success svg {
+            color: #fff;
+        }
         .lqc-btn-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 
         .lqc-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: rgb(228 228 231); border: 1px solid rgb(228 228 231); border-radius: 0.75rem; overflow: hidden; }
@@ -383,7 +400,7 @@
                                                     Call next patient
                                                 </x-filament::button>
                                             @else
-                                                <x-filament::button wire:click="completeVisit" color="success" icon="heroicon-m-check-badge" size="lg">
+                                                <x-filament::button class="cs-complete-visit-btn" wire:click="completeVisit" color="success" icon="heroicon-m-check-badge" size="lg">
                                                     Complete visit
                                                 </x-filament::button>
                                             @endif

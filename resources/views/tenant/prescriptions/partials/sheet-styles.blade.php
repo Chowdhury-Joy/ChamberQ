@@ -1,13 +1,16 @@
 {{-- Shared pad-style prescription CSS (doctor print + patient copy). --}}
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
     * { box-sizing: border-box; }
     body {
         margin: 0;
-        font-family: 'Helvetica Neue', Arial, sans-serif;
+        font-family: 'Hind Siliguri', 'Noto Sans Bengali', Arial, sans-serif;
         color: #111;
         background: #fff;
-        font-size: 13px;
-        line-height: 1.45;
+        font-size: 14px;
+        line-height: 1.5;
     }
     .sheet {
         max-width: 794px; /* ~A4 width at 96dpi */
@@ -32,6 +35,11 @@
         gap: 12px 20px;
         padding: 14px 16px 12px;
         border-bottom: 2px solid #0f172a;
+    }
+    /* Gap so the clinic's own printed name is not overprinted. ~40mm matches
+       a typical BD pad letterhead; not a per-doctor measurement. */
+    .pad--on-paper {
+        padding-top: 40mm;
     }
     .doctor-name {
         font-size: 18px;
@@ -66,11 +74,13 @@
         min-width: 0;
     }
     .patient-band .label {
-        color: #64748b;
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.03em;
+        color: #334155;
+        font-size: 12px;
+        font-weight: 600;
         white-space: nowrap;
+    }
+    .patient-band .label .pad-l-en {
+        font-weight: 500;
     }
     .patient-band .value {
         font-weight: 600;
@@ -103,11 +113,24 @@
     .clinical-block:last-child { margin-bottom: 0; }
     .clinical-block strong {
         display: block;
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.04em;
-        color: #64748b;
+        font-size: 12px;
+        font-weight: 700;
+        color: #334155;
         margin-bottom: 3px;
+    }
+    .clinical-block strong .pad-l-en {
+        font-weight: 500;
+    }
+    .pad-l-bn { }
+    .pad-l-en {
+        margin-left: 0.35em;
+        font-size: 0.82em;
+        font-weight: 500;
+        color: #64748b;
+    }
+    .pad-l-en::before {
+        content: "/ ";
+        color: #94a3b8;
     }
     .clinical-block .body {
         white-space: pre-wrap;
@@ -118,6 +141,9 @@
         font-size: 12px;
         font-style: italic;
     }
+    /* The numbers are rendered as their own grid cell, not as list markers —
+       a marker sits outside the row box and would not line up with the three
+       columns or survive the phone card layout on the patient copy. */
     .med-list {
         list-style: none;
         margin: 0;
@@ -125,13 +151,19 @@
     }
     .med-row {
         display: grid;
-        grid-template-columns: minmax(0, 1fr) auto;
-        gap: 6px 12px;
+        grid-template-columns: auto minmax(0, 1fr) auto;
+        gap: 6px 10px;
         padding: 8px 0;
         border-bottom: 1px solid #e2e8f0;
         align-items: start;
     }
     .med-row:last-child { border-bottom: none; }
+    .med-number {
+        font-weight: 700;
+        font-size: 13px;
+        color: #475569;
+        font-variant-numeric: tabular-nums;
+    }
     .medicine-brand {
         font-weight: 700;
         text-transform: uppercase;
@@ -150,14 +182,25 @@
         font-variant-numeric: tabular-nums;
     }
     .med-dosing .duration,
-    .med-dosing .timing {
+    .med-dosing .timing,
+    .med-dosing .total-doses {
         display: block;
-        font-size: 11px;
+        font-size: 12px;
         font-weight: 500;
         color: #475569;
         margin-top: 2px;
         white-space: normal;
-        max-width: 11rem;
+        max-width: 12rem;
+    }
+    /* Arithmetic on the doctor's own line, not an instruction of its own —
+       so it sits below the dosing, quieter than it. */
+    .med-dosing .total-doses {
+        font-size: 11px;
+        color: #64748b;
+    }
+    .med-dosing .timing .pad-l-bn {
+        color: #0f172a;
+        font-weight: 600;
     }
     .pad-footer {
         margin-top: auto;

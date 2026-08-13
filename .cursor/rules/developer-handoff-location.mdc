@@ -1,0 +1,39 @@
+---
+description: Developer handoff PDFs live outside the repo at ~/developer-handoff/ChamberQ with DDMM-HHmm in the filename
+alwaysApply: true
+---
+
+# Developer handoff location
+
+Developer-handoff PDFs for this project are **not** stored only inside the ChamberQ repo.
+
+Canonical folder (outside the project):
+
+`/Users/chowdhuryjoy/developer-handoff/ChamberQ/`
+
+## Filename (required)
+
+Stamp is **day+month**, then **24-hour time**, no year and no colon.
+
+Pattern:
+
+`<Name>-DDMM-HHmm.pdf`
+
+Examples:
+
+- `ChamberQ-Developer-Handoff-1308-2200.pdf` — 13 August, 10:00 PM
+- `ChamberQ-Developer-Handoff-1308-0326.pdf` — 13 August, 3:26 AM
+
+Use local time at save (`date +"%d%m-%H%M"`). Do not use AM/PM. Do not include the year.
+
+A new save is a **new file**. Do not overwrite an older stamped PDF.
+
+## Rule
+
+Whenever you generate, export, or update a **developer handoff PDF** (or its HTML source):
+
+1. Save the file in `/Users/chowdhuryjoy/developer-handoff/ChamberQ/` with the stamped filename above
+2. You may also keep a copy under `docs/` in the repo if the source still lives there
+3. Do not create a new handoff-only folder inside the project
+
+Other projects get their own named folder under `/Users/chowdhuryjoy/developer-handoff/` — never mix PDFs at the root of that folder.

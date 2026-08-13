@@ -106,6 +106,25 @@
             border-color: var(--gray-800);
         }
         .cs-sticky-actions__btn { width: 100%; min-height: 2.75rem; }
+        /* Filament paints success as a pale chip with dark type when white
+           fails WCAG on green-600. Complete visit must read as a filled go
+           button: white label and icon on solid green. */
+        .cs-complete-visit-btn.fi-btn.fi-color-success {
+            background-color: var(--success-600);
+            color: #fff;
+            --text: #fff;
+            --hover-text: #fff;
+            --dark-text: #fff;
+            --dark-hover-text: #fff;
+        }
+        .cs-complete-visit-btn.fi-btn.fi-color-success:hover {
+            background-color: var(--success-500);
+            color: #fff;
+        }
+        .cs-complete-visit-btn.fi-btn.fi-color-success > .fi-icon,
+        .cs-complete-visit-btn.fi-btn.fi-color-success svg {
+            color: #fff;
+        }
         /* The sticky bar repeats Patient arrived / Complete visit / Call next in a
            thumb-reachable strip, and it is the only copy shown on phones — the page
            header's own actions are the same three, under the same conditions, so
@@ -236,9 +255,14 @@
         .dark .cs-visit-transcript { color: var(--gray-400); }
         .cs-visit-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.625rem; margin-top: 0.625rem; }
 
-        /* Desktop Rx pad — full desk at ≥1024 while the patient is in chamber. */
+        /* Rx pad — full desk from 768px up while the patient is in chamber.
+           It started at 1024px, which sent every tablet to the phone modal and
+           its far smaller pad. 768px is the same breakpoint the rest of this
+           page already turns on at (grid, header actions, hidden thumb strip),
+           so the desk now switches with them instead of on a third rule of its
+           own; the desk's two columns stack below 1024px in theme.css. */
         .cs-rx-desk-shell { display: none; }
-        @media (min-width: 1024px) {
+        @media (min-width: 768px) {
             .cs-rx-desk-shell.is-active { display: block; }
             .cs-layout.is-desk-active { display: none !important; }
             .cs-sticky-actions.is-desk-active { display: none !important; }
@@ -285,17 +309,14 @@
         @endphp
 
         @if ($showRxDesk)
-            {{-- The desk's own sticky bar already carries Complete visit, and at
-                 this width the page header shows the same action — two Complete
-                 visit buttons on one screen. The header is the one that goes:
-                 the desk bar sits with Preview / Save & print / Save only, which
-                 is the order the doctor works in. Same reasoning as the phone
-                 rule above, which hides the header in favour of the thumb strip. --}}
-            <style>
-                @media (min-width: 1024px) {
-                    .fi-header-actions-ctn { display: none; }
-                }
-            </style>
+            {{-- The page header keeps the queue actions at every width from
+                 768px up, including here. It used to be hidden at ≥1024px
+                 because the desk bar carried its own Complete visit — but that
+                 put a queue action inside the prescription pad and left three
+                 different breakpoint rules to keep in step. Complete visit now
+                 lives only in the page header, so the pairing is simply:
+                 below 768px the thumb strip, above it the header. The desk bar
+                 is for the prescription and nothing else. --}}
 
             <div class="cs-rx-desk-shell is-active">
                 @include('filament.tenant-admin.components.rx-desk')
@@ -729,7 +750,7 @@
                         {{ __('Patient arrived') }}
                     </x-filament::button>
                 @elseif ($canWriteNotes && $booking->status === 'in_chamber')
-                    <x-filament::button class="cs-sticky-actions__btn" color="success" wire:click="mountAction('completeVisit')">
+                    <x-filament::button class="cs-sticky-actions__btn cs-complete-visit-btn" color="success" wire:click="mountAction('completeVisit')">
                         {{ __('Complete visit') }}
                     </x-filament::button>
                 @elseif ($booking->status === 'completed')

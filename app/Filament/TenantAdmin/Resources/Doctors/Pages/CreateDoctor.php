@@ -2,12 +2,15 @@
 
 namespace App\Filament\TenantAdmin\Resources\Doctors\Pages;
 
+use App\Filament\TenantAdmin\Concerns\HasPrimaryCreate;
 use App\Filament\TenantAdmin\Resources\Doctors\DoctorResource;
 use App\Models\Doctor;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateDoctor extends CreateRecord
 {
+    use HasPrimaryCreate;
+
     protected static string $resource = DoctorResource::class;
 
     /**

@@ -431,5 +431,13 @@
     "Past visits and prescriptions for :phone": ":phone নম্বরের পুরনো ভিজিট ও ব্যবস্থাপত্র",
     "No past visits yet.": "এখনও কোনো পুরনো ভিজিট নেই।",
     "Save the link, print a copy, or send it on WhatsApp so you have your serial at the chamber.": "লিঙ্ক সেভ করুন, কপি প্রিন্ট করুন, বা হোয়াটসঅ্যাপে পাঠান যাতে চেম্বারে সিরিয়াল হাতে থাকে।",
-    "Save this link so you have your serial handy.": "সিরিয়াল হাতের কাছে রাখতে এই লিঙ্ক সেভ করুন।"
+    "Save this link so you have your serial handy.": "সিরিয়াল হাতের কাছে রাখতে এই লিঙ্ক সেভ করুন।",
+    "Morning": "সকাল",
+    "Noon": "দুপুর",
+    "Night": "রাত",
+    "Send on WhatsApp": "হোয়াটসঅ্যাপে পাঠান",
+    "My prescription: :link": "আমার ব্যবস্থাপত্র: :link",
+    "No printer? Take a screenshot of this page to keep it on your phone.": "প্রিন্টার নেই? ফোনে রাখতে এই পাতার স্ক্রিনশট নিন।",
+    "Print / Save as PDF": "প্রিন্ট / পিডিএফ সেভ করুন",
+    "This link expires :hours hours after it was sent. Save or print this page to keep a copy.": "পাঠানোর :hours ঘণ্টা পর এই লিঙ্কটি আর কাজ করবে না। কপি রাখতে এই পাতা সেভ বা প্রিন্ট করুন।"
 }

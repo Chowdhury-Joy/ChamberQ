@@ -3,16 +3,18 @@
 declare(strict_types=1);
 
 use App\Http\Controllers\BookingController;
+use App\Http\Controllers\ClinicContentController;
 use App\Http\Controllers\ConditionController;
+use App\Http\Controllers\MedicineController;
 use App\Http\Controllers\NotifySmsController;
+use App\Http\Controllers\OfflineController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PrescriptionController;
 use App\Http\Controllers\PrescriptionShareController;
-use App\Http\Controllers\VisitMediaController;
 use App\Http\Controllers\PWAController;
 use App\Http\Controllers\QueueStatusController;
 use App\Http\Controllers\ScreenController;
-use App\Http\Controllers\ClinicContentController;
+use App\Http\Controllers\VisitMediaController;
 use App\Http\Controllers\WebPageController;
 use App\Http\Middleware\EnsureTenantAcceptsBookings;
 use App\Http\Middleware\Localization;
@@ -84,17 +86,17 @@ $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
     Route::get('/api/conditions/search', [ConditionController::class, 'search'])
         ->middleware(['auth', 'throttle:120,1', 'tenant.module:prescription']);
 
-    Route::get('/api/medicines/search', [\App\Http\Controllers\MedicineController::class, 'search'])
+    Route::get('/api/medicines/search', [MedicineController::class, 'search'])
         ->middleware(['auth', 'throttle:120,1', 'tenant.module:prescription']);
 
-    Route::get('/api/medicines/doses', [\App\Http\Controllers\MedicineController::class, 'doses'])
+    Route::get('/api/medicines/doses', [MedicineController::class, 'doses'])
         ->middleware(['auth', 'throttle:120,1', 'tenant.module:prescription']);
 
-    Route::get('/api/offline/bag', [\App\Http\Controllers\OfflineController::class, 'bag'])
+    Route::get('/api/offline/bag', [OfflineController::class, 'bag'])
         ->middleware(['auth', 'throttle:30,1', 'tenant.module:prescription'])
         ->name($routeName('offline.bag'));
 
-    Route::post('/api/offline/sync', [\App\Http\Controllers\OfflineController::class, 'sync'])
+    Route::post('/api/offline/sync', [OfflineController::class, 'sync'])
         ->middleware(['auth', 'throttle:30,1', 'tenant.module:prescription'])
         ->name($routeName('offline.sync'));
 
@@ -141,6 +143,9 @@ $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
     Route::post('/api/visit-media/upload-voice', [VisitMediaController::class, 'uploadVoice'])
         ->middleware(['auth', 'throttle:30,1', 'tenant.module:prescription']);
 
+    Route::post('/api/visit-media/upload-report-photo', [VisitMediaController::class, 'uploadReportPhoto'])
+        ->middleware(['auth', 'throttle:30,1', 'tenant.module:prescription']);
+
     Route::get('/visit-records/{visitRecord}/voice', [VisitMediaController::class, 'voice'])
         ->middleware(['auth', 'tenant.module:prescription'])
         ->name($routeName('visit-records.voice'));
@@ -148,6 +153,11 @@ $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
     Route::get('/visit-records/{visitRecord}/photo', [VisitMediaController::class, 'photo'])
         ->middleware(['auth', 'tenant.module:prescription'])
         ->name($routeName('visit-records.photo'));
+
+    Route::get('/visit-records/{visitRecord}/report-photos/{index}', [VisitMediaController::class, 'reportPhoto'])
+        ->middleware(['auth', 'tenant.module:prescription'])
+        ->whereNumber('index')
+        ->name($routeName('visit-records.report-photo'));
 
     Route::get('/manifest.webmanifest', [PWAController::class, 'manifest']);
     Route::get('/sw.js', [PWAController::class, 'serviceWorker']);

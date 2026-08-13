@@ -172,6 +172,39 @@ class PatientRecordsStage4DeferredTest extends TestCase
         $this->actingAs($this->staff)->get($photoUrl)->assertForbidden();
     }
 
+    public function test_doctor_can_upload_and_view_report_photos_staff_cannot(): void
+    {
+        tenancy()->initialize($this->tenant);
+
+        $file = UploadedFile::fake()->image('cbc.jpg');
+
+        $response = $this->actingAs($this->doctor)
+            ->post('http://stage4-deferred.localhost/api/visit-media/upload-report-photo', [
+                'photo' => $file,
+            ]);
+
+        $response->assertOk()->assertJsonStructure(['path']);
+        $path = $response->json('path');
+        $this->assertStringStartsWith('visit-reports/stage4-deferred/', $path);
+        Storage::disk('local')->assertExists($path);
+
+        $this->actingAs($this->staff)
+            ->post('http://stage4-deferred.localhost/api/visit-media/upload-report-photo', [
+                'photo' => $file,
+            ])
+            ->assertForbidden();
+
+        $record = app(VisitRecordService::class)->saveForCompletedBooking($this->completedBooking, $this->doctor, [
+            'report_photos' => [$path],
+        ]);
+
+        $url = 'http://stage4-deferred.localhost/visit-records/'.$record->id.'/report-photos/0';
+
+        $this->actingAs($this->doctor)->get($url)->assertOk();
+        $this->actingAs($this->staff)->get($url)->assertForbidden();
+        $this->get($url)->assertForbidden();
+    }
+
     public function test_catch_up_counts_completed_bookings_without_notes_today(): void
     {
         tenancy()->initialize($this->tenant);

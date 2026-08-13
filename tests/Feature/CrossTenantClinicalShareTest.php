@@ -162,6 +162,7 @@ class CrossTenantClinicalShareTest extends TestCase
         $this->assertSame('Diabetes follow-up', $shared->first()->visitRecord?->clinical_notes);
         $this->assertNull($shared->first()->visitRecord?->voice_path);
         $this->assertNull($shared->first()->visitRecord?->photo_path);
+        $this->assertNull($shared->first()->visitRecord?->report_photo_paths);
         $this->assertSame('NAPA', $shared->first()->medicines[0]['brand'] ?? null);
         $this->assertSame('Clinic A', $shared->first()->sourceLabel);
 
@@ -283,6 +284,7 @@ class CrossTenantClinicalShareTest extends TestCase
             'clinical_notes' => $notes,
             'voice_path' => 'visit-audio/secret.webm',
             'photo_path' => 'visit-photos/secret.jpg',
+            'report_photo_paths' => ['visit-reports/secret.jpg'],
             'recorded_at' => now()->subDay(),
         ]);
 

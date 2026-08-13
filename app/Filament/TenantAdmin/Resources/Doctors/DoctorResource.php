@@ -20,6 +20,8 @@ class DoctorResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedUser;
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Settings';
+
     public static function canViewAny(): bool
     {
         return auth()->user()?->canManageOps() ?? false;

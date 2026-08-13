@@ -156,6 +156,7 @@ class CrossTenantClinicalHistoryService
                 // Never expose private media across chambers.
                 $visit->voice_path = null;
                 $visit->photo_path = null;
+                $visit->report_photo_paths = null;
                 $visit->setRelation('booking', $booking);
             }
 

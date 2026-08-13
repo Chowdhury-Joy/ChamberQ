@@ -50,6 +50,9 @@ class VisitRecordService
             $existing = VisitRecord::query()->where('booking_id', $booking->id)->first();
             $voicePath = $this->nullableString($data['voice_path'] ?? null);
             $photoPath = $this->normalizeUploadedPath($data['prescription_photo'] ?? null);
+            $reportPhotos = array_key_exists('report_photos', $data)
+                ? $this->normalizeReportPhotoPaths($data['report_photos'])
+                : ($existing?->report_photo_paths);
             $voiceTranscript = $this->nullableString($data['voice_transcript'] ?? null);
 
             if ($existing && filled($existing->voice_path) && $voicePath !== $existing->voice_path) {
@@ -59,6 +62,8 @@ class VisitRecordService
             if ($existing && filled($existing->photo_path) && $photoPath !== $existing->photo_path) {
                 $this->visitMediaService->deleteIfExists($existing->photo_path);
             }
+
+            $this->syncReportPhotos($existing?->report_photo_paths, $reportPhotos);
 
             $visitRecord = VisitRecord::query()->updateOrCreate(
                 ['booking_id' => $booking->id],
@@ -73,6 +78,7 @@ class VisitRecordService
                     'bp_diastolic' => $data['bp_diastolic'] ?? null,
                     'pulse_bpm' => $data['pulse_bpm'] ?? null,
                     'spo2_percent' => $data['spo2_percent'] ?? null,
+                    'temperature_f' => $data['temperature_f'] ?? null,
                     'clinical_notes' => $this->nullableString($data['clinical_notes'] ?? null),
                     'chief_complaint' => $this->nullableString($data['chief_complaint'] ?? null),
                     'history' => $this->nullableString($data['history'] ?? null),
@@ -80,6 +86,7 @@ class VisitRecordService
                     'advice' => $this->nullableString($data['advice'] ?? null),
                     'tests_advised' => $this->nullableString($data['tests_advised'] ?? null),
                     'reports_seen' => $this->nullableString($data['reports_seen'] ?? null),
+                    'report_photo_paths' => $reportPhotos,
                     'follow_up_date' => $data['follow_up_date'] ?? null,
                     'follow_up_note' => $this->nullableString($data['follow_up_note'] ?? null),
                     'voice_path' => $voicePath,
@@ -98,10 +105,11 @@ class VisitRecordService
     /**
      * Staff typing up a prescription the doctor wrote on paper.
      *
-     * Writes only the prescription, follow-up and paper photo. Any diagnosis,
-     * vitals, clinical notes, advice, tests, reports or voice note already on
-     * the record is left untouched — staff never overwrite the doctor's
-     * clinical notes, and anything they submit outside the whitelist is discarded.
+     * Writes only the prescription, follow-up, paper photo and photos of
+     * reports the patient brought. Any diagnosis, vitals, clinical notes,
+     * advice, tests, typed reports note or voice note already on the record
+     * is left untouched — staff never overwrite the doctor's clinical notes,
+     * and anything they submit outside the whitelist is discarded.
      *
      * @param  array<string, mixed>  $data
      */
@@ -124,10 +132,15 @@ class VisitRecordService
         return DB::transaction(function () use ($booking, $staff, $data) {
             $existing = VisitRecord::query()->where('booking_id', $booking->id)->first();
             $photoPath = $this->normalizeUploadedPath($data['prescription_photo'] ?? null);
+            $reportPhotos = array_key_exists('report_photos', $data)
+                ? $this->normalizeReportPhotoPaths($data['report_photos'])
+                : ($existing?->report_photo_paths);
 
             if ($existing && filled($existing->photo_path) && $photoPath !== $existing->photo_path) {
                 $this->visitMediaService->deleteIfExists($existing->photo_path);
             }
+
+            $this->syncReportPhotos($existing?->report_photo_paths, $reportPhotos);
 
             $visitRecord = VisitRecord::query()->updateOrCreate(
                 ['booking_id' => $booking->id],
@@ -140,6 +153,7 @@ class VisitRecordService
                     'follow_up_date' => $data['follow_up_date'] ?? null,
                     'follow_up_note' => $this->nullableString($data['follow_up_note'] ?? null),
                     'photo_path' => $photoPath,
+                    'report_photo_paths' => $reportPhotos,
                     'recorded_at' => now(),
                 ]
             );
@@ -200,11 +214,16 @@ class VisitRecordService
             || ($data['bp_systolic'] ?? null) !== null
             || ($data['bp_diastolic'] ?? null) !== null
             || ($data['pulse_bpm'] ?? null) !== null
-            || ($data['spo2_percent'] ?? null) !== null) {
+            || ($data['spo2_percent'] ?? null) !== null
+            || ($data['temperature_f'] ?? null) !== null) {
             return true;
         }
 
         if ($this->normalizeUploadedPath($data['prescription_photo'] ?? null) !== null) {
+            return true;
+        }
+
+        if ($this->normalizeReportPhotoPaths($data['report_photos'] ?? null) !== null) {
             return true;
         }
 
@@ -329,5 +348,48 @@ class VisitRecordService
         }
 
         return $this->nullableString(is_string($value) ? $value : null);
+    }
+
+    /**
+     * @return list<string>|null
+     */
+    private function normalizeReportPhotoPaths(mixed $value): ?array
+    {
+        if (! is_array($value)) {
+            $value = filled($value) ? [$value] : [];
+        }
+
+        $paths = [];
+
+        foreach ($value as $item) {
+            if (is_array($item)) {
+                $item = $item[0] ?? null;
+            }
+
+            $path = $this->nullableString(is_string($item) ? $item : null);
+
+            if ($path && $this->visitMediaService->isOwnedReportPhotoPath($path)) {
+                $paths[] = $path;
+            }
+
+            if (count($paths) >= VisitMediaService::REPORT_PHOTO_MAX_FILES) {
+                break;
+            }
+        }
+
+        $paths = array_values(array_unique($paths));
+
+        return $paths === [] ? null : $paths;
+    }
+
+    /**
+     * @param  list<string>|null  $previous
+     * @param  list<string>|null  $next
+     */
+    private function syncReportPhotos(?array $previous, ?array $next): void
+    {
+        foreach (array_diff($previous ?? [], $next ?? []) as $removed) {
+            $this->visitMediaService->deleteIfExists($removed);
+        }
     }
 }

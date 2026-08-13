@@ -2,21 +2,16 @@
 
 namespace App\Filament\TenantAdmin\Resources\Doctors\Pages;
 
+use App\Filament\TenantAdmin\Concerns\HasPrimarySaveAndDangerDelete;
 use App\Filament\TenantAdmin\Resources\Doctors\DoctorResource;
 use App\Models\Doctor;
-use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 
 class EditDoctor extends EditRecord
 {
-    protected static string $resource = DoctorResource::class;
+    use HasPrimarySaveAndDangerDelete;
 
-    protected function getHeaderActions(): array
-    {
-        return [
-            DeleteAction::make(),
-        ];
-    }
+    protected static string $resource = DoctorResource::class;
 
     /**
      * @param  array<string, mixed>  $data

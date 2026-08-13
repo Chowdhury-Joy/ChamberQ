@@ -2,12 +2,15 @@
 
 namespace App\Filament\TenantAdmin\Resources\SlotBlocks\Pages;
 
+use App\Filament\TenantAdmin\Concerns\HasPrimaryCreate;
 use App\Filament\TenantAdmin\Resources\SlotBlocks\SlotBlockResource;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 
 class CreateSlotBlock extends CreateRecord
 {
+    use HasPrimaryCreate;
+
     protected static string $resource = SlotBlockResource::class;
 
     /**

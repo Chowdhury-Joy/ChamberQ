@@ -40,6 +40,8 @@ class DailyRoster extends Page implements HasTable, HasForms
 
     protected static string | \BackedEnum | null $navigationIcon = 'heroicon-o-document-text';
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Operations';
+
     protected string $view = 'filament.tenant-admin.pages.daily-roster';
 
     /**

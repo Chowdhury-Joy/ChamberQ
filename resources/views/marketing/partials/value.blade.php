@@ -1,13 +1,13 @@
-<section class="mk-section mk-band" id="why" aria-labelledby="why-heading">
-    <div class="mk-wrap">
-        <div class="mk-section-head mk-section-head-split">
+<section class="mk-section mk-value" id="why" aria-labelledby="why-heading">
+    <div class="mk-wrap mk-value-layout">
+        <div class="mk-section-head">
             <div>
                 <p class="mk-kicker">What really changes</p>
                 <h2 id="why-heading">Good care feels better<br><em>when the wait does too.</em></h2>
             </div>
             <p>Less admin for you. More respect for their time. A visit worth telling others about.</p>
         </div>
-        <x-card-grid :count="count(config('marketing.value_points'))" tag="ul" class="mk-value-list">
+        <ul class="mk-value-list">
             @foreach(config('marketing.value_points') as $point)
                 @php
                     $exists = file_exists(public_path($point['image']));
@@ -35,6 +35,6 @@
                     </div>
                 </li>
             @endforeach
-        </x-card-grid>
+        </ul>
     </div>
 </section>

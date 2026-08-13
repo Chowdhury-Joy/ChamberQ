@@ -909,3 +909,55 @@
  <root_cause>Three stacked faults: (1) `public/storage` still pointed at the old SolDoc checkout, so `/storage/…` URLs never hit ChamberQ files; (2) stancl suffixed the `public` disk into `storage/tenant{id}/app/public`, which is not web-visible; (3) FileUpload `dehydrateStateUsing` rewrote Livewire's temp file into a `/storage/…` path before the file was stored, wiping the upload.</root_cause>
  <prevention_rule>Website FileUpload stays on the unsuffixed `public` disk; Livewire stages on a dedicated `livewire-tmp` disk; `RuntimeDirectories` must recreate `public/storage` when it does not point at this app's `storage/app/public`; convert disk paths to `/storage/…` only on `WebPage` save, never while Livewire still holds a temp file.</prevention_rule>
 </bug>
+
+## 2026-08-13T12:48:03+0600
+
+<bug>
+ <category>Code</category>
+ <symptom>Opening a chamber admin page (My medicines, and any other tenant page that touches cache) crashed with `BadMethodCallException: This cache store does not support tagging`.</symptom>
+ <root_cause>Stancl's `CacheTenancyBootstrapper` wraps every `Cache::` call in tags. Redis/array can tag; the default `CACHE_STORE=database` (and `file`) cannot. Tests used `array`, so the crash never showed in PHPUnit.</root_cause>
+ <prevention_rule>Never enable Stancl's tagged cache bootstrapper against a store that cannot tag. Use `App\Tenancy\CacheTenancyBootstrapper`: tags when the store supports them, `setPrefix` on the live store otherwise. Pin with a test that puts/gets cache on the `database` driver inside an initialized tenant.</prevention_rule>
+</bug>
+
+## 2026-08-13T18:09:24+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>The printed / shared prescription showed raw HTML on every medicine line — `<span class="pad-l-bn">খাবারের পর</span>` — instead of the Bangla timing the patient needs to read.</symptom>
+ <root_cause>`Bilingual::html()` correctly returns an `HtmlString` so Blade will not escape it. `PrescriptionItem::timingBilingualLabel()` was typed `?string`, which stringifies that markup. `{{ }}` then escaped the string, so the tags became visible text.</root_cause>
+ <prevention_rule>A method that returns `Bilingual::html()` must keep the `HtmlString` type. `?string` is a silent stringify. Pin with a print-page assertion that the timing markup is real HTML (`<span class="pad-l-bn">`) and that `&lt;span` does not appear.</prevention_rule>
+</bug>
+
+## 2026-08-13T18:25:48+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>Doctors could not find the premade advice. The Advice box was empty, and the "Add advice" chip sat under Diagnosis — then vanished after the first save.</symptom>
+ <root_cause>Starter advice was only stored in Alpine after `pickDiagnosis()`. The pad remounts on every save (`wire:key` includes `updated_at`), which reset `diagnosisAdvice` to empty. The chip also lived under Diagnosis rather than in the Advice card where doctors look.</root_cause>
+  <prevention_rule>Anything offered because of the current coded diagnosis must be passed from the server on every pad render (`$written->condition->adviceForLocale()`), not only on the pick click. Put the chip in the Advice card. Pin with a Consult Screen test that a saved coded diagnosis still prints the starter sentence in the desk HTML.</prevention_rule>
+</bug>
+
+## 2026-08-13T21:07:28+0600
+
+<bug>
+  <category>UI/UX</category>
+  <symptom>On the desktop Consult Screen pad, the patient strip (name, Preview, My paper, Save & print) covered Filament's top bar — the menu, chamber name, and Complete visit.</symptom>
+  <root_cause>`.cs-rx-desk__bar` was `position: sticky; top: 0; z-index: 30`, the same seat as `.fi-topbar-ctn` (`sticky top-0 z-30`, `min-h-16`). Later in the DOM, the strip painted on top.</root_cause>
+  <prevention_rule>A sticky element inside page content must not use `top: 0` / z-index 30 when Filament's topbar already occupies that seat. Offset by the topbar height (`4rem` / `min-h-16`) and keep z-index below 30. `DesktopRxPadTest::test_the_patient_strip_sticks_below_the_filament_topbar` fails if the strip returns to `top: 0`.</prevention_rule>
+</bug>
+
+## 2026-08-13T23:35:10+0600
+
+<bug>
+  <category>Business_Logic</category>
+  <symptom>A doctor could write a whole prescription on the desktop Rx pad, tap the green **Complete visit**, and end the consult with an empty or stale prescription — told the visit had completed, with no warning that the pad was never saved. The patient walked out with nothing.</symptom>
+  <root_cause>The pad held everything in Alpine memory and only posted from Preview or Save & print. Complete visit is a Filament page header action whose form is filled from `stateFromRecord($this->currentVisitRecord)` — the *stored* record — so it never saw the typed state. A second path to the same loss: `wire:key` carried the visit record's `updated_at`, so any write to that row (a staff paper entry, a follow-up stamp) changed the key on the next 3s poll and remounted the component, discarding whatever was typed.</root_cause>
+  <prevention_rule>A writing surface that holds state client-side must keep the server in step on its own, and must say on screen whether it has. The pad autosaves 1.5s after any change and immediately on any pointerdown outside itself, and carries an Unsaved / Saving… / Saved badge. On failure the badge must be set to Unsaved **before** the offline outbox is attempted — doing it after left it stuck on "Saving…" whenever `enqueue` threw, which is precisely when the doctor is relying on it. Pinned by `DesktopRxPadTest::test_the_pad_saves_itself_so_complete_visit_cannot_close_on_an_unwritten_script`, `test_a_draft_save_is_silent_while_an_explicit_save_still_speaks`, `test_a_draft_save_refuses_everything_an_explicit_save_refuses` and `test_the_pad_is_not_keyed_on_the_record_timestamp`.</prevention_rule>
+</bug>
+
+<bug>
+  <category>Code</category>
+  <symptom>After the first save on the Rx pad, every `x-show` on it stopped responding — the complaint "+ Add" picker would not open, brand suggestions never appeared, the timing and follow-up reveals froze. The pad still accepted typing and still saved, so it looked alive.</symptom>
+  <root_cause>Introduced while fixing the remount data loss above. Removing `updated_at` from `wire:key` stopped the destructive remount, but that timestamp was also what made the post-save remount *clean*: a changed key makes Livewire replace the element, so Alpine re-initialises the whole subtree consistently. With a stable key Livewire morphs instead, and `x-data="rxDesk({...})"` is rendered from the record — so its attribute string changes after every save and re-runs the component's init against nodes whose effects have already been torn down.</root_cause>
+  <prevention_rule>A subtree Alpine owns must be `wire:ignore`, so Livewire can never morph it, with the identity that should force a fresh mount (here the booking) carried in `wire:key` — a changed key still replaces the element even under `wire:ignore`. The methods that write from it are `#[Renderless]`. Note for testing: this class of bug is invisible to the suite, which asserts rendered markup and never executes Alpine — it was found by driving the real page in a browser and toggling state, and `test_the_pad_is_never_morphed_out_from_under_alpine` only guards the two structural markers that stand in for it.</prevention_rule>
+</bug>

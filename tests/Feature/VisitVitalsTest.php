@@ -229,6 +229,27 @@ class VisitVitalsTest extends TestCase
         $this->assertNull($normalized['weight_kg']);
     }
 
+    public function test_absurd_temperature_is_dropped_rather_than_stored(): void
+    {
+        $normalized = VisitNotesFormSchema::normalizeVitals(['temperature_f' => 900]);
+
+        $this->assertNull($normalized['temperature_f']);
+    }
+
+    public function test_temperature_alone_counts_as_clinical_content(): void
+    {
+        tenancy()->initialize($this->tenant);
+
+        $record = app(VisitRecordService::class)->saveForCompletedBooking($this->booking->fresh(), $this->doctor, [
+            'temperature_f' => 101.2,
+        ]);
+
+        $this->assertNotNull($record);
+        $this->assertTrue($record->hasClinicalContent());
+        $this->assertSame(101.2, $record->temperature_f);
+        $this->assertStringContainsString('101.2', (string) $record->temperatureLabel());
+    }
+
     /**
      * A typo in an optional vitals box must never strand the patient in the
      * chamber: `submissionHasContent()` runs before the queue advances, so it

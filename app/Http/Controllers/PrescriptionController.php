@@ -33,6 +33,10 @@ class PrescriptionController extends Controller
 
         $missingRegistration = blank($doctor?->registration_number);
 
+        // Doctor print only. Patient share/portal never pass this, so a
+        // phone copy always keeps the letterhead.
+        $onMyPaper = $request->boolean('paper');
+
         return view('tenant.prescriptions.print', [
             'prescription' => $prescription,
             'visitRecord' => $visitRecord,
@@ -42,6 +46,7 @@ class PrescriptionController extends Controller
             'chamber' => $chamber,
             'tenant' => tenant(),
             'missingRegistration' => $missingRegistration,
+            'onMyPaper' => $onMyPaper,
         ]);
     }
 }

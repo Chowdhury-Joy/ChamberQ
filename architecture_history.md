@@ -483,3 +483,48 @@
 
 ## 2026-08-13T12:08:55+0600
 - Portal phone lookup lists every prescription with medicines (removed the 2-item `PORTAL_PRESCRIPTION_LIMIT` cap).
+
+## 2026-08-13T12:48:03+0600
+- Replaced Stancl's tagged-only `CacheTenancyBootstrapper` with `App\Tenancy\CacheTenancyBootstrapper` so file/database cache stores prefix keys instead of throwing.
+
+## 2026-08-13T13:09:33+0600
+- Added consult-pad mic-to-prescription: `PrescriptionDictationService` + `POST /api/prescriptions/dictate` + Groq config. Browser speech, no audio stored; catalogue-matched draft only.
+- Rx pad speed pass: the doctor's own `MedicineUsage` shortlist now appears as one-tap chips above the medicine table (alphabetical, capped at 8, personal and excluding hidden entries), each tap filling the row from his saved line; medicine rows gained ↑/↓ reordering; Enter moves through dose/frequency/duration/reason cells and adds a row off the end. "Packs" relabelled **Use a pack** and its panel chrome dropped so nothing on the consult screen reads as a place to build one, and the Add medicine control became a real button with proper spacing instead of a dashed placeholder.
+- Rx desk visual pass: table type raised to 14px with the brand at 15px (the bold on `.cs-rx-desk__brand` had never applied — `.cs-rx-desk__table input { font: inherit }` out-specified it and `font` shorthand resets weight); the ℞ card given a tinted header and stronger border so it out-ranks the eight cards around it; row hover added for tracking across seven columns; the six left-hand cards merged into one continuous sheet in CSS with no markup change; chips that *insert* (Yours, packs) marked `--add` with a leading + to distinguish them from chips that *toggle*. Action bar cut from four buttons to two: **Save only** removed, and **Complete visit** returned to the page header, which also removed the ≥1024px rule hiding `.fi-header-actions-ctn` and reduced three interacting breakpoint rules to a clean pair.
+
+## 2026-08-13T18:09:24+0600
+- Prescription timing on print/share now keeps `HtmlString` through `PrescriptionItem::timingBilingualLabel()` so Bangla/English labels render instead of escaped `<span>` tags.
+
+## 2026-08-13T18:25:48+0600
+- Correction: an 18:03:32 line on Bangla-focused print/share was overwritten by the 18:09:24 timing entry; that print behaviour still stands in `architecture.md` and `decisions.md`. Starter diagnosis advice now shows as a tap chip in the Advice card and is rehydrated from the coded condition so a pad save does not hide it.
+
+## 2026-08-13T20:18:58+0600
+- Doctor print can skip the ChamberQ letterhead (`?paper=1` / desk **My paper** tick, ~40mm top gap); patient share and portal stay headed. Offline print follows the same tick; PWA shell cache bumped to `clinic-shell-v5`.
+
+## 2026-08-13T20:32:16+0600
+- Rx desk speed pass: **Why?** typeahead (`IndicationSuggestions` + conditions search), advice chips + browser ★ (`AdviceChips`), Temp °F column + finding chips (`FindingChips`), H/O More gained COPD/Allergy, medicine rows gained a drag handle (↑↓ kept). PWA shell cache bumped to `clinic-shell-v6`.
+
+## 2026-08-13T20:45:05+0600
+- O/E on the desktop Rx pad is a wrapping vitals line (Wt / BP / P / SpO₂ / T) instead of a five-row table; finding chips and Other findings sit tight underneath. Same fields, grey last-visit, never pre-filled.
+
+## 2026-08-13T21:07:28+0600
+- Desktop Rx pad patient strip sticks at `top: 4rem` / z-index 20 so it sits under Filament's topbar instead of covering the menu and Complete visit.
+
+## 2026-08-13T21:11:44+0600
+- Correction: the 21:07:28 strip offset was source-only until `npm run build`; compiled theme now includes it, and `.fi-topbar-ctn` is z-index 40 so the menu bar always paints above the strip.
+
+## 2026-08-13T21:43:23+0600
+- Tenant admin chrome: no global topbar; sticky content header (Geist, back on Create/Edit, Save/Create as the header CTA, Delete in the form footer); full-width content; nav grouped Operations / Website / Settings. Collapsed icon sidebar and Filament Blue kept. Rx pad strip still sits at `top: 4rem` under the new header.
+
+## 2026-08-13T22:08:16+0600
+- Visit report photos: `visit_records.report_photo_paths` JSON on the private `visit-reports/{tenant_id}/` disk; Reports moved to the left of the Rx pad with an image upload; Voice/photo chip removed from the pad; staff Daily Roster entry may attach report photos but still cannot write `reports_seen`.
+
+## 2026-08-13T22:34:01+0600
+- Stashed consult-pad voice-to-writing: `PrescriptionDictationService`, `PrescriptionDictationController`, `config/groq.php` and the Mic markup moved to `docs/deferred/prescription-dictation/` (unloaded `.stash` files). No Groq calls; typing the Rx is unchanged. 20-second visit voice notes stay.
+
+## 2026-08-13T23:35:10+0600
+- Rx pad now saves itself: `ConsultScreen::autosaveRxDesk()` (silent sibling of `saveRxDesk()`), Alpine `x-effect` debounce + flush on click-away/visibilitychange, `beforeunload` guard, and an Unsaved/Saving/Saved badge — Complete visit used to close a visit on whatever was last stored, which was usually nothing.
+- Pad made `wire:ignore`, keyed on the booking alone, with both desk saves `#[Renderless]`: a stable key alone turned the post-save remount into a morph that re-ran `x-data` and killed every `x-show` on the pad.
+- Rx pad breakpoint dropped 1024px → 768px, columns stacking below 1024px with touch-sized controls, so tablets get the desk instead of the far smaller phone modal; desk follow-up gained 3 months and Pick a date.
+- Printed sheet: medicines numbered, and `app/Support/PrescriptionQuantity.php` prints a total dose count when frequency × duration multiplies out cleanly (silent for SOS/Continue).
+- Patient share copy made phone-first (card per medicine below 640px) with `app/Support/DoseSchedule.php` writing `1+0+1` out in Bangla, plus a WhatsApp forward gated to the share-link routes so the portal's phone-carrying URL is never forwarded.

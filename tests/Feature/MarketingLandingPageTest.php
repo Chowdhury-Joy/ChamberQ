@@ -50,7 +50,9 @@ class MarketingLandingPageTest extends TestCase
         $response->assertDontSee('Better reviews', escape: false);
         $response->assertDontSee('images.unsplash.com', escape: false);
         $response->assertSee('fonts.googleapis.com', escape: false);
-        $response->assertSee('Inter+Tight', escape: false);
+        $response->assertSee('Instrument+Serif', escape: false);
+        $response->assertSee('DM+Sans', escape: false);
+        $response->assertDontSee('Inter+Tight', escape: false);
         $response->assertDontSee("Let's get started", escape: false);
         $response->assertDontSee('Ready for calmer days?', escape: false);
     }

@@ -1,7 +1,261 @@
 @import '../../../../vendor/filament/filament/resources/css/theme.css';
+@import '@fontsource/geist-sans/400.css';
+@import '@fontsource/geist-sans/600.css';
+@import '@fontsource/geist-mono/400.css';
+@import '@fontsource/geist-mono/600.css';
 
 @source '../../../../app/Filament/TenantAdmin/**/*';
 @source '../../../../resources/views/filament/tenant-admin/**/*';
+@source '../../../../resources/views/vendor/filament-panels/**/*';
+
+/*
+ * Admin chrome follows Getwebfield's content-header shell (title left,
+ * primary action right, no global topbar) while keeping ChamberQ's Filament
+ * Blue and the icon-only collapsed sidebar.
+ */
+
+:root {
+    --fi-shell-sidebar-bg: #ffffff;
+    --fi-shell-header-bg: #ffffff;
+    --fi-shell-header-stroke: #e5e7eb;
+    --fi-shell-sidebar-stroke: #e5e7eb;
+    --fi-shell-content-bg: #f9fafb;
+    --fi-shell-logo-color: #1f2937;
+    --fi-shell-heading-color: #1f2937;
+    --fi-shell-subheading-color: #6b7280;
+    --fi-shell-back-color: rgb(75 85 99 / 0.85);
+    --fi-shell-back-hover-bg: rgb(17 24 39 / 0.06);
+    --fi-shell-back-hover-color: #111827;
+    --fi-shell-danger-zone-border: #e5e7eb;
+
+    --fi-font-sans: 'Geist Sans', 'Geist', ui-sans-serif, system-ui, sans-serif;
+    --fi-font-mono: 'Geist Mono', ui-monospace, monospace;
+
+    --fi-text-sm-size: 14px;
+    --fi-text-sm-leading: 22px;
+    --fi-text-sm-tracking: -0.02em;
+
+    --fi-text-xs-size: 12px;
+    --fi-text-xs-leading: 16px;
+    --fi-text-xs-tracking: -0.03em;
+
+    --fi-text-title-size: 18px;
+    --fi-text-title-leading: 22px;
+    --fi-text-title-tracking: -0.02em;
+
+    --fi-shell-inline: 16px;
+    --fi-shell-block: 1.5rem;
+}
+
+@media (min-width: 768px) {
+    :root {
+        --fi-shell-inline: 40px;
+        --fi-shell-block: 2rem;
+    }
+}
+
+@media (min-width: 1200px) {
+    :root {
+        --fi-shell-inline: 80px;
+        --fi-shell-block: 48px;
+    }
+}
+
+html.dark {
+    --fi-shell-sidebar-bg: #171717;
+    --fi-shell-header-bg: #171717;
+    --fi-shell-header-stroke: #20252d;
+    --fi-shell-sidebar-stroke: #20272d;
+    --fi-shell-content-bg: #0d0d0d;
+    --fi-shell-logo-color: #ffffff;
+    --fi-shell-heading-color: #ffffff;
+    --fi-shell-subheading-color: rgb(255 255 255 / 0.5);
+    --fi-shell-back-color: rgb(255 255 255 / 0.7);
+    --fi-shell-back-hover-bg: rgb(255 255 255 / 0.1);
+    --fi-shell-back-hover-color: #ffffff;
+    --fi-shell-danger-zone-border: #20252d;
+}
+
+.fi-body {
+    background-color: var(--fi-shell-content-bg) !important;
+    font-family: var(--fi-font-sans);
+    font-size: var(--fi-text-sm-size);
+    font-weight: 400;
+    line-height: var(--fi-text-sm-leading);
+    letter-spacing: var(--fi-text-sm-tracking);
+}
+
+.fi-main-sidebar,
+.fi-sidebar {
+    background-color: var(--fi-shell-sidebar-bg) !important;
+    border-right: 1px solid var(--fi-shell-sidebar-stroke);
+}
+
+.fi-sidebar-header {
+    border-bottom: 1px solid var(--fi-shell-header-stroke);
+}
+
+.fi-main-ctn {
+    background-color: var(--fi-shell-content-bg);
+}
+
+.fi-logo {
+    font-family: var(--fi-font-mono) !important;
+    font-size: var(--fi-text-title-size) !important;
+    font-weight: 600 !important;
+    line-height: var(--fi-text-title-leading) !important;
+    letter-spacing: var(--fi-text-title-tracking) !important;
+    color: var(--fi-shell-logo-color) !important;
+}
+
+.fi-sidebar-item-label,
+.fi-sidebar-group-label {
+    font-family: var(--fi-font-sans);
+    font-size: var(--fi-text-sm-size);
+    font-weight: 400;
+    line-height: var(--fi-text-sm-leading);
+    letter-spacing: var(--fi-text-sm-tracking);
+}
+
+.fi-main:has(.fi-content-shell-header) {
+    @apply max-w-none px-0;
+}
+
+.fi-page-header-main-ctn:has(.fi-content-shell-header) {
+    @apply gap-y-0 py-0;
+}
+
+.fi-header.fi-content-shell-header {
+    @apply m-0 flex w-full min-h-16 flex-row items-center justify-between gap-4 py-0 sm:flex-row sm:items-center;
+    position: sticky;
+    top: 0;
+    z-index: 40;
+    padding-inline: var(--fi-shell-inline);
+    background-color: var(--fi-shell-header-bg);
+    border-bottom: 1px solid var(--fi-shell-header-stroke);
+}
+
+.fi-page-header-title-row {
+    @apply flex min-w-0 items-center gap-3;
+}
+
+.fi-page-header-titles {
+    @apply min-w-0;
+}
+
+.fi-page-header-back {
+    @apply inline-flex shrink-0 items-center justify-center rounded-md p-1 transition;
+    color: var(--fi-shell-back-color);
+}
+
+.fi-page-header-back:hover {
+    background-color: var(--fi-shell-back-hover-bg);
+    color: var(--fi-shell-back-hover-color);
+}
+
+.fi-page-header-back-icon {
+    @apply size-6 text-current;
+}
+
+.fi-content-shell-header .fi-header-heading {
+    margin: 0;
+    font-family: var(--fi-font-mono);
+    font-size: var(--fi-text-title-size);
+    font-weight: 400;
+    line-height: var(--fi-text-title-leading);
+    letter-spacing: var(--fi-text-title-tracking);
+    text-transform: uppercase;
+    color: var(--fi-shell-heading-color);
+}
+
+.fi-content-shell-header .fi-header-subheading {
+    margin-top: 0.25rem;
+    font-family: var(--fi-font-sans);
+    font-size: var(--fi-text-xs-size);
+    font-weight: 400;
+    line-height: var(--fi-text-xs-leading);
+    letter-spacing: var(--fi-text-xs-tracking);
+    text-transform: none;
+    color: var(--fi-shell-subheading-color);
+}
+
+.fi-content-shell-header .fi-header-actions-ctn {
+    @apply shrink-0;
+}
+
+.fi-btn.fi-color-primary:not(.fi-outlined):not(label) {
+    --text: #ffffff;
+    --hover-text: #ffffff;
+    --dark-text: #ffffff;
+    --dark-hover-text: #ffffff;
+}
+
+.fi-btn.fi-color-primary:not(.fi-outlined):not(label) > .fi-icon {
+    color: #ffffff;
+}
+
+.fi-content-shell-header .fi-btn {
+    font-family: var(--fi-font-sans);
+    font-size: var(--fi-text-sm-size);
+    font-weight: 400;
+    line-height: var(--fi-text-sm-leading);
+    letter-spacing: var(--fi-text-sm-tracking);
+    text-transform: uppercase;
+}
+
+.fi-page-header-main-ctn:has(.fi-content-shell-header) > .fi-page-main {
+    padding-inline: var(--fi-shell-inline);
+    padding-block: var(--fi-shell-block);
+}
+
+.fi-form-actions:has(.fi-color-danger),
+.fi-sc-actions:has(.fi-color-danger) {
+    margin-top: 2rem;
+    border-top: 1px solid var(--fi-shell-danger-zone-border);
+    padding-top: 1.5rem;
+}
+
+.fi-body,
+.fi-body * {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+}
+
+.fi-body:hover,
+.fi-body:focus-within,
+.fi-body *:hover,
+.fi-body *:focus-within {
+    scrollbar-color: rgb(156 163 175 / 0.45) transparent;
+}
+
+.fi-body::-webkit-scrollbar,
+.fi-body *::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+.fi-body::-webkit-scrollbar-track,
+.fi-body *::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+.fi-body::-webkit-scrollbar-thumb,
+.fi-body *::-webkit-scrollbar-thumb {
+    background-color: transparent;
+    border-radius: 9999px;
+}
+
+.fi-body:hover::-webkit-scrollbar-thumb,
+.fi-body:focus-within::-webkit-scrollbar-thumb,
+.fi-body *:hover::-webkit-scrollbar-thumb,
+.fi-body *:focus-within::-webkit-scrollbar-thumb {
+    background-color: rgb(156 163 175 / 0.45);
+}
+
+.fi-body:hover::-webkit-scrollbar-thumb:hover,
+.fi-body *:hover::-webkit-scrollbar-thumb:hover {
+    background-color: rgb(156 163 175 / 0.7);
+}
 
 /* Visit notes modal — full height on phones, sticky save area */
 @media (max-width: 767px) {
@@ -71,9 +325,11 @@
 .cs-summary-panel__list { margin: 0.5rem 0 0; padding-left: 1.125rem; font-size: 0.8125rem; }
 
 /* Desktop Rx pad (Consult Screen ≥1024px) */
+/* The content header must stay above the patient strip. */
 .cs-rx-desk { display: flex; flex-direction: column; gap: 1rem; }
 .cs-rx-desk__bar {
-    position: sticky; top: 0; z-index: 30;
+    /* Sticky under the content header (min-h-16), not the viewport edge. */
+    position: sticky; top: 4rem; z-index: 20;
     display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem;
     padding: 0.75rem 1rem; border: 1px solid var(--gray-200); border-radius: 0.75rem;
     background: var(--color-white, #fff);
@@ -86,11 +342,60 @@
 .cs-rx-desk__meta { font-size: 0.8125rem; color: var(--gray-500); display: flex; flex-wrap: wrap; gap: 0.25rem; margin-top: 0.125rem; }
 .cs-rx-desk__allergy { color: var(--warning-700); font-weight: 600; }
 .cs-rx-desk__bp-sep { color: var(--gray-400); padding: 0 0.125rem; }
-.cs-rx-desk__bp { width: 3.25rem !important; }
+.cs-rx-desk__bp { width: 2.625rem !important; }
 .cs-rx-desk__unit { font-size: 0.75rem; color: var(--gray-500); white-space: nowrap; }
-.cs-rx-desk__bar-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+.cs-rx-desk__bar-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; }
+.cs-rx-desk__my-paper {
+    display: inline-flex; align-items: center; gap: 0.375rem;
+    font-size: 0.8125rem; color: var(--gray-600); cursor: pointer; user-select: none;
+    padding: 0 0.25rem;
+}
+.cs-rx-desk__my-paper input { margin: 0; accent-color: var(--primary-600); }
+.dark .cs-rx-desk__my-paper { color: var(--gray-400); }
+/* The pad saves itself; this is the only thing that says whether it has. It
+   sits with the actions rather than floating, because "Unsaved" next to Save
+   & print is the pairing the doctor is being asked to read. */
+.cs-rx-desk__save-state {
+    display: inline-flex; align-items: center; gap: 0.3125rem;
+    font-size: 0.75rem; font-weight: 600; white-space: nowrap;
+}
+.cs-rx-desk__save-state::before {
+    content: ''; width: 0.4375rem; height: 0.4375rem; border-radius: 9999px;
+    background: currentColor;
+}
+.cs-rx-desk__save-state.is-unsaved { color: var(--warning-600); }
+.cs-rx-desk__save-state.is-saving { color: var(--gray-500); }
+.cs-rx-desk__save-state.is-saved { color: var(--success-600); }
+.dark .cs-rx-desk__save-state.is-unsaved { color: var(--warning-400); }
+.dark .cs-rx-desk__save-state.is-saved { color: var(--success-400); }
 .cs-rx-desk__grid {
     display: grid; grid-template-columns: minmax(0, 34fr) minmax(0, 66fr); gap: 1rem; align-items: start;
+}
+/* Tablet (768–1023px). The desk used to start at 1024 and everything under it
+   fell back to the phone modal, which has none of the desk's speed work — no
+   shorthand line, no My medicines, no packs, no complaint/history/investigation
+   chips. A tablet on the consult desk is an ordinary chamber setup, so the two
+   columns stack instead. The medicine table is not squeezed by this: stacked at
+   768px it gets the full content width, which is *wider* than the 66% column it
+   gets at 1024px — so no horizontal scroller is needed here, and none may be
+   added (see the overflow note on `__table-wrap`). */
+@media (max-width: 1023px) {
+    .cs-rx-desk__grid { grid-template-columns: minmax(0, 1fr); }
+    /* Prescription first on a stacked pad: it is what the doctor came to
+       write, and the clinical column is reference while writing it. */
+    .cs-rx-desk__right { order: 1; }
+    .cs-rx-desk__left { order: 2; }
+    /* Fingers, not a mouse. 12px chips at 26px tall are a mis-tap on glass. */
+    .cs-rx-desk__chip { padding: 0.4375rem 0.75rem; font-size: 0.8125rem; }
+    .cs-rx-desk__table input,
+    .cs-rx-desk__table select,
+    .cs-rx-desk__card input,
+    .cs-rx-desk__card textarea,
+    .cs-rx-desk__card select { min-height: 2.5rem; }
+    .cs-rx-desk__move,
+    .cs-rx-desk__remove,
+    .cs-rx-desk__save-default,
+    .cs-rx-desk__grip { padding: 0.375rem; font-size: 1.0625rem; }
 }
 .cs-rx-desk__left, .cs-rx-desk__right { display: flex; flex-direction: column; gap: 0.75rem; }
 .cs-rx-desk__card {
@@ -100,14 +405,69 @@
 .dark .cs-rx-desk__card { background: var(--gray-900); border-color: var(--gray-800); }
 .cs-rx-desk__card--muted { background: var(--gray-50); }
 .dark .cs-rx-desk__card--muted { background: color-mix(in srgb, var(--gray-800) 40%, transparent); }
-.cs-rx-desk__card h3 {
-    margin: 0 0 0.5rem; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.04em;
-    text-transform: uppercase; color: var(--gray-500);
+
+/* The prescription is the point of the screen, but it was rendered with the
+   same border, radius and heading as Advice and Follow-up — nine cards all
+   shouting at one volume, so nothing told the eye where to land. */
+.cs-rx-desk__rx { border-color: var(--primary-300); box-shadow: 0 1px 2px color-mix(in srgb, var(--gray-950) 6%, transparent); }
+.dark .cs-rx-desk__rx { border-color: color-mix(in srgb, var(--primary-500) 45%, transparent); }
+.cs-rx-desk__rx > h3 {
+    margin: -0.75rem -0.875rem 0.625rem; padding: 0.5rem 0.875rem;
+    border-bottom: 1px solid var(--primary-200);
+    border-radius: 0.75rem 0.75rem 0 0;
+    background: color-mix(in srgb, var(--primary-50) 70%, transparent);
+    color: var(--primary-800); font-size: 1rem; letter-spacing: 0;
 }
+.dark .cs-rx-desk__rx > h3 {
+    border-bottom-color: color-mix(in srgb, var(--primary-500) 35%, transparent);
+    background: color-mix(in srgb, var(--primary-500) 12%, transparent);
+    color: var(--primary-200);
+}
+
+/* The six left-hand sections are one continuous note, not six objects — but
+   the note itself is the clinical assessment, and it is a peer of the
+   prescription, not a margin beside it. So the *column* becomes the card:
+   one surface with the same weight as the ℞ block, divided internally.
+   (An earlier pass stripped the inner cards bare and left nothing around
+   them, which read as "this side does not matter".) Done in CSS so no
+   section markup has to move. */
+.cs-rx-desk__left {
+    gap: 0;
+    padding: 0.25rem 0.875rem;
+    border: 1px solid var(--gray-200); border-radius: 0.75rem;
+    background: var(--color-white, #fff);
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--gray-950) 6%, transparent);
+}
+.dark .cs-rx-desk__left { background: var(--gray-900); border-color: var(--gray-800); }
+.cs-rx-desk__left > .cs-rx-desk__card {
+    border: 0; border-radius: 0; background: transparent;
+    border-bottom: 1px solid var(--gray-200);
+    padding-inline: 0; padding-block: 0.75rem;
+}
+.dark .cs-rx-desk__left > .cs-rx-desk__card { border-bottom-color: var(--gray-800); background: transparent; }
+.cs-rx-desk__left > .cs-rx-desk__card:last-child { border-bottom: 0; }
+/* "Last visit" keeps its tint so it still reads as reference, not as a box
+   the doctor is meant to type into. */
+.cs-rx-desk__left > .cs-rx-desk__card--muted {
+    margin: 0.5rem 0; padding: 0.625rem 0.75rem;
+    border-radius: 0.5rem; background: var(--gray-50);
+}
+.dark .cs-rx-desk__left > .cs-rx-desk__card--muted {
+    background: color-mix(in srgb, var(--gray-800) 40%, transparent);
+}
+/* Six sections stacked in one column have to be findable at a glance, and
+   gray-500 at 12px was too quiet to scan — the eye slid past the headings and
+   the column read as undifferentiated text. */
+.cs-rx-desk__card h3 {
+    margin: 0 0 0.5rem; font-size: 0.8125rem; font-weight: 700; letter-spacing: 0.04em;
+    text-transform: uppercase; color: var(--gray-700);
+}
+.dark .cs-rx-desk__card h3 { color: var(--gray-300); }
 .cs-rx-desk__card textarea,
 .cs-rx-desk__card input[type="text"],
 .cs-rx-desk__card input[type="search"],
 .cs-rx-desk__card input[type="number"],
+.cs-rx-desk__card input[type="date"],
 .cs-rx-desk__mini-select,
 .cs-rx-desk__table input,
 .cs-rx-desk__table select,
@@ -128,33 +488,36 @@
     border-color: var(--primary-500);
     box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary-500) 25%, transparent);
 }
-.cs-rx-desk__oe-notes { margin-top: 0.5rem; min-height: 2.25rem !important; }
-.cs-rx-desk__mini-table,
-.cs-rx-desk__oe-table {
+.cs-rx-desk__oe-notes { margin-top: 0.25rem; min-height: 1.75rem !important; }
+.cs-rx-desk__oe-table + .cs-rx-desk__chips { margin-top: 0.35rem; margin-bottom: 0.25rem; }
+.cs-rx-desk__mini-table {
     width: 100%; border-collapse: collapse; margin-bottom: 0.5rem; font-size: 0.8125rem;
 }
-.cs-rx-desk__mini-table td,
-.cs-rx-desk__oe-table th,
-.cs-rx-desk__oe-table td {
+.cs-rx-desk__mini-table td {
     padding: 0.35rem 0.25rem; border-bottom: 1px solid var(--gray-100); vertical-align: middle;
 }
-.dark .cs-rx-desk__mini-table td,
-.dark .cs-rx-desk__oe-table th,
-.dark .cs-rx-desk__oe-table td { border-bottom-color: var(--gray-800); }
+.dark .cs-rx-desk__mini-table td { border-bottom-color: var(--gray-800); }
 .cs-rx-desk__mini-name { font-weight: 600; color: var(--gray-900); width: 55%; }
 .dark .cs-rx-desk__mini-name { color: var(--gray-100); }
 .cs-rx-desk__mini-select { min-height: 1.875rem !important; padding: 0.25rem 0.375rem !important; width: auto; min-width: 4.5rem; }
 .cs-rx-desk__mini-actions { width: 1.5rem; text-align: right; }
-.cs-rx-desk__oe-table th {
-    width: 3.25rem; text-align: left; font-size: 0.75rem; font-weight: 700;
-    text-transform: uppercase; letter-spacing: 0.03em; color: var(--gray-500);
+/* Paper-pad vitals: one wrapping line, not a five-row hospital table. */
+.cs-rx-desk__oe-table {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.25rem;
+    width: 100%; margin-bottom: 0.125rem; font-size: 0.75rem;
 }
-.cs-rx-desk__oe-table td {
-    display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem;
+.cs-rx-desk__vital {
+    display: inline-flex; align-items: center; gap: 0.2rem; min-width: 0;
 }
-.cs-rx-desk__oe-table input[type="number"] {
-    width: 4rem; min-height: 2rem; appearance: textfield; -moz-appearance: textfield;
+.cs-rx-desk__vital-label {
+    font-size: 0.6875rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.03em; color: var(--gray-500); white-space: nowrap;
 }
+.cs-rx-desk__card .cs-rx-desk__oe-table input[type="number"] {
+    width: 3.25rem; min-height: 1.625rem; padding: 0.125rem 0.3rem;
+    appearance: textfield; -moz-appearance: textfield;
+}
+.cs-rx-desk__card .cs-rx-desk__oe-table .cs-rx-desk__bp { width: 2.625rem; }
 .cs-rx-desk__oe-table input::-webkit-outer-spin-button,
 .cs-rx-desk__oe-table input::-webkit-inner-spin-button { appearance: none; margin: 0; }
 .cs-rx-desk__add {
@@ -203,6 +566,30 @@
     font-size: 0.75rem; font-weight: 500; color: var(--gray-700); cursor: pointer;
 }
 .dark .cs-rx-desk__chip { color: var(--gray-300); border-color: var(--gray-700); }
+/* Chips do two different jobs and looked identical: History chips *toggle* a
+   state (and show it via `.is-on`), while Yours and pack chips *insert* a row
+   the doctor then edits. A leading + marks the ones that add something, so the
+   difference is learnable rather than discovered by tapping. */
+.cs-rx-desk__chip--add::before {
+    content: '+';
+    font-weight: 700; color: var(--primary-600); margin-right: 0.125rem;
+}
+.dark .cs-rx-desk__chip--add::before { color: var(--primary-400); }
+.cs-rx-desk__chip--add {
+    background: color-mix(in srgb, var(--primary-50) 60%, transparent);
+    border-color: var(--primary-200);
+}
+.dark .cs-rx-desk__chip--add {
+    background: color-mix(in srgb, var(--primary-500) 10%, transparent);
+    border-color: color-mix(in srgb, var(--primary-500) 35%, transparent);
+}
+.cs-rx-desk__chip--advice {
+    max-width: 100%;
+    border-radius: 0.5rem;
+    white-space: normal;
+    text-align: left;
+    line-height: 1.35;
+}
 .cs-rx-desk__chip.is-on,
 .cs-rx-desk__chip:hover {
     border-color: var(--primary-400); color: var(--primary-700);
@@ -231,10 +618,50 @@
     float: right; font-style: normal; font-size: 0.6875rem; color: var(--gray-400);
     max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
-.cs-rx-desk__packs {
-    margin-top: 0.5rem; padding: 0.625rem; border: 1px dashed var(--gray-300); border-radius: 0.5rem;
+/* Reorder arrows sit with the ★ and ✕ in the row-actions cell. Muted until
+   hovered so a five-drug prescription is not a wall of arrows. */
+.cs-rx-desk__move {
+    border: 0; background: none; padding: 0 0.125rem; cursor: pointer;
+    color: var(--gray-400); font-size: 0.875rem; line-height: 1;
 }
-.dark .cs-rx-desk__packs { border-color: var(--gray-700); }
+.cs-rx-desk__move:hover { color: var(--primary-600); }
+.dark .cs-rx-desk__move { color: var(--gray-500); }
+.dark .cs-rx-desk__move:hover { color: var(--primary-400); }
+.cs-rx-desk__index {
+    display: flex; align-items: center; gap: 0.25rem;
+    color: var(--gray-500); font-size: 0.75rem; white-space: nowrap;
+}
+.cs-rx-desk__grip {
+    border: 0; background: none; padding: 0.125rem 0.2rem; cursor: grab;
+    color: var(--gray-400); font-size: 0.75rem; line-height: 1; letter-spacing: -0.15em;
+}
+.cs-rx-desk__grip:active { cursor: grabbing; }
+.cs-rx-desk__grip:hover { color: var(--primary-600); }
+.dark .cs-rx-desk__grip { color: var(--gray-500); }
+.cs-rx-desk__row--uncertain.is-dragging,
+tr.is-dragging { opacity: 0.55; }
+.cs-rx-desk__why { position: relative; margin-top: 0.25rem; }
+.cs-rx-desk__why-label {
+    display: block; font-size: 0.625rem; font-weight: 700; letter-spacing: 0.04em;
+    text-transform: uppercase; color: var(--gray-500); margin-bottom: 0.125rem;
+}
+
+/* The doctor's own shortlist, above the table. Wraps rather than scrolls —
+   a horizontal scroller hides buttons behind an edge, and the whole value
+   here is that every one of them is visible without a gesture. */
+.cs-rx-desk__mine {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.375rem;
+    margin-bottom: 0.625rem;
+}
+.cs-rx-desk__mine-label {
+    font-size: 0.6875rem; font-weight: 700; text-transform: uppercase;
+    letter-spacing: 0.04em; color: var(--gray-500); margin-right: 0.125rem;
+}
+
+/* A picker, not a workspace. The bordered box read as a place to build packs;
+   packs are built on My medicines and this screen only applies them, so the
+   panel chrome is gone and what is left is a row of chips. */
+.cs-rx-desk__packs { margin-top: 0.5rem; }
 .cs-rx-desk__hint { margin: 0; font-size: 0.8125rem; color: var(--gray-600); }
 .cs-rx-desk__link {
     margin-top: 0.5rem; border: 0; background: none; padding: 0;
@@ -246,7 +673,10 @@
    and nothing visible appeared under the box. The desk is ≥1024px wide; the
    columns fit without a horizontal scroller. */
 .cs-rx-desk__table-wrap { overflow: visible; }
-.cs-rx-desk__table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+/* 14px, not 13. This is read at arm's length by people who are frequently
+   over 45, on a screen with width to spare — the old scale put the brand, its
+   dose and its duration all at the same size, so nothing led the eye. */
+.cs-rx-desk__table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
 .cs-rx-desk__table th {
     text-align: left; padding: 0.375rem 0.375rem; font-size: 0.6875rem; letter-spacing: 0.04em;
     text-transform: uppercase; color: var(--gray-500); border-bottom: 1px solid var(--gray-200);
@@ -254,12 +684,29 @@
 .cs-rx-desk__table td {
     padding: 0.375rem; vertical-align: top; border-bottom: 1px solid var(--gray-100);
 }
+/* Seven columns and a hairline divider is not enough to carry the eye from a
+   brand on the left back to its duration on the right. */
+.cs-rx-desk__table tbody tr:hover td {
+    background: color-mix(in srgb, var(--gray-50) 70%, transparent);
+}
+.dark .cs-rx-desk__table tbody tr:hover td {
+    background: color-mix(in srgb, var(--gray-800) 45%, transparent);
+}
 .dark .cs-rx-desk__table th, .dark .cs-rx-desk__table td { border-color: var(--gray-800); }
 .cs-rx-desk__table td:first-child { width: 1.75rem; color: var(--gray-400); padding-top: 0.75rem; }
 /* Brand cell is the dropdown anchor — suggestions float over Dose / Frequency
    rather than pushing the row open and still getting clipped. */
 .cs-rx-desk__table td.cs-rx-desk__brand-cell { position: relative; min-width: 11rem; }
-.cs-rx-desk__brand { font-weight: 700; text-transform: uppercase; }
+/* The brand is the thing being prescribed — it should out-rank its own dose
+   and duration rather than sitting at the same size as them.
+   Selector deliberately carries the table class: `.cs-rx-desk__table input`
+   sets `font: inherit`, and that shorthand resets font-size *and* font-weight.
+   It out-specifies a bare `.cs-rx-desk__brand`, so the bold here never took
+   effect — only `text-transform` survived, because it is not part of `font`. */
+.cs-rx-desk__table input.cs-rx-desk__brand,
+.cs-rx-desk__brand {
+    font-size: 0.9375rem; font-weight: 700; text-transform: uppercase;
+}
 /* Prescription preview modal — the printed script in a frame, so it cannot
    drift from what the printer produces. */
 .cs-rx-preview__frame {
@@ -273,8 +720,8 @@
 /* Secondary to the brand it sits under: smaller, quieter, and only bordered
    once the doctor is in it, so the column still reads as one medicine. */
 .cs-rx-desk__table input.cs-rx-desk__reason {
-    margin-top: 0.125rem; min-height: 1.5rem; padding: 0.125rem 0.25rem;
-    border-color: transparent; font-size: 0.6875rem; color: var(--gray-600);
+    margin-top: 0; min-height: 1.75rem; padding: 0.2rem 0.375rem;
+    border-color: var(--gray-200); font-size: 0.75rem; color: var(--gray-700);
 }
 .cs-rx-desk__table input.cs-rx-desk__reason:hover { border-color: var(--gray-200); }
 .cs-rx-desk__table input.cs-rx-desk__reason:focus { border-color: var(--gray-300); color: inherit; }
@@ -289,18 +736,38 @@
     display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; margin-top: 0.75rem;
 }
 .cs-rx-desk__shorthand input { flex: 1 1 16rem; }
+.cs-rx-desk__row--uncertain { background: color-mix(in srgb, #f59e0b 14%, transparent); }
+.cs-rx-desk__uncertain-hint {
+    margin-top: 0.2rem;
+    font-size: 0.75rem;
+    color: #b45309;
+}
 /* Add medicine sits under the table rather than beside the shorthand box —
    it continues the list, so it belongs where the list ends. Full-width and
    dashed so it reads as "the next empty row", not as a competing action. */
-.cs-rx-desk__add-row { margin-top: 0.5rem; }
+/* Sits under the medicine table, clear of it. A dashed outline read as a
+   placeholder rather than a control, so this is a real button: solid border,
+   its own surface, and enough space above that it is not mistaken for another
+   table row. */
+.cs-rx-desk__add-row { margin-top: 1rem; }
 .cs-rx-desk__add-btn {
-    width: 100%; padding: 0.5rem; border: 1px dashed var(--gray-300);
-    border-radius: 0.5rem; background: none; color: var(--gray-600);
-    font: inherit; cursor: pointer; text-align: center;
+    display: inline-flex; align-items: center; gap: 0.375rem;
+    min-height: 2.25rem; padding: 0.5rem 1rem;
+    border: 1px solid var(--gray-300); border-radius: 0.5rem;
+    background: var(--gray-50); color: var(--gray-700);
+    font: inherit; font-weight: 500; cursor: pointer;
 }
-.cs-rx-desk__add-btn:hover { border-color: var(--primary-400); color: var(--primary-600); }
-.dark .cs-rx-desk__add-btn { border-color: var(--gray-700); color: var(--gray-400); }
-.dark .cs-rx-desk__add-btn:hover { border-color: var(--primary-500); color: var(--primary-400); }
+.cs-rx-desk__add-btn:hover {
+    background: var(--primary-50); border-color: var(--primary-400); color: var(--primary-700);
+}
+.cs-rx-desk__add-btn:active { transform: translateY(1px); }
+.dark .cs-rx-desk__add-btn {
+    background: var(--gray-800); border-color: var(--gray-700); color: var(--gray-200);
+}
+.dark .cs-rx-desk__add-btn:hover {
+    background: color-mix(in srgb, var(--primary-500) 18%, transparent);
+    border-color: var(--primary-500); color: var(--primary-200);
+}
 .cs-rx-desk__suggest {
     list-style: none; margin: 0.25rem 0 0; padding: 0.25rem;
     border: 1px solid var(--gray-200); border-radius: 0.5rem; background: var(--color-white, #fff);
@@ -328,4 +795,67 @@
 }
 .cs-rx-desk__media { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
 .cs-rx-desk__reports { width: 100%; margin-top: 0.5rem; }
+.cs-rx-desk__reports-card textarea { width: 100%; }
+.cs-rx-desk__report-photos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    align-items: flex-start;
+    margin-top: 0.5rem;
+}
+.cs-rx-desk__report-thumb {
+    position: relative;
+    width: 4.5rem;
+    height: 4.5rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 0.25rem;
+    overflow: hidden;
+    background: var(--gray-50);
+}
+.dark .cs-rx-desk__report-thumb { border-color: var(--gray-700); background: var(--gray-800); }
+.cs-rx-desk__report-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.cs-rx-desk__report-thumb .cs-rx-desk__remove {
+    position: absolute;
+    top: 0.125rem;
+    right: 0.125rem;
+}
+.cs-rx-desk__report-add {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 4.5rem;
+    height: 4.5rem;
+    border: 1px dashed var(--gray-400);
+    border-radius: 0.25rem;
+    font-size: 0.7rem;
+    font-weight: 600;
+    text-align: center;
+    padding: 0.25rem;
+    cursor: pointer;
+    color: var(--gray-600);
+    background: transparent;
+}
+.dark .cs-rx-desk__report-add { border-color: var(--gray-600); color: var(--gray-400); }
+.cs-rx-desk__report-add input { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0, 0, 0, 0); }
 [x-cloak] { display: none !important; }
+
+/* Complete visit is a filled “go” button. Filament’s success green at 600
+   fails WCAG white-on-green, so it paints a pale chip with dark type — which
+   reads as disabled. Force a solid green with white label and icon. */
+.cs-complete-visit-btn.fi-btn.fi-color-success {
+    background-color: var(--success-600);
+    color: #fff;
+    --text: #fff;
+    --hover-text: #fff;
+    --dark-text: #fff;
+    --dark-hover-text: #fff;
+}
+.cs-complete-visit-btn.fi-btn.fi-color-success:hover {
+    background-color: var(--success-500);
+    color: #fff;
+}
+.cs-complete-visit-btn.fi-btn.fi-color-success > .fi-icon,
+.cs-complete-visit-btn.fi-btn.fi-color-success svg {
+    color: #fff;
+}

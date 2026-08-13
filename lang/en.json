@@ -396,5 +396,13 @@
     "Past visits and prescriptions for :phone": "Past visits and prescriptions for :phone",
     "No past visits yet.": "No past visits yet.",
     "Save the link, print a copy, or send it on WhatsApp so you have your serial at the chamber.": "Save the link, print a copy, or send it on WhatsApp so you have your serial at the chamber.",
-    "Save this link so you have your serial handy.": "Save this link so you have your serial handy."
+    "Save this link so you have your serial handy.": "Save this link so you have your serial handy.",
+    "Morning": "Morning",
+    "Noon": "Noon",
+    "Night": "Night",
+    "Send on WhatsApp": "Send on WhatsApp",
+    "My prescription: :link": "My prescription: :link",
+    "No printer? Take a screenshot of this page to keep it on your phone.": "No printer? Take a screenshot of this page to keep it on your phone.",
+    "Print / Save as PDF": "Print / Save as PDF",
+    "This link expires :hours hours after it was sent. Save or print this page to keep a copy.": "This link expires :hours hours after it was sent. Save or print this page to keep a copy."
 }

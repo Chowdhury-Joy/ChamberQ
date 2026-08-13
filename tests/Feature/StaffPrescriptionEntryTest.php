@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Filament\TenantAdmin\Pages\DailyRoster;
+use App\Filament\TenantAdmin\Support\VisitNotesFormSchema;
 use App\Models\Booking;
 use App\Models\Chamber;
 use App\Models\Condition;
@@ -18,6 +19,7 @@ use Carbon\Carbon;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 use Tests\TestCase;
@@ -218,6 +220,62 @@ class StaffPrescriptionEntryTest extends TestCase
         $this->assertNull($record->tests_advised);
         $this->assertNull($record->reports_seen);
         $this->assertNull($record->voice_transcript);
+        $this->assertNull($record->report_photo_paths);
+    }
+
+    public function test_staff_can_attach_report_photos_without_writing_clinical_notes(): void
+    {
+        tenancy()->initialize($this->tenant);
+
+        $this->doctorProfile->update(['staff_may_enter_prescriptions' => true]);
+
+        $path = 'visit-reports/'.$this->tenant->id.'/cbc.jpg';
+        Storage::disk('local')->put($path, 'cbc-bytes');
+
+        $record = app(VisitRecordService::class)->saveStaffEnteredPrescription(
+            $this->booking->fresh(),
+            $this->staff,
+            $this->paperScript() + [
+                'report_photos' => [$path],
+                'reports_seen' => 'Staff must not write this',
+            ],
+        );
+
+        $this->assertNotNull($record);
+        $this->assertSame([$path], $record->report_photo_paths);
+        $this->assertNull($record->reports_seen);
+        $this->assertContains('report_photos', VisitNotesFormSchema::STAFF_WRITABLE_FIELDS);
+        $this->assertNotContains('reports_seen', VisitNotesFormSchema::STAFF_WRITABLE_FIELDS);
+    }
+
+    public function test_staff_entry_keeps_report_photos_the_doctor_already_attached(): void
+    {
+        tenancy()->initialize($this->tenant);
+
+        $this->doctorProfile->update(['staff_may_enter_prescriptions' => true]);
+
+        $path = 'visit-reports/'.$this->tenant->id.'/xray.jpg';
+        Storage::disk('local')->put($path, 'xray-bytes');
+
+        app(VisitRecordService::class)->saveForCompletedBooking(
+            $this->booking->fresh(),
+            $this->doctorUser,
+            [
+                'diagnosis_free_text' => 'Viral fever',
+                'report_photos' => [$path],
+            ],
+        );
+
+        app(VisitRecordService::class)->saveStaffEnteredPrescription(
+            $this->booking->fresh(),
+            $this->staff,
+            $this->paperScript(),
+        );
+
+        $record = $this->booking->fresh()->visitRecord->fresh();
+
+        $this->assertSame([$path], $record->report_photo_paths);
+        $this->assertSame('Viral fever', $record->diagnosis_uncoded);
     }
 
     public function test_staff_entry_does_not_overwrite_the_doctors_own_notes(): void

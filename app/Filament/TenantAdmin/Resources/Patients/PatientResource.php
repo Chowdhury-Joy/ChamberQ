@@ -21,6 +21,8 @@ class PatientResource extends Resource
 
     protected static ?string $navigationLabel = 'Patients';
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Operations';
+
     protected static ?int $navigationSort = 25;
 
     public static function canViewAny(): bool

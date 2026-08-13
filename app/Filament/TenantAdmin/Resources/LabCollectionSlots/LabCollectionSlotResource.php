@@ -20,6 +20,8 @@ class LabCollectionSlotResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCalendarDateRange;
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Operations';
+
     public static function canViewAny(): bool
     {
         $user = auth()->user();

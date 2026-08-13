@@ -1953,3 +1953,229 @@
  <action>Remove `PORTAL_PRESCRIPTION_LIMIT`. `/portal` now lists every prescription that has medicines for that phone, newest first. Phone gate, durable `/portal/prescriptions/{id}?phone=` links, and the 48h SMS `/p/{token}` channel are unchanged. Empty prescriptions (no medicine lines) still stay off the list. Bookings on the same page stay capped at 10.</action>
  <reason>Owner asked to drop the cap. The portal is already the backup when staff forget to send the link; hiding older pads after visit three made that backup incomplete. Anyone who knows the phone could already open those two slips — listing the rest uses the same gate.</reason>
 </decision>
+
+## 2026-08-13T12:26:34+0600
+
+<decision>
+ <category>Code</category>
+ <context>Developer handoff PDFs were mixed into the ChamberQ git folder (`docs/`), which is easy to lose among code, proposals, and slides. Future handoffs need one obvious place outside the project.</context>
+ <action>Keep all developer-handoff PDFs in `~/developer-handoff/<ProjectName>/`. ChamberQ copies live in `~/developer-handoff/ChamberQ/`. New products get their own named folder under `~/developer-handoff/`. Agents must write new handoff PDFs there (a repo `docs/` copy is optional).</action>
+ <reason>Like a labelled drawer on the desk, not a PDF buried in a filing cabinet of source code. Finder can open it without opening the project. Other projects can share the same parent folder without mixing files.</reason>
+</decision>
+
+## 2026-08-13T12:34:58+0600
+
+<decision>
+ <category>Code</category>
+ <context>Handoff PDFs in `~/developer-handoff/ChamberQ/` needed a clear version stamp so a later export does not silently replace an earlier one, and so the owner can see when it was made.</context>
+ <action>Filename must include local date and 24-hour time with no colon: `<Name>-YYYY-MM-DD-HHmm.pdf` (10:00 PM is `2200`). Each save is a new file; do not overwrite an older dated PDF.</action>
+ <reason>Like writing the date and time on a printed pack before you hand it over. 24-hour time avoids AM/PM mix-ups (2200 is clearly night).</reason>
+</decision>
+
+## 2026-08-13T12:38:12+0600
+
+<decision>
+ <category>Code</category>
+ <context>The full `YYYY-MM-DD-HHmm` stamp on handoff PDFs was longer than needed. Owner asked for `1308-2200` only.</context>
+ <action>Filename stamp is day+month then 24-hour time: `<Name>-DDMM-HHmm.pdf` (13 August 10:00 PM → `1308-2200`). No year. Each save is still a new file.</action>
+ <reason>Shorter to read in Finder. Day and month plus clock time is enough to tell packs apart.</reason>
+</decision>
+
+## 2026-08-13T12:48:03+0600
+
+<decision>
+ <category>Code</category>
+ <context>Chamber admin crashed on the default Laravel cache driver because Stancl tenancy always uses cache tags, which database and file stores cannot do.</context>
+ <action>Keep tagged cache when the store supports it (tests' array store, Redis later). On database/file, isolate chambers by prefixing cache keys with the tenant id instead of requiring Redis to open the panel.</action>
+ <reason>Like putting each chamber's papers in a labelled folder rather than demanding a filing cabinet that can colour-code them. Redis is still better in production for a one-chamber flush, but the panel must work on the cache driver we actually ship.</reason>
+</decision>
+
+## 2026-08-13T13:09:33+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Doctors already speak the prescription out loud (Napa 500 one plus one plus one five days). Typing the same words onto the pad is extra work in a busy chamber. An earlier decision (2026-08-07) deferred speech-to-text because Whisper-on-audio was the wrong tool for mixed Bangla-English brand names, and because no free LLM was trusted to fill a BM&DC-signed pad.</context>
+ <action>Ship mic-to-prescription on the desktop consult pad. Chrome/Edge listens in the browser (bn-BD or en-US) and does not save audio. Groq (`openai/gpt-oss-120b`) turns the words into a draft of catalogue-matched medicine rows. The doctor checks the draft, then Save / Print. Unmatched brands are marked uncertain. Diagnosis is never auto-coded from speech. Patient name and phone are never sent to Groq. ChamberQ absorbs the Groq cost (no doctor AI wallet). Existing 20-second visit voice notes stay as a separate recorder. This supersedes the 2026-08-07 STT deferral for this flow only — do not restore the Whisper-1 audio pipeline.</action>
+ <reason>Like a compounder who writes what the doctor just said, then the doctor reads the pad before it is signed. Listening is free in Chrome. The paid step is only the fill, on a model that is still available after Llama 8B/70B shut down. A wrong drug name on a signed pad is a patient-safety failure, so the draft is never auto-printed or SMS'd.</reason>
+</decision>
+
+## 2026-08-13T16:32:23+0600
+<decision>
+  <category>UI/UX</category>
+  <context>A full re-read of the Rx pad. Most of the earlier gap list is built — shorthand search with prefill, per-brand dose chips, Bangla/English dictation, a Reason box, clash and allergy warnings, vitals trends, follow-up reminders, packs on My medicines, an offline shell. What remained was the thing a doctor feels forty times a day: the drugs he always prescribes still had to be typed. His curated **My medicines** list only surfaced if he typed into the search box, so a drug he had chosen and saved was no closer to hand than one he had never used.</context>
+  <action>The doctor's own shortlist now sits above the prescription table as one-tap chips (`ConsultScreen::getMyMedicinesProperty()` → `addFromMine()`), filling the row from **his saved line** rather than the catalogue. Alongside it: ↑/↓ reordering on every medicine row, Enter moving through the dose/frequency/duration/reason cells and adding a row off the end, "Packs" relabelled **Use a pack** with its panel chrome removed, and the Add medicine control rebuilt as a real button with proper spacing.</action>
+  <reason>The chips are the highest-value change left because a chamber doctor prescribes the same small set all day, and this is the one place where a tap replaces typing without the app guessing anything — the list is hand-curated, so the no-auto-learning decision (2026-08-11) is untouched. Alphabetical and capped at 8 on purpose: ordering by frequency would make the strip rearrange itself from behaviour the doctor cannot see, and buttons that move between patients are worse than no buttons. Row order matters because it is the order the patient reads and the pharmacist dispenses, and until now getting it wrong meant deleting and retyping. `nextCell()` walks the table's real inputs rather than a row/column map because cells appear and disappear — the Reason box only exists once a brand is chosen — so an index map would go stale exactly when the doctor is typing fastest.</reason>
+</decision>
+
+<decision>
+  <category>UI/UX</category>
+  <context>The owner reported that pack creation was still on the consult screen. It is not — the naming box, `savePack()` and `ConsultScreen::saveRxPack()` were removed earlier and a test asserts they cannot return. What is still there is the **Packs** button and a bordered panel, which read as a workspace rather than a picker.</context>
+  <action>Relabelled to **Use a pack** and the panel's border/padding removed, leaving a row of chips. Nothing on the consult screen now resembles a place to build one.</action>
+  <reason>Recorded because the report was about perception rather than code, and the fix is therefore a labelling and framing one. A control that *looks* like it edits something invites the doctor to hunt for the edit and conclude the product is confusing when they cannot find it. Worth noting for whoever reads the earlier entry: if a save-a-pack control genuinely appears on screen again, the page is stale rather than the code wrong — clear compiled views and rebuild assets before changing anything.</reason>
+</decision>
+
+## 2026-08-13T16:58:43+0600
+<decision>
+  <category>UI/UX</category>
+  <context>Design review of the Rx desk. Nine cards rendered with identical chrome — white, 1px gray-200, radius 0.75rem, an 11px uppercase gray-500 heading — so the prescription shouted at exactly the same volume as Advice and Follow-up. Almost all type sat between 11px and 13px, with the brand name the same size as its own duration. Seven columns were separated by a single hairline with no hover, and chips that *insert* a row looked identical to chips that *toggle* a state.</context>
+  <action>Table type to 14px and the brand to 15px; the ℞ card given a tinted heading strip and a primary-tinted border; row hover added; the six left-hand cards stripped of their individual borders and radii so the column reads as one continuous sheet (CSS only — no section markup moved); chips that add something marked `--add` with a leading `+` and a faint primary fill. The **Last visit** card keeps its tint so it still reads as reference rather than somewhere to type.</action>
+  <reason>The screen is read at arm's length by people who are frequently over 45, on a monitor with width to spare, so 13px was costing legibility for nothing. Nine equally-weighted cards give the eye nowhere to land first; the prescription is the point of the screen and should look like it. Merging the left column in CSS rather than markup keeps the change reversible and avoids touching six sections that other work is actively editing. The chip distinction is learnable rather than discoverable — previously the only way to find out whether a chip toggled or inserted was to tap it.</reason>
+</decision>
+
+<decision>
+  <category>UI/UX</category>
+  <context>The desk's sticky bar carried four actions — Preview, Save & print, Save only, Complete visit — with two saturated buttons (primary and success) side by side and nothing indicating which one ends the consult. Keeping **Complete visit** there also forced a third breakpoint rule hiding `.fi-header-actions-ctn` at ≥1024px, on top of the ≤767px header rule and the ≥768px sticky-bar rule, all of which had to stay in step.</context>
+  <action>**Save only** removed — *Save & print* already saves. **Complete visit** returned to the Consult Screen's own page header, and the ≥1024px hide rule deleted. The desk bar now holds Preview and Save & print, one of them filled, with the bar's existing `justify-content: space-between` putting patient identity at one end and the actions at the other. `DesktopRxPadTest::test_the_desk_leaves_only_one_complete_visit_button_on_screen` was rewritten: it previously asserted the header was hidden, which after this change still passed for the wrong reason (it matched the *mobile* rule's identical CSS string), and now asserts the desk template mounts no `completeVisit` at all.</action>
+  <reason>Completing a visit closes it and advances the queue — a page action, not something a prescription pad does — so the pad carrying it was a category error as well as a visual one. Removing it collapses three interacting breakpoint rules into one complementary pair (header below 768px off, sticky strip above 768px off), which is the arrangement `bug_history.md` records as the fix for the two-Complete-visit-buttons bug; three rules was the shape that caused it in the first place. Two grey buttons and one filled one leaves exactly one obvious next action.</reason>
+</decision>
+
+## 2026-08-13T17:20:31+0600
+
+<decision>
+  <category>UI/UX</category>
+  <context>Complete visit is the green “done” button on Consult Screen and Live Queue Control. Filament’s success palette cannot put white on its default green and still pass contrast, so it paints a pale chip with dark green type and a grey icon — which reads as muted or disabled, not as the action that ends the consult.</context>
+  <action>Force a solid `--success-600` fill with white label and white icon via `.cs-complete-visit-btn` on the Consult Screen header action, the phone sticky copy, and the Live Queue Control card button.</action>
+  <reason>A filled green button with white writing is what “this is the go action” looks like at arm’s length. Leaving Filament’s contrast fallback made the most important button on the page look quieter than Preview.</reason>
+</decision>
+
+## 2026-08-13T18:03:32+0600
+
+<decision>
+  <category>UI/UX</category>
+  <context>The doctor print and the patient copy of a prescription used bilingual labels, but English led whenever the admin panel locale was English — which is always, because staff UI is English-only. The paper a patient takes to the pharmacy therefore opened with “Patient / রোগী” and Helvetica, which does not look like a Bangladeshi pad. Timing already printed both languages; the rest of the chrome did not feel Bangla-first.</context>
+  <action>Printed/shared pad is Bangla-focused: `Bilingual` always leads with Bangla and renders English quieter (`.pad-l-en`); `html lang="bn"`; Hind Siliguri; dates via Carbon `bn`; print/share views set locale `bn` so follow-up phrases and empty states match. English stays on every fixed label for the pharmacist. Names, brands, and anything the doctor typed still pass through as written. Supersedes the 2026-08-11 “tenant locale leads” rule for this helper only — the helper exists solely on this sheet.</action>
+  <reason>The patient and their family read the paper. A pharmacist still needs the English. Leading with English because the doctor types in English was the wrong reader. Like a school report card printed for parents in Bangla with the English subject names kept smaller, not the other way around.</reason>
+</decision>
+
+## 2026-08-13T18:25:48+0600
+<decision>
+  <category>UI/UX</category>
+  <context>Premade advice for 58 diagnoses already existed, but doctors looking at the Advice box saw a blank textarea. The chip was a generic "Add advice" under Diagnosis, and saving the pad wiped it.</context>
+  <action>The starter sentence now appears as a tap chip in the Advice card (the actual text, not the label "Add advice"). It is rehydrated from the coded diagnosis on every pad render so a save cannot hide it. Nothing auto-fills the box — tap still copies the line in, same as before. Free-text diagnoses still have no preset.</action>
+  <reason>Advice chips belong where advice is written, the way C/C chips sit on the C/C table. A proposal that disappears after save trains the doctor that the feature does not exist.</reason>
+</decision>
+
+## 2026-08-13T20:18:58+0600
+
+<decision>
+  <category>UI/UX</category>
+  <context>Many Bangladeshi doctors print onto pads that already carry their name, qualifications and chamber. ChamberQ's headed sheet would stamp a second letterhead on top of theirs. A second "Print on my paper" button would sit next to Save & print and force a choice every consult.</context>
+  <action>One quiet **My paper** tick beside **Save & print**. Ticked: doctor print (`GET /prescriptions/{id}/print?paper=1`) hides the ChamberQ letterhead and leaves ~40mm at the top so their printed name is not overprinted. Unticked: the headed sheet, unchanged. The tick is remembered in this browser (`cq-print-on-my-paper`). Preview uses the same URL, so the iframe cannot disagree with the printer. Patient share and portal never omit the letterhead, even if `?paper=1` is pasted onto those URLs. Offline print on this computer follows the same tick.</action>
+  <reason>Like choosing "print on letterhead" vs "print on blank" in Word — a setting, not a second Print button. The doctor who always uses clinic pads ticks once and forgets it. The patient copy still needs ChamberQ's heading because they are not holding the clinic's paper.</reason>
+</decision>
+
+## 2026-08-13T20:32:16+0600
+
+<decision>
+  <category>UI/UX</category>
+  <context>The remaining ZilSoft speed gaps on the existing two-column pad: the Reason box made the doctor invent words; Advice was a blank box plus one diagnosis starter; O/E had no temperature and no finding taps; History's More list lacked COPD and Allergy; medicines could only be reordered with ↑↓.</context>
+  <action>Keep the pad layout. (1) Label the reason box **Why?** and suggest as he types — curated English reasons immediately, then `/api/conditions/search` after three letters. Still free text. Never a popup, never pre-filled from the catalogue's drug-class / marketing text, and not ranked by what this doctor has diagnosed (2026-08-11 no-learning). (2) Five advice chips above the box (English labels, Bangla lines inserted); ★ saves the last line as "mine" in this browser (`cq-my-advice`), same class of explicit tap as My medicines, not inferred from past pads. (3) Temp °F as one extra vitals row (`visit_records.temperature_f`, grey last-visit, never pre-filled); four finding chips write into Other findings. (4) COPD and Allergy added behind History **More**. (5) Drag handle on the left of each medicine row; ↑↓ stay.</action>
+  <reason>Steal their taps, not their Windows form. Google Maps does not open a window to pick a place; the list appears under the field. Ranking Why? by past diagnoses would have rebuilt the silent profile the owner ruled out. Bangla advice lines are what the patient reads; English chip labels match the English-only staff panel. Temperature is a measurement taken today, so it gets the same grey-reference rule as weight.</reason>
+</decision>
+
+## 2026-08-13T20:45:05+0600
+
+<decision>
+  <category>UI/UX</category>
+  <context>On examination on the desktop pad listed Wt, BP, Pulse, SpO₂ and Temp as five full table rows. That hospital-form stack ate the left column so diagnosis and investigations sat below the fold while the doctor was still writing vitals.</context>
+  <action>Put the five vitals on one wrapping paper-pad line: Wt [ ] kg · BP [ ]/[ ] · P [ ] · SpO₂ [ ]% · T [ ]°F. Finding chips and Other findings sit tight underneath. Last visit stays grey beside each box and is never copied into the box. Trend charts still appear only when past visits have data. Phone modal vitals are unchanged.</action>
+  <reason>A paper pad writes vitals across one line, not down a form. Five stacked rows were furniture, not clinical content — like printing each vital on its own page of a chart.</reason>
+</decision>
+
+## 2026-08-13T21:07:28+0600
+
+<decision>
+  <category>UI/UX</category>
+  <context>The desktop pad's patient strip (name, Preview, My paper, Save & print) is sticky so Save & print stays in reach while writing a long prescription. It used the same seat as Filament's topbar — viewport top, z-index 30 — so the strip painted over the menu and Complete visit.</context>
+  <action>Stick the patient strip at `top: 4rem` (Filament topbar is `min-h-16`) with z-index 20, below the topbar's 30. It still pins while scrolling; it no longer covers the chrome. Pinned by `DesktopRxPadTest::test_the_patient_strip_sticks_below_the_filament_topbar`.</action>
+  <reason>A sticky note belongs on the chart, not over the toolbar. Sharing `top: 0` / z-index 30 with `.fi-topbar-ctn` made the later element win, which hid Complete visit — the one button that ends the consult.</reason>
+</decision>
+
+## 2026-08-13T21:11:44+0600
+
+<decision>
+  <category>UI/UX</category>
+  <context>The 21:07:28 source CSS change did not reach the browser: Filament loads the compiled Vite theme, which had not been rebuilt, so the patient strip still cut through "Dr. Shamim Ahmed".</context>
+  <action>Rebuild `npm run build` so `theme-*.css` carries `top: 4rem` / z-index 20 on the strip. Also set `.fi-topbar-ctn { z-index: 40 }` so the menu bar wins if the two ever share pixels. The test now asserts both rules.</action>
+  <reason>Editing the `.css` source is not what the doctor sees. The panel paints the built file. Raising the topbar's stack order is the backstop if sticky offset is a pixel short.</reason>
+</decision>
+
+## 2026-08-13T21:43:23+0600
+
+<decision>
+  <category>UI/UX</category>
+  <context>ChamberQ's tenant admin still looked like stock Filament (top bar + default heading) while Getwebfield's admin used a designed content header, Geist type, Save-vs-Delete placement, and full-width padding. The doctor liked ChamberQ's collapsed icon sidebar and ChamberQ blue, and wanted the rest of Getwebfield's chrome.</context>
+  <action>Turn the tenant admin topbar off. Each page gets a sticky content header: title left (uppercase Geist Mono), back arrow on Create/Edit, primary Save/Create (or Complete visit) on the right. Delete moves to an outlined danger action at the bottom of the form. Geist Sans/Mono, gray-50 content well, 16/40/80px inline padding, outlined table row actions, nav groups Operations / Website / Settings. Keep `sidebarCollapsibleOnDesktop()` forced closed, and keep `Color::Blue` (do not use Getwebfield `#2173BD`). The Rx pad patient strip still sticks at `top: 4rem` under that header. Super Admin and marketer panels are unchanged.</action>
+  <reason>A chamber desk needs one place for the page's main button and a quiet place for Delete — not two bars fighting the prescription strip. The collapsed sidebar is already the right density for all-day use; swapping ChamberQ blue for Getwebfield blue would make the admin look like a different product.</reason>
+</decision>
+
+## 2026-08-13T22:08:16+0600
+
+<decision>
+  <category>UI/UX</category>
+  <context>Reports the patient brought lived on the right of the desktop pad next to Voice / photo, so the visit column (C/C, H/O, O/E, Dx, Inv) was missing the papers they actually walked in with, and the prescription column mixed chart work with the Rx.</context>
+  <action>Put Reports on the left: a typed note plus photos of the papers (lab printout, X-ray). Remove Voice / photo from the pad — voice stays in Complete visit. Cap 8 photos, stored separately from the handwritten-slip photo.</action>
+  <reason>A paper chart keeps the reports with the examination, not with the medicines. Voice is a doctor-only note after the visit, not something the pad needs mid-consult.</reason>
+</decision>
+
+<decision>
+  <category>Business_Logic</category>
+  <context>Staff who type up a paper prescription already photograph the slip. Patients also bring lab reports and X-rays that reception can scan before the doctor sees them, but staff must not write clinical notes.</context>
+  <action>Staff Daily Roster entry may attach report photos (`report_photo_paths`) on the private disk. Typed `reports_seen`, diagnosis, advice and voice stay doctor-only. Existing doctor-attached photos are re-filled on reopen so a later staff save does not wipe them. Consult Screen stays doctor-only.</action>
+  <reason>Photographing a paper the patient handed over is clerical, like photographing the slip. Writing what the report means is a clinical judgement staff are not allowed to make.</reason>
+</decision>
+
+## 2026-08-13T22:34:01+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Voice-to-writing on the consult pad (Mic → Groq fills medicine rows) was not ready to keep running. The owner asked to put it aside and to make sure Groq is not called in the meantime. Doctors still type the prescription as they always could.</context>
+ <action>Stash the pipeline unloaded under `docs/deferred/prescription-dictation/` (service, controller, Groq config, tests, Mic markup). Remove the Mic from the pad, drop `POST /api/prescriptions/dictate`, drop `GROQ_*` from env/phpunit/production-check. `PrescriptionDictationDeferredTest` fails the build if the route, Mic, or Groq config come back. 20-second visit voice notes stay. Do not restore the Whisper-1 audio pipeline from `docs/deferred/voice-transcription/` as a substitute. This supersedes the 2026-08-13T13:09:33+0600 “ship mic-to-prescription” decision until the owner asks to bring Mic back.</action>
+ <reason>Like taking the dictation machine off the desk and locking it in a cupboard: the pad is still there for typing, and nobody can accidentally send a patient's visit words to Groq while it is off. Stashing rather than deleting keeps the working fill recoverable when we want it again.</reason>
+</decision>
+
+## 2026-08-13T23:35:10+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The Rx pad held the whole prescription in Alpine memory and only reached the server from Preview or Save & print. Complete visit is a page header action that fills its form from the stored record, so a doctor who wrote the script and then tapped the green button ended the visit with whatever had last been saved — usually nothing — and was told the visit completed. Nothing on screen said the pad was unsaved.</context>
+ <action>The pad saves itself. `x-effect="queueDraftSave()"` debounces 1.5s after any change to the payload, `flushIfClickedAway()` flushes immediately on any pointerdown outside the pad, `visibilitychange` flushes, and `beforeunload` warns while dirty. Drafts go to a separate `ConsultScreen::autosaveRxDesk()` that skips the toast and the RxSafety re-check. A three-state badge (Unsaved / Saving… / Saved) sits with the actions, hidden while the pad is untouched. The signature is snapshotted at the end of `init()` so a pad nobody touched still saves nothing.</action>
+ <reason>Autosave is the only fix that also closes the other two holes — a stale record read by Complete visit, and a remount discarding typed work — without asking the doctor to remember a button mid-consult. It is a separate entry point rather than a flag so the client cannot request the quiet version of an explicit save; a safety warning fired every two seconds is one the doctor learns to dismiss, and it rides the same toast channel as the allergy and duplicate-generic checks.</reason>
+</decision>
+
+<decision>
+ <category>Code</category>
+ <context>Dropping `updated_at` from the pad's `wire:key` stopped unrelated writes remounting it mid-consult, but that timestamp was also what made the post-save remount clean: a changed key replaces the element, so Alpine re-initialises the subtree consistently. With a stable key Livewire morphs instead, and `x-data="rxDesk({...})"` is rendered from the record — its attribute string changes after every save, re-running init against nodes whose effects are already torn down. Every x-show on the pad went dead: the complaint picker, the brand suggestions, the timing chips.</context>
+ <action>`wire:ignore` on the pad, keyed on the booking alone, with `saveRxDesk()` and `autosaveRxDesk()` both `#[Renderless]`.</action>
+ <reason>Alpine already owns this subtree outright, so the morph has nothing to contribute between patients — and when the patient does change, the key changes with them and Livewire replaces the element wholesale, which is the one moment a fresh mount is wanted. Renderless drops the HTML diff, not the dispatches or the return value, so notifications and the print URL still arrive.</reason>
+</decision>
+
+<decision>
+ <category>UI/UX</category>
+ <context>The Rx desk started at 1024px. Everything below fell back to the phone modal, which has none of the desk's speed work — no shorthand line, no My medicines, no packs, no complaint / history / investigation / advice chips. A tablet on the consult desk is an ordinary chamber setup, so those doctors were getting the older, slower pad.</context>
+ <action>Desk turns on at 768px, the same breakpoint the rest of Consult Screen already uses for its grid, header actions and thumb strip. Its two columns stack to one below 1024px with the prescription first, and chips, inputs and row actions get touch-sized targets there. Desk follow-up also gained 3 months and Pick a date, which the modal always had.</action>
+ <reason>One breakpoint instead of a third rule to keep in step, and one pad to maintain instead of two diverging ones. Stacking rather than scrolling is not a compromise: at 768px stacked, the medicine table gets the full content width, which is wider than the 66% column it gets at 1024px — and a horizontal scroller would clip the brand suggestion dropdown.</reason>
+</decision>
+
+<decision>
+ <category>Business_Logic</category>
+ <context>The printed sheet gave the pharmacist a frequency at one end of the row and a duration at the other, and left them to multiply. Medicines were also unnumbered, so neither doctor nor pharmacist could refer to one by position.</context>
+ <action>Number the medicine list, and print a total dose count from `PrescriptionQuantity` — but only when both columns multiply out cleanly. `SOS`, `Continue` and anything free-typed print nothing, and one unreadable slot voids the whole line. Half doses round up.</action>
+ <reason>It is arithmetic on the doctor's own instruction, not a clinical judgement. That is exactly why silence is the designed answer rather than a gap: a number on a prescription is read as the doctor's, so inventing one for a line they deliberately left open-ended is worse than leaving it blank.</reason>
+</decision>
+
+<decision>
+ <category>UI/UX</category>
+ <context>The patient's share link is read on a phone essentially always — it arrives by SMS or WhatsApp — but it rendered the doctor's A4 sheet: a 794px frame, 12–13px type, and a nowrap dosing column pressed against the brand. The dose itself was prescriber shorthand; a patient reading `1+0+1` has to be taught the three positions first.</context>
+ <action>Below 640px the medicine list stops being a grid: one card per drug, number in the gutter, brand at 16px, dosing on its own row under a dashed rule. Each line carries the dose written out in Bangla via `DoseSchedule`, passed in as `$patientCopy` so the doctor's A4 print never grows the extra line. Added a Send on WhatsApp forward, rendered only on the share-link routes, and a written instruction to screenshot.</action>
+ <reason>Same partial and same data as the print, so the two cannot drift — only the presentation changes at phone width. The WhatsApp button is gated because the portal route reaches the same view with the patient's phone number in the query string, and forwarding that would hand their number to whoever receives the prescription. Screenshotting is an instruction rather than a button because capturing the page as an image needs a canvas library the app does not ship, and every phone here already has the gesture.</reason>
+</decision>
+
+## 2026-08-13T23:47:28+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The ChamberQ sales homepage at `/` looked like a cream/teal flyer (Inter Tight, orbit rings, phone mockup), while the doctor’s patient site is a calm clinic: Instrument Serif + DM Sans, white page, pill buttons, pale grey cards. Doctors seeing the sales page did not recognise the websites we build for them.</context>
+ <action>Restyle the live marketing homepage in the doctor-site design language without changing the sales story: same sections, copy, prices, WhatsApp CTAs, Maestro featured / Clinic beside / Rising Star hidden. Tokens, type, 1280px shell, square hero photo, Conditions-style cards, split FAQ, and one black About-style value band. Primary buttons stay ChamberQ blue (`#2563eb`). Locked solo patient homepage files were not edited. Find a doctor / Patient login pick up the shared `marketing.css` fonts and header.</action>
+ <reason>Same rooms, new paint: the sales page should feel like a sample of the doctor website, not a second brand. Keeping WhatsApp, Maestro, and prices protects CRO; keeping ChamberQ blue (not the tenant sky `#30A9E5`) keeps product chrome distinct from a named doctor’s theme.</reason>
+</decision>

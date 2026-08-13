@@ -164,7 +164,7 @@
         try {
             const visiting = config().visitingUrl;
             if (visiting && 'caches' in window) {
-                const cache = await caches.open('clinic-shell-v4');
+                const cache = await caches.open('clinic-shell-v6');
                 await cache.add(visiting).catch(() => {});
             }
         } catch (e) {}
@@ -300,11 +300,23 @@
             </div>`;
         }).join('');
 
+        const onMyPaper = !!input.on_my_paper;
+        const header = onMyPaper ? '' : `<header class="header"><div>
+<p class="doctor">${escapeHtml(letter.doctor_name || '')}</p>
+<p class="muted">${escapeHtml(letter.qualifications || '')}</p>
+<p class="muted">${letter.registration_number ? 'Reg. No. ' + escapeHtml(letter.registration_number) : ''}</p>
+</div><div>
+<p class="doctor" style="font-size:14px">${escapeHtml(letter.chamber_name || '')}</p>
+<p class="muted">${escapeHtml(letter.chamber_address || '')}</p>
+<p class="muted">${escapeHtml(letter.chamber_contact || '')}</p>
+</div></header>`;
+        const padPad = onMyPaper ? 'padding-top:40mm' : '';
+
         const html = `<!doctype html><html><head><meta charset="utf-8"><title>Prescription</title>
 <style>
 body{font-family:Helvetica Neue,Arial,sans-serif;color:#111;font-size:13px;margin:0}
 .sheet{max-width:794px;margin:0 auto;padding:20px 24px}
-.pad{border:1px solid #cbd5e1;border-radius:2px;overflow:hidden}
+.pad{border:1px solid #cbd5e1;border-radius:2px;overflow:hidden;${padPad}}
 .header{display:flex;justify-content:space-between;gap:16px;padding:14px 16px;border-bottom:2px solid #0f172a}
 .doctor{font-size:18px;font-weight:700;margin:0 0 4px}
 .muted{color:#64748b;margin:0}
@@ -320,21 +332,14 @@ h3{margin:0 0 8px;font-size:12px;text-transform:uppercase;letter-spacing:.04em}
 .unsynced{margin-top:16px;font-size:11px;color:#92400e}
 @media print {.unsynced{display:none} .sheet{padding:0}}
 </style></head><body><div class="sheet"><div class="pad">
-<header class="header"><div>
-<p class="doctor">${escapeHtml(letter.doctor_name || '')}</p>
-<p class="muted">${escapeHtml(letter.qualifications || '')}</p>
-<p class="muted">${letter.registration_number ? 'Reg. No. ' + escapeHtml(letter.registration_number) : ''}</p>
-</div><div>
-<p class="doctor" style="font-size:14px">${escapeHtml(letter.chamber_name || '')}</p>
-<p class="muted">${escapeHtml(letter.chamber_address || '')}</p>
-<p class="muted">${escapeHtml(letter.chamber_contact || '')}</p>
-</div></header>
+${header}
 <div class="band">
 <div class="field"><span class="label">Patient</span><span>${escapeHtml(patient.name || '')}</span></div>
 ${patient.age ? `<div class="field"><span class="label">Age</span><span>${escapeHtml(patient.age)}</span></div>` : ''}
 <div class="field"><span class="label">Date</span><span>${escapeHtml(input.date || new Date().toLocaleDateString())}</span></div>
 ${data.weight_kg ? `<div class="field"><span class="label">Wt</span><span>${escapeHtml(data.weight_kg)} kg</span></div>` : ''}
 ${data.bp_systolic ? `<div class="field"><span class="label">BP</span><span>${escapeHtml(data.bp_systolic)}/${escapeHtml(data.bp_diastolic || '')}</span></div>` : ''}
+${data.temperature_f ? `<div class="field"><span class="label">Temp</span><span>${escapeHtml(data.temperature_f)} °F</span></div>` : ''}
 </div>
 <div class="body">
 <aside class="clinical">

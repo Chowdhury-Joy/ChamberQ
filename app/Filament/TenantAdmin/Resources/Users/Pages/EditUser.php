@@ -2,18 +2,13 @@
 
 namespace App\Filament\TenantAdmin\Resources\Users\Pages;
 
+use App\Filament\TenantAdmin\Concerns\HasPrimarySaveAndDangerDelete;
 use App\Filament\TenantAdmin\Resources\Users\UserResource;
-use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 
 class EditUser extends EditRecord
 {
-    protected static string $resource = UserResource::class;
+    use HasPrimarySaveAndDangerDelete;
 
-    protected function getHeaderActions(): array
-    {
-        return [
-            DeleteAction::make(),
-        ];
-    }
+    protected static string $resource = UserResource::class;
 }

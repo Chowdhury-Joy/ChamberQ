@@ -108,6 +108,45 @@ class ClinicalMediaPrivacyTest extends TestCase
         $this->actingAs($outsideDoctor)
             ->get("http://clinic-a.localhost/visit-records/{$visitRecord->id}/voice")
             ->assertForbidden();
+
+        $this->actingAs($ownDoctor)
+            ->get("http://clinic-a.localhost/visit-records/{$visitRecord->id}/report-photos/0")
+            ->assertOk();
+
+        $this->actingAs($outsideDoctor)
+            ->get("http://clinic-a.localhost/visit-records/{$visitRecord->id}/report-photos/0")
+            ->assertForbidden();
+    }
+
+    public function test_report_photo_directory_is_private(): void
+    {
+        tenancy()->initialize(Tenant::create([
+            'id' => 'report-dir-test',
+            'plan_tier' => 'solo',
+        ]));
+
+        $directory = app(VisitMediaService::class)->reportPhotoDirectory();
+
+        $this->assertSame('visit-reports/report-dir-test', $directory);
+
+        $probe = $directory.'/cbc.jpg';
+        Storage::disk('local')->put($probe, 'lab-report');
+
+        $absolute = realpath(Storage::disk('local')->path($probe));
+        $webRoot = realpath(public_path());
+
+        $this->assertNotFalse($absolute);
+        $this->assertStringNotContainsString(
+            $webRoot.DIRECTORY_SEPARATOR,
+            $absolute,
+            'Report photos must not land in the public web root.'
+        );
+
+        $this->get('/storage/'.$probe)->assertForbidden();
+
+        Storage::disk('local')->delete($probe);
+
+        tenancy()->end();
     }
 
     public function test_a_doctor_from_another_practice_cannot_print_a_prescription(): void
@@ -177,8 +216,10 @@ class ClinicalMediaPrivacyTest extends TestCase
 
         $photoPath = 'visit-photos/'.$id.'/slip.jpg';
         $voicePath = 'visit-audio/'.$id.'/note.webm';
+        $reportPath = 'visit-reports/'.$id.'/cbc.jpg';
         Storage::disk('local')->put($photoPath, 'prescription-photo');
         Storage::disk('local')->put($voicePath, 'consultation-audio');
+        Storage::disk('local')->put($reportPath, 'lab-report');
 
         $visitRecord = \App\Models\VisitRecord::create([
             'booking_id' => $booking->id,
@@ -186,6 +227,7 @@ class ClinicalMediaPrivacyTest extends TestCase
             'recorded_by' => $doctorUser->id,
             'photo_path' => $photoPath,
             'voice_path' => $voicePath,
+            'report_photo_paths' => [$reportPath],
             'recorded_at' => now(),
         ]);
 

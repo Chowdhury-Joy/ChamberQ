@@ -5,6 +5,7 @@ namespace App\Filament\TenantAdmin\Pages;
 use App\Models\Booking;
 use App\Models\LabCollectionSlot;
 use App\Models\LiveSession;
+use App\Models\MedicineUsage;
 use App\Models\ScheduleSession;
 use App\Models\Patient;
 use App\Models\VisitRecord;
@@ -26,12 +27,20 @@ use Filament\Actions\Contracts\HasActions;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Enums\Width;
+use Livewire\Attributes\Renderless;
 
 class ConsultScreen extends Page implements HasActions
 {
     use AppliesVisitNotesDrafts;
     use InteractsWithActions;
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-clipboard-document-list';
+
+    /**
+     * Print onto pads that already have the doctor's name. The desk tick
+     * remembers this in the browser; Preview and Save & print share it so
+     * the iframe cannot disagree with the printer.
+     */
+    public bool $printOnMyPaper = false;
 
     protected static string|\UnitEnum|null $navigationGroup = 'Operations';
 
@@ -44,6 +53,13 @@ class ConsultScreen extends Page implements HasActions
     protected string $view = 'filament.tenant-admin.pages.consult-screen';
 
     protected Width | string | null $maxContentWidth = Width::Full;
+
+    /**
+     * How many of the doctor's own medicines appear as chips on the pad.
+     * Enough to cover a chamber's common set without the strip wrapping into
+     * a wall that pushes the prescription table below the fold.
+     */
+    private const MY_MEDICINE_CHIPS = 8;
 
     public static function canAccess(): bool
     {
@@ -295,6 +311,7 @@ class ConsultScreen extends Page implements HasActions
                 ->label(__('Complete visit'))
                 ->icon('heroicon-o-check-circle')
                 ->color('success')
+                ->extraAttributes(['class' => 'cs-complete-visit-btn'])
                 ->visible(fn (): bool => $this->currentBooking?->status === 'in_chamber')
                 ->form(function (Action $action): array {
                     if (! auth()->user()?->canRecordVisitNotes()) {
@@ -383,9 +400,48 @@ class ConsultScreen extends Page implements HasActions
      * Returns the doctor print URL when a prescription exists, so Preview /
      * Save & print can open it without a second round trip.
      *
+     * Renderless: the pad is `wire:ignore` and Alpine already holds everything
+     * on screen, so a re-render has no HTML to contribute and only risks
+     * morphing the subtree the doctor is typing into. Notifications and the
+     * returned print URL travel on the response either way — `Renderless` drops
+     * the HTML diff, not the dispatches or the return value.
+     *
      * @param  array<string, mixed>  $data
      */
+    #[Renderless]
     public function saveRxDesk(array $data, VisitRecordService $visitRecordService): ?string
+    {
+        return $this->writeRxDesk($data, $visitRecordService, announce: true);
+    }
+
+    /**
+     * The same write, fired by the desk itself a second after the doctor stops
+     * typing and again the moment they click anything outside the pad.
+     *
+     * The desk held the whole prescription in Alpine memory and only reached
+     * the server from **Preview** or **Save & print**. **Complete visit** is a
+     * page header action that fills its form from the *stored* record, so a
+     * doctor who wrote the script and then tapped the green button ended the
+     * visit with whatever had last been saved — usually nothing — and was told
+     * the visit completed. Nothing on screen said the pad was unsaved.
+     *
+     * Silent by design: a toast and a safety re-check every couple of seconds
+     * would train the doctor to dismiss both. Explicit Save keeps them, which
+     * is why this is a separate entry point rather than a flag on the payload —
+     * the client cannot ask for the quiet version of an explicit save.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    #[Renderless]
+    public function autosaveRxDesk(array $data, VisitRecordService $visitRecordService): ?string
+    {
+        return $this->writeRxDesk($data, $visitRecordService, announce: false);
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     */
+    private function writeRxDesk(array $data, VisitRecordService $visitRecordService, bool $announce): ?string
     {
         $booking = $this->currentBooking;
         $user = auth()->user();
@@ -398,12 +454,14 @@ class ConsultScreen extends Page implements HasActions
 
         $this->forgetQueueState();
 
-        Notification::make()
-            ->title(__('Prescription saved'))
-            ->success()
-            ->send();
+        if ($announce) {
+            Notification::make()
+                ->title(__('Prescription saved'))
+                ->success()
+                ->send();
 
-        $this->warnAboutRxSafety($data);
+            $this->warnAboutRxSafety($data);
+        }
 
         return $this->prescriptionPrintUrl($record);
     }
@@ -440,9 +498,15 @@ class ConsultScreen extends Page implements HasActions
     {
         $prescription = ($record ?? $this->currentVisitRecord)?->prescription;
 
-        return $prescription
-            ? tenant_web_route('prescriptions.print', ['prescription' => $prescription])
-            : null;
+        if (! $prescription) {
+            return null;
+        }
+
+        $url = tenant_web_route('prescriptions.print', ['prescription' => $prescription]);
+
+        return $this->printOnMyPaper
+            ? $url.(str_contains($url, '?') ? '&' : '?').'paper=1'
+            : $url;
     }
 
 
@@ -505,6 +569,47 @@ class ConsultScreen extends Page implements HasActions
         $user = auth()->user();
 
         return $user ? app(PrescriptionTemplateService::class)->forDoctor($user) : [];
+    }
+
+    /**
+     * The doctor's own shortlist, as one-tap chips on the pad.
+     *
+     * A chamber doctor prescribes the same small set all day. Until now those
+     * entries only surfaced if he typed into the search box — the list he
+     * curates by hand was one step further away than a drug he had never used.
+     *
+     * **Alphabetical, and capped.** Not ordered by how often he prescribes
+     * something: a row that rearranges itself from behaviour he cannot see is
+     * exactly what was ruled out (`decisions.md` 2026-08-11), and a strip whose
+     * buttons move between patients is worse than no strip. The full list is
+     * still one keystroke away in the search box.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function getMyMedicinesProperty(): array
+    {
+        $user = auth()->user();
+
+        if (! $user?->canRecordVisitNotes()) {
+            return [];
+        }
+
+        return MedicineUsage::query()
+            ->where('user_id', $user->id)
+            ->whereNull('hidden_at')
+            ->orderBy('medicine_name')
+            ->limit(self::MY_MEDICINE_CHIPS)
+            ->get()
+            ->map(fn (MedicineUsage $usage): array => [
+                'brand_name' => $usage->medicine_name,
+                'generic_name' => $usage->generic_name,
+                'dose' => $usage->last_dose,
+                'frequency' => $usage->last_frequency,
+                'duration' => $usage->last_duration,
+                'timing' => $usage->last_timing,
+            ])
+            ->values()
+            ->all();
     }
 
     /**

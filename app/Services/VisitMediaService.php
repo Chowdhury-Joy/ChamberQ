@@ -24,6 +24,8 @@ class VisitMediaService
 
     public const PHOTO_MAX_BYTES = 5 * 1024 * 1024;
 
+    public const REPORT_PHOTO_MAX_FILES = 8;
+
   /**
      * @return list<string>
      */
@@ -65,6 +67,25 @@ class VisitMediaService
         return 'visit-photos/'.tenant('id');
     }
 
+    public function reportPhotoDirectory(): string
+    {
+        return 'visit-reports/'.tenant('id');
+    }
+
+    /**
+     * Stored report-photo paths must live under this practice's directory.
+     * A hand-crafted save must not be able to point at another tenant's file
+     * or walk out with `..`.
+     */
+    public function isOwnedReportPhotoPath(?string $path): bool
+    {
+        if (blank($path) || str_contains($path, '..') || str_contains($path, "\0")) {
+            return false;
+        }
+
+        return str_starts_with($path, $this->reportPhotoDirectory().'/');
+    }
+
     public function storeVoiceUpload(UploadedFile $file): string
     {
         $extension = $file->getClientOriginalExtension() ?: 'webm';
@@ -86,6 +107,22 @@ class VisitMediaService
         $extension = $file->getClientOriginalExtension() ?: 'jpg';
 
         $path = $this->photoDirectory().'/'.Str::uuid().'.'.$extension;
+
+        Storage::disk(self::DISK)->putFileAs(
+            dirname($path),
+            $file,
+            basename($path),
+            ['visibility' => 'private']
+        );
+
+        return $path;
+    }
+
+    public function storeReportPhotoUpload(UploadedFile $file): string
+    {
+        $extension = $file->getClientOriginalExtension() ?: 'jpg';
+
+        $path = $this->reportPhotoDirectory().'/'.Str::uuid().'.'.$extension;
 
         Storage::disk(self::DISK)->putFileAs(
             dirname($path),

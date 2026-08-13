@@ -1,0 +1,223 @@
+{{-- Stashed 2026-08-13 with consult-pad voice-to-writing.
+     Restore onto resources/views/filament/tenant-admin/components/rx-desk.blade.php
+     (see README.md). Not loaded by the application. --}}
+
+{{-- PHP, with the other tenant_web_url helpers: --}}
+$dictateUrl = tenant_web_url('/api/prescriptions/dictate');
+
+{{-- x-data config: --}}
+dictateUrl: {{ \Illuminate\Support\Js::from($dictateUrl) }},
+
+{{-- Markup, after the shorthand <input>: --}}
+                    <button
+                        type="button"
+                        class="cs-rx-desk__mic"
+                        :class="{ 'is-listening': dictating }"
+                        :disabled="dictationBusy"
+                        x-on:click="toggleDictate()"
+                        :title="dictating ? '{{ __('Stop listening') }}' : '{{ __('Speak the prescription') }}'"
+                    >
+                        <span x-show="!dictating && !dictationBusy">{{ __('Mic') }}</span>
+                        <span x-show="dictating" x-cloak>{{ __('Stop') }}</span>
+                        <span x-show="dictationBusy" x-cloak>{{ __('Filling…') }}</span>
+                    </button>
+                    <button
+                        type="button"
+                        class="cs-rx-desk__lang"
+                        x-on:click="cycleDictateLang()"
+                        :title="{{ \Illuminate\Support\Js::from(__('Listening language')) }}"
+                        x-text="dictateLang === 'en-US' ? 'EN' : 'বাং'"
+                    ></button>
+                <p class="cs-rx-desk__dictate-status" x-show="dictateStatus" x-cloak x-text="dictateStatus"></p>
+
+{{-- Alpine: add dictateUrl from config, then this state and these methods. --}}
+<script>
+            dictateUrl: config.dictateUrl,
+            dictateLang: 'bn-BD',
+            dictating: false,
+            dictationBusy: false,
+            dictateStatus: '',
+            dictateFinal: '',
+            dictateInterim: '',
+            recognition: null,
+
+            destroy() {
+                this.dictating = false;
+                if (this.recognition) {
+                    try { this.recognition.stop(); } catch (e) {}
+                    this.recognition = null;
+                }
+            },
+
+            cycleDictateLang() {
+                this.dictateLang = this.dictateLang === 'bn-BD' ? 'en-US' : 'bn-BD';
+                if (this.recognition) {
+                    this.recognition.lang = this.dictateLang;
+                }
+            },
+
+            toggleDictate() {
+                if (this.dictationBusy) {
+                    return;
+                }
+                if (this.dictating) {
+                    this.stopDictate();
+                    return;
+                }
+                this.startDictate();
+            },
+
+            startDictate() {
+                const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                if (!SpeechRecognition) {
+                    this.dictateStatus = @js(__('Voice fill needs Chrome or Edge. You can still type.'));
+                    return;
+                }
+
+                this.dictateStatus = @js(__('Listening… speak the medicines'));
+                this.dictateFinal = '';
+                this.dictateInterim = '';
+                this.dictating = true;
+
+                const recognition = new SpeechRecognition();
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                recognition.lang = this.dictateLang;
+
+                recognition.onresult = (event) => {
+                    let interim = '';
+                    for (let i = event.resultIndex; i < event.results.length; i++) {
+                        const piece = event.results[i][0].transcript;
+                        if (event.results[i].isFinal) {
+                            this.dictateFinal = `${this.dictateFinal} ${piece}`.trim();
+                        } else {
+                            interim += piece;
+                        }
+                    }
+                    this.dictateInterim = interim;
+                    this.dictateStatus = [this.dictateFinal, interim].filter(Boolean).join(' ');
+                };
+
+                recognition.onerror = (event) => {
+                    if (event.error === 'not-allowed') {
+                        this.dictateStatus = @js(__('Microphone blocked. Allow it, or type the medicines.'));
+                    } else if (event.error === 'network') {
+                        this.dictateStatus = @js(__('Need internet while speaking. Type if the line is down.'));
+                    } else if (event.error !== 'aborted' && event.error !== 'no-speech') {
+                        this.dictateStatus = @js(__('Could not hear that. Try again, or type it.'));
+                    }
+                };
+
+                recognition.onend = () => {
+                    if (this.dictating) {
+                        try {
+                            recognition.start();
+                        } catch (e) {
+                            this.dictating = false;
+                        }
+                    }
+                };
+
+                this.recognition = recognition;
+                try {
+                    recognition.start();
+                } catch (e) {
+                    this.dictating = false;
+                    this.dictateStatus = @js(__('Could not start the microphone. Type the medicines instead.'));
+                }
+            },
+
+            stopDictate() {
+                this.dictating = false;
+                if (this.recognition) {
+                    try {
+                        this.recognition.stop();
+                    } catch (e) {
+                        // Chrome throws if it already ended.
+                    }
+                    this.recognition = null;
+                }
+
+                const transcript = `${this.dictateFinal} ${this.dictateInterim || ''}`.trim();
+                if (transcript.length < 3) {
+                    this.dictateStatus = @js(__('Nothing heard. Tap Mic and speak, or type it.'));
+                    return;
+                }
+
+                this.fillFromTranscript(transcript);
+            },
+
+            async fillFromTranscript(transcript) {
+                this.dictationBusy = true;
+                this.dictateStatus = @js(__('Filling the pad…'));
+
+                try {
+                    const response = await fetch(this.dictateUrl, {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Accept: 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || '',
+                            'X-Requested-With': 'XMLHttpRequest',
+                        },
+                        body: JSON.stringify({
+                            transcript,
+                            language: this.dictateLang,
+                        }),
+                    });
+
+                    if (!response.ok) {
+                        const payload = await response.json().catch(() => ({}));
+                        throw new Error(payload.message || @js(__('Could not turn that into a prescription. Type it instead.')));
+                    }
+
+                    const draft = await response.json();
+                    this.applyDictationDraft(draft);
+                    const count = (draft.medicines || []).length;
+                    const uncertain = (draft.medicines || []).filter((row) => row.uncertain).length;
+                    if (count === 0) {
+                        this.dictateStatus = @js(__('Heard you, but no medicines to add. Check the words, or type them.'));
+                    } else if (uncertain) {
+                        this.dictateStatus = @js(__('Draft on the pad — yellow rows need a check before you print.'));
+                    } else {
+                        this.dictateStatus = @js(__('Draft on the pad. Check it, then Save / Print.'));
+                    }
+                } catch (error) {
+                    this.dictateStatus = error.message || @js(__('Could not turn that into a prescription. Type it instead.'));
+                } finally {
+                    this.dictationBusy = false;
+                }
+            },
+
+            applyDictationDraft(draft) {
+                const existing = this.items
+                    .map((row) => (row.medicine_name || '').trim().toUpperCase())
+                    .filter(Boolean);
+
+                (draft.medicines || []).forEach((row) => {
+                    const name = (row.medicine_name || '').trim().toUpperCase();
+                    if (!name || existing.includes(name)) return;
+                    this.items.push({
+                        ...this.emptyItem(),
+                        medicine_name: name,
+                        generic_name: row.generic_name || '',
+                        dose: row.dose || '',
+                        frequency: row.frequency || '',
+                        duration: row.duration || '',
+                        timing: row.timing || '',
+                        uncertain: !!row.uncertain,
+                    });
+                    existing.push(name);
+                });
+
+                this.items = this.items.filter((row) => (row.medicine_name || '').trim() !== '');
+                if (!this.advice && draft.advice) this.advice = draft.advice;
+                if (draft.tests_advised) {
+                    draft.tests_advised.split(/[,;\n]+/).map((s) => s.trim()).filter(Boolean)
+                        .forEach((test) => this.addInvestigation(test));
+                }
+                if (!this.followUpRelative && draft.follow_up_relative) this.followUpRelative = draft.follow_up_relative;
+                (draft.complaints || []).forEach((chip) => this.appendComplaint(chip));
+            },
+</script>

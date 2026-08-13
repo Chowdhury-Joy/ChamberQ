@@ -20,6 +20,8 @@ class ScheduleSessionResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCalendarDays;
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Settings';
+
     public static function canViewAny(): bool
     {
         return (auth()->user()?->canManageOps() ?? false)

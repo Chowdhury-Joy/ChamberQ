@@ -2,18 +2,13 @@
 
 namespace App\Filament\TenantAdmin\Resources\SlotBlocks\Pages;
 
+use App\Filament\TenantAdmin\Concerns\HasPrimarySaveAndDangerDelete;
 use App\Filament\TenantAdmin\Resources\SlotBlocks\SlotBlockResource;
-use Filament\Actions\DeleteAction;
 use Filament\Resources\Pages\EditRecord;
 
 class EditSlotBlock extends EditRecord
 {
-    protected static string $resource = SlotBlockResource::class;
+    use HasPrimarySaveAndDangerDelete;
 
-    protected function getHeaderActions(): array
-    {
-        return [
-            DeleteAction::make(),
-        ];
-    }
+    protected static string $resource = SlotBlockResource::class;
 }

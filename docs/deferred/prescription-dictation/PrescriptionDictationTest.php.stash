@@ -1,0 +1,210 @@
+<?php
+
+namespace Tests\Feature;
+
+use App\Models\Doctor;
+use App\Models\Domain;
+use App\Models\Medicine;
+use App\Models\Tenant;
+use App\Models\User;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
+use Tests\TestCase;
+
+class PrescriptionDictationTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private Tenant $tenant;
+
+    private User $doctor;
+
+    private User $staff;
+
+    private string $host;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->tenant = Tenant::create([
+            'id' => 'dictate-kit',
+            'plan_tier' => 'solo',
+        ]);
+        Domain::create(['domain' => 'dictate-kit.localhost', 'tenant_id' => $this->tenant->id]);
+        $this->host = 'http://dictate-kit.localhost';
+
+        tenancy()->initialize($this->tenant);
+
+        $this->doctor = User::create([
+            'name' => 'Dr Dictate',
+            'email' => 'doc@dictate.test',
+            'password' => Hash::make('secret'),
+            'role' => User::ROLE_DOCTOR,
+            'tenant_id' => $this->tenant->id,
+        ]);
+        $this->staff = User::create([
+            'name' => 'Staff Dictate',
+            'email' => 'staff@dictate.test',
+            'password' => Hash::make('secret'),
+            'role' => User::ROLE_STAFF,
+            'tenant_id' => $this->tenant->id,
+        ]);
+        Doctor::create([
+            'name' => 'Dr Dictate',
+            'user_id' => $this->doctor->id,
+        ]);
+        Medicine::create([
+            'brand_name' => 'NAPA',
+            'generic_name' => 'Paracetamol',
+            'default_strength' => '500 mg',
+            'form' => 'tablet',
+            'aliases' => ['napa', 'paracetamol'],
+            'category' => 'Analgesic',
+        ]);
+
+        tenancy()->end();
+    }
+
+    protected function tearDown(): void
+    {
+        tenancy()->end();
+
+        parent::tearDown();
+    }
+
+    public function test_guest_cannot_dictate(): void
+    {
+        $this->postJson($this->host.'/api/prescriptions/dictate', [
+            'transcript' => 'Napa 500 1+1+1 five days',
+        ])->assertUnauthorized();
+    }
+
+    public function test_staff_cannot_dictate(): void
+    {
+        $this->actingAs($this->staff)
+            ->postJson($this->host.'/api/prescriptions/dictate', [
+                'transcript' => 'Napa 500 1+1+1 five days',
+            ])
+            ->assertForbidden();
+    }
+
+    public function test_a_doctor_from_another_chamber_cannot_dictate_here(): void
+    {
+        $other = Tenant::create(['id' => 'dictate-other', 'plan_tier' => 'solo']);
+        Domain::create(['domain' => 'dictate-other.localhost', 'tenant_id' => $other->id]);
+
+        tenancy()->initialize($other);
+        $outsider = User::create([
+            'name' => 'Dr Other',
+            'email' => 'other@dictate.test',
+            'password' => Hash::make('secret'),
+            'role' => User::ROLE_DOCTOR,
+            'tenant_id' => $other->id,
+        ]);
+        tenancy()->end();
+
+        $this->actingAs($outsider)
+            ->postJson($this->host.'/api/prescriptions/dictate', [
+                'transcript' => 'Napa 500 1+1+1 five days',
+            ])
+            ->assertForbidden();
+    }
+
+    public function test_empty_transcript_is_rejected(): void
+    {
+        tenancy()->initialize($this->tenant);
+
+        $this->actingAs($this->doctor)
+            ->postJson($this->host.'/api/prescriptions/dictate', [
+                'transcript' => '',
+            ])
+            ->assertUnprocessable();
+    }
+
+    public function test_array_driver_fills_napa_from_the_catalogue(): void
+    {
+        tenancy()->initialize($this->tenant);
+
+        $this->actingAs($this->doctor)
+            ->postJson($this->host.'/api/prescriptions/dictate', [
+                'transcript' => 'Napa 500 1+1+1 five days. Avoid spicy food. Come back in two weeks.',
+                'language' => 'en-US',
+            ])
+            ->assertOk()
+            ->assertJsonPath('medicines.0.medicine_name', 'NAPA')
+            ->assertJsonPath('medicines.0.generic_name', 'Paracetamol')
+            ->assertJsonPath('medicines.0.uncertain', false)
+            ->assertJsonPath('advice', 'Avoid spicy food')
+            ->assertJsonPath('follow_up_relative', '2_weeks');
+    }
+
+    public function test_unknown_brand_is_marked_uncertain(): void
+    {
+        tenancy()->initialize($this->tenant);
+
+        $this->actingAs($this->doctor)
+            ->postJson($this->host.'/api/prescriptions/dictate', [
+                'transcript' => 'Give NOTACATALOGUE 10 mg 1+0+0 for seven days',
+            ])
+            ->assertOk()
+            ->assertJsonPath('medicines.0.medicine_name', 'NOTACATALOGUE')
+            ->assertJsonPath('medicines.0.uncertain', true);
+    }
+
+    public function test_groq_payload_never_includes_the_patient(): void
+    {
+        tenancy()->initialize($this->tenant);
+
+        config([
+            'groq.driver' => 'groq',
+            'groq.api_key' => 'gsk_test_not_a_real_key',
+        ]);
+
+        Http::fake([
+            'https://api.groq.com/openai/v1/chat/completions' => Http::response([
+                'choices' => [
+                    [
+                        'message' => [
+                            'content' => json_encode([
+                                'medicines' => [[
+                                    'brand_name' => 'NAPA',
+                                    'generic_name' => 'Paracetamol',
+                                    'dose' => '500 mg',
+                                    'frequency' => '1+1+1',
+                                    'duration' => '5 days',
+                                    'timing' => 'after_food',
+                                ]],
+                                'advice' => null,
+                                'tests_advised' => null,
+                                'complaints' => [],
+                                'follow_up_relative' => null,
+                            ]),
+                        ],
+                    ],
+                ],
+            ], 200),
+        ]);
+
+        $this->actingAs($this->doctor)
+            ->postJson($this->host.'/api/prescriptions/dictate', [
+                'transcript' => 'Napa 500 1+1+1 five days',
+                'language' => 'bn-BD',
+                'patient_name' => 'Fatima Rahman',
+                'patient_phone' => '01710000001',
+            ])
+            ->assertOk()
+            ->assertJsonPath('medicines.0.medicine_name', 'NAPA')
+            ->assertJsonPath('medicines.0.uncertain', false);
+
+        Http::assertSent(function ($request): bool {
+            $body = $request->body();
+
+            return str_contains($request->url(), 'api.groq.com')
+                && str_contains($body, 'Napa 500 1+1+1 five days')
+                && ! str_contains($body, 'Fatima Rahman')
+                && ! str_contains($body, '01710000001');
+        });
+    }
+}

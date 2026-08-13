@@ -54,6 +54,15 @@ class AppServiceProvider extends ServiceProvider
         ]);
 
         $this->recoverExpiredGuestPagesSilently();
+
+        \Illuminate\Support\Facades\View::composer(
+            ['tenant.prescriptions.print', 'tenant.prescriptions.share'],
+            function (): void {
+                // The paper the patient leaves with is Bangla-first, even when
+                // the doctor is using the English admin panel on this request.
+                \Illuminate\Support\Facades\App::setLocale('bn');
+            }
+        );
     }
 
     /**

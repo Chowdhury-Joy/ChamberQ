@@ -96,7 +96,7 @@ class PrescriptionTiming
         return in_array($trimmed, self::KEYS, true) ? $trimmed : null;
     }
 
-    public static function bilingualLabel(?string $key): ?string
+    public static function bilingualLabel(?string $key): \Illuminate\Support\HtmlString|string|null
     {
         $normalized = self::normalize($key);
 
@@ -106,7 +106,7 @@ class PrescriptionTiming
 
         $label = self::labels()[$normalized] ?? null;
 
-        return $label === null ? null : Bilingual::label($label);
+        return $label === null ? null : Bilingual::html($label);
     }
 
     public static function displayLabel(?string $key): ?string

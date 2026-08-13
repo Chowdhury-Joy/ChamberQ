@@ -4,8 +4,11 @@ namespace App\Providers\Filament\Concerns;
 
 use App\Filament\TenantAdmin\Widgets\TenantStatsOverview;
 use App\Filament\TenantAdmin\Widgets\TodayAppointmentsWidget;
+use Filament\Actions\Action;
 use Filament\Panel;
 use Filament\Support\Colors\Color;
+use Filament\Support\Enums\Width;
+use Filament\Tables\Table;
 use Filament\View\PanelsRenderHook;
 use Filament\Widgets\AccountWidget;
 
@@ -18,10 +21,17 @@ trait ConfiguresTenantAdminPanel
             ->viteTheme('resources/css/filament/tenantAdmin/theme.css')
             ->login()
             ->passwordReset()
+            ->topbar(false)
+            ->maxContentWidth(Width::Full)
             ->sidebarCollapsibleOnDesktop()
             ->databaseNotifications()
             ->colors([
                 'primary' => Color::Blue,
+            ])
+            ->navigationGroups([
+                'Operations',
+                'Website',
+                'Settings',
             ])
             ->discoverResources(in: app_path('Filament/TenantAdmin/Resources'), for: 'App\Filament\TenantAdmin\Resources')
             ->discoverPages(in: app_path('Filament/TenantAdmin/Pages'), for: 'App\Filament\TenantAdmin\Pages')
@@ -32,6 +42,7 @@ trait ConfiguresTenantAdminPanel
                 TodayAppointmentsWidget::class,
             ])
             // Icon-only sidebar; item names appear as hover tooltips while collapsed.
+            // User menu lives in the sidebar because the global topbar is off.
             ->renderHook(
                 PanelsRenderHook::HEAD_START,
                 fn (): string => <<<'HTML'
@@ -133,6 +144,13 @@ trait ConfiguresTenantAdminPanel
                         color: #dc2626 !important;
                     }
                 </style>'
-            );
+            )
+            ->bootUsing(function (): void {
+                Table::configureUsing(function (Table $table): void {
+                    $table->modifyUngroupedRecordActionsUsing(
+                        fn (Action $action): Action => $action->button()->outlined(),
+                    );
+                });
+            });
     }
 }

@@ -3,7 +3,7 @@
 @endphp
 <section class="mk-section mk-compare" id="before-after" aria-labelledby="compare-heading">
     <div class="mk-wrap">
-        <div class="mk-section-head mk-section-head-light">
+        <div class="mk-section-head">
             <p class="mk-kicker">The everyday difference</p>
             <h2 id="compare-heading">Same chamber.<br><em>A much better day.</em></h2>
         </div>

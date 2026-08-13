@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
+<html lang="bn">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -50,11 +50,15 @@
             </div>
         @endif
 
-        {{-- Fixed labels print in both languages (see \App\Support\Bilingual):
-             the patient's family reads the Bangla, a pharmacist or a referred-to
-             consultant may only be handed the English. Names, qualifications and
-             anything the doctor typed are stored in one language and pass
-             through as written. --}}
+        @if (! empty($onMyPaper))
+            <p class="warning no-print">
+                {{ __('Letterhead hidden — printing onto your own pads.') }}
+            </p>
+        @endif
+
+        {{-- Fixed labels print Bangla-first with English quieter (see
+             \App\Support\Bilingual). Names, qualifications and anything the
+             doctor typed pass through as written. --}}
         @include('tenant.prescriptions.partials.sheet')
     </div>
 </body>

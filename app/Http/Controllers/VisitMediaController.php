@@ -43,6 +43,34 @@ class VisitMediaController extends Controller
         ]);
     }
 
+    public function uploadReportPhoto(Request $request, VisitMediaService $visitMediaService): JsonResponse
+    {
+        $user = $request->user();
+
+        if (! $user?->canRecordVisitNotes() || ! $user->belongsToCurrentTenant()) {
+            abort(403);
+        }
+
+        $request->validate([
+            'photo' => ['required', 'file', 'max:5120'],
+        ]);
+
+        /** @var UploadedFile $file */
+        $file = $request->file('photo');
+
+        if (! in_array($file->getMimeType(), VisitMediaService::allowedPhotoMimeTypes(), true)) {
+            return response()->json([
+                'message' => __('Unsupported image format.'),
+            ], 422);
+        }
+
+        $path = $visitMediaService->storeReportPhotoUpload($file);
+
+        return response()->json([
+            'path' => $path,
+        ]);
+    }
+
     public function voice(Request $request, VisitRecord $visitRecord): StreamedResponse
     {
         $this->authorizeClinicalRead($request);
@@ -56,6 +84,21 @@ class VisitMediaController extends Controller
         $this->authorizeClinicalRead($request);
 
         return app(VisitMediaService::class)->streamResponse($visitRecord->photo_path)
+            ?? abort(404);
+    }
+
+    public function reportPhoto(Request $request, VisitRecord $visitRecord, int $index): StreamedResponse
+    {
+        $this->authorizeClinicalRead($request);
+
+        $paths = $visitRecord->report_photo_paths ?? [];
+        $path = $paths[$index] ?? null;
+
+        if (! is_string($path) || ! app(VisitMediaService::class)->isOwnedReportPhotoPath($path)) {
+            abort(404);
+        }
+
+        return app(VisitMediaService::class)->streamResponse($path)
             ?? abort(404);
     }
 

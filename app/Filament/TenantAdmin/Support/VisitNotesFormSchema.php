@@ -34,7 +34,7 @@ class VisitNotesFormSchema
     /** Browser event announcing that "Add medicine" has appended a row. */
     public const MEDICINE_ADDED_EVENT = 'prescription-medicine-added';
 
-    private const STAFF_ENTRY_HINT = 'Type only what the doctor wrote on paper. Attach a photo of the slip so it can be checked later.';
+    private const STAFF_ENTRY_HINT = 'Type only what the doctor wrote on paper. Photograph the slip, and any lab reports the patient brought.';
 
     /**
      * Fields staff may write when typing up a paper prescription.
@@ -50,6 +50,7 @@ class VisitNotesFormSchema
         'follow_up_date',
         'follow_up_note',
         'prescription_photo',
+        'report_photos',
     ];
 
     /**
@@ -88,6 +89,10 @@ class VisitNotesFormSchema
     public const SPO2_MIN = 50;
 
     public const SPO2_MAX = 100;
+
+    public const TEMP_MIN_F = 90;
+
+    public const TEMP_MAX_F = 110;
 
     /**
      * `0+1+0` and `SOS` joined the closed set when per-drug defaults arrived:
@@ -204,6 +209,7 @@ class VisitNotesFormSchema
             'bp_diastolic' => $record->bp_diastolic,
             'pulse_bpm' => $record->pulse_bpm,
             'spo2_percent' => $record->spo2_percent,
+            'temperature_f' => $record->temperature_f,
             'clinical_notes' => $record->clinical_notes,
             'chief_complaint' => $record->chief_complaint,
             'history' => $record->history,
@@ -211,6 +217,7 @@ class VisitNotesFormSchema
             'advice' => $record->advice,
             'tests_advised' => $record->tests_advised,
             'reports_seen' => $record->reports_seen,
+            'report_photos' => $record->report_photo_paths ?? [],
             'follow_up_date' => $record->follow_up_date?->toDateString(),
             'follow_up_note' => $record->follow_up_note,
             'follow_up_relative' => self::inferRelativeFollowUp($record->follow_up_date),
@@ -375,6 +382,13 @@ class VisitNotesFormSchema
             ? $spo2
             : null;
 
+        $temp = is_numeric($data['temperature_f'] ?? null) ? (float) $data['temperature_f'] : null;
+        $data['temperature_f'] = ($temp !== null
+            && $temp >= self::TEMP_MIN_F
+            && $temp <= self::TEMP_MAX_F)
+            ? round($temp, 1)
+            : null;
+
         $notes = trim((string) ($data['clinical_notes'] ?? ''));
         $data['clinical_notes'] = $notes === '' ? null : $notes;
 
@@ -515,6 +529,7 @@ class VisitNotesFormSchema
                 ->helperText(__('Blood tests, X-rays, or other reports you looked at today.'))
                 ->rows(2)
                 ->columnSpanFull(),
+            self::reportPhotoSection(),
             self::followUpSection(),
             Section::make(__('Voice note'))
                 ->schema([
@@ -535,10 +550,10 @@ class VisitNotesFormSchema
     /**
      * Staff typing up a prescription the doctor wrote on paper.
      *
-     * Medicines, follow-up and the photo of the slip only — no diagnosis,
-     * vitals, clinical notes, advice, tests, voice note or allergy history.
-     * Staff are transcribing, not making a clinical judgement, so widening
-     * this would hand them patient history the role split says they may not read.
+     * Medicines, follow-up, the photo of the slip and photos of reports the
+     * patient brought — no diagnosis, vitals, clinical notes, advice, tests,
+     * typed reports note, voice note or allergy history. Staff are transcribing
+     * and attaching paper, not making a clinical judgement.
      *
      * @return list<\Filament\Forms\Components\Component>
      */
@@ -556,6 +571,7 @@ class VisitNotesFormSchema
             self::prescriptionSection($prescribingDoctor),
             self::followUpSection(),
             self::paperPhotoSection(),
+            self::reportPhotoSection(),
         ];
     }
 
@@ -581,6 +597,7 @@ class VisitNotesFormSchema
             'follow_up_note' => $full['follow_up_note'],
             'follow_up_relative' => $full['follow_up_relative'],
             'prescription_photo' => $full['prescription_photo'],
+            'report_photos' => $full['report_photos'],
         ];
     }
 
@@ -735,6 +752,15 @@ class VisitNotesFormSchema
                     ->inputMode('numeric')
                     ->placeholder('98')
                     ->suffix('%'),
+                TextInput::make('temperature_f')
+                    ->label(__('Temp'))
+                    ->numeric()
+                    ->minValue(self::TEMP_MIN_F)
+                    ->maxValue(self::TEMP_MAX_F)
+                    ->step(0.1)
+                    ->inputMode('decimal')
+                    ->placeholder('100.5')
+                    ->suffix('°F'),
             ])
             ->columns(3);
     }
@@ -784,6 +810,25 @@ class VisitNotesFormSchema
                     ->maxSize(5120)
                     ->disk('local')
                     ->directory(fn () => app(VisitMediaService::class)->photoDirectory())
+                    ->visibility('private')
+                    ->columnSpanFull(),
+            ]);
+    }
+
+    private static function reportPhotoSection(): Section
+    {
+        return Section::make(__('Report photos'))
+            ->schema([
+                FileUpload::make('report_photos')
+                    ->label(__('Photos of reports the patient brought'))
+                    ->helperText(__('Lab printouts, X-rays, or other papers. Not the handwritten prescription.'))
+                    ->image()
+                    ->multiple()
+                    ->maxFiles(VisitMediaService::REPORT_PHOTO_MAX_FILES)
+                    ->acceptedFileTypes(VisitMediaService::allowedPhotoMimeTypes())
+                    ->maxSize(5120)
+                    ->disk('local')
+                    ->directory(fn () => app(VisitMediaService::class)->reportPhotoDirectory())
                     ->visibility('private')
                     ->columnSpanFull(),
             ]);
@@ -1002,6 +1047,7 @@ class VisitNotesFormSchema
 
         return $record->prescription->items
             ->map(fn (\App\Models\PrescriptionItem $item): array => [
+                'row_key' => 'item-'.$item->id,
                 'medicine_name' => $item->medicine_name,
                 'generic_name' => $item->generic_name,
                 'indication' => $item->indication,

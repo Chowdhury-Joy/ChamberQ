@@ -21,6 +21,8 @@ class LabTestResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedDocumentMagnifyingGlass;
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Operations';
+
     public static function canViewAny(): bool
     {
         $user = auth()->user();

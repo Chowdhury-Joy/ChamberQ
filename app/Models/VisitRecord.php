@@ -23,6 +23,7 @@ class VisitRecord extends Model
         'bp_diastolic',
         'pulse_bpm',
         'spo2_percent',
+        'temperature_f',
         'clinical_notes',
         'chief_complaint',
         'history',
@@ -30,6 +31,7 @@ class VisitRecord extends Model
         'advice',
         'tests_advised',
         'reports_seen',
+        'report_photo_paths',
         'follow_up_date',
         'follow_up_note',
         'follow_up_reminder_sms_sent_at',
@@ -48,6 +50,8 @@ class VisitRecord extends Model
         'bp_diastolic' => 'integer',
         'pulse_bpm' => 'integer',
         'spo2_percent' => 'integer',
+        'temperature_f' => 'float',
+        'report_photo_paths' => 'array',
         'follow_up_date' => 'date',
         'follow_up_reminder_sms_sent_at' => 'datetime',
         'follow_up_reminder_whatsapp_queued_at' => 'datetime',
@@ -132,8 +136,22 @@ class VisitRecord extends Model
     }
 
     /**
+     * "100.5 °F" — or null when temperature was not recorded this visit.
+     */
+    public function temperatureLabel(): ?string
+    {
+        if ($this->temperature_f === null) {
+            return null;
+        }
+
+        $formatted = rtrim(rtrim(number_format((float) $this->temperature_f, 1, '.', ''), '0'), '.');
+
+        return $formatted.' °F';
+    }
+
+    /**
      * One line of vitals for the consult screen and summary panel, e.g.
-     * "Wt 58.5 kg · BP 170/100 · Pulse 78 /min · SpO₂ 98 %". Kept on the model because the same line is
+     * "Wt 58.5 kg · BP 170/100 · Pulse 78 /min · SpO₂ 98 % · Temp 100.5 °F". Kept on the model because the same line is
      * drawn in three places and hand-rolled copies had already drifted — one
      * of them showed only blood pressure when both were recorded.
      */
@@ -144,6 +162,7 @@ class VisitRecord extends Model
             $this->bloodPressureLabel() ? __('BP').' '.$this->bloodPressureLabel() : null,
             $this->pulseLabel() ? __('Pulse').' '.$this->pulseLabel() : null,
             $this->spo2Label() ? __('SpO₂').' '.$this->spo2Label() : null,
+            $this->temperatureLabel() ? __('Temp').' '.$this->temperatureLabel() : null,
         ]);
 
         return $parts === [] ? null : implode(' · ', $parts);
@@ -166,6 +185,7 @@ class VisitRecord extends Model
             || $this->bp_diastolic !== null
             || $this->pulse_bpm !== null
             || $this->spo2_percent !== null
+            || $this->temperature_f !== null
             || filled($this->clinical_notes)
             || filled($this->chief_complaint)
             || filled($this->history)
@@ -173,6 +193,7 @@ class VisitRecord extends Model
             || filled($this->advice)
             || filled($this->tests_advised)
             || filled($this->reports_seen)
+            || filled($this->report_photo_paths)
             || filled($this->voice_path)
             || filled($this->photo_path)
             || filled($this->voice_transcript)

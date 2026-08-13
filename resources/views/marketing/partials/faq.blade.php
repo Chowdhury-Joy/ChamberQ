@@ -1,11 +1,11 @@
-<section class="mk-section mk-band" id="faq" aria-labelledby="faq-heading">
-    <div class="mk-wrap">
-        <div class="mk-section-head mk-narrow">
+<section class="mk-section" id="faq" aria-labelledby="faq-heading">
+    <div class="mk-wrap mk-faq-layout">
+        <div class="mk-section-head">
             <h2 id="faq-heading">Common questions</h2>
             <p>Straight answers for solo chambers.</p>
         </div>
         <div class="mk-faq">
-            <details>
+            <details open>
                 <summary>My patients aren’t tech-savvy. Will this work?</summary>
                 <p>Booking is a few taps on a phone. Most patients already use WhatsApp — the ticket shares there too. Staff can still book for walk-ins.</p>
             </details>

@@ -1,0 +1,264 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\User;
+use App\Support\PrescriptionTiming;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
+
+/**
+ * Turn a spoken transcript into a catalogue-matched prescription draft.
+ *
+ * Listening happens in the browser (Chrome/Edge Web Speech). This service
+ * never sees audio. Groq only receives the words plus this doctor's brand
+ * shortlist — never a patient name or phone.
+ */
+class PrescriptionDictationService
+{
+    public const FOLLOW_UP_KEYS = ['1_week', '2_weeks', '1_month', '3_months', 'as_needed'];
+
+    public function __construct(private readonly MedicineService $medicineService) {}
+
+    /**
+     * @return array{
+     *     medicines: list<array{medicine_name: string, generic_name: ?string, dose: ?string, frequency: ?string, duration: ?string, timing: ?string, uncertain: bool}>,
+     *     advice: ?string,
+     *     tests_advised: ?string,
+     *     complaints: list<string>,
+     *     follow_up_relative: ?string
+     * }
+     */
+    public function extract(string $transcript, string $language, User $doctor): array
+    {
+        $driver = config('groq.driver', 'groq');
+
+        $parsed = $driver === 'array'
+            ? $this->arrayParse($transcript)
+            : $this->groqParse($transcript, $language, $doctor);
+
+        return $this->toDraft($parsed, $doctor);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function groqParse(string $transcript, string $language, User $doctor): array
+    {
+        $apiKey = config('groq.api_key');
+
+        if (blank($apiKey)) {
+            abort(503, __('Voice fill is not configured on this server. Type the medicines instead.'));
+        }
+
+        $vocabulary = $this->medicineService->vocabularyHints($doctor);
+
+        $response = Http::withToken((string) $apiKey)
+            ->timeout((int) config('groq.timeout', 90))
+            ->acceptJson()
+            ->asJson()
+            ->post('https://api.groq.com/openai/v1/chat/completions', [
+                'model' => config('groq.model'),
+                'temperature' => 0,
+                'response_format' => ['type' => 'json_object'],
+                'messages' => [
+                    ['role' => 'system', 'content' => $this->systemPrompt($vocabulary)],
+                    ['role' => 'user', 'content' => "Speech language: {$language}\n\n".$transcript],
+                ],
+            ]);
+
+        if (! $response->successful()) {
+            Log::warning('Groq dictation failed', ['status' => $response->status()]);
+            abort(502, __('Could not turn that into a prescription. Try again, or type it.'));
+        }
+
+        $content = $response->json('choices.0.message.content');
+        $parsed = json_decode((string) $content, true);
+
+        return is_array($parsed) ? $parsed : [];
+    }
+
+    /**
+     * Test fixture: never hits the network. Looks for NAPA / a missing brand
+     * so Feature tests can assert catalogue matching without Groq.
+     *
+     * @return array<string, mixed>
+     */
+    private function arrayParse(string $transcript): array
+    {
+        $lower = mb_strtolower($transcript);
+        $medicines = [];
+
+        if (str_contains($lower, 'napa')) {
+            $medicines[] = [
+                'brand_name' => 'NAPA',
+                'generic_name' => null,
+                'dose' => '500 mg',
+                'frequency' => '1+1+1',
+                'duration' => '5 days',
+                'timing' => 'after_food',
+            ];
+        }
+
+        if (str_contains($lower, 'notacatalogue')) {
+            $medicines[] = [
+                'brand_name' => 'NOTACATALOGUE',
+                'generic_name' => null,
+                'dose' => '10 mg',
+                'frequency' => '1+0+0',
+                'duration' => '7 days',
+                'timing' => null,
+            ];
+        }
+
+        return [
+            'medicines' => $medicines,
+            'advice' => str_contains($lower, 'spicy') ? 'Avoid spicy food' : null,
+            'tests_advised' => str_contains($lower, 'cbc') ? 'CBC' : null,
+            'complaints' => str_contains($lower, 'fever') ? ['Fever'] : [],
+            'follow_up_relative' => str_contains($lower, 'two weeks') || str_contains($lower, '2 weeks')
+                ? '2_weeks'
+                : null,
+        ];
+    }
+
+    /**
+     * @param  list<string>  $vocabulary
+     */
+    private function systemPrompt(array $vocabulary): string
+    {
+        $brands = $vocabulary === [] ? '(none yet)' : implode(', ', $vocabulary);
+        $timings = implode(', ', PrescriptionTiming::KEYS);
+        $followUps = implode(', ', self::FOLLOW_UP_KEYS);
+
+        return <<<PROMPT
+You extract a Bangladesh chamber prescription from a doctor's spoken transcript (Bangla, English, or mixed).
+Return JSON only with keys:
+- medicines: array of {brand_name, generic_name, dose, frequency, duration, timing}
+- advice: string or null
+- tests_advised: string or null (comma-separated investigation names)
+- complaints: array of short English chief-complaint terms (Fever, Cough, Acidity) or []
+- follow_up_relative: one of {$followUps}, or null
+
+Rules:
+- Use Bangladesh brand names (NAPA not Panadol) when they named a brand.
+- frequency like 1+0+1 or 1+1+1.
+- duration like 5 days or 2 weeks.
+- timing MUST be one of: {$timings}, or null.
+- Never invent a brand they did not mention.
+- Never output a patient name, phone, or address. If the transcript contains those, ignore them.
+- Do not output a diagnosis or ICD code.
+
+Known brands this doctor uses: {$brands}
+PROMPT;
+    }
+
+    /**
+     * @param  array<string, mixed>  $parsed
+     * @return array{
+     *     medicines: list<array{medicine_name: string, generic_name: ?string, dose: ?string, frequency: ?string, duration: ?string, timing: ?string, uncertain: bool}>,
+     *     advice: ?string,
+     *     tests_advised: ?string,
+     *     complaints: list<string>,
+     *     follow_up_relative: ?string
+     * }
+     */
+    private function toDraft(array $parsed, User $doctor): array
+    {
+        $items = [];
+
+        foreach ($parsed['medicines'] ?? [] as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $mapped = $this->matchMedicine($row, $doctor);
+
+            if ($mapped !== null) {
+                $items[] = $mapped;
+            }
+        }
+
+        $followUp = $parsed['follow_up_relative'] ?? null;
+        $followUp = is_string($followUp) && in_array($followUp, self::FOLLOW_UP_KEYS, true)
+            ? $followUp
+            : null;
+
+        $complaints = [];
+        foreach ($parsed['complaints'] ?? [] as $complaint) {
+            if (! is_string($complaint)) {
+                continue;
+            }
+            $trimmed = trim($complaint);
+            if ($trimmed !== '') {
+                $complaints[] = $trimmed;
+            }
+        }
+
+        return [
+            'medicines' => $items,
+            'advice' => $this->nullableString($parsed['advice'] ?? null),
+            'tests_advised' => $this->nullableString($parsed['tests_advised'] ?? null),
+            'complaints' => $complaints,
+            'follow_up_relative' => $followUp,
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $row
+     * @return array{medicine_name: string, generic_name: ?string, dose: ?string, frequency: ?string, duration: ?string, timing: ?string, uncertain: bool}|null
+     */
+    private function matchMedicine(array $row, User $doctor): ?array
+    {
+        $brand = $this->medicineService->normalizeMedicineName((string) ($row['brand_name'] ?? ''));
+
+        if ($brand === '') {
+            return null;
+        }
+
+        $match = $this->catalogueMatch($brand, $doctor);
+        $spokenTiming = filled($row['timing'] ?? null) ? (string) $row['timing'] : null;
+        $catalogue = $match ?? [];
+
+        return [
+            'medicine_name' => $catalogue['brand_name'] ?? $brand,
+            'generic_name' => $this->nullableString($row['generic_name'] ?? null) ?? ($catalogue['generic_name'] ?? null),
+            'dose' => $this->nullableString($row['dose'] ?? null) ?? ($catalogue['dose'] ?? null),
+            'frequency' => $this->nullableString($row['frequency'] ?? null) ?? ($catalogue['frequency'] ?? null),
+            'duration' => $this->nullableString($row['duration'] ?? null) ?? ($catalogue['duration'] ?? null),
+            'timing' => PrescriptionTiming::normalize($spokenTiming ?? ($catalogue['timing'] ?? null)),
+            'uncertain' => $match === null,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>|null
+     */
+    private function catalogueMatch(string $brand, User $doctor): ?array
+    {
+        $match = $this->medicineService->search($brand, $doctor)->first();
+
+        if ($match !== null) {
+            return $match;
+        }
+
+        $firstWord = explode(' ', $brand)[0] ?? '';
+
+        if ($firstWord !== '' && $firstWord !== $brand) {
+            return $this->medicineService->search($firstWord, $doctor)->first();
+        }
+
+        return null;
+    }
+
+    private function nullableString(mixed $value): ?string
+    {
+        if (! is_string($value) && ! is_numeric($value)) {
+            return null;
+        }
+
+        $trimmed = trim((string) $value);
+
+        return $trimmed === '' ? null : $trimmed;
+    }
+}

@@ -3,6 +3,9 @@
 
     Expects: $prescription, $visitRecord, $patient, $booking, $doctor, $chamber
     Optional: $showExpiryFootnote (bool) for the SMS/WhatsApp share page.
+    Optional: $onMyPaper (bool) — doctor print onto pre-printed pads; hides
+    the letterhead and leaves a gap so the clinic's own header is not
+    overprinted. Patient share must never set this.
 --}}
 @php
     $doctorName = $doctor?->name ?? ($tenant?->displayName() ?? tenant()?->displayName());
@@ -24,7 +27,8 @@
     $dateSource = $booking?->booking_date ?? $prescription->created_at;
 @endphp
 
-<div class="pad">
+<div class="pad{{ ! empty($onMyPaper) ? ' pad--on-paper' : '' }}">
+    @unless (! empty($onMyPaper))
     <header class="pad-header">
         <div>
             <p class="doctor-name">{{ $doctorLabel }}</p>
@@ -47,6 +51,7 @@
             </div>
         @endif
     </header>
+    @endunless
 
     <div class="patient-band">
         <div class="field">
@@ -88,9 +93,15 @@
                 <span class="value">{{ $visitRecord->spo2Label() }}</span>
             </div>
         @endif
+        @if ($visitRecord?->temperatureLabel())
+            <div class="field">
+                <span class="label">{{ bilingual('Temp') }}</span>
+                <span class="value">{{ $visitRecord->temperatureLabel() }}</span>
+            </div>
+        @endif
         <div class="field grow">
             <span class="label">{{ bilingual('Date') }}</span>
-            <span class="value">{{ $dateSource?->translatedFormat('j F Y') }}</span>
+            <span class="value">{{ $dateSource?->copy()->locale('bn')->translatedFormat('j F Y') }}</span>
         </div>
     </div>
 
@@ -156,7 +167,7 @@
             @endif
 
             @unless ($hasClinical || $prescription->followUpLabel())
-                <p class="clinical-empty">{{ __('No clinical notes recorded for this visit.') }}</p>
+                <p class="clinical-empty">{{ bilingual('No clinical notes recorded for this visit.') }}</p>
             @endunless
         </aside>
 
@@ -164,9 +175,13 @@
             <div class="rx-symbol">℞</div>
 
             @if ($prescription->items->isNotEmpty())
-                <ul class="med-list">
+                {{-- Numbered, because "stop number 3" is how a doctor refers
+                     back to a line on a follow-up call and how a pharmacist
+                     reads a strip back to the counter. --}}
+                <ol class="med-list">
                     @foreach ($prescription->items as $item)
                         <li class="med-row">
+                            <span class="med-number">{{ $loop->iteration }}.</span>
                             <div>
                                 <div class="medicine-brand">
                                     {{ $item->medicine_name }}
@@ -182,6 +197,14 @@
                                 @if (filled($item->instructions))
                                     <div class="medicine-meta">{{ $item->instructions }}</div>
                                 @endif
+                                {{-- Patient copy only. `1+0+1` is prescriber
+                                     shorthand: correct on the doctor's paper,
+                                     unreadable on the phone of the person who
+                                     has to swallow it. Rendered under the brand
+                                     so the phone card reads top to bottom. --}}
+                                @if (! empty($patientCopy) && ($plainDose = \App\Support\DoseSchedule::sentence($item->frequency)))
+                                    <div class="medicine-plain">{{ $plainDose }}</div>
+                                @endif
                             </div>
                             <div class="med-dosing">
                                 @if (filled($item->frequency))
@@ -193,12 +216,20 @@
                                 @if (filled($item->timing))
                                     <span class="timing">{{ $item->timingBilingualLabel() }}</span>
                                 @endif
+                                {{-- Frequency × duration, printed only when both
+                                     multiply out cleanly. Nothing appears for
+                                     SOS or Continue — see PrescriptionQuantity. --}}
+                                @if ($item->totalDoses())
+                                    <span class="total-doses">
+                                        {{ bilingual('Total') }} {{ $item->totalDoses() }}
+                                    </span>
+                                @endif
                             </div>
                         </li>
                     @endforeach
-                </ul>
+                </ol>
             @else
-                <p class="clinical-empty">{{ __('No medicines on this prescription.') }}</p>
+                <p class="clinical-empty">{{ bilingual('No medicines on this prescription.') }}</p>
             @endif
         </section>
     </div>

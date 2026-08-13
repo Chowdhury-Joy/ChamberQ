@@ -1,0 +1,25 @@
+<?php
+
+return [
+
+    /*
+    |--------------------------------------------------------------------------
+    | Driver
+    |--------------------------------------------------------------------------
+    |
+    | groq  — POST the transcript to Groq chat completions (live chambers)
+    | array — fixture parse for tests; never call the network
+    |
+    | The array driver must not run in production: it would fill a real pad
+    | from a hardcoded NAPA row instead of what the doctor said.
+    |
+    */
+    'driver' => env('GROQ_DRIVER', 'groq'),
+
+    'api_key' => env('GROQ_API_KEY'),
+
+    'model' => env('GROQ_MODEL', 'openai/gpt-oss-120b'),
+
+    'timeout' => (int) env('GROQ_TIMEOUT', 90),
+
+];

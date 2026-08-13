@@ -83,7 +83,7 @@ class PWAController extends Controller
         $scopePrefixJs = json_encode(rtrim($scopePrefix, '/') ?: '');
 
         $sw = <<<JS
-const CACHE_NAME = 'clinic-shell-v4';
+const CACHE_NAME = 'clinic-shell-v6';
 const SCOPE_PREFIX = {$scopePrefixJs};
 const PRECACHE = ['/css/theme.css', '/js/chamberq-offline.js'];
 
