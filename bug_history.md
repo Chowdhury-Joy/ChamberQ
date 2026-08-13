@@ -239,7 +239,7 @@
  <category>UI/UX</category>
  <symptom>Call voice still sounded ghostly when testing from Live Queue (admin) — same hollow English as before.</symptom>
  <root_cause>First “recorded” clips were generated with macOS Samantha, which is the same family of voice as browser TTS; admin Live Queue also played nothing of its own, so any leftover TTS fallback still dominated the experience.</root_cause>
- <prevention_rule>Announce clips must use a clear PA voice (Karen), never Samantha; Live Queue Control must play the same WAV on Call; never fall back to SpeechSynthesis.</prevention_rule>
+ <prevention_rule>Announce *serial* clips must use a clear PA voice (Karen), never Samantha; Live Queue Control must play the same WAV on Call; never fall back to SpeechSynthesis for the serial. Patient *names* may use browser SpeechSynthesis as a try-it path (see decisions.md 2026-08-12 name announce).</prevention_rule>
 </bug>
 
 ## 2026-08-05T06:24:53+0600
@@ -719,4 +719,184 @@
  <symptom>On the new "When can you come?" step, tapping a date card did nothing useful — patients could not move on, and only the first card looked selectable.</symptom>
  <root_cause>`selectOpenDate` called `rebuildFlow()` which dropped `step-when` once `bookableId` and `prefilledDate` were set, then `nextStep()` could not advance because the current index was already past the shortened flow. The earliest card also used `.selected`, which made other dates look disabled.</root_cause>
  <prevention_rule>Never rebuild the wizard flow in a way that removes the step the patient is currently on before `nextStep()` runs — keep `step-when` in the flow like the type step, and reserve `.selected` for the card the patient actually tapped.</prevention_rule>
+</bug>
+
+## 2026-08-11T23:15:08+0600
+
+<bug>
+ <category>Code</category>
+ <symptom>A chamber admin restoring a crafted backup ZIP could overwrite the central Super Admin account and any other chamber's rows — reassigning them into their own chamber with an attacker-chosen email and a reset password. Verified by running it: the Super Admin row came back with `tenant_id` set to the attacking chamber, `role` demoted, and the email replaced.</symptom>
+ <root_cause>`DataImportService::importTableRows()` upserted with `[$primaryKey]` as the match key on a shared database, then `normalizeImportedRow()` force-wrote `tenant_id` onto whichever row that id hit. `users.id` is auto-increment, so no id had to be guessed. Being Query Builder writes, they bypassed `BelongsToTenant`'s "a record must never change hands" guard entirely.</root_cause>
+ <prevention_rule>Never upsert on a bare global primary key in this shared database. Any import path must assert that every incoming primary key is unowned or owned by the target tenant **before** writing, and refuse the whole restore otherwise — pinned by `DataBackupTest::test_restore_refuses_a_zip_that_reuses_another_accounts_user_id`.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Code</category>
+ <symptom>A "replace" restore that failed partway left the chamber completely empty with no rollback — verified: row counts went from 1/1/1 (patients/bookings/chambers) to 0/0/0. Separately, a replace restore on any chamber with a live queue failed outright on a foreign key, in both the wipe and the import direction.</symptom>
+ <root_cause>`wipeScope()` ran in its own `DB::transaction` and committed; the import loop then ran outside any transaction. And `TENANT_TABLES` listed `live_sessions` before `bookings` even though `live_sessions.current_booking_id` references `bookings.id` with no ON DELETE rule — the same list is read forwards to import (parents first) and reversed to delete (children first), so one wrong order was wrong both ways.</root_cause>
+ <prevention_rule>Destructive wipe and the import that replaces it must share one transaction. `BackupTableMap::TENANT_TABLES` is ordered parent-before-child and must stay that way — a table's position is load-bearing in both directions. Pinned by `test_a_failed_replace_restore_rolls_back_the_wipe` and `test_replace_restore_works_while_a_queue_is_live`.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>Merging two duplicate patient records detached the surviving patient from their clinical history. The doctor's Consult Screen then reported "no history" for someone whose visit notes and prescriptions were still in the database, and no screen could re-link them.</symptom>
+ <root_cause>`PatientService::mergePatients()` moved only `bookings.patient_id` before deleting the duplicate. `visit_records.patient_id` and `prescriptions.patient_id` are `nullOnDelete` foreign keys, so the delete NULLed both. `moveBookingToPatient()` had the mirror-image gap — the booking moved while its visit record stayed filed under the old patient.</root_cause>
+ <prevention_rule>Anything that deletes or re-parents a `patients` row must repoint every table that references it, in the same transaction, via `PatientService::repointPatientOwnedRows()`. A new patient-owned table must be added there. Pinned by `PatientMergeHistoryTest`.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>Medicine and condition "learning" never recorded anything on a real consult. The ranked picker that is supposed to surface a doctor's frequent prescriptions stayed empty for the entire life of the feature; `medicine_usages` had zero rows after a genuine Complete-visit with a prescribed medicine.</symptom>
+ <root_cause>`VisitRecordService` gated usage recording on `$booking->status === 'completed'`, but both completion helpers save the notes while the booking is still `in_chamber` and flip the status immediately afterwards. The existing test passed because it called the service directly and set `status = 'completed'` by hand first, so it exercised an order production never uses.</root_cause>
+ <prevention_rule>A test for behaviour that hangs off a status transition must drive the real entry point (`CompleteBookingWithVisitNotes`), not the service with the status pre-set. Pinned by `test_completing_a_visit_records_medicine_usage_through_the_real_path`, with `test_writing_a_prescription_mid_consult_does_not_record_usage` guarding the behaviour the gate was protecting.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>"Cancel Session (Doctor Absent)" marked the patient who was mid-consult as `cancelled`, discarding a visit that had actually happened along with any notes written during it — and told none of the patients it turned away, unlike "End session" which hands staff a WhatsApp link per person.</symptom>
+ <root_cause>`markAbsent()` cancelled everything not already completed/cancelled/no-show, without `endSession()`'s `in_chamber` carve-out, and returned `void` so the caller had nothing to notify from. Its confirmation modal also named no count and no patients.</root_cause>
+ <prevention_rule>Every path that cancels a session's bookings must complete `in_chamber` first and return the bookings it cancelled, so the caller can offer the notify hand-off. Cancelling a patient's appointment without telling them is the failure that return value exists to prevent. Pinned by `test_mark_absent_completes_the_mid_consult_patient_and_returns_who_it_cancelled`.</prevention_rule>
+</bug>
+
+## 2026-08-12T01:47:03+0600
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>A doctor's saved default dose/frequency/duration was ignored for exactly the brands most worth saving. Editing NAPA on **My medicines** appeared to work — the row was written — but prescribing NAPA still prefilled the catalogue's values, so the doctor re-typed the same correction every visit and concluded the feature did nothing.</symptom>
+ <root_cause>`MedicineService::search()` concatenated catalogue and usage rows, sorted by rank, and kept the first row per brand. The doctor's own entry carries a +15 bonus, but a curated or pinned catalogue SKU carries a tier boost of up to 32, so for any well-known brand the catalogue row won the dedupe and the usage row was silently discarded. The two numbers were introduced for different purposes (search ordering vs curation preference) and were never meant to be compared against each other.</root_cause>
+ <prevention_rule>Deduplication must never be a side effect of ranking. When two rows describe the same thing, choose by provenance explicitly — the doctor's own row wins — and use rank only for ordering what survives.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Code</category>
+ <symptom>The CI step that asserts the production-readiness gate can pass could never pass. It ran `app:production-check --strict` against a freshly migrated MySQL database, and the gate treats an empty medicine catalogue as a blocker.</symptom>
+ <root_cause>The gate check and the workflow were written at different times. A real deploy runs `catalogues:load` right after migrating (`composer setup` does exactly that), but the workflow went straight from `migrate` to the gate, so it was asserting a state no deployment ever ships in. Adding the empty-`conditions` blocker would have made a green-looking step fail for a second reason without the first ever being noticed.</root_cause>
+ <prevention_rule>A CI step that simulates a deploy must run the same steps a deploy runs, in the same order. If a gate blocks on state that a setup command produces, that command belongs in the job before the gate.</prevention_rule>
+</bug>
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>Nineteen patient-facing strings in the booking wizard — including "Pick a date", the WhatsApp number help text and the "no seats available" message — had no Bangla translation, so a Bangla-reading patient hit English mid-booking. `PatientFacingBanglaTest` was failing.</symptom>
+ <root_cause>The strings were added to `resources/views/tenant/partials/booking-wizard.blade.php` without the matching `lang/bn.json` entries. The test that exists precisely to catch this was red rather than blocking, so the gap survived.</root_cause>
+ <prevention_rule>A red test is a broken feature until proven otherwise. Run the full suite before declaring work done, and never add a `__()` string to a patient-reachable view without its `bn.json` entry in the same change.</prevention_rule>
+</bug>
+
+## 2026-08-12T01:55:19+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>Tapping a chief-complaint chip a second time after attaching a duration (Fever → × 3 days → Fever again) appended a duplicate: `Fever × 3 days, Fever`.</symptom>
+ <root_cause>`appendComplaint` compared whole comma-separated segments. After a duration chip ran, the segment was `Fever × 3 days`, which did not equal `Fever`, so the duplicate guard treated it as new.</root_cause>
+ <prevention_rule>When a chip can later gain a qualifier on the same segment, strip the qualifier before the duplicate check — compare the complaint itself, not the decorated string.</prevention_rule>
+</bug>
+
+## 2026-08-12T12:50:00+0600
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>Doctors typing Latin timing shorthand `ac` or `pc` on the Rx desk got the opposite meal instruction — a PPI written `ac` saved as after food instead of before food.</symptom>
+ <root_cause>`PrescriptionTiming::shorthandMap()` and the Alpine `timingShorthand` object in `rx-desk.blade.php` mapped `ac` → `after_food` and `pc` → `before_food`. Latin ante cibum / post cibum are the reverse of those mappings; only the English `af`/`bf` tokens were correct.</root_cause>
+ <prevention_rule>Clinical abbreviations must be checked against their Latin meaning, not assumed to mirror English shorthand. `PrescriptionTimingTest` asserts `ac` → `before_food` and `pc` → `after_food`.</prevention_rule>
+</bug>
+
+## 2026-08-12T15:38:21+0600
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>Every medicine on the desktop Rx desk offered the same five dose chips — 500 mg, 10 mg, 20 mg, 40 mg, 5 mg — regardless of the drug. The list simultaneously offered strengths that do not exist (a 5 mg NAPA nobody manufactures) and hid ones that do (NAPA's 120 mg/5 ml paediatric syrup, 125/250/500 mg suppositories, 80 mg/ml drops), so the doctor typed the dose by hand on every line and the chips were noise at best.</symptom>
+ <root_cause>`doseChipsFor()` in `rx-desk.blade.php` was a hardcoded JavaScript array, written before the desk had a way to reach the catalogue. The correct per-brand lookup already existed and was already used by the phone form (`VisitNotesFormSchema::doseOptionsForBrand()`), so the desk was a second, dumber implementation of a rule that was solved elsewhere — the same shape of failure as the two copies of the Rx safety rules and the two `ac`/`pc` maps.</root_cause>
+ <prevention_rule>Dose strengths come from `MedicineService::doseOptionsForBrand()` and nowhere else — both pickers read it (the desk via `GET /api/medicines/doses`), and a brand with no catalogue row shows no chips rather than a plausible-looking guess. `MedicinePickerTest::test_both_dose_pickers_read_the_same_catalogue_lookup` and `DesktopRxPadTest::test_the_desk_never_ships_a_hardcoded_dose_list` fail if a literal list comes back.</prevention_rule>
+</bug>
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>A doctor working at the desktop Rx desk could not record **why** a medicine was given. The field existed end to end — `prescription_items.indication` is written by the service, saved by the desk payload, and printed under the brand — but the desk rendered it as read-only text, so the only way to fill it was to abandon the desk and open the phone modal.</symptom>
+ <root_cause>The desk was built as a new surface against the same schema, and the brand cell showed `generic_name · indication` as a display line. A field that renders when populated looks finished, which is why nobody noticed that no input on the page could populate it.</root_cause>
+ <prevention_rule>A column the print template renders must have an input on every surface that writes prescriptions, not only on the first one built. `DesktopRxPadTest::test_the_desk_can_write_a_reason_for_each_medicine` saves through the real Livewire path and asserts the value lands on the item.</prevention_rule>
+</bug>
+
+## 2026-08-12T15:47:16+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>The desktop Rx desk showed **two Complete visit buttons** — one in the desk's own sticky bar, one in the Filament page header — both green, both doing the same thing.</symptom>
+ <root_cause>The desk was added as a new full-width surface on Consult Screen and hid the old layout (`.cs-layout.is-desk-active`) and the phone strip (`.cs-sticky-actions.is-desk-active`), but not the page header's action container. A rule for exactly this already existed for phones (`@media (max-width: 767px) { .fi-header-actions-ctn { display: none } }`); the desk breakpoint was simply never given the same treatment.</root_cause>
+ <prevention_rule>Any surface that renders its own copy of a page header action must hide `.fi-header-actions-ctn` at the widths where it is visible. `DesktopRxPadTest::test_the_desk_leaves_only_one_complete_visit_button_on_screen` fails if that rule is dropped.</prevention_rule>
+</bug>
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>Preview on the Rx desk opened the prescription in a **new browser tab**, dropping the doctor onto a bare print page mid-consult with the browser's Back button as the only way back to the patient.</symptom>
+ <root_cause>Preview and Save & print shared one code path — `saveRxDesk()` returns the print URL and the Alpine `save()` called `window.open()` for either. Preview is a "check it before I commit" action and print is a "send it to paper" action; treating them as the same because they resolve the same URL is what put the doctor on another page.</root_cause>
+ <prevention_rule>Preview mounts `previewPrescriptionAction()` and frames the print route in a modal; only Save & print leaves the page. The framed URL is resolved on the server from the record, never accepted from the client. Pinned by `DesktopRxPadTest::test_preview_opens_a_modal_over_the_desk_rather_than_a_new_page`.</prevention_rule>
+</bug>
+
+## 2026-08-12T16:01:00+0600
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>Typing `napa` into the Rx desk's typing box and pressing Enter added a row with the brand and nothing else — no dose, no frequency, no duration, no timing, and no generic under the brand — even though the same doctor typing `napa` into the Brand cell got all of it prefilled. No suggestions appeared while typing there either, so the "fast" way of writing a prescription was the one that filled in the least.</symptom>
+ <root_cause>`commitShorthand()` only ever split the text on spaces and pattern-matched tokens. It never asked the catalogue anything, so everything the search endpoint knows — the doctor's own saved default, the catalogue default, the generic name — was reachable from the Brand cell and unreachable from the box directly under it. The box was written as a keyboard shortcut for the token grammar rather than as a second door into the same lookup.</root_cause>
+ <prevention_rule>Every way of naming a medicine on the pad resolves through the same `/api/medicines/search` lookup and the shared `applyPrefill()` / `fillOnlyStrength()` helpers. A typed name only prefills on an **exact** brand match (`catalogueMatch()`); anything less exact must be chosen from the suggestion list, because `nap` silently becoming NAPA EXTRA is a different drug on a signed document. Pinned by `DesktopRxPadTest::test_the_typing_box_searches_the_catalogue_instead_of_only_parsing_tokens`.</prevention_rule>
+</bug>
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>The Rx pad opened as bare column headings with no row under them, so the doctor's first action had to be finding "+ Add medicine" or the typing box. An empty table also left a permanent grey scrollbar slab directly under the headings, which read as a broken element, and the typing box drew a red-looking focus ring on click that read as a validation error on an empty, perfectly valid field.</symptom>
+ <root_cause>The desk seeded `items` straight from the saved record, so a new visit started with an empty array and rendered a table with no `<tr>`. The desk's inputs are plain HTML rather than Filament fields and had no `:focus` style of their own, so they fell through to the browser's default ring.</root_cause>
+ <prevention_rule>The pad always shows one waiting row (`init()` pushes an empty item) and the blank row is dropped on save — both client-side in `payload()` and server-side in `VisitRecordService::syncPrescription()`, so an untouched row can never reach a prescription. Desk inputs carry their own primary-coloured focus style. Pinned by `DesktopRxPadTest::test_the_pad_opens_with_a_row_waiting_and_drops_it_if_left_empty`.</prevention_rule>
+</bug>
+
+## 2026-08-12T16:08:33+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>Typing a medicine name in the Brand cell (or `na` / `Nap` in the typing box) produced no visible suggestion list. The doctor concluded search was broken and typed full brand names by hand — which then also left Dose / Frequency empty, because prefill only runs when a catalogue row is chosen.</symptom>
+ <root_cause>Two layered faults. (1) `.cs-rx-desk__table-wrap { overflow-x: auto }` makes the browser compute `overflow-y: auto` as well, which clipped the suggestion `<ul>` inside the brand cell — the API answered, Alpine filled `medicineResults`, and the list was painted into a clipped box. (2) Absolute `url('/api/medicines/…')` against `APP_URL=localhost` can hit the central host instead of the tenant domain and return empty/403.</root_cause>
+ <prevention_rule>The table wrap stays `overflow: visible`; brand suggestions are absolutely positioned in `.cs-rx-desk__brand-cell`. Medicine/condition API URLs on the desk are relative paths (`/api/medicines/search`). `DesktopRxPadTest::test_brand_suggestions_are_not_clipped_inside_the_table` fails if the overflow-x rule returns.</prevention_rule>
+</bug>
+
+## 2026-08-12T16:17:49+0600
+
+<bug>
+ <category>Code</category>
+ <symptom>Typing na on the Rx desk produced console 404s for http://127.0.0.1:8000/api/medicines/search?q=na and no suggestion list. The catalogue was fine; the browser was calling the wrong URL.</symptom>
+ <root_cause>The desk shipped a bare /api/medicines/search path. On local php artisan serve (path tenancy at /{slug}/admin) that hits the central app, which has no such route — the real endpoint is /{slug}/api/medicines/search. Custom-domain tenants were unaffected, which is why domain-based tests stayed green.</root_cause>
+ <prevention_rule>Desk (and any Alpine fetch) API URLs go through tenant_web_url(), same as the voice recorder. DesktopRxPadTest::test_medicine_search_url_includes_the_tenant_slug_on_the_central_host asserts both the helper output and a live GET on the prefixed path.</prevention_rule>
+</bug>
+
+## 2026-08-12T16:46:44+0600
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>After picking NAPA, Dose could show 80 mg/ml (paediatric drops) while Frequency, Duration and Timing stayed blank — so the doctor still had to tap each cell even though the catalogue knows the adult tablet line (1+1+1, 3 days, after food).</symptom>
+ <root_cause>Several catalogue SKUs share one brand. Search collapse and My-medicines fallback could land on a drops/injection row that has a strength but no frequency/duration/timing. Dose chips then only wrote the strength, never backfilled the rest from the brand line that does have defaults.</root_cause>
+ <prevention_rule>Collapse to the SKU with the most complete dosing defaults (brandDosingDefaults / searchRowCompleteness). The doses API returns those brand defaults; the desk applies them on pick and on dose-chip via applyBrandDefaults, without overwriting cells the doctor already filled. Timing gets the same on-focus chips as frequency/duration.</prevention_rule>
+</bug>
+
+## 2026-08-12T17:23:06+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>Timing never autofilled on the Rx desk even when frequency and duration did. Prefill wrote after_food into the row, but the Timing column stayed on "—".</symptom>
+ <root_cause>Timing used a &lt;select&gt; whose &lt;option&gt;s were built with Alpine x-for. When prefill set item.timing, the options were not yet a stable matching set; the browser fell back to the empty "—" option and x-model wrote "" back over the prefill. Text inputs (dose / frequency / duration) never had that round-trip.</root_cause>
+ <prevention_rule>Timing &lt;option&gt;s are Blade-rendered (@foreach), not Alpine x-for inside the select. Chips may still use x-for. DesktopRxPadTest::test_timing_select_options_are_blade_rendered_so_prefill_is_not_wiped fails if x-for options return.</prevention_rule>
+</bug>
+
+## 2026-08-13T00:43:22+0600
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>The nightly follow-up reminder run had no error isolation: one chamber's bad row aborted the whole job, so every chamber after it in the cursor silently got no reminders that morning — patients were never told to come back for their recheck, and nobody noticed because the command runs unattended at 07:00.</symptom>
+ <root_cause>`SendFollowUpRemindersCommand::handle()` looped `Tenant::cursor()` calling `processTenant()` with no try/catch, and `FollowUpReminderService::processTenant()` had none around its per-visit loop either. Any throw — an SMS gateway timeout, an unresolvable doctor, a malformed row — escaped both loops. `tenancy()->end()` was also skipped on that path, leaving the failed chamber's context bound as the loop moved on.</root_cause>
+ <prevention_rule>Every unattended cross-tenant batch isolates each tenant AND each record, logs what it skipped, and ends tenancy in a `finally`. It must also exit non-zero when anything was skipped, so a partly-failed scheduled run is visible instead of reported as a clean night. `SendDoctorLateNotices` already did per-patient isolation — new batch jobs must inherit that shape. Pinned by `FollowUpReminderTest::test_one_failing_chamber_does_not_stop_the_rest` and `::test_one_bad_patient_does_not_stop_the_clinics_other_reminders`.</prevention_rule>
+</bug>
+
+## 2026-08-13T10:46:29+0600
+
+<bug>
+ <category>Code</category>
+ <symptom>Opening the Web Pages editor (or any panel page that compiles a real-time facade) crashed with `tempnam(): file created in the system's temporary directory` in `AliasLoader.php`.</symptom>
+ <root_cause>Laravel 12 writes facade cache via `tempnam()` into `storage/framework/cache`. PHP 8.4+ warns when that folder is missing or not writable and the file lands in `/tmp` instead; debug mode turns the warning into an unhandled exception. Livewire's upload folder `storage/app/private/livewire-tmp` was also missing, so FileUpload had nowhere to stage files.</root_cause>
+ <prevention_rule>`RuntimeDirectories::ensure()` must run from `AppServiceProvider::register()` so cache, session, view, Livewire tmp, and public website-media folders exist and are writable before the first request. Do not rely on a human remembering `chmod`.</prevention_rule>
 </bug>

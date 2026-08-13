@@ -373,11 +373,60 @@
 - Medicine catalogue expanded from the curated 460 to the full Bangladesh market — 24,491 SKUs across 16,029 brands — from BDDrugBank v1.0.0 (CC BY 4.0, DOI 10.5281/zenodo.20749707), at the owner's explicit direction overriding the 2026-08-10 curated-catalogue decision. `medicines` gained `indications`, `manufacturer`, `is_essential`, `priority` and three indexes; rows are now keyed on brand + strength + form rather than brand alone (brand-only upserts were discarding 8,656 SKUs, mostly syrups and paediatric drops). Safety moved from exclusion to ranking: five priority tiers with the hand-verified 460 kept verbatim as a seed, and `Medicine::displayLabel()` now carries the form so same-strength SKUs are distinguishable. The prescription and My medicines pickers switched from a static grouped option list to `getSearchResultsUsing()` over `MedicineService::search()`, which orphaned `groupedSelectOptions()` and its helper chain. `data/ATTRIBUTION.md` added for the CC BY requirement.
 
 ## 2026-08-12
+- Desktop Rx pad (Option B) on Consult Screen ≥1024px while `in_chamber`: full-width page (`MaxWidth::Full`), Alpine medicine table + structured C/C/H/O/O/E fields, sticky patient bar; migration adds `visit_records.chief_complaint|history|on_examination` and `prescription_items.indication|timing|instructions`; `PrescriptionTiming` closed vocabulary with bilingual print; mobile/modal path kept.
 - Deleted the orphaned whole-catalogue chain from `MedicineService` — `groupedSelectOptions()`, `catalogMedicinesForPracticeType()`, `personalMedicineOptions()`, `excludeBrandsFromOptions()`, `normalizedBrandSet()`, `catalogForPracticeType()` and the `MAX_CATALOG_ROWS` (2000) cap — confirmed reachable only from each other and from tests since the pickers moved to `getSearchResultsUsing()` the day before. The cap had been a stopgap guard rail on a method nothing called; at 24,491 rows a category-grouped array of the visible catalogue is a memory/latency trap, so the method went rather than the cap. `vocabularyHints()` kept: outside that chain, bounded at 40 rows, and the restore contract for the deferred voice-transcription stash. The four tests that only existed to exercise the chain now assert the same rules through `MedicineService::search()`, the live path; the clinic-specialist rule from `bug_history.md` (2026-08-07) is now guarded by a *dermatologist-only* brand staying hidden from a dentist, because `visibleToPracticeType()` withholds nothing from a general physician and a dentist-only brand therefore stayed visible under the very fallback the old assertion claimed to catch.
 - Tenant admin sidebar: unique related nav icons (no shared rectangle-stack), and desktop sidebar starts icon-only with labels on hover via `sidebarCollapsibleOnDesktop()` in `ConfiguresTenantAdminPanel`.
+- Rx pad automation. Prefill became a three-layer chain — the doctor's saved default, then a per-drug catalogue default, then blank — resolved field by field inside `MedicineService::search()`; the hardcoded `'1+1+1'` / `'5 days'` literals in `MedicinePickerFields` are gone. `medicines` gained `default_frequency|default_duration|default_timing`, filled by a new `dosing-defaults:load` from `data/dosing-defaults.csv` (171 generics, 9,862 SKUs) rather than by `medicines:load`, so a BDDrugBank refresh cannot overwrite clinical judgement; the loader rejects out-of-vocabulary values, touches oral forms only, and never lets a combination inherit a single-ingredient default. `medicine_usages` gained `last_timing`. Dedupe in `search()` now prefers the doctor's usage row over the catalogue row for the same brand — the tier boost (up to 32) had been outranking the +15 usage bonus, dropping his own line for exactly the brands he had saved. Shipping these on by default, with a `hold` column instead of an approval gate, was the owner's explicit call; see `decisions.md`.
+- New tables `prescription_templates` + `prescription_template_items` (doctor-owned prescription packs, written only by an explicit "Save as pack", coded diagnoses only, overwrite-by-name) with `PrescriptionTemplateService`, both added to `BackupTableMap`. `conditions` gained `default_advice` (a `{en,bn}` JSON pair) + `default_tests`, loaded by a new `condition-presets:load` from `data/condition-presets.csv` (58 diagnoses); `ConditionService::search()` now returns them so the pad can offer advice/investigation chips on diagnosis pick. **No shipped preset carries a medicine** — guarded by a test. New `App\Support\ComplaintChips` (~40 bilingual chief-complaint chips), `VisitNotesFormSchema::historySeedFromPatient()` (H/O seeded from the patient record), last-visit one-tap chips, and last visit's vitals shown as grey reference rather than pre-filled. `catalogues:load` now runs all four importers, dosing defaults last.
+- CI: added a `catalogues:load` step to the MySQL job before the production-readiness gate. The gate treats an empty catalogue as a blocker and a real deploy loads it (`composer setup`), so the step was asserting a state no deployment ships in; an empty `conditions` table is now a blocker too. Verified on MySQL 8.4 locally: migrate/reset/migrate clean, gate passes with catalogues loaded, full suite 465 green on both SQLite and MySQL.
+- C/C on the desktop Rx desk became a ZilSoft-style row list (complaint + per-row duration) instead of chips appending into one textarea; `ComplaintChips::parse` / `format` round-trip the plain-text `chief_complaint` column so print and the phone modal stay unchanged.
 
-## 2026-08-12T15:23:59+0600
+## 2026-08-12T02:12:16+0600
+- Desktop Rx desk polished to Option B mockup: C/C mini-table, H/O toggles, O/E vitals table with pulse/SpO₂ columns, Inv list + InvestigationChips, Preview / Save & print / Save only (saveRxDesk returns print URL); print and patient share show pulse/SpO₂ when recorded.
+
+## 2026-08-12T12:51:30+0600
+- Rx safety + reminders batch: fixed swapped `ac`/`pc` timing shorthand; `RxSafety` warn-only duplicate-generic/allergy checks on Rx desk and modal; `VitalsTrend` SVG weight/BP charts on Consult Screen O/E; `FollowUpReminderService` + daily `follow-ups:send-reminders` (SMS 3 days before, WhatsApp staff-confirm queue), `FollowUpReminders` Operations page, `notifications` table, doctor `follow_up` notify toggles.
+
+## 2026-08-12T13:20:29+0600
+- Operational Reports summary UI is one scoped 3×3 metric grid (dropped separate status section and the page’s `card-grid.css` link); see decisions.md.
+
+## 2026-08-12T13:25:02+0600
+- Operational Reports headline grid dropped Called / In chamber / Skipped cards (six cards: Total, Completed, Still in queue, Waiting, No-show, Cancelled); mid-flow detail remains in day list and week/month tables.
+- Added `drugs:coverage-report` (`app/Console/Commands/DrugCoverageReportCommand.php`), a read-only measurement answering whether drug-interaction checking is possible at all before any database is licensed. Result: 92.9% of catalogue rows fully checkable; of the remainder, 1,190 rows are devices/supplements that cannot interact and 906 rows (3.7%) are real medicines with no entry in the US drug vocabulary under any spelling (doxophylline, rupatadine, bilastine, cilnidipine, roxadustat, favipiravir and others). No interaction feature was built — the finding is recorded so the blind spot is not rediscovered later as a bug.
+- `ConsultScreen::saveRxDesk()` now re-runs `RxSafety::allWarnings()` server-side on every desktop Rx pad save. The duplicate-generic and allergy rules existed twice — tested PHP reached only from the phone modal, and an untested Alpine copy that was the *only* check on the desktop pad; the two already disagreed cosmetically. The client copy stays for instant feedback; the server is now authoritative at save. Covered by `DesktopRxPadTest::test_the_server_re_checks_rx_safety_even_if_the_pad_sends_a_clashing_prescription`, which bypasses the client checks entirely.
+- Shipped drug-clash warnings: `drug_interactions` table + `App\Models\DrugInteraction`, 221 ingredient pairs generated by `data/build-drug-interactions.py` from 22 clinical rules, loaded via `interactions:load` (wired into `catalogues:load`). `RxSafety::interactionWarnings()` matches on ingredients through the new shared `App\Support\DrugIngredients` (extracted from `drugs:coverage-report`, so runtime and the feasibility measurement split names identically), and `RxSafety::uncheckedMedicines()` names any line with no generic name rather than staying silent about it. Deliberately a short curated list rather than a bulk import — the coverage measurement showed 3.7% of the catalogue has no entry in any US-derived database, so an import would have under-warned on exactly the locally-marketed drugs. `reviewed_at`/`reviewed_by` remain NULL pending a named clinician's sign-off.
+- Dropped `drug_interactions.reviewed_by` (owner decision: no clinician is named against clinical content anywhere in the product, since that makes one person personally answerable for a list the practice ships). The safety requirement moved from an attribution to `RxSafety::DISCLAIMER`, shown beside every warning on both the desktop pad and the phone modal and locked by `RxSafetyTest::test_every_surface_that_shows_a_warning_also_shows_the_disclaimer`. `reviewed_at` kept without a name so staleness is still answerable.
+
+## 2026-08-12
+- Moved the end-of-session "patients today without notes" catch-up banner from Consult Screen to Live Queue Control (Fill in now + patient list modal); Consult Screen no longer interrupts mid-consult; end-session toasts point at the banner on the queue page.
+- Rx packs moved off the consult screen: creation, editing and deletion now live on **My medicines** (`MyMedicines::createPackAction()` / `editPackAction()` / `deletePackAction()`), and `ConsultScreen::saveRxPack()` plus the desk's Save-as-pack box were removed — the desk applies packs only (owner decision: building a named set is preparation, not consult-time work). Two wrinkles fixed while wiring it: `PrescriptionTemplateService::save()` matches on name, so renaming now deletes the original row instead of leaving a near-duplicate; and the pack list is a Livewire computed property, so writes call `forgetPacks()` or a saved pack does not appear until reload. Separately, "+ Add medicine" moved from beside the shorthand box to a full-width button under the medicine table.
+
+## 2026-08-12T15:17:03+0600
 - Daily Roster gained Mark Late (table header → `LiveSessionService::markDelay()`), keeping the Live Queue Control Session-actions entry; optional WhatsApp hand-off and SMS cost warning match the queue screen.
+
+## 2026-08-12T15:38:21+0600
+- Rx desk medicine entry fixed: per-brand dose chips now come from `MedicineService::doseOptionsForBrand()` via the new `GET /api/medicines/doses` (replacing a hardcoded 500/10/20/40/5 mg list shown for every drug), `VisitNotesFormSchema::doseOptionsForBrand()` delegates to the same lookup so the two pickers cannot drift, and the desk gained an inline per-row Reason input writing the existing `prescription_items.indication`.
+
+## 2026-08-12T15:47:16+0600
+- Consult Screen desk: Preview now opens `ConsultScreen::previewPrescriptionAction()` — a modal framing the real `prescriptions.print` route (new `resources/views/filament/tenant-admin/components/rx-preview.blade.php`) — instead of a new tab; page header actions are hidden at desk widths so Complete visit is not rendered twice.
+
+## 2026-08-12T16:01:00+0600
+- Rx desk typing box became a catalogue search (shared `applyPrefill()` / `fillOnlyStrength()` with the Brand cell, exact-match-only prefill on Enter), the pad now opens with one blank row that is dropped if untouched, and desk inputs gained their own focus style.
+
+## 2026-08-12T16:08:33+0600
+- Rx desk brand suggestion list was clipped by `overflow-x:auto` on the table wrap (CSS forces overflow-y:auto too); wrap is now `overflow: visible`, suggestions are absolutely positioned in the brand cell, and medicine API URLs are relative to the tenant host.
+
+## 2026-08-12T16:17:49+0600
+- Rx desk medicine/condition API URLs now use tenant_web_url() so local path tenancy (127.0.0.1:8000/{slug}/…) no longer 404s on bare /api/medicines/search.
+
+## 2026-08-12T16:46:44+0600
+- Medicine search/doses now prefer the catalogue SKU with complete dosing defaults; Rx desk backfills frequency/duration/timing from brand defaults on pick and dose-chip, and timing has on-focus chips.
+
+## 2026-08-12T18:00:05+0600
+- Prescription print/share restyled as a shared BD pad sheet (left clinical / right Rx); patient copy now includes full clinical + chamber; portal lists up to 2 phone-gated prescriptions as a durable backup to the 48h `/p/{token}` link.
+
+## 2026-08-13
+- Follow-up reminder batch hardened: `SendFollowUpRemindersCommand` and `FollowUpReminderService::processTenant()` now isolate failures per tenant and per visit, log skips, end tenancy in a `finally`, and return a non-zero exit when anything was skipped. One bad row previously killed the reminders for every chamber later in the cursor.
 
 ## 2026-08-13T01:35:49+0600
 - Cross-chamber clinical share (Option B): `patients.share_clinical_history` + booking/walk-in checkbox (default ON); `CrossTenantClinicalHistoryService` + `SharedClinicalVisit` load other ChamberQ chambers' visit notes/Rx (no media) by phone+name with short TTL cache; Consult Screen shows Other ChamberQ clinics + merged vitals/warnings; Appendix B privacy copy updated.
@@ -390,9 +439,38 @@
 
 ## 2026-08-13T02:08:02+0600
 - Booking wizard no longer shows seat counts or “Pay at the clinic” on date/identity steps; capacity still enforced silently.
-
 ## 2026-08-13T02:24:42+0600
-- Booking identity: summary strip first, then Your details; separate Date field removed.
+- Booking identity: summary strip first, then Your details; Date/Change controls removed (Back to change day).
 
-## 2026-08-13T10:15:17+0600
-- Booking identity: dark summary; Phone then Name; footer Change booking date (btn-back style) beside Confirm Booking.
+## 2026-08-13T02:36:15+0600
+- Product modules (`front_door` / `live_queue` / `prescription`) in tenant `feature_flags` with Super Admin checkboxes; `EnsureTenantHasModule` route middleware; Front-door tickets omit come-around / live queue UI; Daily Roster Arrived/Done/No-show when live queue is off.
+
+## 2026-08-13T02:39:04+0600
+- Solo module list prices in `config/marketing.php` (`modules` + all-three bundle); `PlanPricingService` prices Solo from enabled modules and Clinic from Clinic tier; Super Admin preview and commission snapshots follow.
+
+## 2026-08-13T03:17:53+0600
+- Marketing pricing: Rising Star retired; homepage shows Maestro + Clinic cards and a modules à la carte table; sales name Maestro maps to internal `solo` plan.
+
+## 2026-08-13T02:42:37+0600
+- Booking identity: **Change date** link restored on the dark summary strip.
+
+## 2026-08-13T10:20:51+0600
+- Desk cashbook: `chamber_cash_entries` + `ChamberCashService`; Operations Cashbook (income/expense/net); Daily Roster Collect fee; `doctors.default_fee_taka`; included in chamber backups after bookings.
+
+## 2026-08-13T10:23:15+0600
+- Offline kit: IndexedDB bag + pending queue (`public/js/chamberq-offline.js`); `OfflineBagService` / `OfflineSyncService` / `OfflineController`; Visiting / camp page; `visit_records.offline_sync_id`; PWA shell v4; queue freeze on outage — pad save/print only, never Call next.
+
+## 2026-08-13T10:29:34+0600
+- Cashbook Waived KPI: waived rows keep the uncollected ৳ (not zero); summary `waived_amount` + count; Daily Roster shows Waived ৳….
+
+## 2026-08-13T10:33:22+0600
+- Two booking doors: `patient_accounts` + OTP (`PatientOtpService`); public `/find` directory (`DoctorDirectoryService`); `/me` serials and history (`PlatformPatientHistoryService`); marketing nav Find a doctor; reserved paths `find` / `me`.
+
+## 2026-08-13T10:38:47+0600
+- Hero banner image in the Web Pages builder is a Filament FileUpload on Laravel's public disk (`webpage-hero/{tenant_id}/`, stored as `/storage/…`); `PublicStoredImage` maps disk paths to public URLs.
+
+## 2026-08-13T10:41:56+0600
+- Latest Educational Videos (`video_gallery`) cover + MP4 uploads via `PublicMediaFields` on the public disk; `WebPage` copies `uploaded_video` onto `video_url` so the existing card layout still works.
+
+## 2026-08-13T10:46:29+0600
+- `RuntimeDirectories` creates writable `storage/framework/cache` and `livewire-tmp` on boot so PHP 8.4+ `tempnam()` does not fall back to `/tmp` and crash; Livewire temp uploads raised to 20 MB; `public/.user.ini` sets PHP upload limits.

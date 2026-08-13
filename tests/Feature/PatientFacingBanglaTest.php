@@ -21,6 +21,11 @@ class PatientFacingBanglaTest extends TestCase
         'resources/views/tenant/portal/index.blade.php',
         'resources/views/tenant/solo/portal/index.blade.php',
         'resources/views/tenant/screen.blade.php',
+        'resources/views/patient/find.blade.php',
+        'resources/views/patient/login.blade.php',
+        'resources/views/patient/serials.blade.php',
+        'resources/views/patient/history.blade.php',
+        'resources/views/components/patient/layout.blade.php',
     ];
 
     public function test_every_patient_facing_string_has_a_bangla_translation(): void

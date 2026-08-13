@@ -1,16 +1,23 @@
 # Site Map
-Last Updated: 2026-08-13T10:15:17+0600
+Last Updated: 2026-08-13T10:41:56+0600
 
 ## Full Site Map
 
-### Central (marketing + Super Admin + Marketer partner)
+### Central (marketing + Super Admin + Marketer partner + patient Find)
 Hosts: values in `CENTRAL_DOMAINS` (e.g. `localhost`).
 
 | Route | Purpose | Access |
 |-------|---------|--------|
-| `/` | Sales landing for ChamberQ (Solo/Clinic plans, WhatsApp CTAs); captures `?ref=` and `?code=` into session | public |
+| `/` | Sales landing for ChamberQ (**Maestro** + **Clinic** cards; modules table under pricing; WhatsApp CTAs); **Find a doctor** + **Patient login** in nav; captures `?ref=` and `?code=` into session | public |
+| `/find` | Directory of every Front door doctor who currently accepts online serials (search by name / specialty / area) | public |
+| `/me/login` | Patient phone OTP login (optional; not required to book) | public |
+| `POST /me/login/otp` | Send 6-digit SMS code (throttled; ChamberQ-paid SMS) | public |
+| `POST /me/login/verify` | Verify code and sign in on the `patient` guard | public |
+| `/me` | Upcoming serials across every ChamberQ clinic for this phone | patient login |
+| `/me/history` | Past visits and prescriptions for this phone (own records; no share-flag gate; no voice/photo) | patient login |
+| `/me/prescriptions/{id}` | Full patient pad for one prescription belonging to this phone | patient login |
 | `/admin` | Super Admin Filament login | public login |
-| `/admin/*` | Super Admin: Tenants, Marketers, Discount Codes, Commissions; finance dashboard widgets; **Client Health** seller overview (`/admin/seller-overview`); **Research data** aggregate view (`/admin/research`); **Platform data backup** (`/admin/data-backup`); per-tenant chamber backup download/restore on Tenants; confirm doctor payments on tenant edit | super_admin only |
+| `/admin/*` | Super Admin: Tenants (incl. **Product modules** checkboxes: Front door / Live queue / Prescription), Marketers, Discount Codes, Commissions; finance dashboard widgets; **Client Health** seller overview (`/admin/seller-overview`); **Research data** aggregate view (`/admin/research`); **Platform data backup** (`/admin/data-backup`); per-tenant chamber backup download/restore on Tenants; confirm doctor payments on tenant edit | super_admin only |
 | `/partner` | Marketer partner panel login | public login |
 | `/partner/*` | Marketer: referral link, owed/paid stats, referred doctors list, commission history | marketer only |
 | `/up` | Laravel health check | public |
@@ -20,12 +27,12 @@ Same central host; tenant identified by URL slug (tenant `id`), e.g. `drkarim`.
 
 | Route | Purpose | Access |
 |-------|---------|--------|
-| `/{slug}/` | Branded website home | public |
-| `/{slug}/book` | Booking wizard | public |
-| `/{slug}/bookings/{booking}` | Patient ticket | public (UUID) |
-| `/{slug}/portal` | Phone lookup | public (throttled) |
-| `/{slug}/screen/{session}` | Outdoor TV (always today for that schedule session — bookmark once) | public |
-| `/{slug}/screen/{session}/{date}` | Outdoor display for a specific date (legacy / deep link) | public |
+| `/{slug}/` | Branded website home | public (**Front door** module) |
+| `/{slug}/book` | Booking wizard | public (**Front door**) |
+| `/{slug}/bookings/{booking}` | Patient ticket (sitting window always; live queue / come-around only with **Live queue**) | public (UUID) |
+| `/{slug}/portal` | Phone lookup — bookings + up to 2 recent prescriptions (Rx list needs **Prescription**) | public (throttled, **Front door**) |
+| `/{slug}/screen/{session}` | Outdoor TV (always today for that schedule session — bookmark once) | public (**Live queue**) |
+| `/{slug}/screen/{session}/{date}` | Outdoor display for a specific date (legacy / deep link) | public (**Live queue**) |
 | `/{slug}/departments` | Clinic departments listing (clinic tier only) | public |
 | `/{slug}/departments/{slug}` | Single department page | public |
 | `/{slug}/blog` | Clinic health articles listing (clinic tier only) | public |
@@ -33,6 +40,7 @@ Same central host; tenant identified by URL slug (tenant `id`), e.g. `drkarim`.
 | `/{slug}/doctors` | Clinic doctor profiles listing (clinic tier only) | public |
 | `/{slug}/doctors/{slug}` | Single doctor public profile | public |
 | `/{slug}/admin` | Tenant staff Filament panel | staff login |
+| `/{slug}/admin/cashbook` | Desk khata: income, expense, net, waived (day/week/month) | staff / doctor / admin |
 | `/{slug}/admin/waiting-for-earlier-date` | Staff list of patients who opted in for an earlier date (WhatsApp per row) | staff login (ops) |
 | `/{slug}/admin/data-backup` | Chamber disaster-recovery backup download + restore (Admin only) | admin only |
 | `/{slug}/manifest.webmanifest`, `/{slug}/sw.js`, … | PWA | public |
@@ -54,13 +62,15 @@ When a doctor connects their own domain (e.g. `drkarim.com`), routes live at the
 | `/book` | Online serial booking wizard | public |
 | `POST /book` | Homepage hero form target — flashes name/phone to session, redirects to the wizard so patient details never enter the URL | public (throttled) |
 | `/bookings/{booking}` | Patient ticket (UUID) | public |
-| `/portal` | Phone lookup | public (throttled) |
+| `/portal` | Phone lookup — bookings + up to 2 recent prescriptions | public (throttled) |
 | `/screen/{session}` | Outdoor waiting-room TV (always today — bookmark once per schedule session) | public (throttled) |
 | `/screen/{session}/{date}` | Outdoor waiting-room display for a specific date (legacy) | public (throttled) |
 | `/lang/{locale}` | Switch session locale `en` / `bn` | public |
 | `/manifest.webmanifest`, `/sw.js`, `/pwa-icon-{192\|512}.svg` | PWA bits | public |
 | `/admin` | Tenant staff Filament panel | staff login |
+| `/admin/cashbook` | Desk khata: income, expense, net, waived (day/week/month) | staff / doctor / admin |
 | `/admin/waiting-for-earlier-date` | Staff list of patients who opted in for an earlier date (WhatsApp per row) | staff login (ops) |
+| `/admin/visiting-day` | Pack bag / write prescriptions away from the chamber (bad internet, camps) | doctor login (**Prescription**) |
 | `/admin/data-backup` | Chamber disaster-recovery backup download + restore (Admin only) | admin only |
 
 ### Tenant public APIs
@@ -86,17 +96,21 @@ Available under both platform path and custom domain. Requires doctor role (`can
 |-------|---------|--------|
 | `GET /prescriptions/{prescription}/print` | Printable prescription (browser print / Save as PDF) | doctor auth |
 | `GET /api/medicines/search` | Ranked medicine brand search for prescription picker | doctor auth (throttled) |
+| `GET /api/medicines/doses` | Strengths one brand actually ships in, for the Rx desk dose chips | doctor auth (throttled) |
+| `GET /api/offline/bag` | Travel bag: packs, My medicines, known patients, letterhead | doctor auth (throttled, **Prescription**) |
+| `POST /api/offline/sync` | Upload pad saves and visiting visits queued on this computer | doctor auth (throttled, **Prescription**) |
 | `POST /api/visit-media/upload-voice` | Upload voice note blob from Mark Completed modal | doctor auth (throttled) |
 | `GET /visit-records/{visitRecord}/voice` | Stream visit voice note | doctor auth |
 | `GET /visit-records/{visitRecord}/photo` | View paper prescription photo | doctor auth |
 
-### Tenant patient prescription copy (no login — short token link)
-The one patient-facing route that shows prescription content. Deliberately outside the doctor-auth set above; an unguessable, expiring token stored on the row is the gate.
+### Tenant patient prescription copy (no login)
+Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber letterhead). Voice notes and prescription photos stay off. Shared Blade sheet with the doctor print.
 
 | Route | Purpose | Access |
 |-------|---------|--------|
-| `GET /p/{token}` | The patient's own copy of **one** prescription — medicines, that prescription's advice/follow-up, visit vitals (weight / BP when recorded), prescriber name + registration, patient name and age, date. No diagnosis, clinical notes, tests, other visit, chamber contact, or link onward into the record. Doctor/staff send it via WhatsApp and/or SMS per that doctor's `prescription` notify prefs. Deliberately short so the SMS fits one billable segment. Unknown or expired token → 404; the tenant global scope means one clinic's token never resolves on another's host. | public, **10-char token, expires 48h**, throttled 30/min |
-| `GET /prescriptions/{prescription}/share` | **Superseded by `/p/{token}`.** Kept registered only so links already delivered to patients keep working; every one expires within 48h, after which this route is deletable. | public, **signed URL, expires 48h**, throttled |
+| `GET /p/{token}` | SMS/WhatsApp copy of **one** prescription. Short token so the SMS fits one billable segment. Unknown or expired token → 404. | public, **10-char token, expires 48h**, throttled 30/min |
+| `GET /portal/prescriptions/{prescription}?phone=` | Durable portal backup when staff forget to send `/p/{token}`. Phone must match the booking that owns the visit. | public, phone-gated, throttled 30/min |
+| `GET /prescriptions/{prescription}/share` | **Superseded by `/p/{token}`.** Kept only so links already delivered keep working; every one expires within 48h. | public, **signed URL, expires 48h**, throttled |
 
 ## Customer Journeys
 
@@ -113,13 +127,19 @@ The one patient-facing route that shows prescription content. Deliberately outsi
 
 ### Patient → book serial → ticket
 1. Open `/{slug}/` or custom domain home — see doctor brand + Book CTA. On clinic-tier sites the Book Appointment CTA now also sits in the header nav (desktop) and the mobile drawer, per the Clireo design port; solo keeps its locked layout.
-2. Book flow — chamber/doctor when needed, then **When can you come?** (only dates with seats left, soonest first; earliest option highlighted). Dark booking summary first, then **Your details** (Phone then Name / NID optional / Different WhatsApp / Share with other ChamberQ doctors); footer **Change booking date** beside Confirm Booking. If the number is known, choose **Who for?** inline — masked initials (`F. R., 34`); picking one stands the name field down. Clinic hero form can POST name/phone into the session first.
+2. Book flow — chamber/doctor when needed, then **When can you come?** (only dates with seats left, soonest first; earliest option highlighted). **Your details** under the booking summary strip (Name / Phone / NID optional / Different WhatsApp / Who for?; **Share with other ChamberQ doctors**); **Change date** on the summary strip (or Back). If the number is known, choose **Who for?** inline — masked initials (`F. R., 34`); picking one stands the name field down. Clinic hero form can POST name/phone into the session first. A ChamberQ patient login on the same host prefills name/phone.
 3. Submit → ticket at `…/bookings/{uuid}`. Goal: proof of serial; share via WhatsApp/copy, or Print / Save as PDF for a paper or file copy.
 4. Optional: PWA install scoped to tenant path or custom domain.
 
+### Patient → Find a doctor (ChamberQ directory)
+1. Open `/find` from the marketing nav or directly — browse every bookable ChamberQ doctor. Goal: pick a doctor without hunting their website.
+2. Optional: **Patient login** at `/me/login` (phone + SMS code) to see every serial and prescription in one place. Booking does not require this.
+3. Tap **Book serial** → that doctor's existing wizard at `/{slug}/book` (same BookingService). Ticket still lives on the doctor's site and also appears under `/me` after login.
+
 ### Patient → check status later
-1. Open `/portal` or ticket link.
-2. Portal: enter BD phone → see matching bookings.
+1. Open `/portal` or ticket link — or, with a ChamberQ login, `/me`.
+2. Portal: enter BD phone → see matching bookings **and**, when present, up to two recent prescriptions. `/me` lists every clinic for that phone without re-typing it.
+3. Tap **View prescription** → full pad (phone must still match, or the logged-in account owns it). Goal: get medicines/diagnosis even if staff forgot the SMS/WhatsApp link.
 
 ### Patient → waiting room
 1. Watch the outdoor TV (staff bookmark `/screen/{session}` once — always shows today for that Morning/Evening slot).
@@ -129,9 +149,10 @@ The one patient-facing route that shows prescription content. Deliberately outsi
 
 ### New tenant → go live (Super Admin)
 - **Trigger:** Sales closes a doctor/clinic.
-- **Steps:** Create Tenant with URL **slug** (e.g. `drkarim`; rejected if already taken or if it matches a reserved path prefix such as `admin` / `book`) → optional custom **domain** → set `plan_tier`, attach **marketer** / **discount code**, snapshot pricing → set SMS, `billing_status` → **doctor login email** (required; creates doctor user) → hand off admin + doctor logins.
+- **Steps:** Create Tenant with URL **slug** (e.g. `drkarim`; rejected if already taken or if it matches a reserved path prefix such as `admin` / `book` / `find` / `me`) → optional custom **domain** → set `plan_tier` → tick **Product modules** (Front door / Live queue / Prescription; default all on) → attach **marketer** / **discount code**, snapshot pricing → set SMS, `billing_status` → **doctor login email** (required; creates doctor user) → hand off admin + doctor logins.
 - **URLs:** Platform `/{slug}/…`; after custom domain DNS, also `drkarim.com/…` at root.
-- **Success:** `/{slug}/book` works; admin at `/{slug}/admin` (or `/admin` on custom domain).
+- **Modules:** Front door alone = website + book + day list (no outdoor TV / Call next / come-around). Live queue adds TV + live ticket. Prescription adds consult/Rx. Booking confirmation SMS is optional (credits + doctor toggle).
+- **Success:** Enabled module routes work; disabled ones 404. Admin at `/{slug}/admin` (or `/admin` on custom domain).
 
 ### Confirm doctor payment & pay marketer (Super Admin)
 - **Trigger:** bKash/bank payment received from doctor.
@@ -152,7 +173,7 @@ The one patient-facing route that shows prescription content. Deliberately outsi
 
 ### Open clinic day → run queue
 - **Trigger:** Session day starts.
-- **Steps:** Queue runner (staff or doctor per Branding **Who runs the queue**) → Live Queue Control → session auto-selected when today has only one, else pick from the dropdown/session cards → **Open screen / Copy link** once onto the waiting-room TV (stable URL, no date — bookmark and reuse every day for that session) → Start → Call → Patient arrived → Complete. A no-response patient is skipped from the current-call card (twice, then no-show); any waiting or skipped patient can be called out of turn via **Call now** on their row (unavailable while someone is in the chamber). Mark Late, Pause, Resume, Cancel session and Finish/End session all live behind the header's **Session actions** menu; **New Walk-In** is the standalone header action. **Mark Late** is also on **Daily Roster** (table header) so staff can warn waiting patients before opening Live Queue Control or pressing Start — same delay SMS / WhatsApp hand-off. Doctor opens **Consult Screen** for auto-updating patient context (no search).
+- **Steps:** Queue runner (staff or doctor per Branding **Who runs the queue**) → Live Queue Control → session auto-selected when today has only one, else pick from the dropdown/session cards → **Open screen / Copy link** once onto the waiting-room TV (stable URL, no date — bookmark and reuse every day for that session) → Start → Call → Patient arrived → Complete. A no-response patient is skipped from the current-call card (twice, then no-show); any waiting or skipped patient can be called out of turn via **Call now** on their row (unavailable while someone is in the chamber). Mark Late, Pause, Resume, Cancel session and Finish/End session all live behind the header's **Session actions** menu; **New Walk-In** is the standalone header action. **Mark Late** is also on **Daily Roster** (table header) so staff can warn waiting patients before opening Live Queue Control or pressing Start — same delay SMS / WhatsApp hand-off. **Cancel session (doctor absent)** and **Finish/End session** behave identically toward patients: both name the count and the patients in their confirmation, both leave a patient already in the chamber as *completed* rather than cancelled, and both surface **Tell cancelled patients** afterwards for a per-patient WhatsApp/SMS hand-off. Amber **patients today without notes** banner at the top when completed patients lack notes (**Fill in now** opens the catch-up list). Doctor opens **Consult Screen** for auto-updating patient context (no search). After the visit, **Daily Roster → Collect fee** records cash/bKash/Nagad/card (or waive); **Operations → Cashbook** is where rent/tea/salary go out.
 - **Success:** Outdoor screen matches control panel; consult screen shows the patient in chamber; the summary strip's waiting count and projected finish time match the table.
 
 ### Tell waiting patients the doctor is late
@@ -163,23 +184,30 @@ The one patient-facing route that shows prescription content. Deliberately outsi
 
 ### Doctor consult (doctor role)
 - **Trigger:** Patient called into chamber (`live_sessions.current_booking_id` set).
-- **Steps:** Tenant admin → **Consult Screen** — screen updates automatically (poll). Review visit count, warnings (above the write section on mobile), last visit diagnosis/advice/voice/photo/transcript, past visits with reprint, voice playback, and photo links. Amber catch-up banner when today's session is active and completed patients lack notes — tap to fill in. While the patient is in the chamber the card carries **Write prescription** (then **Edit prescription**) — prescription-first modal with searchable medicine picker (prefills dose/frequency/duration from the doctor's history), quick-pick frequency/duration chips, **Same as last visit**, relative follow-up chips, voice note (recorded and saved for playback; no speech-to-text — deferred 2026-08-07); saving does not end the visit. The consult ends in **two steps**: **Complete visit** shows a read-only summary when notes already exist (Edit to reopen the full form), then closes the visit *without* advancing the queue; the patient stays on screen under "Visit completed — ready for next patient" with **Print prescription** and **Send via WhatsApp**; sticky bottom actions on phones mirror the header queue controls. Then **Call next patient** advances the queue. Staff completing from the queue skip the modal. Ending the session from Live Queue Control warns if notes are still missing.
-- **Data/systems touched:** `live_sessions`, `bookings`, `patients`, `visit_records`, `prescriptions`.
-- **Key CTA:** Complete visit → Print / Send via WhatsApp → Call next patient.
-- **Success:** Doctor sees correct person and honest history state; visit notes saved when provided; the prescription can be printed or sent before the next patient is called; patient ticket/portal never show clinical data, and the shared link exposes only that one prescription.
+- **Steps:** Tenant admin → **Consult Screen** — screen updates automatically (poll). On a **wide desktop (≥1024px)** while the patient is in the chamber, the page *is* the prescription pad: sticky bar (name · age · sex · serial, allergy, **Preview / Save & print / Save only / Complete visit**), left column C/C mini-table · H/O toggles · O/E vitals table (Wt / BP / Pulse / SpO₂, **weight/BP trend charts** when past data exists) · Dx pill · Inv list (plus last-visit copy), right column medicine spreadsheet (search, dose/frequency/duration chips, timing, shorthand line, **warn-only duplicate/allergy checks**), advice and follow-up underneath. How much of that is already filled when he arrives: H/O is seeded from the patient's stored conditions and medicines; C/C is a row list (~40 bilingual chips): each tap adds a complaint line with its own duration; a previous visit offers **Same medicines / Same Dx / Same Inv / Same advice / Repeat whole visit**; picking a diagnosis surfaces his own **packs** for it and **Add advice** / **Add investigations** presets (English or Bangla, following the panel language); and typing a brand brings its dose, frequency, duration and timing with it — his own saved default first, the catalogue's per-drug default otherwise, blank when neither knows. **Vitals are never pre-filled**; last visit's shows grey beside each box. **★** on a row saves that line to My medicines; **Packs** applies one the doctor built earlier on **My medicines** — packs cannot be created or renamed from here. On phones/tablets the older layout stays: review history, then **Write prescription** modal. The consult ends in **two steps**: **Complete visit** (summary when notes exist) closes the visit *without* advancing the queue; Print / Send via WhatsApp while the patient is still on screen; then **Call next patient**. Staff completing from the queue skip the modal. Catch-up for patients completed without notes lives on **Live Queue Control** (amber banner + **Fill in now**), not here.
+- **Data/systems touched:** `live_sessions`, `bookings`, `patients`, `visit_records` (including `chief_complaint` / `history` / `on_examination`), `prescriptions`, `prescription_items` (including `timing` / `indication` / `instructions`); reads `medicines` dosing defaults and `conditions` advice/investigation presets; writes `medicine_usages` (★); reads `prescription_templates` but never writes them (packs are built on My medicines).
+- **Key CTA:** Save (desk) or Write prescription (phone) → Complete visit → Print / Send via WhatsApp → Call next patient.
+- **Note:** Everything the pad fills is a proposal on a document the doctor signs — visible, editable, cleared in one keystroke, and never committed until Save. Nothing is learned from what he prescribes: packs and My medicines entries only ever come from an explicit tap. If the internet drops mid-consult, Save & print still work on this computer; Call next stays frozen until the line is back.
+- **Success:** Doctor sees correct person and honest history state; visit notes saved when provided; the prescription can be printed or sent before the next patient is called; the shared link and portal show the full clinical pad for that prescription (voice/photo stay doctor-only); ticket itself still shows no clinical data.
+
+### Visiting day / camp (doctor — bad internet away from the chamber)
+- **Trigger:** Doctor will sit somewhere with unstable internet (village camp, second chamber, outreach), or the main chamber line is expected to drop.
+- **Steps:** On good internet → **Operations → Visiting / camp** → **Pack bag** (copies packs, My medicines, known patients, letterhead onto this laptop). At the remote room → add name + phone or pick a packed patient → write medicines from the bag → **Save & print** (paper is the record until upload). When signal returns → **Upload pending visits** (or the yellow banner's Upload now). SMS / WhatsApp Rx links wait until then. This is not Live Queue — no Call next, no outdoor TV.
+- **Data/systems touched:** IndexedDB on the laptop; `GET /api/offline/bag`; `POST /api/offline/sync` → `bookings` + `visit_records` (`offline_sync_id`) + `prescriptions`. Does not mutate the live queue.
+- **Success:** Patient leaves with a printed pad; the same visit appears in ChamberQ when the line is back, without calling the next serial at the main chamber.
 
 ### Type up a paper prescription (staff — only for doctors who opted in)
 - **Trigger:** A doctor who prescribes by hand has finished a consult, and `staff_may_enter_prescriptions` is on for that doctor (Doctors resource; **off by default**).
 - **Steps:** Admin or doctor first turns on **Staff may type this doctor's prescriptions** on the Doctors record. Then staff → **Daily Roster** → the patient's *completed* row → **Enter prescription** (**Edit prescription** once one exists) → photograph the paper slip → pick medicines from the grouped dropdown with dose/frequency/duration chips → set follow-up → Save. Booking status is unchanged and there is no doctor approval step. The form shows medicines, follow-up and the photo only — staff see no diagnosis, advice, voice note, allergy strip or past visits, and cannot open Consult Screen or the prescription print route.
-- **Data/systems touched:** `visit_records` (prescription/follow-up/photo columns only, with `recorded_by` = the staff user), `prescriptions`, `prescription_items`. Any diagnosis or voice note the doctor already recorded is left intact; medicine usage learning is not updated.
+- **Data/systems touched:** `visit_records` (prescription/follow-up/photo columns only, with `recorded_by` = the staff user), `prescriptions`, `prescription_items`. Any diagnosis or voice note the doctor already recorded is left intact. Nothing is added to any doctor's medicine list — prescribing never writes there, for staff or doctors alike.
 - **Success:** The visit gains a searchable prescription that feeds **Same as last visit** next time, the paper slip is attached for checking, and the printed copy still carries the doctor's name and BM&DC registration from the booking's session.
 
 ### Manage personal medicine list (doctor)
 - **Trigger:** Doctor wants to fix default dose/frequency/duration or hide a brand from their picker.
-- **Steps:** Tenant admin → **My medicines** (Operations group) → edit defaults, hide from search, or add a manual entry.
+- **Steps:** Tenant admin → **My medicines** (Operations group) → edit defaults including **Timing**, hide from search, or add a manual entry. The other way in is **★** on any Rx desk row mid-consult, which saves that line here. The same page carries **Rx packs**: create, edit and delete named sets of medicines (with optional diagnosis, advice, tests and follow-up) that the Rx desk then applies in one tap.
 - **Data/systems touched:** `medicine_usages` only — never the shared `medicines` catalogue.
 - **Note:** There is no booking on this page, so the catalogue offered follows the doctor's own `practice_type` — which requires their login to be paired with their Doctors record (below). An unpaired clinic account sees the general-physician list.
-- **Success:** Next prescription search ranks and prefills from the doctor's corrected defaults.
+- **Success:** Next prescription search prefills from the doctor's corrected defaults, field by field — anything he left blank still falls back to the catalogue's per-drug default, then to empty. The list is shown A–Z and only changes when the doctor changes it.
 
 ### Pair a doctor with their login (admin — clinics)
 - **Trigger:** A clinic adds a doctor, or an existing clinic has doctors whose accounts were never matched to their Doctors record (the 2026-08-07 migration only auto-paired tenants with exactly one doctor and one doctor login).
@@ -189,13 +217,25 @@ The one patient-facing route that shows prescription content. Deliberately outsi
 
 ### Content update (staff)
 - **Trigger:** Doctor wants copy/photo change.
-- **Steps:** Staff edits Web Page blocks in tenant admin, or (clinic tier) adds/edits **Departments**, **Blog posts**, and doctor **Website profile** fields under **Website** in tenant admin.
+- **Steps:** Staff edits Web Page blocks in tenant admin. Hero photo and **Latest Educational Videos** cover/video are file uploads (or a YouTube link). Clinic tier can also add/edit **Departments**, **Blog posts**, and doctor **Website profile** fields under **Website**.
 
 ### Clinic website content (admin/staff — clinic tier)
 - **Trigger:** Clinic needs a new department, blog article, or public doctor profile.
 - **Steps:** Tenant admin → **Website** → **Departments** / **Blog posts** (create, publish) or **Doctors** → enable **Show on website**, photo, bio, slug → homepage sections (`service_matrix`, `health_insights`, `doctor_grid`) pull published rows automatically.
 - **Data/systems touched:** `departments`, `blog_posts`, `doctors` website columns; public routes `/departments`, `/blog`, `/doctors`.
 - **Success:** List + detail pages live; homepage teasers match without duplicating cards in the page builder.
+
+### Follow-up reminders (staff / doctor — ops)
+- **Trigger:** A visit has a follow-up date set and the prescribing doctor has follow-up notifications enabled.
+- **Steps:** **SMS (automatic):** daily job texts patients **3 days before** the follow-up date when the doctor's follow-up SMS toggle is on (1 credit; empty wallet skips). **WhatsApp (confirm first):** when the doctor's follow-up WhatsApp toggle is on, staff (or doctor if no staff) get a panel notification → **Operations → Follow-up reminders** → tap **Confirm WhatsApp** per row to open the prepared message.
+- **Data/systems touched:** `visit_records.follow_up_date`, reminder timestamp columns, `SmsMessage` (`purpose=follow_up`), doctor `notify_channels.follow_up`.
+- **Success:** Patient is reminded before the follow-up; WhatsApp never sends without a human tap.
+
+### Chamber cashbook (staff / doctor / admin — ops)
+- **Trigger:** A patient pays at the desk, or the chamber spends money (rent, tea, salary).
+- **Steps:** Set the doctor's **Default consultation fee** on Doctors. On **Daily Roster**, **Collect fee** (amount, cash/bKash/Nagad/card, or waive). On **Operations → Cashbook**, **Add expense** or **Add income**, then read day/week/month income, expense, net, and waived ৳ (not collected — not an expense).
+- **Data/systems touched:** `chamber_cash_entries`, `doctors.default_fee_taka`, `ChamberCashService`. Patients still pay at the chamber — no booking gateway.
+- **Success:** End of day the khata shows what came in, what went out, and what is left.
 
 ### Earlier-date waiting list (staff — ops)
 - **Trigger:** Legacy bookings still flagged `wants_earlier_date` (the public wizard no longer offers the opt-in), or staff want to contact those patients when a seat frees up.

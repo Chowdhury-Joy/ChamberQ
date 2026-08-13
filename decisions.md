@@ -1508,6 +1508,14 @@
   <reason>Those edges are text-mined from the `interaction` free-text field of manufacturer marketing copy. They carry no severity grading, no mechanism, and no evidence level, and their recall depends on how a given company chose to write its label. A warning a doctor learns to dismiss is worse than no warning, and a *missing* warning presented by a system that claims to check interactions is worse still — the doctor stops checking themselves. Interaction checking needs a licensed clinical database (or DDInter 2.0, which does carry severity); until there is one, the product should not imply it has one.</reason>
 </decision>
 
+## 2026-08-12T00:42:21+0600
+<decision>
+  <category>UI/UX</category>
+  <context>Owner confirmed Option B (full Rx desk) for the next build, implementing the already-logged 2026-08-11 desktop pad decisions that were not yet in code.</context>
+  <action>Shipped the desktop Consult Screen Rx pad at ≥1024px while a patient is `in_chamber`: sticky bar, 34/66 C/C·H/O·O/E·Dx·Inv / medicine table, Alpine shorthand + one-shot `saveRxDesk`, schema columns for pad fields and item timing/indication/instructions, bilingual timing on print and share drug lines. Modal path kept for phones and other screens.</action>
+  <reason>Matches the paper pad doctors already know; contains blast radius to one screen and one breakpoint so Daily Roster / Live Queue / staff entry stay stable.</reason>
+</decision>
+
 ## 2026-08-12T00:50:43+0600
 <decision>
   <category>UI/UX</category>
@@ -1516,7 +1524,166 @@
   <reason>Doctors scan the rail by shape during a busy sitting; identical icons force reading every label. Icon-only with hover names keeps the rail thin without hiding where things are.</reason>
 </decision>
 
-## 2026-08-12T15:23:59+0600
+## 2026-08-12T01:47:03+0600
+<decision>
+  <category>Business_Logic</category>
+  <context>The Rx pad was structurally right but still made the doctor type everything. Its own prefill was two literals hardcoded in PHP — `1+1+1` and `5 days` — applied to every drug alike, which is wrong for a PPI, an antihistamine and anything taken long term. No drug database sells the missing piece: BDDrugBank is a product list, and even licensed clinical databases leave the dose to the prescriber, which is why Zilsoft and ProtonEMR ship a per-doctor "save as my default" and nothing more. Owner's instruction was explicit: "fuck doctor approval. ship something that makes them want to buy it, as long as it is harmless."</context>
+  <action>Three-layer prefill — the doctor's own saved default, then a per-drug catalogue default, then blank — resolved field by field inside `MedicineService::search()` so the Alpine pad and the Filament modal cannot drift. Layer 2 ships **on by default** as 171 hand-written generic dosing rows (`data/dosing-defaults.csv`, reaching 9,862 SKUs), with a `hold` column to veto a row rather than an approval gate to unlock one. Both hardcoded literals deleted.</action>
+  <reason>Shipping the defaults off-by-default would have meant every new chamber gets the blank version of the product and judges it on that. It is defensible because it is strictly safer than what it replaced: a class-appropriate default beats one literal for all 24k SKUs, it only fills a row the doctor is already writing, every cell stays editable, and the doctor signs the document. Blank remains a real third layer — a guess is never substituted for "nothing knows".</reason>
+</decision>
+
+<decision>
+  <category>Business_Logic</category>
+  <context>"Automate the prescription" could mean anything from filling a duration to proposing a drug regimen for a diagnosis. The line had to be drawn once, in code, rather than re-argued per feature.</context>
+  <action>The product ships **advice and investigations** per diagnosis (58 conditions, English + Bangla, `data/condition-presets.csv`) but **never ships a medicine**. Drug sets attached to a diagnosis exist only as packs the doctor saves from a prescription he wrote himself. Enforced by `RxAutomationTest::test_shipped_presets_never_carry_a_medicine` and stated at the top of both CSVs.</action>
+  <reason>"Drink plenty of water, avoid spicy food" is a thing the doctor says out loud anyway, and printing it in Bangla helps the patient more than it helps him. A drug proposed for a diagnosis is a clinical recommendation, and a product that makes those needs a liability position, a clinical author and a licensed source — none of which exist here. The same instinct as the 2026-08-11 refusal to import BDDrugBank's text-mined interaction edges.</reason>
+</decision>
+
+<decision>
+  <category>Business_Logic</category>
+  <context>The pad needed to fill the left column too, but the 2026-08-11 "no learning from consultations" decision rules out deriving anything from what the doctor prescribes or diagnoses.</context>
+  <action>Fill only from data the chamber already holds and can point at: H/O seeded from the patient's stored conditions/medicines, last visit offered as explicit one-tap chips (Same medicines / Dx / Inv / advice), C/C from a fixed chip list. **Vitals are never pre-filled** — last visit's weight and BP appear as grey reference beside the boxes instead. "Save as my default" (★ on a row) writes through the existing `saveDoctorMedicine()` into My medicines.</action>
+  <reason>Every one of these is data the doctor can see the source of and correct, which is what separates it from inference. Vitals are the exception because they are a measurement taken today: carrying a number forward would put a reading the doctor never took onto a document he signs. The ★ keeps My medicines the single visible, editable home of a doctor's shortlist — it adds a door, not a second writer.</reason>
+</decision>
+
+## 2026-08-12T01:59:32+0600
+<decision>
+  <category>UI/UX</category>
+  <context>C/C started as chips appending into one textarea, with one shared duration on the whole line. That is not how ZilSoft-style pads work, and it made Fever for 3 days and Cough for 1 week awkward (and briefly buggy when duration was attached).</context>
+  <action>C/C on the desktop Rx desk is now a row list: each chip adds a complaint row with its own duration chips; a second tap on the same complaint is a no-op; free text still works via an Enter line. Stored as plain text, one complaint per line (`Fever — 3 days`), via ComplaintChips::format/parse so print and the phone modal need no schema change.</action>
+  <reason>Matches the paper/ZilSoft mental model doctors already know — one complaint, one duration — without inventing a new database table for a text field that print already shows.</reason>
+</decision>
+
+## 2026-08-12T02:12:16+0600
+<decision>
+  <category>UI/UX</category>
+  <context>The live Rx desk worked but looked busier and less paper-like than the Option B mockup the owner preferred — stacked chips, vitals in the sticky bar, one Save button, and Investigations as a textarea.</context>
+  <action>Restyle the desktop pad toward the mockup: sticky bar actions become Preview / Save & print / Save only / Complete visit; C/C is a mini-table with duration dropdowns; H/O uses on/off toggles; O/E is a vitals table including Pulse and SpO₂ (new nullable columns); Inv is a clean list with a chip picker. saveRxDesk returns the print URL so Preview and Save & print can open it in one trip.</action>
+  <reason>Doctors already know that paper/ZilSoft layout; matching it makes the product feel familiar without changing clinical rules (vitals still never auto-fill; packs and presets still explicit taps).</reason>
+</decision>
+
+## 2026-08-12T12:51:30+0600
+
+<decision>
+  <category>Business_Logic</category>
+  <context>Follow-up dates were captured on visit records but patients were never reminded. Owner chose 3 days before, message template B, SMS auto-send when the doctor's follow-up SMS toggle is on, and WhatsApp as a staff-confirm queue (never auto-send). Letterhead upload was explicitly declined.</context>
+  <action>`Doctor::NOTIFY_FOLLOW_UP` with defaults SMS on / WhatsApp off. `follow-ups:send-reminders` runs daily; `FollowUpReminderService` finds visits with `follow_up_date` = today + 3, auto-SMS through `SmsService` (1 credit, idempotent via `follow_up_reminder_sms_sent_at`), queues WhatsApp rows and notifies staff (or admin/doctor if no staff). **Operations → Follow-up reminders** lists pending WhatsApp confirms. Allergy and duplicate-generic checks on the Rx pad warn only — never block save.</action>
+  <reason>Matches how chambers actually work: SMS can run unattended; WhatsApp stays human-tapped like every other outbound channel here. Warn-only safety respects that a doctor may override with good reason.</reason>
+</decision>
+
+## 2026-08-12T13:09:34+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Operational Reports filter bar felt sparse (dropdown + date floating left, period text stranded on the right), and the status breakdown used cramped Filament badges that did not match the KPI cards above.</context>
+ <action>Polish only those two blocks in `operational-reports.blade.php`: replace Period select with Day/Week/Month segmented tabs plus a tinted "Showing" summary chip for the resolved date range; restyle status chips as mini KPI cards (icon, label, large number, left accent) with a 7-up desktop grid. Extended `getStatusMeta()` with accent CSS variables. KPI row and day/week/month tables unchanged.</action>
+ <reason>Staff glance the same numbers faster — period choice is one tap, and status counts now scan like the headline cards — without changing report logic or duplicating totals.</reason>
+</decision>
+
+## 2026-08-12T13:12:00+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>After polishing filters and status chips, the four KPI cards and the Status breakdown still sat as two separate white boxes — same day story told twice with a gap between them.</context>
+ <action>Merged KPIs and status chips into one `ops-summary` panel: headline cards on top, a light divider, then Status breakdown underneath. Numbers and report logic unchanged.</action>
+ <reason>One glance answers “how was the day?” then “where did each booking land?” without jumping between two modules.</reason>
+</decision>
+
+## 2026-08-12T13:20:29+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Stacking four KPI cards above a seven-chip Status breakdown still felt like two modules, and Completed appeared twice.</context>
+ <action>Replace both blocks with one 3×3 grid: Total bookings, Completed, Still in queue, Waiting, Called, In chamber, Skipped, No-show, Cancelled. Dropped the Needs attention card and Status breakdown heading. Scoped `.ops-grid` CSS (phone 1-col, tablet 2-col, desktop 3×3); removed the Operational Reports `card-grid.css` link.</action>
+ <reason>Nine cells, each number once — staff see the day as one picture. Queue and problem detail are visible without a second section repeating Completed.</reason>
+</decision>
+
+## 2026-08-12T13:25:02+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Called, In chamber, and Skipped on the Operational Reports headline grid were mid-flow / niche outcomes; Still in queue already covers the live ones, and staff did not need three extra cards to judge the day.</context>
+ <action>Remove those three from the summary grid. Grid is now Total, Completed, Still in queue, Waiting, No-show, Cancelled (3×2 on desktop). Week/month breakdown tables and the day booking list still show full statuses including called / in_chamber / skipped.</action>
+ <reason>End-of-day glance should answer booked / finished / still here / waiting / no-show / cancelled — not duplicate Live Queue Control states.</reason>
+</decision>
+
+## 2026-08-12T13:37:00+0600
+<decision>
+  <category>Business_Logic</category>
+  <context>Competitors advertise drug-clash warnings and we have none. Before costing one, two questions had to be answered: which interaction database is usable, and whether our own drug names can be matched to any of them. **Correction to earlier advice in the same conversation: DDInter 2.0 was twice recommended here as the free option with severity grading. Its licence is CC BY-NC-SA 4.0 — the NonCommercial clause rules it out for a product that is sold, and ShareAlike would force any derivative to carry the same terms.** The owner also pushed back on every option initially offered on the grounds that they were all American, which turned out to be correct in a measurable way rather than only a cultural one.</context>
+  <action>Built `drugs:coverage-report` — a read-only measurement, not a feature — and ran it over all 24,486 catalogue rows. It splits combination generics, strips salt words, applies a small alias map for British spellings, and resolves each ingredient against RxNorm. Result: **92.9% of rows fully checkable**, 1.6% partly, 5.5% not at all. Of the misses, 1,190 rows are devices, supplements and ORS that cannot interact; **906 rows (3.7%) are real medicines with no RxNorm entry under any spelling** — doxophylline, rupatadine, bilastine, mirogabalin, roxadustat, cilnidipine, favipiravir, dexibuprofen, omarigliptin. No interaction feature was built.</action>
+  <reason>The failure mode decides the design: an unmatched drug produces no warning, and a doctor seeing no warning concludes there is nothing to worry about — so a checker that silently skips drugs is worse than none, because it replaces the doctor's own caution with false confidence. 92.9% is workable but only with the screen stating what it could **not** check. The 3.7% blind spot is structural rather than a cleaning task: those drugs are not FDA-approved, are ordinary prescriptions in a Bangladeshi chamber, and will be missing from any US-derived database. That is the evidence for anchoring future content on the Bangladesh National Formulary and a short doctor-approved pair list rather than a bulk Western import — which would under-warn precisely on the drugs that distinguish this market. Cheap spelling fixes were worth making (`levofloxacin hemihydrate`, `clopidogrel bisulphate`, `b12`, `guaiphenasine` all resolve once normalised, +1.5 points); guessing at the rest was not.</reason>
+</decision>
+
+<decision>
+  <category>Code</category>
+  <context>`ac` and `pc` — the two Latin abbreviations doctors actually type — were mapped backwards in both `App\Support\PrescriptionTiming::shorthand()` and the Alpine `timingShorthand` map in `rx-desk.blade.php`. `ac` (ante cibum, before food) produced "After food" and `pc` (post cibum, after food) produced "Before food". Found while auditing competitor gaps, not by a test.</context>
+  <action>Recorded here as an open defect. Not yet fixed at the time of writing — flagged to the owner as the first thing to correct.</action>
+</decision>
+
+## 2026-08-12T13:40:40+0600
+<decision>
+  <category>CRO</category>
+  <context>Belle Vue Maestro proposals (Dr. Shamim Ahmed, Dr. Sharfuddin Mahmood) were 11 pages — too long for doctors who only skim on WhatsApp. Owner locked cover (page 1), full competitor comparison, and investment + close as must-keep; allowed tightening price/close copy. Hard ceiling: 6 pages max.</context>
+  <action>Collapsed old pages 2–8 into two middle pages in both `Dr-Shamim-Ahmed-ChamberQ-Proposal` and `Dr-Sharfuddin-Mahmood-ChamberQ-Proposal` (HTML + MD + regenerated PDF via `print-doctor-proposals.sh`). New map: (1) cover unchanged, (2) “Your chamber with ChamberQ” — short intro + five outcomes, (3) “A day at your chamber” — patient path + desk loop + Rx home + soft-launch line, (4) comparison unchanged, (5) investment tightened (price-first, 4 bullets, one-line SMS), (6) close tightened (3-step go-live, WhatsApp → walkthrough → lock sittings). Dropped mid-doc letter sign-off, patient story essay, desk/consult table, setup checklist, and separate “kept simple” page.</action>
+  <reason>Busy doctors glance; 11 pages read as a brochure. Cover + comparison + price + WhatsApp close carry the sale; the long walkthrough belongs in the Maestro slide deck and live demo, not the leave-behind PDF.</reason>
+</decision>
+
+## 2026-08-12T13:45:14+0600
+<decision>
+  <category>Business_Logic</category>
+  <context>The duplicate-generic and allergy checks exist twice: `App\Support\RxSafety` (covered by `RxSafetyTest`, reached from the phone modal through `rx-safety-warnings.blade.php`) and a hand-written Alpine copy in `rx-desk.blade.php::safetyWarnings()` that no test exercises. The desktop pad — the surface a doctor actually uses at a desk — ran only the untested copy, and `ConsultScreen::saveRxDesk()` never re-checked. The two already disagree: the PHP version `break`s at the first allergy token matching a medicine while the JavaScript reports every matching token, and the duplicate-generic rule dedupes raw names in PHP and normalised names in JavaScript. Both differences are cosmetic today, which is precisely how a real gap would start.</context>
+  <action>`saveRxDesk()` now calls `RxSafety::allWarnings()` on the submitted payload and raises a persistent warning notification listing anything found. The Alpine copy is untouched — it still gives instant feedback with no round trip, which is why it exists — but the server is now authoritative at the one point every desk save passes through. `DesktopRxPadTest::test_the_server_re_checks_rx_safety_even_if_the_pad_sends_a_clashing_prescription` calls the Livewire method directly, bypassing the client checks entirely, and asserts the duplicate-generic rule still fires.</action>
+  <reason>Two implementations of one clinical rule cannot be kept in step by convention — `CLAUDE.md` says to put the guard where the code converges, and `bug_history.md` already records three cases in this repo where two plausible-looking spellings of the same wiring silently disagreed. Re-checking server-side means a change to the JavaScript, a client-side error, or a hand-crafted payload cannot remove a warning, without giving up the responsiveness the pad was built for. It warns **after** the save and never blocks: a doctor may have a good reason to prescribe two brands of one generic, and notes have never been allowed to hold up the queue. The warning is `persistent()` because a safety note that fades in four seconds while the doctor is looking at the patient has not been delivered.</reason>
+</decision>
+
+## 2026-08-12T14:04:53+0600
+<decision>
+  <category>Business_Logic</category>
+  <context>Step 2 of the approved interaction plan, after `drugs:coverage-report` measured 92.9% of the catalogue as checkable. The available databases were all unusable or unsuitable: DDInter is non-commercial, FDB/Medi-Span/DrugBank are five figures a year and sold through sales calls, and the measurement showed 3.7% of our catalogue — doxophylline, bilastine, rupatadine, cilnidipine, roxadustat and others — has no entry in any US-derived vocabulary at all, so an import would have gone silent on precisely the drugs that distinguish this market.</context>
+  <action>A hand-built list instead: `data/build-drug-interactions.py` expands 22 clinical rules into **221 explicit ingredient pairs**, restricted to drugs verified present in the catalogue (49 of 50 candidates). Stored in `drug_interactions` with severity `avoid` or `serious`, effect, action and mechanism, keyed alphabetically so lookup ignores typing order. `RxSafety::interactionWarnings()` matches on ingredients via the new shared `App\Support\DrugIngredients`, which splits combination generics and strips salts — so `Warfarin Sodium` + `Diclofenac Sodium` still meets the `warfarin`/`diclofenac` pair. Warn only; never blocks save. Both entry points get it: the modal renders `RxSafety` directly, and `saveRxDesk()` re-runs it server-side.</action>
+  <reason>Explicit pairs rather than class rules because a doctor reviewing this reads lines, not logic. 221 rows expanded from 22 rules is what a reviewer actually has to judge — 22 decisions, not 221. `RxSafety::uncheckedMedicines()` exists because the failure mode is the whole point: a line with no generic name produces no warning, and silence would let a doctor read "no warning" as "checked and clear" for a drug never examined, so those lines are named as plainly as the clashes. A combination product whose two ingredients both appear in one pair is skipped — that is one product, not two drugs prescribed together. Metformin + iodinated contrast was dropped despite being a real interaction: contrast is given in radiology, never written on a chamber prescription, so it could only pad a list someone has to read.</reason>
+</decision>
+
+<decision>
+  <category>Business_Logic</category>
+  <context>The pair list is clinical content generated from general pharmacology by an AI agent, not taken from a licensed clinical database. The approved plan required a named doctor to sign it off before it is relied on. The owner asked to proceed with the build.</context>
+  <action>Built and shipped, warning doctors from the moment it loads — but `drug_interactions.reviewed_at` and `reviewed_by` are NULL for all 221 rows, `DrugInteraction::isReviewed()` reports that state, and `interactions:load` prints "This list is a DRAFT. It warns doctors but has not been clinically approved" on every single run.</action>
+  <reason>The sign-off requirement is carried as data and as a loud message rather than quietly dropped, because the alternative — shipping clinical warnings that look authoritative with nothing behind them — is the thing the plan was written to prevent. A draft warning about warfarin and ibuprofen is still worth showing, so the list is not disabled; but nothing in the product should describe this as clinically approved until a name is recorded against it. Whoever reviews it should check the 22 rules in `data/build-drug-interactions.py`, not the 221 generated rows.</reason>
+</decision>
+
+## 2026-08-12T14:12:07+0600
+<decision>
+  <category>Business_Logic</category>
+  <context>**Supersedes the sign-off decision appended earlier the same day.** That entry held `drug_interactions.reviewed_at` / `reviewed_by` NULL and had `interactions:load` demand a named doctor before the pair list could be relied on. The owner ruled it out flatly: no doctor's name is to be used anywhere in the product, at any time.</context>
+  <action>`reviewed_by` dropped by migration and removed from `DrugInteraction`; `isReviewed()` now answers only "has this been checked", never by whom. `reviewed_at` survives without a name. In its place, `RxSafety::DISCLAIMER` — "Reference only, and not a complete list — use your own judgement" — renders beside every warning on **both** surfaces, the Blade partial the modal uses and the Alpine block on the desktop pad, and is included in the server-side notification from `saveRxDesk()`. `RxSafetyTest::test_every_surface_that_shows_a_warning_also_shows_the_disclaimer` fails if either display stops showing it. `interactions:load` now states plainly that this is a reference list rather than a licensed clinical database, and that every warning must carry the disclaimer.</action>
+  <reason>The owner's position is sound on its own terms, and stronger than what it replaced. Naming one clinician makes that individual personally answerable for a list the practice ships and profits from; no drug reference works that way — the publisher carries it, not a named reviewer. And the practical effect is better: a name in a column nobody reads protected nobody, while a line the doctor sees on every warning does the actual work of saying how much weight to give it. What must not be lost is the honesty the signature was standing in for — this list is compiled from general pharmacology, has had no clinical review, and is knowingly incomplete (221 pairs, and 3.7% of the catalogue is drugs absent from every vocabulary we could check). The disclaimer is now the only thing keeping the product's claim matched to its backing, which is why it is enforced by a test rather than left to whoever edits the templates next. Anyone adding a third place that shows warnings must extend that test.</reason>
+</decision>
+
+## 2026-08-12T14:27:41+0600
+<decision>
+  <category>UI/UX</category>
+  <context>The amber "patients today without notes" banner on Consult Screen interrupted the doctor mid-patient — the same screen where they write prescriptions and complete visits. The product plan (`patient-records-plan.md`) always said catch-up belongs at end of session, not during a consult.</context>
+  <action>Removed the catch-up banner and its Fill-in-now modal actions from Consult Screen. Moved the same banner and patient-list flow to Live Queue Control (top of page, doctors only). End-session toasts now point at **Fill in now** on that page instead of "open Consult Screen".</action>
+  <reason>Consult Screen is the exam desk; Live Queue Control is the front-desk wrap-up board where staff already end the session. One reminder in the right place beats a distraction while a patient is in the chair.</reason>
+</decision>
+
+## 2026-08-12T15:07:10+0600
+<decision>
+  <category>UI/UX</category>
+  <context>The Rx desk let a doctor name and save the current prescription as a reusable pack, and that was the **only** place packs could be created — nothing else in the app touched `prescription_templates`. The owner ruled it out: doctors will not add or change packs from the consult screen. Separately, "+ Add medicine" sat beside the shorthand typing box rather than under the medicine table.</context>
+  <action>Pack creation, editing and deletion moved to **My medicines** (`createPackAction` / `editPackAction` / `deletePackAction` + a packs section in the page view), reusing `PrescriptionTemplateService` unchanged. The desk keeps the Packs chips and `applyPack()` and lost the naming box, `savePack()` and `ConsultScreen::saveRxPack()`. "+ Add medicine" is now a full-width dashed button beneath the table. `DesktopRxPadTest::test_the_consult_screen_applies_packs_but_cannot_create_them` asserts the creation path cannot come back.</action>
+  <reason>Assembling and naming a set of medicines is preparation; doing it with a patient in the chair is admin work interrupting clinical work, and the consult screen is the one place in the product where every second is in front of someone. My medicines was already the doctor's curation surface — `decisions.md` calls it "the one sanctioned writer of a doctor's shortlist" — so packs belong beside it rather than on a second, competing editing surface. Removing creation without providing it elsewhere would have left packs applicable but unmakeable, so the move had to happen in the same change. The button moved because it continues the list, so it belongs where the list ends rather than competing with the typing box for the same row.</reason>
+</decision>
+
+<decision>
+  <category>Code</category>
+  <context>Two defects surfaced only because the pack move was covered by tests, and both would have shipped silently. `PrescriptionTemplateService::save()` matches a pack by name, so editing one and changing its name wrote a *second* pack and left the original. And the pack list is exposed as a Livewire computed property, which Livewire caches for the whole request, so a pack just created re-rendered from the list captured before the write.</context>
+  <action>`editPackAction()` deletes the original row when the name changed. Every pack write calls `MyMedicines::forgetPacks()`, mirroring `ConsultScreen::forgetQueueState()`. Both are covered: `test_renaming_a_pack_does_not_leave_the_old_one_behind` and `test_a_pack_can_be_created_here_and_shows_on_the_page`. The pack repeater also starts at `defaultItems(0)` — the medicine field is required, so a pre-seeded blank row made the form refuse to save until the doctor filled or deleted it.</action>
+  <reason>All three fail quietly rather than loudly, which is what makes them worth recording. A duplicate pack looks like the doctor's own mistake and is only noticed once there are six of them and nobody can tell which one the desk is offering. A save that appears to do nothing teaches a doctor the feature is broken and they stop using it. A required blank row reads as the form being wrong rather than the row being empty. None would have been found by using the page casually.</reason>
+</decision>
+
+## 2026-08-12T15:17:03+0600
 <decision>
   <category>UI/UX</category>
   <context>Staff needed to tell waiting patients the doctor was running late, but Mark Late lived only under Live Queue Control → Session actions. That felt like they had to start the queue first, even though Mark Late actually works before Start.</context>
@@ -1524,20 +1691,76 @@
   <reason>Daily Roster is where staff already look in the morning (walk-ins, who is booked). Putting Mark Late there matches "doctor called — stuck in traffic" without opening the queue runner screen. One service path keeps outdoor screen, ticket delay banner, and SMS behaviour identical from either door.</reason>
 </decision>
 
-## 2026-08-13T01:16:27+0600
+## 2026-08-12T15:26:35+0600
 <decision>
-  <category>Business_Logic</category>
-  <context>Owner unlocked cross-chamber patient sharing after reviewing Singapore (opt-out national file) vs India (opt-in consent). Patients are expected to agree in almost all cases; a new phone currently creates a disconnected patient file with no staff prompt. The previous rule was that records stay inside one practice and other ChamberQ doctors never see individual clinical data.</context>
-  <action>Override the practice-only records rule for ChamberQ-to-ChamberQ clinical continuity. On booking, add a checkbox (default ON): patient opts to share their details with other ChamberQ doctors — scope is everyone on the platform (any ChamberQ chamber/doctor the patient later visits), not limited to the same clinic. Sharing is consent-gated by that checkbox (can be unticked), not silent. Super Admin / marketers still do not browse individual patient files; Research data stays counts-only. Signup/privacy copy (including patient-records-plan Appendix B “records belong to your practice”) must be rewritten before this ships to patients. Exact shared payload (basic demographics vs full visit notes/Rx) and the cross-tenant identity model are implementation follow-ups — default intent is clinical continuity for treating doctors, not a public directory.</action>
-  <reason>Owner explicit unlock (“unlock it. share with everyone”) after confirming default-ticked booking consent matches real chamber behaviour (patients almost always say yes). India-style one-tap consent is preferred over Singapore-style silent national open access; “everyone” means any ChamberQ treating doctor, not platform staff. Continuity across chambers and SIM changes is a product bet the owner is willing to take against the earlier practice-silo promise.</reason>
+  <category>UI/UX</category>
+  <context>Owner asked for the waiting-room queue to call the patient's name as well as the serial. Names cannot be pre-recorded like `number-N.wav`, and prior bugs forbade browser SpeechSynthesis for the serial (ghost voice). Owner said try it anyway — English or Bangla reading does not matter.</context>
+  <action>Keep Karen WAVs for the serial. After each of the three number passes on the outdoor screen, speak `now_serving_name` via browser `speechSynthesis` (`speakName()`), gated on the same sound-unlock / mute / `announceSequence` cut as the WAV loop. Live Queue Control plays the number WAV then the name once. Locale still follows `call_announce_locale` (bn-BD / en-US) with best-effort voice pick; missing Bangla voices fall back to English. Serial must never fall back to TTS.</action>
+  <reason>A try-it path that ships today without API keys or a name-recording workflow. The ghost-voice complaint was about hollow *number* speech; names are short and variable, so quality is "good enough to try" rather than settled. If chambers hate the name voice, replace with check-in name recording or cloud TTS without touching the Karen serial path.</reason>
 </decision>
 
-## 2026-08-13T01:29:48+0600
+## 2026-08-12T15:38:21+0600
 <decision>
   <category>Business_Logic</category>
-  <context>Owner chose Option B for cross-chamber share payload after unlocking ChamberQ-to-ChamberQ clinical continuity.</context>
-  <action>Shared payload is the full clinical file: demographics, allergies/conditions/medicines on the patient row, visit notes (including C/C, H/O, O/E, diagnosis, vitals, advice, tests), and prescriptions/medicine lines. Voice notes and prescription photos are never shared across chambers. Identity for v1 is normalized phone + normalized name. Booking checkbox defaults ON; untick revokes on that patient row. Consult Screen may show other chambers’ visits only when the current patient’s share flag is true and matching remote patients also have share on. Index + short TTL cache required so the Consult Screen 3s poll does not re-query every tick.</action>
-  <reason>Owner selected full-file continuity over a basic safety pack; excluding media keeps cross-tenant URLs and private disk objects out of foreign chambers while still giving the treating doctor the paper-folder equivalent.</reason>
+  <context>The owner's complaint about the Rx desk was about typing, not looks: full medicine name by hand, then dose, then frequency, then duration, then timing, with dose chips that showed the same five numbers for every drug — "who makes 5 mg NAPA?". Two of the three causes were defects rather than design: the desk carried a hardcoded dose list, and it had no input for the per-medicine Reason (`indication`) that the phone modal and the printed script have always had.</context>
+  <action>`MedicineService::doseOptionsForBrand()` becomes the one lookup for a brand's strengths; `VisitNotesFormSchema::doseOptionsForBrand()` now delegates to it and only adds the "Other" escape, and the desk reads it over a new `GET /api/medicines/doses` — on picking a medicine and again when the dose cell is focused, cached per brand, because a row reopened from a saved prescription never ran a search. Chips show the form in the label (`500 mg tablet`) and write the bare strength. A brand with no catalogue row shows no chips. `pickMedicine()` also fills the single strength when a brand ships only one. Reason is now an inline input under the brand on each desk row, never pre-filled.</action>
+  <reason>The catalogue already knew every strength each brand ships in — the desk was the only place guessing, and guessing wrongly in both directions at once, offering doses that do not exist while hiding the paediatric syrup. Chips fetched on focus rather than bundled with search results is what makes them work on a reopened prescription, which is the case a doctor hits when a patient comes back. Reason is deliberately left blank rather than seeded from the catalogue's `indications` column: that column holds a drug-class hint and sometimes marketing prose ("Maxpro is indicated: To relieve from chronic heartburn…"), and pre-filling it would put text the doctor did not write onto a document he signs — the same rule that keeps vitals from carrying forward.</reason>
+</decision>
+
+## 2026-08-12T15:47:16+0600
+<decision>
+  <category>UI/UX</category>
+  <context>Two complaints about the Rx desk, both about it behaving like two screens rather than one: the doctor saw two Complete visit buttons, and Preview threw him into a separate tab while a patient was sitting in front of him.</context>
+  <action>Hide the Filament page header actions at ≥1024px whenever the desk is on screen, leaving the desk's own sticky bar as the single copy. Preview now saves and mounts `previewPrescriptionAction()`, a modal that loads the real `prescriptions.print` route in an iframe with a Print button inside it; Save & print still opens a tab, because that action is explicitly handing the page to the browser's print dialog.</action>
+  <reason>The desk bar keeps Complete visit because it stands beside Preview / Save & print / Save only, which is the order the doctor actually works in — the header copy is the orphan. Framing the print route rather than re-rendering a summary means the preview is the printed script rather than an approximation of it: a second rendering path would be a second thing to keep in step, which this codebase has repeatedly failed to do. The URL is built on the server rather than passed from the pad so nothing the browser says decides what gets framed.</reason>
+</decision>
+
+## 2026-08-12T16:01:00+0600
+<decision>
+  <category>UI/UX</category>
+  <context>Screenshots of the desk showed the pad opening as headings over nothing, a grey slab under those headings, a red-looking focus ring on the typing box, and `napa` + Enter producing an empty NAPA line. Together they made the fastest path through the pad the least helpful one.</context>
+  <action>The typing box now searches the catalogue as you type (same `/api/medicines/search` the Brand cell uses), with arrow-key navigation and Enter to take the highlighted suggestion. Enter on a bare name prefills only from an exact brand match; anything else must be picked from the list. Prefill logic is shared with the Brand cell through `applyPrefill()` and `fillOnlyStrength()`. The pad opens with one blank row, which the new medicine replaces rather than stacking above. Desk inputs get an explicit primary focus ring, and the table scrollbar is thin.</action>
+  <reason>Two doors onto the same pad should carry the same knowledge; the shortcut being dumber than the long way is what made the desk feel worse than the phone form. Exact-match-only on Enter is the safety line — a prescription is signed, and `nap` resolving to NAPA EXTRA is a different drug, so the near-miss case is pushed onto the suggestion list where the doctor sees what he is choosing. The blank opening row is what the paper pad does; it is furniture only, and both the client payload and `VisitRecordService` drop it if untouched.</reason>
+</decision>
+
+## 2026-08-12T16:08:33+0600
+<decision>
+  <category>UI/UX</category>
+  <context>Owner screenshots showed typing ENTI / na / Nap with no dropdown, and ENTASID with an empty dose cell — so the previous "suggestions work" claim looked like nothing had changed.</context>
+  <action>Stop clipping: table wrap `overflow: visible`, brand suggestions absolutely positioned with a shadow. Medicine API URLs relative to the current host. Tabbing out of a typed exact brand name now runs the same catalogue prefill as picking a row. ENTASID-style freehand names that are not in the catalogue still get no dose chips — that is correct, not a blank UI bug.</action>
+  <reason>A search that runs but cannot be seen is worse than no search: the doctor invents workarounds (typing the full name) that then also skip prefill. Clipping was a CSS rule interaction, not missing data — NAPA and ENTIFLOX were in the catalogue the whole time.</reason>
+</decision>
+
+## 2026-08-12T16:17:49+0600
+<decision>
+  <category>Code</category>
+  <context>Owner browser console showed repeated 404s for /api/medicines/search on 127.0.0.1:8000 — the reason suggestions never appeared locally.</context>
+  <action>Wire the desk medicine search, dose, and condition URLs through tenant_web_url(), matching the voice-upload endpoint. Custom domains still get root paths; path tenants get /{slug}/api/….</action>
+  <reason>A relative /api/… looks portable but skips the tenant slug on central hosts. That failure mode is invisible on solo.localhost (domain tenancy) and only shows up on the path-tenant local workflow the owner actually uses.</reason>
+</decision>
+
+## 2026-08-12T16:46:44+0600
+<decision>
+  <category>Business_Logic</category>
+  <context>Owner asked what about frequency, duration and timing after search started working — the screenshot showed NAPA with 80 mg/ml filled and those three cells still empty, with frequency chips only appearing after a manual click.</context>
+  <action>Prefer the catalogue SKU that actually carries a starter pattern when collapsing a brand. Expose brand-level defaults on GET /api/medicines/doses. Desk backfills empty frequency/duration/timing from that on pick and when a dose chip is tapped. Timing gains the same focus chips as frequency/duration.</action>
+  <reason>Choosing drops for a child must not erase the adult pattern the pad already knows — empty cells get the brand line, filled cells stay as typed. Chips remain the fast edit path; auto-fill is what stops the one-cell-at-a-time grind.</reason>
+</decision>
+
+## 2026-08-12T17:23:06+0600
+<decision>
+  <category>UI/UX</category>
+  <context>Owner screenshot showed NAPA / HISPASIN / RESERVIX with frequency and duration filled but Timing stuck on a dash, despite catalogue defaults carrying after_food / at_night.</context>
+  <action>Render Timing select options in Blade so they exist before Alpine writes the prefilled value. Keep on-focus chips as a fast tap path.</action>
+  <reason>Same data path as frequency — the wipe was a control bug, not missing defaults. Fixing the select avoids teaching doctors to re-tap Timing on every line.</reason>
+</decision>
+
+## 2026-08-12T18:00:31+0600
+<decision>
+  <category>UI/UX</category>
+  <context>Real Bangladeshi chamber pads put clinical notes on the left and medicines on the right under a letterhead; ChamberQ's printout was a top-to-bottom report that did not look like the paper doctors and pharmacists already trust. Separately, if staff forgot to send the SMS/WhatsApp prescription link, the patient had no backup — portal and ticket deliberately showed no clinical data.</context>
+  <action>Restyle doctor print and patient copy as one shared BD pad sheet (letterhead, patient band, left clinical / right Rx, chamber footer + bilingual "bring this prescription when you visit again"). Expand the patient copy to the full clinical pad (diagnosis, notes, Inv, meds, chamber; still no voice/photo). Override the Stage 4 portal ban: `/portal` lists up to 2 recent prescriptions with medicines and opens them via phone-gated `GET /portal/prescriptions/{id}?phone=` (durable, no 48h expiry). SMS `/p/{token}` stays as the send channel and still expires in 48h.</action>
+  <reason>Patients and pharmacists recognise the two-column pad; matching it reduces friction at the pharmacy counter. Portal access accepts that anyone who knows the phone can see those two prescriptions — the same gate bookings already used — in exchange for the patient still getting something when staff forget to tap Send.</reason>
 </decision>
 
 ## 2026-08-13T01:16:27+0600
@@ -1592,15 +1815,114 @@
 ## 2026-08-13T02:24:42+0600
 <decision>
   <category>UI/UX</category>
-  <context>The Date field + Change control duplicated the booking summary and competed with Your details.</context>
-  <action>Identity step order is appointment summary strip → **Your details** → fields. Removed the separate Date input.</action>
+  <context>The Date field + Change control duplicated the dark booking summary and competed with Your details.</context>
+  <action>Identity step order is summary strip → **Your details** → name/phone fields. Removed the Date input and Change button; patients use Back to pick another day.</action>
   <reason>One place shows the appointment; the heading sits with the fields it introduces.</reason>
 </decision>
 
-## 2026-08-13T10:15:17+0600
+## 2026-08-13T02:36:15+0600
+<decision>
+  <category>Business_Logic</category>
+  <context>Clients want to buy only a portfolio site, only queue, only prescription, or combinations — not always the full Solo/Clinic bundle. Solo vs Clinic remains the size tier (doctors/chambers/labs).</context>
+  <action>Three sellable product modules in `feature_flags` (default ON when absent): **Front door** (`front_door` — website + booking + Daily Roster day list; ticket shows sitting name + window, no come-around); **Live queue** (`live_queue` — outdoor TV, Call next, live ticket ETA/now serving); **Prescription** (`prescription` — consult/Rx). Super Admin checkboxes on tenant create/edit. Routes gated with `tenant.module:*`. Front-door-only roster gets Arrived / Done / No-show (no Call next). Booking confirmation SMS stays optional (credits + doctor toggle), not a module.</action>
+  <reason>Matches WhatsApp sales reality (many doctors only want a site + serials) while keeping Solo/Clinic for scale; defaults preserve existing full-product chambers.</reason>
+</decision>
+
+## 2026-08-13T02:39:04+0600
+<decision>
+  <category>Business_Logic</category>
+  <context>Module packages need clear Solo list prices so Super Admin snapshots and marketer commissions match what sales quotes on WhatsApp.</context>
+  <action>Solo à la carte in `config/marketing.php` `modules`: Front door ৳7,500 setup / ৳1,000 mo; Prescription ৳2,500 / ৳0; Live queue ৳7,500 / ৳2,000. All three = bundle ৳15,000 / ৳3,000 (setup discount vs ৳17,500 unit sum; monthly equals the sum). Partial combos sum unit prices. `PlanPricingService::listPricesForModules` / `listPricesForTenant` drive billing snapshots; Clinic tier still uses Clinic list price. Super Admin amount preview follows the module checkboxes.</action>
+  <reason>One source of truth for sales quotes, tenant due amounts, and partner commissions; Prescription as a cheap/no-monthly attach keeps Rx easy to add after Front door.</reason>
+</decision>
+
+## 2026-08-13T02:39:57+0600
+<decision>
+  <category>Business_Logic</category>
+  <context>Marketers need a clear script when a doctor asks for a feature or module in a meeting, phone call, or SMS — without inventing free timelines or surprise fees.</context>
+  <action>Policy for partners (logged in `docs/ChamberQ-Marketing-Playbook.md` + BN): capture the request and escalate; we try to include reasonable asks for free as soon as capacity allows; we always say whether it is possible; if it is out of budget we may charge extra and disclose the fee before work starts. Partners must not promise “free next week” without central confirmation.</action>
+  <reason>High-touch BD sales will always surface custom asks; a shared free-first / honest-fee policy protects trust and stops partners over-promising.</reason>
+</decision>
+
+## 2026-08-13T03:17:53+0600
+<decision>
+  <category>CRO</category>
+  <context>Rising Star overlapped Front door / module pricing and confused sales. Owner agreed the cleanest story is modules only, with Maestro as the full one-doctor bundle.</context>
+  <action>Retire **Rising Star** as a named plan. Marketing pricing shows two cards — **Maestro** (৳15,000 / ৳3,000, all three modules) and **Clinic** — plus a modules table under the cards (website, +Rx, +queue, all three = Maestro). Internal `plan_tier` `solo` unchanged. Playbook updated; no Rising Star card or brand on the homepage.</action>
+  <reason>One product language for marketers and buyers; à la carte stays a footnote, not a competing lite brand.</reason>
+</decision>
+
+## 2026-08-13T02:42:37+0600
 <decision>
   <category>UI/UX</category>
-  <context>Patients need an obvious way to change the day without a second date field, and Phone should come before Name. The Change booking date control on the summary strip fought the dark receipt look.</context>
-  <action>Dark summary strip (doctor / day / session / chamber) first, then **Your details** with **Phone** then **Name**. Footer: **Change booking date** (same style as the old Back button) beside **Confirm Booking** — no Back on this step, no Change link on the strip.</action>
-  <reason>Matches how patients think (number first), keeps the summary clean, and puts Change booking date where Back used to be.</reason>
+  <context>Patients still need an obvious way to pick another day after the Date field was removed.</context>
+  <action>Put a **Change date** text control on the dark booking summary strip (not a second date input). Your details stays below.</action>
+  <reason>Keeps one summary of the appointment while restoring the familiar Change date label.</reason>
+</decision>
+
+## 2026-08-13T10:08:50+0600
+<decision>
+  <category>Code</category>
+  <context>The repo was marked "pre-production" on 2026-08-08. It is now live-ready, and the gap that kept showing up was verification: agents (including this one) repeatedly reported work "done" on a green SQLite run, while production is MySQL. SQLite hides exactly the failures this codebase has already been bitten by — foreign-key ordering, `ONLY_FULL_GROUP_BY`, datetimes in date columns, and uncontended row locks.</context>
+  <action>`CLAUDE.md` now states the project is live and requires a production-shaped run: any change touching migrations, foreign keys, transactions, row locking, date columns or `GROUP BY` must pass against local MySQL (exact command documented in `CLAUDE.md`) and the report must name the engine(s) it passed on, finishing with `app:production-check --strict`. Separately, `~/AGENTS.md` §3 gained the general discipline: record the pre-existing failures before starting, watch every new regression test fail without its fix, and confirm a revert actually reverted before trusting a "still passes" result.</action>
+  <reason>A local MySQL server is already running on this machine, so "I could only test on SQLite" was never a real constraint — just an unstated default. Making the engine explicit in the report is what turns a green tick into evidence. The `~/AGENTS.md` half is deliberately generic because those three habits are not ChamberQ-specific; the MySQL specifics stay here, next to the MySQL CI job.</reason>
+</decision>
+
+## 2026-08-13T10:20:51+0600
+<decision>
+  <category>Business_Logic</category>
+  <context>Doctors still take cash at the desk. They also spend money the same day (rent, tea, salary). Competitors show a billing tick; ChamberQ had none. This is not online booking payment.</context>
+  <action>Desk khata: income and expense in `chamber_cash_entries`. Daily Roster Collect fee records one income row per booking (default from the doctor's `default_fee_taka` plus labs; cash/bKash/Nagad/card at the desk; waive allowed). Cashbook Add expense / Add income for everything else. Day/week/month totals: income, expense, net. Patients still pay at the chamber — no payment gateway on booking.</action>
+  <reason>Like the red exercise book at the counter: money in and money out in one place. A fee-only tick would hide the day's real leftover. Online checkout stays locked until the owner asks.</reason>
+</decision>
+
+## 2026-08-13T10:23:15+0600
+<decision>
+  <category>Business_Logic</category>
+  <context>Bangladesh chambers lose internet during load shedding, and doctors also sit in rooms that barely have signal (camps, visiting days). A competitor ships offline-first. ChamberQ is a cloud Livewire app, so the pad used to hang on Save. A PC in every chamber would be a second product (updates, two-way sync, home booking dying with the box).</context>
+  <action>Same cloud app, with a travel bag on the laptop. Chamber outage: yellow banner; pad Save/Print queue in IndexedDB (`rx_save`) and print locally; Call next / walk-ins freeze — never replayed later. Visiting / camp: Pack bag on good internet, write a walk-in list (not Live Queue), print, upload `visiting_visit` when signal returns. SMS waits until upload. Sync is idempotent (`visit_records.offline_sync_id`). Queue mutations are not accepted offline.</action>
+  <reason>The patient in the chair still gets a printed pad. The TV and online booking stay in the cloud so patients at home can still book while the chamber line is down. A local server would lose that and own hardware support.</reason>
+</decision>
+
+## 2026-08-13T10:29:34+0600
+<decision>
+  <category>UI/UX</category>
+  <context>Cashbook only said how many fees were waived, not how many taka were left on the table. Staff need the money figure the way the red khata would show it.</context>
+  <action>A waived fee keeps the uncollected amount (what staff typed, or the doctor's default + labs if they left it blank). Category stays `waived`, so it is not income and not an expense. Cashbook shows a Waived ৳ card plus patient count. Daily Roster shows Waived ৳… on the row.</action>
+  <reason>Counting patients hides whether you waived ৳200 or ৳2,000. The amount is what was not taken; it must not shrink net cash in the drawer.</reason>
+</decision>
+
+## 2026-08-13T10:33:22+0600
+<decision>
+  <category>Business_Logic</category>
+  <context>Patients could only book on each doctor's own website (name + phone, no account). Finding another ChamberQ doctor meant hunting a separate site. The 2026-07-27 rule was "no patient login accounts."</context>
+  <action>Two booking doors. Door 1 unchanged: doctor's website, name + phone, no account. Door 2: central `/find` lists every Front door doctor who `acceptsBookings()`, and optional phone-OTP login (`patient` guard, `patient_accounts`) unlocks `/me` serials and `/me/history` across clinics. Booking never requires login. OTP SMS is ChamberQ-paid (not the doctor's wallet). Book from Find reuses `BookingService` via `/{slug}/book`. Share-clinical-history still gates *other doctors*; a logged-in patient always sees their own visits. Central `/` stays doctor sales (WhatsApp CTA) with Find / Patient login in the nav.</action>
+  <reason>Like a mall directory plus a membership locker: anyone can walk into a shop, and the card is only for people who want every receipt in one place. Overrides "no patient login" for Door 2 only.</reason>
+</decision>
+
+## 2026-08-13T10:38:47+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The homepage hero photo field was a paste-a-link box. Chamber staff do not keep Unsplash URLs; they have a photo on the phone or computer and expect a Choose file control, like attaching a picture in WhatsApp.</context>
+ <action>Hero Banner uses Filament FileUpload (Laravel's public disk, folder `webpage-hero/{tenant_id}/`). The saved value is a `/storage/…` path so the locked homepage templates still use it as the image source. A previously pasted https link still shows until staff upload a replacement. Clinical photos stay on the private disk; this is website chrome only.</action>
+ <reason>Laravel's default public disk plus Filament's image picker is the stock way to put a file on the website. A URL field made staff think they needed a web address first.</reason>
+</decision>
+
+## 2026-08-13T10:41:56+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Latest Educational Videos had an "upload" choice that still asked for a URL. Staff need to drop in a cover photo and a short file, like putting a poster and a clip on a notice board, while the homepage cards stay the same design.</context>
+ <action>The video block offers a cover-image FileUpload and, when Media is "upload", a video FileUpload (MP4/WebM/MOV, 20 MB) on the public disk. On save, the file path is copied to `video_url` so the existing cards still open the clip. YouTube/Facebook links stay available. Homepage markup is unchanged.</action>
+ <reason>The section already looked right; the missing piece was a real file picker. Changing the locked patient cards would have been a redesign, not a media fix.</reason>
+</decision>
+
+## 2026-08-13T10:46:29+0600
+
+<decision>
+ <category>Code</category>
+ <context>PHP 8.4+ warns when `tempnam()` cannot write Laravel's facade cache folder and drops the file in `/tmp`. Debug mode turns that warning into a red error page, so the Web Pages editor died the moment a facade was compiled. Livewire also had no temp folder for the new image/video uploads.</context>
+ <action>`RuntimeDirectories::ensure()` on app register creates the cache, session, view, Livewire tmp, and website-media folders at 0775. Livewire's temp upload cap matches the 20 MB video field. PHP-FPM upload limits are set in `public/.user.ini`.</action>
+ <reason>A chmod someone must remember will be forgotten. Creating the folders at boot is the same class of fix as putting GSM flattening inside `SmsService::send()`.</reason>
 </decision>
