@@ -118,6 +118,106 @@ class LiveSessionEndCleanupTest extends TestCase
         tenancy()->end();
     }
 
+    /**
+     * "Cancel session (doctor absent)" must behave exactly like "End session"
+     * for the patient already in the room, and must hand back who it turned
+     * away. It used to do neither: the mid-consult patient was recorded as
+     * cancelled — losing a visit that actually happened, along with any notes
+     * written during it — and nothing was returned, so nobody was told.
+     */
+    public function test_mark_absent_completes_the_mid_consult_patient_and_returns_who_it_cancelled(): void
+    {
+        $tenant = Tenant::create(['id' => 'mark-absent', 'plan_tier' => 'solo']);
+        tenancy()->initialize($tenant);
+
+        $chamber = Chamber::create(['name' => 'Main']);
+        $doctor = Doctor::create(['name' => 'Dr. Away']);
+        $schedule = ScheduleSession::create([
+            'chamber_id' => $chamber->id,
+            'doctor_id' => $doctor->id,
+            'day_of_week' => Carbon::today()->dayOfWeek,
+            'session_name' => 'Evening',
+            'start_time' => '18:00',
+            'end_time' => '21:00',
+            'slot_cap' => 10,
+        ]);
+
+        $today = Carbon::today()->toDateString();
+
+        $inChamber = Booking::create([
+            'bookable_type' => ScheduleSession::class,
+            'bookable_id' => $schedule->id,
+            'booking_date' => $today,
+            'patient_name' => 'Fatima In Chamber',
+            'patient_phone' => '01744444444',
+            'serial_number' => 1,
+            'status' => 'in_chamber',
+            'in_chamber_at' => now(),
+        ]);
+
+        $waiting = Booking::create([
+            'bookable_type' => ScheduleSession::class,
+            'bookable_id' => $schedule->id,
+            'booking_date' => $today,
+            'patient_name' => 'Waiting Patient',
+            'patient_phone' => '01722222222',
+            'serial_number' => 2,
+            'status' => 'waiting',
+        ]);
+
+        $called = Booking::create([
+            'bookable_type' => ScheduleSession::class,
+            'bookable_id' => $schedule->id,
+            'booking_date' => $today,
+            'patient_name' => 'Called Patient',
+            'patient_phone' => '01733333333',
+            'serial_number' => 3,
+            'status' => 'called',
+            'called_at' => now(),
+        ]);
+
+        $liveSession = LiveSession::create([
+            'schedule_session_id' => $schedule->id,
+            'session_date' => $today,
+            'status' => 'active',
+            'started_at' => now(),
+            'current_booking_id' => $inChamber->id,
+            'current_called_at' => now(),
+        ]);
+
+        $cancelled = app(LiveSessionService::class)->markAbsent($liveSession);
+
+        $this->assertEqualsCanonicalizing(
+            [$waiting->id, $called->id],
+            $cancelled->pluck('id')->all(),
+            'The patients turned away must be handed back so staff can notify them',
+        );
+        $this->assertNotContains($inChamber->id, $cancelled->pluck('id')->all());
+
+        $liveSession->refresh();
+        $inChamber->refresh();
+        $waiting->refresh();
+        $called->refresh();
+
+        $this->assertEquals(
+            'completed',
+            $inChamber->status,
+            'A consult that already happened must not be recorded as cancelled',
+        );
+        $this->assertNotNull($inChamber->completed_at);
+
+        $this->assertEquals('cancelled', $waiting->status);
+        $this->assertEquals('Doctor unavailable', $waiting->cancellation_reason);
+        $this->assertNotNull($waiting->cancelled_at);
+        $this->assertEquals('cancelled', $called->status);
+
+        $this->assertEquals('cancelled', $liveSession->status);
+        $this->assertNull($liveSession->current_booking_id);
+        $this->assertNull($liveSession->current_called_at);
+
+        tenancy()->end();
+    }
+
     public function test_tenant_call_audio_url_uses_preset_and_custom_path(): void
     {
         $tenant = Tenant::create([
@@ -196,7 +296,10 @@ class LiveSessionEndCleanupTest extends TestCase
             ->assertSee('ANNOUNCE_REPEATS = 3', escape: false)
             // A newer call must cut a sequence still repeating the old serial.
             ->assertSee('announceSequence', escape: false)
-            ->assertDontSee('speechSynthesis', escape: false);
+            // Serial stays on Karen WAVs; patient name uses browser TTS (try-it).
+            ->assertSee('speakName', escape: false)
+            ->assertSee('speechSynthesis', escape: false)
+            ->assertSee('now_serving_name', escape: false);
     }
 
     public function test_outdoor_screen_voice_only_omits_chime_element(): void

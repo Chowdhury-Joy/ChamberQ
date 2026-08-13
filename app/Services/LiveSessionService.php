@@ -506,24 +506,56 @@ class LiveSessionService
         return $bookings;
     }
 
+    /**
+     * Cancel the whole session because the doctor is not coming.
+     *
+     * Mirrors `endSession()` on purpose — same in-chamber rule, same return
+     * value. It did neither before: it cancelled every non-terminal booking
+     * *including* the patient who was `in_chamber`, so a consult that had
+     * actually happened (and any notes or prescription written during it) was
+     * recorded as a cancelled appointment; and it returned nothing, so the
+     * queue runner got no way to tell the people they had just turned away.
+     * This is the path where telling them matters most — the doctor is absent,
+     * so every one of them would otherwise travel to the chamber for nothing.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection<int, Booking> The bookings
+     *         this cancelled, for the caller's notification hand-off.
+     */
     public function markAbsent(LiveSession $liveSession, string $reason = 'Doctor unavailable')
     {
-        DB::transaction(function () use ($liveSession, $reason) {
+        return DB::transaction(function () use ($liveSession, $reason) {
             $liveSession = $this->lockSession($liveSession);
 
-            $liveSession->update([
-                'status' => 'cancelled',
-                'cancellation_reason' => $reason,
-                'completed_at' => now(),
-            ]);
+            // Captured before the update: once they are `cancelled` the same
+            // query no longer matches them.
+            $toCancel = $this->bookingsEndSessionWouldCancel($liveSession);
+
+            // Already with the doctor — the visit happened, so close it rather
+            // than cancelling it out from under them.
+            $liveSession->bookings()
+                ->where('status', 'in_chamber')
+                ->update([
+                    'status' => 'completed',
+                    'completed_at' => now(),
+                ]);
 
             $liveSession->bookings()
-                ->whereNotIn('status', ['completed', 'cancelled', 'no_show'])
+                ->whereNotIn('status', ['completed', 'cancelled', 'no_show', 'in_chamber'])
                 ->update([
                     'status' => 'cancelled',
                     'cancellation_reason' => $reason,
                     'cancelled_at' => now(),
                 ]);
+
+            $liveSession->update([
+                'status' => 'cancelled',
+                'cancellation_reason' => $reason,
+                'completed_at' => now(),
+                'current_booking_id' => null,
+                'current_called_at' => null,
+            ]);
+
+            return $toCancel;
         });
     }
 
