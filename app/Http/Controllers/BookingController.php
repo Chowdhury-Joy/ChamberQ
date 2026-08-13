@@ -93,7 +93,10 @@ class BookingController extends Controller
             'bookingClosedForBilling' => ! $acceptsBookings,
             // Session values (from the hero POST) win over query params, so a
             // deep link still works but PII never has to ride in the URL.
+            // Logged-in ChamberQ patient fills identity when empty. Hero session
+            // and query params still win so a typed name is not overwritten.
             'prefill' => array_merge(
+                $this->prefillFromPatientAccount(),
                 $this->prefillFrom($request),
                 (array) session('booking_prefill', []),
             ),
@@ -119,6 +122,32 @@ class BookingController extends Controller
                     break;
                 }
             }
+        }
+
+        return $prefill;
+    }
+
+    /**
+     * Identity from the optional ChamberQ patient login (same host, path tenancy).
+     *
+     * @return array<string, string>
+     */
+    private function prefillFromPatientAccount(): array
+    {
+        $account = auth('patient')->user();
+
+        if (! $account) {
+            return [];
+        }
+
+        $prefill = [];
+
+        if (filled($account->phone)) {
+            $prefill['phone'] = $account->normalizedPhone();
+        }
+
+        if (filled($account->name)) {
+            $prefill['name'] = (string) $account->name;
         }
 
         return $prefill;
@@ -394,15 +423,17 @@ class BookingController extends Controller
 
                 // Durable backup for the expiring /p/{token} link: up to two
                 // prescriptions that actually have medicines, newest first.
-                $prescriptions = Prescription::query()
-                    ->whereHas('items')
-                    ->whereHas('visitRecord.booking', function ($query) use ($variants) {
-                        $query->whereIn('patient_phone', $variants);
-                    })
-                    ->with(['items', 'visitRecord.booking', 'patient'])
-                    ->latest()
-                    ->take(self::PORTAL_PRESCRIPTION_LIMIT)
-                    ->get();
+                if (tenant()?->hasPrescription()) {
+                    $prescriptions = Prescription::query()
+                        ->whereHas('items')
+                        ->whereHas('visitRecord.booking', function ($query) use ($variants) {
+                            $query->whereIn('patient_phone', $variants);
+                        })
+                        ->with(['items', 'visitRecord.booking', 'patient'])
+                        ->latest()
+                        ->take(self::PORTAL_PRESCRIPTION_LIMIT)
+                        ->get();
+                }
             }
         }
 

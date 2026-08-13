@@ -1,0 +1,234 @@
+/* Patient Find / login / my serials — uses marketing tokens, not Filament. */
+body.pf {
+    padding-bottom: 2rem;
+}
+
+.pf-nav-links {
+    display: none;
+}
+
+.pf-nav-end {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-left: auto;
+}
+
+.pf-lang {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--mk-muted);
+    text-decoration: none;
+}
+
+.pf-logout button {
+    font: inherit;
+    font-size: 0.86rem;
+    font-weight: 600;
+    color: var(--mk-teal);
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+}
+
+.pf-main {
+    padding: 1.75rem 0 3rem;
+}
+
+.pf-hero {
+    margin-bottom: 1.5rem;
+}
+
+.pf-hero h1 {
+    margin: 0;
+    font-size: clamp(1.7rem, 1.2rem + 1.6vw, 2.4rem);
+    letter-spacing: -0.04em;
+    font-weight: 700;
+}
+
+.pf-hero p {
+    margin: 0.5rem 0 0;
+    color: var(--mk-muted);
+    max-width: 36rem;
+}
+
+.pf-narrow {
+    max-width: 28rem;
+}
+
+.pf-search {
+    display: grid;
+    gap: 0.75rem;
+    margin-bottom: 1.75rem;
+}
+
+@media (min-width: 720px) {
+    .pf-nav-links { display: flex; }
+    .pf-search {
+        grid-template-columns: 1fr minmax(10rem, 14rem) auto;
+        align-items: end;
+    }
+}
+
+.pf-search input,
+.pf-search select,
+.pf-form input {
+    width: 100%;
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--mk-line);
+    border-radius: 12px;
+    font: inherit;
+    background: #fff;
+}
+
+.pf-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+}
+
+.pf-empty {
+    color: var(--mk-muted);
+}
+
+.pf-card {
+    background: #fff;
+    border: 1px solid var(--mk-line);
+    border-radius: var(--mk-radius-card);
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.pf-card h2 {
+    margin: 0;
+    font-size: 1.15rem;
+    letter-spacing: -0.03em;
+}
+
+.pf-card-photo {
+    width: 4.5rem;
+    height: 4.5rem;
+    object-fit: cover;
+    border-radius: 50%;
+    margin-bottom: 0.5rem;
+}
+
+.pf-card-spec,
+.pf-card-qual,
+.pf-card-clinic,
+.pf-card-chamber,
+.pf-card-fee {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--mk-muted);
+}
+
+.pf-card-chamber span {
+    display: block;
+}
+
+.pf-card-cta {
+    margin-top: 0.9rem;
+    text-decoration: none;
+}
+
+.pf-panel {
+    max-width: 26rem;
+    background: #fff;
+    border: 1px solid var(--mk-line);
+    border-radius: var(--mk-radius-card);
+    padding: 1.5rem;
+}
+
+.pf-form {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.pf-form label {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.pf-error {
+    color: #b42318;
+    margin: 0 0 1rem;
+}
+
+.pf-flash {
+    background: var(--mk-teal-soft);
+    color: var(--mk-teal-deep);
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+}
+
+.pf-lead { margin: 0 0 0.75rem; color: var(--mk-muted); }
+
+.pf-resend {
+    margin-top: 1rem;
+}
+
+.pf-resend button {
+    font: inherit;
+    background: none;
+    border: 0;
+    color: var(--mk-teal);
+    font-weight: 600;
+    cursor: pointer;
+    padding: 0;
+}
+
+.pf-tabs {
+    display: flex;
+    gap: 1.25rem;
+    margin: 0 0 1.25rem;
+}
+
+.pf-tabs a {
+    text-decoration: none;
+    color: var(--mk-muted);
+    font-weight: 600;
+}
+
+.pf-tabs a.is-active { color: var(--mk-ink); }
+
+.pf-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: grid;
+    gap: 0.85rem;
+}
+
+.pf-list-card {
+    background: #fff;
+    border: 1px solid var(--mk-line);
+    border-radius: 16px;
+    padding: 1.1rem 1.2rem;
+}
+
+.pf-list-card h2 {
+    margin: 0.15rem 0;
+    font-size: 1.05rem;
+}
+
+.pf-list-kicker {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--mk-muted);
+}
+
+.pf-list-card a {
+    color: var(--mk-teal);
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.pf-meds { color: var(--mk-muted); font-size: 0.9rem; }

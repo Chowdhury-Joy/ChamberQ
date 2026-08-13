@@ -18,6 +18,10 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->prependToGroup('web', \App\Http\Middleware\InitializeTenancyForTenantHosts::class);
         // TEMPORARY diagnostic, no-ops unless AUTH_DEBUG=true. Remove with AuthDebugProvider.
         $middleware->appendToGroup('web', \App\Http\Middleware\SessionProbe::class);
+        $middleware->alias([
+            'tenant.module' => \App\Http\Middleware\EnsureTenantHasModule::class,
+            'patient.auth' => \App\Http\Middleware\AuthenticatePatient::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //

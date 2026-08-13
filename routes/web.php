@@ -1,5 +1,11 @@
 <?php
 
+use App\Http\Controllers\FindDoctorController;
+use App\Http\Controllers\PatientAccountController;
+use App\Http\Controllers\PatientAuthController;
+use App\Http\Middleware\CaptureReferralParams;
+use App\Http\Middleware\Localization;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 $centralDomains = config('tenancy.central_domains');
@@ -9,9 +15,40 @@ if (blank($centralDomains)) {
 }
 
 foreach ($centralDomains as $domain) {
-    Route::domain($domain)->middleware(\App\Http\Middleware\CaptureReferralParams::class)->group(function () {
+    Route::domain($domain)->middleware([CaptureReferralParams::class, Localization::class])->group(function () {
         Route::get('/', function () {
             return view('marketing.home');
+        });
+
+        Route::get('/lang/{locale}', function (Request $request, string $locale) {
+            if (in_array($locale, ['en', 'bn'], true)) {
+                session()->put('locale', $locale);
+            }
+
+            $referer = (string) $request->headers->get('referer');
+            $sameHost = $referer !== ''
+                && parse_url($referer, PHP_URL_HOST) === $request->getHost();
+
+            return redirect()->to($sameHost ? $referer : '/find');
+        });
+
+        Route::get('/find', [FindDoctorController::class, 'index'])->name('patient.find');
+
+        Route::get('/me/login', [PatientAuthController::class, 'showLogin'])->name('patient.login');
+        Route::post('/me/login/otp', [PatientAuthController::class, 'sendOtp'])
+            ->middleware('throttle:5,10')
+            ->name('patient.otp.send');
+        Route::post('/me/login/verify', [PatientAuthController::class, 'verify'])
+            ->middleware('throttle:10,10')
+            ->name('patient.otp.verify');
+        Route::post('/me/logout', [PatientAuthController::class, 'logout'])
+            ->name('patient.logout');
+
+        Route::middleware('patient.auth')->group(function () {
+            Route::get('/me', [PatientAccountController::class, 'serials'])->name('patient.serials');
+            Route::get('/me/history', [PatientAccountController::class, 'history'])->name('patient.history');
+            Route::get('/me/prescriptions/{prescription}', [PatientAccountController::class, 'showPrescription'])
+                ->name('patient.prescription');
         });
     });
 }

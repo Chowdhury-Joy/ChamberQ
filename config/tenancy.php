@@ -30,6 +30,8 @@ return [
     'reserved_path_prefixes' => [
         'admin',
         'partner',
+        'find',
+        'me',
         'up',
         'api',
         'lang',
