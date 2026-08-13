@@ -357,7 +357,12 @@ class WebPageResource extends Resource
                                         ->columns(2)
                                         ->columnSpan(2)
                                         ->schema([
-                                            Forms\Components\TextInput::make('image_url')->label('Image URL')->required()->placeholder('https://images.unsplash.com/...'),
+                                            PublicMediaFields::image(
+                                                'image_url',
+                                                'webpage-gallery',
+                                                'Slide image',
+                                                'Upload a photo from this computer (JPG, PNG, or WebP, up to 4 MB). An older pasted link still works until you replace it.',
+                                            )->required()->columnSpanFull(),
                                             Forms\Components\TextInput::make('title')->label('Caption Title'),
                                             Forms\Components\TextInput::make('description')->label('Caption Subtitle'),
                                             Forms\Components\TextInput::make('link_url')->label('Click Link (Optional)'),
@@ -443,7 +448,12 @@ class WebPageResource extends Resource
                                             Forms\Components\Textarea::make('quote')->required()->columnSpanFull(),
                                             Forms\Components\TextInput::make('name')->required(),
                                             Forms\Components\TextInput::make('label')->default('Verified Patient'),
-                                            Forms\Components\TextInput::make('photo_url')->label('Avatar image URL'),
+                                            PublicMediaFields::image(
+                                                'photo_url',
+                                                'webpage-testimonials',
+                                                'Patient photo',
+                                                'Optional headshot beside the quote (JPG, PNG, or WebP, up to 4 MB).',
+                                            )->columnSpanFull(),
                                         ])
                                         ->default([
                                             [
@@ -461,7 +471,12 @@ class WebPageResource extends Resource
                             ->label(PageBuilderChrome::blockLid('FAQ'))
                             ->schema([
                                 Forms\Components\TextInput::make('heading')->default('Frequently Asked Questions'),
-                                Forms\Components\TextInput::make('promo_image_url')->label('Side panel image URL')->columnSpanFull(),
+                                PublicMediaFields::image(
+                                    'promo_image_url',
+                                    'webpage-faq',
+                                    'Side panel image',
+                                    'The photo beside the questions (JPG, PNG, or WebP, up to 4 MB).',
+                                )->columnSpanFull(),
                                 Forms\Components\TextInput::make('promo_heading')->label('Side panel heading')->default('Need care? Book an appointment'),
                                 Forms\Components\TextInput::make('promo_cta_text')->label('Side panel CTA label')->default('Get in touch'),
                                 Forms\Components\TextInput::make('promo_cta_link')->label('Side panel CTA link')->default('/book'),
@@ -497,7 +512,12 @@ class WebPageResource extends Resource
                                         ->columnSpan(2)
                                         ->schema([
                                             Forms\Components\TextInput::make('title')->required(),
-                                            Forms\Components\TextInput::make('image_url')->label('Icon / image URL')->required(),
+                                            PublicMediaFields::image(
+                                                'image_url',
+                                                'webpage-facility',
+                                                'Icon / image',
+                                                'Upload the picture for this card (JPG, PNG, or WebP, up to 4 MB).',
+                                            )->required()->columnSpan(2),
                                             Forms\Components\Textarea::make('description')->columnSpan(2),
                                         ]),
                                     fn (array $state): ?string => PageBuilderChrome::nestedName($state, 'title') ?? 'Untitled image',

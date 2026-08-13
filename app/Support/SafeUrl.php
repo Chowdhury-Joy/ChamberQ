@@ -81,6 +81,8 @@ class SafeUrl
             'link_url',
             'link',
             'image_url',
+            'promo_image_url',
+            'photo_url',
             'follow_url',
         ];
 

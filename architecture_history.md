@@ -528,3 +528,6 @@
 - Rx pad breakpoint dropped 1024px → 768px, columns stacking below 1024px with touch-sized controls, so tablets get the desk instead of the far smaller phone modal; desk follow-up gained 3 months and Pick a date.
 - Printed sheet: medicines numbered, and `app/Support/PrescriptionQuantity.php` prints a total dose count when frequency × duration multiplies out cleanly (silent for SOS/Continue).
 - Patient share copy made phone-first (card per medicine below 640px) with `app/Support/DoseSchedule.php` writing `1+0+1` out in Bangla, plus a WhatsApp forward gated to the share-link routes so the portal's phone-carrying URL is never forwarded.
+
+## 2026-08-14T01:12:58+0600
+- Replaced every remaining website image **URL** field in the tenant admin with the `PublicMediaFields` uploader (gallery slides, testimonial avatars, FAQ panel, About Practice cards, blog, departments, doctor photos, branding logo/favicon); model `saving` hooks now promote the disk path to `/storage/…` before `SafeUrl` scrubs it, the shared image field no longer accepts SVG, and `PublicStoredImage::toPublicPath()` refuses to prefix `/storage/` onto a scheme-carrying value.

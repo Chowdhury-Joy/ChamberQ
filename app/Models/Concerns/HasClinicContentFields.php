@@ -3,6 +3,7 @@
 namespace App\Models\Concerns;
 
 use App\Support\HtmlSanitizer;
+use App\Support\PublicStoredImage;
 use App\Support\SafeUrl;
 use Illuminate\Support\Str;
 
@@ -21,8 +22,14 @@ trait HasClinicContentFields
                 $model->body = HtmlSanitizer::clean($model->body);
             }
 
+            // FileUpload hands back a disk-relative path ("blog-images/…"), which
+            // has no scheme and would be scrubbed to ''. Promote it to the
+            // same-origin /storage/… path the blades use as an <img src> first.
             if (filled($model->image_url)) {
-                $model->image_url = SafeUrl::href($model->image_url, '');
+                $model->image_url = SafeUrl::href(
+                    PublicStoredImage::toPublicPath($model->image_url),
+                    '',
+                );
             }
         });
     }

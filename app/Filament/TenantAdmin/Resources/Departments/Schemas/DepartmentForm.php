@@ -2,6 +2,7 @@
 
 namespace App\Filament\TenantAdmin\Resources\Departments\Schemas;
 
+use App\Filament\TenantAdmin\Support\PublicMediaFields;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -39,10 +40,12 @@ class DepartmentForm
                     ->columnSpanFull(),
                 RichEditor::make('body')
                     ->columnSpanFull(),
-                TextInput::make('image_url')
-                    ->label(__('Card image URL'))
-                    ->maxLength(2048)
-                    ->columnSpanFull(),
+                PublicMediaFields::image(
+                    'image_url',
+                    'department-images',
+                    __('Card image'),
+                    __('Upload a photo from this computer (JPG, PNG, or WebP, up to 4 MB). An older pasted link still works until you replace it.'),
+                )->columnSpanFull(),
                 TextInput::make('sort_order')
                     ->numeric()
                     ->default(0)

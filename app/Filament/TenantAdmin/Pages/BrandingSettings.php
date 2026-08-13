@@ -2,6 +2,8 @@
 
 namespace App\Filament\TenantAdmin\Pages;
 
+use App\Filament\TenantAdmin\Support\PublicMediaFields;
+use App\Support\PublicStoredImage;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
@@ -13,6 +15,7 @@ use Filament\Pages\Page;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use Illuminate\Support\Arr;
 
 class BrandingSettings extends Page implements HasForms
 {
@@ -82,16 +85,18 @@ class BrandingSettings extends Page implements HasForms
                             ->label(__('Tagline / Slogan'))
                             ->maxLength(255)
                             ->placeholder('e.g. Quality healthcare at your fingertips'),
-                        TextInput::make('logo_url')
-                            ->label(__('Logo Image URL'))
-                            ->url()
-                            ->maxLength(500)
-                            ->placeholder('https://example.com/logo.png'),
-                        TextInput::make('favicon_url')
-                            ->label(__('Favicon / App Icon URL'))
-                            ->helperText(__('Optional. Leave empty to use the default health cross icon.'))
-                            ->maxLength(500)
-                            ->placeholder('https://example.com/icon.png'),
+                        PublicMediaFields::image(
+                            'logo_url',
+                            'branding-logos',
+                            __('Logo image'),
+                            __('Upload your logo from this computer (JPG, PNG, or WebP, up to 4 MB). An older pasted link still works until you replace it.'),
+                        ),
+                        PublicMediaFields::image(
+                            'favicon_url',
+                            'branding-icons',
+                            __('Favicon / App Icon'),
+                            __('Optional square PNG (or JPG/WebP). Leave empty to use the default health cross icon.'),
+                        ),
                     ]),
 
                 Fieldset::make(__('Visual Theme & Typography'))
@@ -239,6 +244,23 @@ class BrandingSettings extends Page implements HasForms
             ]);
     }
 
+    /**
+     * A FileUpload gives back either a disk path or (single-file) a string;
+     * an old pasted https link passes through untouched.
+     */
+    private static function publicImagePath(mixed $value): ?string
+    {
+        if (is_array($value)) {
+            $value = Arr::first($value);
+        }
+
+        if (! is_string($value) || trim($value) === '') {
+            return null;
+        }
+
+        return PublicStoredImage::toPublicPath($value);
+    }
+
     public function save(): void
     {
         $data = $this->form->getState();
@@ -248,8 +270,10 @@ class BrandingSettings extends Page implements HasForms
             $payload = [
                 'name' => $data['name'],
                 'tagline' => $data['tagline'],
-                'logo_url' => $data['logo_url'],
-                'favicon_url' => $data['favicon_url'],
+                // Uploads dehydrate to a disk path; the header/tab markup uses
+                // these straight as an image source, so store /storage/… .
+                'logo_url' => self::publicImagePath($data['logo_url'] ?? null),
+                'favicon_url' => self::publicImagePath($data['favicon_url'] ?? null),
                 'theme_color' => $data['theme_color'],
                 'font_family' => $data['font_family'],
                 'contact_phone' => $data['contact_phone'],

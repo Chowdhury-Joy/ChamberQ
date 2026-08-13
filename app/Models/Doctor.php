@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
 use App\Support\HtmlSanitizer;
+use App\Support\PublicStoredImage;
 use App\Support\SafeUrl;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -51,8 +52,13 @@ class Doctor extends Model
                 $doctor->bio = HtmlSanitizer::clean($doctor->bio);
             }
 
+            // An uploaded photo arrives as a disk path with no scheme; turn it
+            // into /storage/… before the scrub, or the save would wipe it.
             if (filled($doctor->photo_url)) {
-                $doctor->photo_url = SafeUrl::href($doctor->photo_url, '');
+                $doctor->photo_url = SafeUrl::href(
+                    PublicStoredImage::toPublicPath($doctor->photo_url),
+                    '',
+                );
             }
         });
     }

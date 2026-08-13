@@ -2,6 +2,7 @@
 
 namespace App\Filament\TenantAdmin\Resources\BlogPosts\Schemas;
 
+use App\Filament\TenantAdmin\Support\PublicMediaFields;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\RichEditor;
 use Filament\Forms\Components\Textarea;
@@ -40,10 +41,12 @@ class BlogPostForm
                     ->columnSpanFull(),
                 RichEditor::make('body')
                     ->columnSpanFull(),
-                TextInput::make('image_url')
-                    ->label(__('Featured image URL'))
-                    ->maxLength(2048)
-                    ->columnSpanFull(),
+                PublicMediaFields::image(
+                    'image_url',
+                    'blog-images',
+                    __('Featured image'),
+                    __('Upload a photo from this computer (JPG, PNG, or WebP, up to 4 MB). An older pasted link still works until you replace it.'),
+                )->columnSpanFull(),
                 DateTimePicker::make('published_at')
                     ->seconds(false),
                 TextInput::make('sort_order')

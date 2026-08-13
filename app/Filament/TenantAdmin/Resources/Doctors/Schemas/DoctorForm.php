@@ -2,6 +2,7 @@
 
 namespace App\Filament\TenantAdmin\Resources\Doctors\Schemas;
 
+use App\Filament\TenantAdmin\Support\PublicMediaFields;
 use App\Models\Doctor;
 use App\Models\User;
 use Filament\Forms\Components\Select;
@@ -82,10 +83,12 @@ class DoctorForm
                             ->label(__('Title on website'))
                             ->placeholder(__('e.g. Consultant Physiotherapist'))
                             ->maxLength(255),
-                        TextInput::make('photo_url')
-                            ->label(__('Photo URL'))
-                            ->maxLength(2048)
-                            ->columnSpanFull(),
+                        PublicMediaFields::image(
+                            'photo_url',
+                            'doctor-photos',
+                            __('Photo'),
+                            __('Upload a portrait from this computer (JPG, PNG, or WebP, up to 4 MB). An older pasted link still works until you replace it.'),
+                        )->columnSpanFull(),
                         TextInput::make('website_sort_order')
                             ->label(__('Sort order'))
                             ->numeric()

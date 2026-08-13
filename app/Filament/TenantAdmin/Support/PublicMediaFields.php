@@ -12,6 +12,14 @@ final class PublicMediaFields
     {
         return self::base($name, $directoryPrefix, $label, $helper)
             ->image()
+            // Not `image/*`: an SVG uploaded here is served from this app's own
+            // origin at /storage/…, so any script inside it would run as us.
+            ->acceptedFileTypes([
+                'image/jpeg',
+                'image/png',
+                'image/webp',
+                'image/gif',
+            ])
             ->maxSize(4096)
             ->imagePreviewHeight('16rem');
     }

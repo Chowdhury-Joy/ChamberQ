@@ -26,6 +26,13 @@ final class PublicStoredImage
             return $stored;
         }
 
+        // Anything carrying a scheme (javascript:, data:, ftp:…) is not a disk
+        // path. Prefixing /storage/ would disguise it as a same-origin path and
+        // walk it straight past SafeUrl's allowlist; hand it over unchanged.
+        if (preg_match('/^[a-zA-Z][a-zA-Z0-9+.\-]*:/', $stored) === 1) {
+            return $stored;
+        }
+
         return '/storage/'.$stored;
     }
 
@@ -74,7 +81,7 @@ final class PublicStoredImage
      */
     private static function promoteMediaFields(array $data): array
     {
-        $keys = ['image_url', 'thumbnail_url', 'uploaded_video', 'promo_image_url'];
+        $keys = ['image_url', 'thumbnail_url', 'uploaded_video', 'promo_image_url', 'photo_url'];
 
         foreach ($keys as $key) {
             if (! array_key_exists($key, $data)) {

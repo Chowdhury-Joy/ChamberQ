@@ -71,12 +71,17 @@ class BrandingTest extends TestCase
         $this->actingAs($this->soloAdmin);
         \Filament\Facades\Filament::setCurrentPanel(\Filament\Facades\Filament::getPanel('tenantAdmin'));
 
+        // Logo and favicon are uploaders now, so a link pasted before that
+        // change has to survive being loaded into the picker and saved again.
+        $this->soloTenant->update([
+            'logo_url' => 'https://example.com/clinic-logo.png',
+            'favicon_url' => 'https://example.com/icon.ico',
+        ]);
+
         Livewire::test(BrandingSettings::class)
             ->fillForm([
                 'name' => 'Dr. Custom Branding',
                 'tagline' => 'Healing with care',
-                'logo_url' => 'https://example.com/clinic-logo.png',
-                'favicon_url' => 'https://example.com/icon.ico',
                 'theme_color' => '#8b5cf6',
                 'font_family' => 'Outfit',
                 'contact_phone' => '01700000000',
@@ -91,6 +96,7 @@ class BrandingTest extends TestCase
         $this->assertEquals('Dr. Custom Branding', $this->soloTenant->name);
         $this->assertEquals('Healing with care', $this->soloTenant->tagline);
         $this->assertEquals('https://example.com/clinic-logo.png', $this->soloTenant->logo_url);
+        $this->assertEquals('https://example.com/icon.ico', $this->soloTenant->favicon_url);
         $this->assertEquals('#8b5cf6', $this->soloTenant->theme_color);
         $this->assertEquals('Outfit', $this->soloTenant->font_family);
 
