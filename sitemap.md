@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-13T10:41:56+0600
+Last Updated: 2026-08-13T12:08:55+0600
 
 ## Full Site Map
 
@@ -30,7 +30,7 @@ Same central host; tenant identified by URL slug (tenant `id`), e.g. `drkarim`.
 | `/{slug}/` | Branded website home | public (**Front door** module) |
 | `/{slug}/book` | Booking wizard | public (**Front door**) |
 | `/{slug}/bookings/{booking}` | Patient ticket (sitting window always; live queue / come-around only with **Live queue**) | public (UUID) |
-| `/{slug}/portal` | Phone lookup — bookings + up to 2 recent prescriptions (Rx list needs **Prescription**) | public (throttled, **Front door**) |
+| `/{slug}/portal` | Phone lookup — bookings + every prescription with medicines (Rx list needs **Prescription**) | public (throttled, **Front door**) |
 | `/{slug}/screen/{session}` | Outdoor TV (always today for that schedule session — bookmark once) | public (**Live queue**) |
 | `/{slug}/screen/{session}/{date}` | Outdoor display for a specific date (legacy / deep link) | public (**Live queue**) |
 | `/{slug}/departments` | Clinic departments listing (clinic tier only) | public |
@@ -62,7 +62,7 @@ When a doctor connects their own domain (e.g. `drkarim.com`), routes live at the
 | `/book` | Online serial booking wizard | public |
 | `POST /book` | Homepage hero form target — flashes name/phone to session, redirects to the wizard so patient details never enter the URL | public (throttled) |
 | `/bookings/{booking}` | Patient ticket (UUID) | public |
-| `/portal` | Phone lookup — bookings + up to 2 recent prescriptions | public (throttled) |
+| `/portal` | Phone lookup — bookings + every prescription with medicines | public (throttled) |
 | `/screen/{session}` | Outdoor waiting-room TV (always today — bookmark once per schedule session) | public (throttled) |
 | `/screen/{session}/{date}` | Outdoor waiting-room display for a specific date (legacy) | public (throttled) |
 | `/lang/{locale}` | Switch session locale `en` / `bn` | public |
@@ -138,7 +138,7 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 
 ### Patient → check status later
 1. Open `/portal` or ticket link — or, with a ChamberQ login, `/me`.
-2. Portal: enter BD phone → see matching bookings **and**, when present, up to two recent prescriptions. `/me` lists every clinic for that phone without re-typing it.
+2. Portal: enter BD phone → see matching bookings **and**, when present, every prescription with medicines (newest first). `/me` lists every clinic for that phone without re-typing it.
 3. Tap **View prescription** → full pad (phone must still match, or the logged-in account owns it). Goal: get medicines/diagnosis even if staff forgot the SMS/WhatsApp link.
 
 ### Patient → waiting room

@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Http\Controllers\BookingController;
 use App\Models\Booking;
 use App\Models\Chamber;
 use App\Models\Condition;
@@ -22,8 +21,8 @@ use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 /**
- * Portal phone lookup lists up to two full prescriptions as a backup when
- * staff forget to send the SMS/WhatsApp link.
+ * Portal phone lookup lists every prescription with medicines as a backup
+ * when staff forget to send the SMS/WhatsApp link.
  */
 class PortalPrescriptionTest extends TestCase
 {
@@ -160,7 +159,7 @@ class PortalPrescriptionTest extends TestCase
         return $prescription->fresh();
     }
 
-    public function test_portal_lists_at_most_two_recent_prescriptions(): void
+    public function test_portal_lists_every_prescription_with_medicines(): void
     {
         $oldest = $this->makePrescription('OLDEST', 'Old Diagnosis', now()->subDays(3));
         $second = $this->makePrescription('SECOND', 'Second Diagnosis', now()->subDays(2));
@@ -172,9 +171,7 @@ class PortalPrescriptionTest extends TestCase
             ->assertSee('View prescription', false)
             ->assertSee('/portal/prescriptions/'.$newest->id, false)
             ->assertSee('/portal/prescriptions/'.$second->id, false)
-            ->assertDontSee('/portal/prescriptions/'.$oldest->id, false);
-
-        $this->assertSame(2, BookingController::PORTAL_PRESCRIPTION_LIMIT);
+            ->assertSee('/portal/prescriptions/'.$oldest->id, false);
     }
 
     public function test_portal_prescription_view_requires_matching_phone(): void

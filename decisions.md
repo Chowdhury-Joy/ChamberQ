@@ -1944,3 +1944,12 @@
  <action>Page sections and nested lists start collapsed. Closed labels are type plus headline (e.g. Hero — …). Block numbers off. Clone and drag-reorder stay on. Inner pages get gray Collapse all / Expand all and a narrower form (`max-w-5xl`); homepage (`/`) uses full width without those two buttons. Save changes sits at the bottom right, not sticky; closing the tab still warns if the form is dirty. No SEO or grid-vs-flex layout fields were added — ChamberQ does not have those.</action>
  <reason>Like a packed moving-box list: each lid shows what is inside, and you only open the box you are packing. Public homepage blades stay locked.</reason>
 </decision>
+
+## 2026-08-13T12:08:55+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>The no-login portal only listed the two most recent prescriptions. A returning patient who needed an older slip (for example last month's course, not today's) could not get it without the expired SMS link or a ChamberQ login.</context>
+ <action>Remove `PORTAL_PRESCRIPTION_LIMIT`. `/portal` now lists every prescription that has medicines for that phone, newest first. Phone gate, durable `/portal/prescriptions/{id}?phone=` links, and the 48h SMS `/p/{token}` channel are unchanged. Empty prescriptions (no medicine lines) still stay off the list. Bookings on the same page stay capped at 10.</action>
+ <reason>Owner asked to drop the cap. The portal is already the backup when staff forget to send the link; hiding older pads after visit three made that backup incomplete. Anyone who knows the phone could already open those two slips — listing the rest uses the same gate.</reason>
+</decision>

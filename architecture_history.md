@@ -480,3 +480,6 @@
 
 ## 2026-08-13T11:15:22+0600
 - Web Pages admin editor: collapsed lids + type/headline labels (`PageBuilderChrome`); inner pages `max-w-5xl` with gray Collapse/Expand all; homepage full width; non-sticky Save changes + beforeunload unsaved alert.
+
+## 2026-08-13T12:08:55+0600
+- Portal phone lookup lists every prescription with medicines (removed the 2-item `PORTAL_PRESCRIPTION_LIMIT` cap).

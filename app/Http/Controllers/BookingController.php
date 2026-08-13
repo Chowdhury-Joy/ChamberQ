@@ -390,12 +390,6 @@ class BookingController extends Controller
         ]);
     }
 
-    /**
-     * How many recent prescriptions the portal lists as a backup when staff
-     * forget to send the SMS/WhatsApp link.
-     */
-    public const PORTAL_PRESCRIPTION_LIMIT = 2;
-
     public function portal(Request $request)
     {
         $phone = $request->query('phone');
@@ -421,8 +415,8 @@ class BookingController extends Controller
                     ->take(10)
                     ->get();
 
-                // Durable backup for the expiring /p/{token} link: up to two
-                // prescriptions that actually have medicines, newest first.
+                // Durable backup for the expiring /p/{token} link: every
+                // prescription that actually has medicines, newest first.
                 if (tenant()?->hasPrescription()) {
                     $prescriptions = Prescription::query()
                         ->whereHas('items')
@@ -431,7 +425,6 @@ class BookingController extends Controller
                         })
                         ->with(['items', 'visitRecord.booking', 'patient'])
                         ->latest()
-                        ->take(self::PORTAL_PRESCRIPTION_LIMIT)
                         ->get();
                 }
             }
