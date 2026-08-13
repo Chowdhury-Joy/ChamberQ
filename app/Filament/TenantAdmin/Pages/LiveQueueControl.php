@@ -273,7 +273,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                 } elseif ($catchUpCount > 0 && auth()->user()?->canRecordVisitNotes()) {
                     Notification::make()
                         ->title(__('Session ended'))
-                        ->body(__(':count patients today without notes — open Consult Screen to fill in while the evening is fresh.', [
+                        ->body(__(':count patients today without notes — tap Fill in now on this page while the evening is fresh.', [
                             'count' => $catchUpCount,
                         ]))
                         ->warning()
@@ -286,7 +286,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                 if ($cancelled->isNotEmpty() && $catchUpCount > 0 && auth()->user()?->canRecordVisitNotes()) {
                     Notification::make()
                         ->title(__(':count patients today without notes', ['count' => $catchUpCount]))
-                        ->body(__('Open Consult Screen to fill in while the evening is fresh.'))
+                        ->body(__('Tap Fill in now on this page while the evening is fresh.'))
                         ->warning()
                         ->duration(12000)
                         ->send();
@@ -401,7 +401,13 @@ class LiveQueueControl extends Page implements HasActions, HasTable
      */
     private function forgetQueueState(): void
     {
-        unset($this->activeLiveSession, $this->bookings, $this->queueStats);
+        unset(
+            $this->activeLiveSession,
+            $this->bookings,
+            $this->queueStats,
+            $this->catchUpCount,
+            $this->catchUpBookings,
+        );
     }
 
     public function getActiveLiveSessionProperty()
@@ -683,8 +689,8 @@ class LiveQueueControl extends Page implements HasActions, HasTable
     }
 
     /**
-     * Play the same recorded “Number N” clip staff hear on the outdoor TV
-     * (so Live Queue Control is not silent / not browser TTS).
+     * Play the same recorded “Number N” clip staff hear on the outdoor TV,
+     * then say the patient name (browser TTS — try-it for names only).
      */
     private function dispatchCallAnnounce(): void
     {
@@ -694,12 +700,16 @@ class LiveQueueControl extends Page implements HasActions, HasTable
         }
 
         $this->activeLiveSession?->refresh();
-        $serial = $this->activeLiveSession?->currentBooking?->serial_number;
+        $booking = $this->activeLiveSession?->currentBooking;
+        $serial = $booking?->serial_number;
         if (! $serial) {
             return;
         }
 
-        $this->dispatch('queue-called', serial: (int) $serial);
+        $this->dispatch('queue-called',
+            serial: (int) $serial,
+            name: $booking?->patient_name,
+        );
     }
 
     public function patientArrived()
@@ -952,11 +962,27 @@ class LiveQueueControl extends Page implements HasActions, HasTable
             ->color('danger')
             ->icon('heroicon-o-x-circle')
             ->requiresConfirmation()
-            ->modalDescription('Are you sure? This will cancel the session and all active patient bookings.')
+            // Name the cost before they commit, exactly as End Session does.
+            // "all active patient bookings" does not tell a queue runner
+            // whether that is nobody or nine people already on their way.
+            ->modalDescription(function (): string {
+                $pending = $this->bookingsEndSessionWouldCancel();
+
+                if ($pending->isEmpty()) {
+                    return __('Nobody is still waiting, so cancelling the session will not turn anyone away.');
+                }
+
+                return __('This cancels :count patient(s) still in the queue: :serials. You will get WhatsApp links to tell them.', [
+                    'count' => $pending->count(),
+                    'serials' => $pending
+                        ->map(fn (Booking $booking) => '#'.$booking->serial_number.' '.$booking->patient_name)
+                        ->implode(', '),
+                ]);
+            })
             ->action(function () {
                 if (!$this->selectedSessionId) return;
                 $scheduleSession = ScheduleSession::findOrFail($this->selectedSessionId);
-                
+
                 // toDateString(), not the Carbon — see markLateAction() above.
                 $liveSession = LiveSession::firstOrCreate([
                     'tenant_id' => tenant('id'),
@@ -965,11 +991,101 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                 ], [
                     'status' => 'cancelled',
                 ]);
-                
-                app(LiveSessionService::class)->markAbsent($liveSession);
-                
+
+                $cancelled = app(LiveSessionService::class)->markAbsent($liveSession);
+
+                // Same hand-off as End Session. The doctor is not coming, so
+                // every one of these people would otherwise make the trip for
+                // nothing — this is the path where telling them matters most.
+                $this->cancelledByEndSessionIds = $cancelled->pluck('id')->all();
+                $this->forgetQueueState();
+
+                if ($cancelled->isNotEmpty()) {
+                    Notification::make()
+                        ->title(__('Session cancelled — :count patient(s) turned away', ['count' => $cancelled->count()]))
+                        ->body(__('Use "Tell cancelled patients" to send each of them a WhatsApp message.'))
+                        ->warning()
+                        ->persistent()
+                        ->send();
+
+                    return;
+                }
+
                 Notification::make()->title('Session Cancelled')->success()->send();
             })
             ->visible(fn () => $this->selectedSessionId && (!$this->activeLiveSession || !in_array($this->activeLiveSession->status, ['completed', 'cancelled'])));
+    }
+
+    public function getCatchUpCountProperty(): int
+    {
+        if (! auth()->user()?->canRecordVisitNotes()) {
+            return 0;
+        }
+
+        return app(VisitRecordService::class)->countCompletedBookingsWithoutNotesToday(
+            $this->activeLiveSession,
+        );
+    }
+
+    public function getCatchUpBookingsProperty(): \Illuminate\Support\Collection
+    {
+        return app(VisitRecordService::class)->completedBookingsWithoutNotesToday(
+            $this->activeLiveSession,
+        );
+    }
+
+    public function catchUpNotesAction(): Action
+    {
+        return Action::make('catchUpNotes')
+            ->label(__('Fill in notes (:count)', ['count' => $this->catchUpCount]))
+            ->icon('heroicon-o-pencil-square')
+            ->color('warning')
+            ->modalHeading(__('Patients without notes today'))
+            ->modalDescription(__('Tap a patient to add optional visit notes. Nothing is required.'))
+            ->modalSubmitAction(false)
+            ->modalCancelActionLabel(__('Close'))
+            ->modalContent(fn (): \Illuminate\Contracts\View\View => view(
+                'filament.tenant-admin.components.catch-up-notes-list',
+                ['bookings' => $this->catchUpBookings],
+            ));
+    }
+
+    public function catchUpBookingAction(): Action
+    {
+        return VisitNotesFormSchema::configureModal(Action::make('catchUpBooking'))
+            ->label(__('Add notes'))
+            ->form(function (Action $action): array {
+                $bookingId = $action->getArguments()['bookingId'] ?? null;
+                $booking = $bookingId ? Booking::with('patient')->find($bookingId) : null;
+
+                return VisitNotesFormSchema::components($booking?->patient, null, $booking);
+            })
+            ->modalHeading(__('Add visit notes'))
+            ->modalDescription(__('All fields optional — voice, photo, diagnosis, or prescription.'))
+            ->modalSubmitActionLabel(__('Save notes'))
+            ->action(function (
+                array $data,
+                array $arguments,
+                VisitRecordService $visitRecordService,
+            ): void {
+                $bookingId = $arguments['bookingId'] ?? null;
+                $booking = $bookingId ? Booking::find($bookingId) : null;
+                $user = auth()->user();
+
+                if (! $booking || ! $user?->canRecordVisitNotes()) {
+                    return;
+                }
+
+                if ($visitRecordService->submissionHasContent($data)) {
+                    $visitRecordService->saveForCompletedBooking($booking, $user, $data);
+                }
+
+                $this->forgetQueueState();
+
+                Notification::make()
+                    ->title(__('Notes saved'))
+                    ->success()
+                    ->send();
+            });
     }
 }

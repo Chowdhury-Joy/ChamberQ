@@ -78,9 +78,41 @@
         .lqc-session-card:hover { border-color: rgb(161 161 170); background: rgb(250 250 250); }
         .dark .lqc-session-card { border-color: rgb(63 63 70); background: rgb(24 24 27); color: rgb(244 244 245); }
         .dark .lqc-session-card:hover { border-color: rgb(113 113 122); background: rgb(39 39 42); }
+
+        .lqc-banner {
+            display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between;
+            gap: 0.75rem; padding: 0.875rem 1.125rem;
+            border: 1px solid var(--warning-300); border-radius: 0.75rem;
+            background-color: var(--warning-50); color: var(--warning-900);
+        }
+        .dark .lqc-banner { border-color: var(--warning-600); background-color: color-mix(in srgb, var(--warning-950) 60%, transparent); color: var(--warning-100); }
+        .lqc-banner-text { display: flex; align-items: center; gap: 0.5rem; font-size: 0.875rem; font-weight: 500; }
+        .lqc-banner-icon { width: 1.125rem; height: 1.125rem; flex-shrink: 0; color: var(--warning-600); }
+        .dark .lqc-banner-icon { color: var(--warning-400); }
     </style>
 
-    <div class="lqc-stack">
+    @php
+        $catchUpCount = $this->catchUpCount;
+        $canRecordNotes = auth()->user()?->canRecordVisitNotes() ?? false;
+    @endphp
+
+    <div class="lqc-stack cq-freeze-queue">
+
+        @if ($canRecordNotes && $catchUpCount > 0)
+            <div class="lqc-banner">
+                <span class="lqc-banner-text">
+                    <x-filament::icon icon="heroicon-o-clock" class="lqc-banner-icon" />
+                    {{ __(':count patients today without notes', ['count' => $catchUpCount]) }}
+                </span>
+                <x-filament::button
+                    size="sm"
+                    color="warning"
+                    wire:click="mountAction('catchUpNotes')"
+                >
+                    {{ __('Fill in now') }}
+                </x-filament::button>
+            </div>
+        @endif
 
         {{-- Session picker --}}
         <x-filament::section>
@@ -438,21 +470,42 @@
         <div
             x-data="{
                 base: @js($announceBaseUrl),
+                locale: @js(tenant()?->call_announce_locale ?? 'en'),
                 blocked: false,
                 play(payload) {
-                    const raw = Array.isArray(payload)
-                        ? (payload[0]?.serial ?? payload.serial)
-                        : (payload?.serial ?? payload);
+                    const detail = Array.isArray(payload) ? (payload[0] ?? {}) : (payload ?? {});
+                    const raw = detail.serial ?? payload?.serial ?? payload;
+                    const name = detail.name ?? '';
                     const n = parseInt(raw, 10);
                     const el = this.$refs.audio;
                     if (! el || ! Number.isFinite(n) || n < 1 || n > 99) return;
 
                     el.muted = false;
                     el.pause();
+                    el.onended = () => { this.speakName(name); };
                     el.src = this.base + '/number-' + n + '.wav';
                     el.play()
                         .then(() => { this.blocked = false })
                         .catch(() => { this.blocked = true });
+                },
+                speakName(name) {
+                    const text = String(name || '').trim();
+                    if (! text || ! ('speechSynthesis' in window)) return;
+
+                    try { window.speechSynthesis.cancel(); } catch (e) {}
+
+                    const utterance = new SpeechSynthesisUtterance(text);
+                    utterance.lang = this.locale === 'bn' ? 'bn-BD' : 'en-US';
+                    utterance.rate = 0.95;
+
+                    const voices = window.speechSynthesis.getVoices() || [];
+                    const prefix = this.locale === 'bn' ? 'bn' : 'en';
+                    const voice = voices.find(v => String(v.lang || '').toLowerCase().startsWith(prefix))
+                        || voices.find(v => String(v.lang || '').toLowerCase().startsWith('en'))
+                        || voices[0];
+                    if (voice) utterance.voice = voice;
+
+                    window.speechSynthesis.speak(utterance);
                 },
                 unlock() {
                     const el = this.$refs.audio;
@@ -467,6 +520,10 @@
                         el.muted = false;
                         this.blocked = false;
                     }).catch(() => {});
+
+                    if ('speechSynthesis' in window) {
+                        try { window.speechSynthesis.getVoices(); } catch (e) {}
+                    }
                 },
             }"
             x-on:queue-called.window="play($event.detail)"

@@ -27,11 +27,13 @@
     // Clipboard may include ticket + map on two lines. Never put that in an
     // <input type="text"> value — browsers strip newlines and glue the URLs.
     $copyPayload = $mapsUrl ? ($ticketUrl."\n".$mapsUrl) : $ticketUrl;
+    $hasLiveQueue = $tenant?->hasLiveQueue() ?? false;
 @endphp
 
     {{-- Keeps the serial (and the number being called) on screen once the big
          one scrolls past — patients scroll to the map and prep notes while waiting.
          aria-hidden because the live region inside .live-queue already announces it. --}}
+    @if ($hasLiveQueue)
     <div class="serial-strip no-print" id="serialStrip" aria-hidden="true">
         <div class="serial-strip-inner">
             <span class="serial-strip-label">{{ __('Your serial') }}</span>
@@ -42,6 +44,7 @@
             </span>
         </div>
     </div>
+    @endif
 
     <main class="ticket">
         <div class="ticket-card">
@@ -57,6 +60,7 @@
             <p class="serial">{{ $booking->serial_number }}</p>
             <p class="text-muted" style="margin-top:-0.75rem;margin-bottom:1.25rem;">{{ __('Show this number at reception') }}</p>
 
+            @if ($hasLiveQueue)
             <div class="eta-box" id="etaContainer" style="display: none;">
                 <p class="text-muted" style="margin-bottom: 0.25rem; font-size: 0.9rem;">{{ __('Estimated Time') }}</p>
                 <p style="font-size: 1.25rem; font-weight: 700; color: var(--color-primary); margin: 0;" id="shownTime">—</p>
@@ -67,6 +71,7 @@
                 <p class="now-serving" id="nowServing" aria-live="polite">—</p>
                 <p class="text-muted" id="aheadOfYou" aria-live="polite"></p>
             </div>
+            @endif
 
             <div style="margin-top:1.5rem">
                 <div class="detail-row">
@@ -144,7 +149,9 @@
 
             <div class="handoff no-print">
                 <strong>{{ __('Keep this page') }}</strong>
-                <span> — {{ __('Save the link, print a copy, or send it on WhatsApp so you can check the live queue from your phone.') }}</span>
+                <span> — {{ $hasLiveQueue
+                    ? __('Save the link, print a copy, or send it on WhatsApp so you can check the live queue from your phone.')
+                    : __('Save the link, print a copy, or send it on WhatsApp so you have your serial at the chamber.') }}</span>
             </div>
 
             <div class="share-actions no-print">
@@ -161,7 +168,13 @@
                 <input id="ticketLink" class="form-control" type="text" readonly value="{{ $ticketUrl }}">
             </div>
             <p class="text-muted no-print" style="margin-top:0.35rem;font-size:0.85rem;">
-                {{ $mapsUrl ? __('Copy includes your ticket link and the chamber map.') : __('Save this link to check your place in the queue.') }}
+                @if ($mapsUrl)
+                    {{ __('Copy includes your ticket link and the chamber map.') }}
+                @elseif ($hasLiveQueue)
+                    {{ __('Save this link to check your place in the queue.') }}
+                @else
+                    {{ __('Save this link so you have your serial handy.') }}
+                @endif
             </p>
             <p class="text-muted no-print" style="margin-top:0.25rem;font-size:0.85rem;">
                 {{ __('To download a PDF, tap Save as PDF and choose “Save as PDF” in the print window.') }}
@@ -176,7 +189,6 @@
     </main>
 
     <script>
-        const statusUrl = @json(tenant_web_route('queue.status', $booking, absolute: false));
         const copyPayload = @json($copyPayload);
         const i18n = {
             youAreNext: @json(__('You are next.')),
@@ -184,6 +196,9 @@
             manyAhead: @json(__(':count people ahead of you')),
             copied: @json(__('Link copied')),
         };
+
+        @if ($hasLiveQueue)
+        const statusUrl = @json(tenant_web_route('queue.status', $booking, absolute: false));
 
         async function refreshQueue() {
             try {
@@ -283,6 +298,7 @@
             window.addEventListener('scroll', schedule, { passive: true });
             window.addEventListener('resize', schedule, { passive: true });
         })();
+        @endif
 
         document.getElementById('copyLink').addEventListener('click', async () => {
             const input = document.getElementById('ticketLink');

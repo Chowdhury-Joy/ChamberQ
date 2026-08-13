@@ -190,8 +190,10 @@ class OperationalReportsTest extends TestCase
             ->assertOk()
             ->assertSee('Total bookings')
             ->assertSee('Still in queue')
-            ->assertSee('Needs attention')
-            ->assertSee('Status breakdown');
+            ->assertSee('Waiting')
+            ->assertSee('No-show')
+            ->assertDontSee('Needs attention')
+            ->assertDontSee('Status breakdown');
 
         $page = $component->instance();
 

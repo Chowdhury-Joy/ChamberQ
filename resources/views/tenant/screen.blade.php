@@ -335,6 +335,11 @@
             overlay.classList.add('hidden');
             toggle.classList.remove('hidden');
             updateToggleLabel();
+
+            // Chrome fills getVoices() asynchronously; poke it during the gesture.
+            if ('speechSynthesis' in window) {
+                try { window.speechSynthesis.getVoices(); } catch (e) {}
+            }
         }
 
         /*
@@ -397,8 +402,8 @@
             });
         }
 
-        // Say the number three times: a waiting room is noisy and a patient who
-        // looked away for one pass still catches the second or third.
+        // Say the number (and name) three times: a waiting room is noisy and a
+        // patient who looked away for one pass still catches the second or third.
         const ANNOUNCE_REPEATS = 3;
         const ANNOUNCE_GAP_MS = 700;
 
@@ -406,12 +411,69 @@
         // serial stops instead of talking over the new one.
         let announceSequence = 0;
 
-        async function speakCall(serial) {
+        // Name is spoken with browser TTS (try-it). Serial stays on Karen WAVs —
+        // those were the ghostly part. Name quality varies by TV/OS voice pack.
+        function pickNameVoice() {
+            if (!('speechSynthesis' in window)) return null;
+            const voices = window.speechSynthesis.getVoices() || [];
+            if (!voices.length) return null;
+
+            const wantBn = callAnnounceLocale === 'bn';
+            const prefix = wantBn ? 'bn' : 'en';
+            const matchLang = voices.find(function (v) {
+                return String(v.lang || '').toLowerCase().startsWith(prefix);
+            });
+            if (matchLang) return matchLang;
+
+            // Bangla voice packs are rare on TVs — any English voice is fine.
+            return voices.find(function (v) {
+                return String(v.lang || '').toLowerCase().startsWith('en');
+            }) || voices[0];
+        }
+
+        function speakName(name) {
+            if (!soundUnlocked || soundMuted) return Promise.resolve(false);
+            if (!('speechSynthesis' in window)) return Promise.resolve(false);
+
+            const text = String(name || '').trim();
+            if (!text) return Promise.resolve(false);
+
+            return new Promise(function (resolve) {
+                try {
+                    window.speechSynthesis.cancel();
+                } catch (e) {}
+
+                const utterance = new SpeechSynthesisUtterance(text);
+                utterance.lang = callAnnounceLocale === 'bn' ? 'bn-BD' : 'en-US';
+                utterance.rate = 0.95;
+                const voice = pickNameVoice();
+                if (voice) utterance.voice = voice;
+
+                let settled = false;
+                const done = function (ok) {
+                    if (settled) return;
+                    settled = true;
+                    resolve(ok);
+                };
+
+                utterance.onend = function () { done(true); };
+                utterance.onerror = function () { done(false); };
+
+                try {
+                    window.speechSynthesis.speak(utterance);
+                } catch (e) {
+                    logAudio('name TTS failed', e);
+                    done(false);
+                }
+            });
+        }
+
+        async function speakCall(serial, name) {
             if (!soundUnlocked || soundMuted) return;
 
             const mySequence = ++announceSequence;
 
-            // Pre-recorded only — never fall back to browser TTS (sounds ghostly).
+            // Serial: pre-recorded Karen WAV only. Name: browser TTS after each pass.
             for (let i = 0; i < ANNOUNCE_REPEATS; i++) {
                 if (soundMuted || mySequence !== announceSequence) return;
 
@@ -420,13 +482,16 @@
                 // Clip missing or playback blocked — do not retry two more times.
                 if (!played) return;
 
+                if (soundMuted || mySequence !== announceSequence) return;
+                await speakName(name);
+
                 if (i < ANNOUNCE_REPEATS - 1) {
                     await new Promise(function (r) { setTimeout(r, ANNOUNCE_GAP_MS); });
                 }
             }
         }
 
-        function announceCall(serial) {
+        function announceCall(serial, name) {
             if (!soundUnlocked || soundMuted) return;
 
             if (usesCallChime) {
@@ -435,7 +500,7 @@
 
             if (usesCallVoice) {
                 const delay = usesCallChime ? 900 : 0;
-                setTimeout(function () { speakCall(serial); }, delay);
+                setTimeout(function () { speakCall(serial, name); }, delay);
             }
         }
 
@@ -454,9 +519,13 @@
         toggle.addEventListener('click', function () {
             soundMuted = !soundMuted;
             if (soundMuted) {
+                announceSequence++;
                 if (announceAudio) {
                     announceAudio.pause();
                     announceAudio.currentTime = 0;
+                }
+                if ('speechSynthesis' in window) {
+                    try { window.speechSynthesis.cancel(); } catch (e) {}
                 }
             }
             updateToggleLabel();
@@ -554,7 +623,7 @@
                     
                     if (data.called_at !== lastCalledTime) {
                         lastCalledTime = data.called_at;
-                        announceCall(data.now_serving);
+                        announceCall(data.now_serving, data.now_serving_name);
                     }
                 } else {
                     box.className = 'now-serving-box';

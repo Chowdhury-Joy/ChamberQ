@@ -130,18 +130,60 @@ class OperationalReports extends Page implements HasTable
     /**
      * Display metadata for each status chip, in reporting order.
      *
-     * @return array<string, array{label: string, color: string, icon: string}>
+     * @return array<string, array{label: string, color: string, icon: string, accent: string, accent_soft: string}>
      */
     public function getStatusMeta(): array
     {
         return [
-            'completed' => ['label' => __('Completed'), 'color' => 'success', 'icon' => 'heroicon-m-check-circle'],
-            'waiting' => ['label' => __('Waiting'), 'color' => 'gray', 'icon' => 'heroicon-m-clock'],
-            'called' => ['label' => __('Called'), 'color' => 'warning', 'icon' => 'heroicon-m-bell-alert'],
-            'in_chamber' => ['label' => __('In chamber'), 'color' => 'info', 'icon' => 'heroicon-m-user'],
-            'skipped' => ['label' => __('Skipped'), 'color' => 'warning', 'icon' => 'heroicon-m-forward'],
-            'no_show' => ['label' => __('No-show'), 'color' => 'danger', 'icon' => 'heroicon-m-user-minus'],
-            'cancelled' => ['label' => __('Cancelled'), 'color' => 'danger', 'icon' => 'heroicon-m-x-circle'],
+            'completed' => [
+                'label' => __('Completed'),
+                'color' => 'success',
+                'icon' => 'heroicon-m-check-circle',
+                'accent' => 'var(--success-600)',
+                'accent_soft' => 'var(--success-50)',
+            ],
+            'waiting' => [
+                'label' => __('Waiting'),
+                'color' => 'gray',
+                'icon' => 'heroicon-m-clock',
+                'accent' => 'var(--gray-600)',
+                'accent_soft' => 'var(--gray-100)',
+            ],
+            'called' => [
+                'label' => __('Called'),
+                'color' => 'warning',
+                'icon' => 'heroicon-m-bell-alert',
+                'accent' => 'var(--warning-600)',
+                'accent_soft' => 'var(--warning-50)',
+            ],
+            'in_chamber' => [
+                'label' => __('In chamber'),
+                'color' => 'info',
+                'icon' => 'heroicon-m-user',
+                'accent' => 'var(--info-600)',
+                'accent_soft' => 'var(--info-50)',
+            ],
+            'skipped' => [
+                'label' => __('Skipped'),
+                'color' => 'warning',
+                'icon' => 'heroicon-m-forward',
+                'accent' => 'var(--warning-600)',
+                'accent_soft' => 'var(--warning-50)',
+            ],
+            'no_show' => [
+                'label' => __('No-show'),
+                'color' => 'danger',
+                'icon' => 'heroicon-m-user-minus',
+                'accent' => 'var(--danger-600)',
+                'accent_soft' => 'var(--danger-50)',
+            ],
+            'cancelled' => [
+                'label' => __('Cancelled'),
+                'color' => 'danger',
+                'icon' => 'heroicon-m-x-circle',
+                'accent' => 'var(--danger-600)',
+                'accent_soft' => 'var(--danger-50)',
+            ],
         ];
     }
 

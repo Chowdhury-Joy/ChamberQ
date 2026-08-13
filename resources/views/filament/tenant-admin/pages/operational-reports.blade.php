@@ -3,8 +3,12 @@
         $totals = $this->getTotals();
         $statusMeta = $this->getStatusMeta();
         $queueCount = $this->getQueueCount();
-        $problemCount = $this->getProblemCount();
         $completionRate = $this->getCompletionRate();
+        $dateFieldLabel = match ($period) {
+            'week' => __('Any day in week'),
+            'month' => __('Any day in month'),
+            default => __('Date'),
+        };
     @endphp
 
     {{--
@@ -12,21 +16,88 @@
         utilities are not available here. Layout is written against Filament's own
         CSS variables so it tracks the panel theme and dark mode.
     --}}
-    <link rel="stylesheet" href="{{ asset('css/card-grid.css') }}">
     <style>
         .ops-report { display: flex; flex-direction: column; gap: 1.5rem; }
 
-        .ops-filters {
+        /* —— Filter toolbar —— */
+        .ops-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: stretch;
+            gap: 1rem 1.25rem;
+            padding: 1rem 1.25rem;
+            background-color: var(--color-white);
+            border: 1px solid var(--gray-200);
+            border-radius: 0.75rem;
+            box-shadow: 0 1px 3px rgb(0 0 0 / 0.06);
+        }
+        .dark .ops-toolbar {
+            background-color: var(--gray-900);
+            border-color: var(--gray-800);
+        }
+        .ops-toolbar-controls {
             display: flex;
             flex-wrap: wrap;
             align-items: flex-end;
             gap: 1rem;
+            flex: 1 1 18rem;
+            min-width: 0;
         }
-        .ops-field { display: flex; flex-direction: column; gap: 0.375rem; min-width: 12rem; }
-        .ops-field-label { font-size: 0.8125rem; font-weight: 600; color: var(--gray-700); }
-        .dark .ops-field-label { color: var(--gray-300); }
+        .ops-field { display: flex; flex-direction: column; gap: 0.375rem; }
+        .ops-field-label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            text-transform: uppercase;
+            color: var(--gray-500);
+        }
+        .dark .ops-field-label { color: var(--gray-400); }
+
+        .ops-period-tabs {
+            display: inline-flex;
+            padding: 0.25rem;
+            gap: 0.125rem;
+            background-color: var(--gray-100);
+            border-radius: 0.625rem;
+            border: 1px solid var(--gray-200);
+        }
+        .dark .ops-period-tabs {
+            background-color: var(--gray-800);
+            border-color: var(--gray-700);
+        }
+        .ops-period-tab {
+            appearance: none;
+            border: 0;
+            background: transparent;
+            cursor: pointer;
+            padding: 0.5rem 0.875rem;
+            font-size: 0.875rem;
+            font-weight: 600;
+            line-height: 1.25;
+            color: var(--gray-600);
+            border-radius: 0.5rem;
+            transition: background-color 0.12s ease, color 0.12s ease, box-shadow 0.12s ease;
+        }
+        .ops-period-tab:hover { color: var(--gray-950); }
+        .dark .ops-period-tab { color: var(--gray-300); }
+        .dark .ops-period-tab:hover { color: var(--color-white); }
+        .ops-period-tab.is-active {
+            background-color: var(--color-white);
+            color: var(--primary-700);
+            box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+        }
+        .dark .ops-period-tab.is-active {
+            background-color: var(--gray-950);
+            color: var(--primary-400);
+            box-shadow: 0 0 0 1px var(--gray-700);
+        }
+        .ops-period-tab:focus-visible {
+            outline: 2px solid var(--primary-500);
+            outline-offset: 1px;
+        }
+
         .ops-control {
-            width: 100%;
+            min-width: 11rem;
             padding: 0.5rem 0.75rem;
             font-size: 0.875rem;
             color: var(--gray-950);
@@ -42,27 +113,78 @@
         }
         .dark .ops-control {
             color: var(--color-white);
-            background-color: var(--gray-900);
+            background-color: var(--gray-950);
             border-color: var(--gray-700);
         }
-        .ops-period {
-            margin-inline-start: auto;
-            padding-bottom: 0.5rem;
-            font-size: 0.875rem;
-            color: var(--gray-600);
-        }
-        .ops-period strong { font-weight: 600; color: var(--gray-950); }
-        .dark .ops-period { color: var(--gray-400); }
-        .dark .ops-period strong { color: var(--color-white); }
 
-        .ops-kpis { /* layout: .card-grid */ }
+        .ops-period-summary {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-inline-start: auto;
+            padding: 0.75rem 1rem;
+            min-width: min(100%, 16rem);
+            background-color: var(--primary-50);
+            border: 1px solid color-mix(in srgb, var(--primary-500) 22%, transparent);
+            border-radius: 0.625rem;
+        }
+        .dark .ops-period-summary {
+            background-color: color-mix(in srgb, var(--primary-500) 16%, var(--gray-900));
+            border-color: color-mix(in srgb, var(--primary-500) 35%, var(--gray-700));
+        }
+        .ops-period-summary-icon {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            width: 2.25rem;
+            height: 2.25rem;
+            border-radius: 0.5rem;
+            color: var(--primary-700);
+            background-color: var(--color-white);
+            border: 1px solid color-mix(in srgb, var(--primary-500) 20%, transparent);
+        }
+        .dark .ops-period-summary-icon {
+            color: var(--primary-300);
+            background-color: var(--gray-950);
+            border-color: var(--gray-700);
+        }
+        .ops-period-summary-icon svg { width: 1.125rem; height: 1.125rem; }
+        .ops-period-summary-text { display: flex; flex-direction: column; gap: 0.125rem; min-width: 0; }
+        .ops-period-summary-label {
+            font-size: 0.6875rem;
+            font-weight: 600;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            color: var(--primary-700);
+        }
+        .dark .ops-period-summary-label { color: var(--primary-300); }
+        .ops-period-summary-value {
+            font-size: 0.9375rem;
+            font-weight: 700;
+            line-height: 1.25;
+            color: var(--gray-950);
+        }
+        .dark .ops-period-summary-value { color: var(--color-white); }
+        .ops-period-summary-tz {
+            font-size: 0.75rem;
+            color: var(--gray-500);
+        }
+        .dark .ops-period-summary-tz { color: var(--gray-400); }
+
+        /* —— Single 3×3 metric grid —— */
+        .ops-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.75rem;
+        }
         .ops-kpi {
             position: relative;
             overflow: hidden;
             display: flex;
             flex-direction: column;
             gap: 0.625rem;
-            padding: 1.25rem;
+            padding: 1.125rem 1.25rem;
             background-color: var(--color-white);
             border: 1px solid var(--gray-200);
             border-radius: 0.75rem;
@@ -77,62 +199,56 @@
             background-color: var(--ops-accent);
         }
         .dark .ops-kpi { background-color: var(--gray-900); border-color: var(--gray-800); }
+        .ops-kpi.ops-kpi-empty { opacity: 0.5; }
 
-        .ops-kpi-head { display: flex; align-items: center; gap: 0.5rem; }
+        .ops-kpi-head { display: flex; align-items: center; gap: 0.5rem; min-width: 0; }
         .ops-kpi-icon {
             display: inline-flex;
             align-items: center;
             justify-content: center;
+            flex-shrink: 0;
             width: 1.75rem;
             height: 1.75rem;
             border-radius: 0.5rem;
             color: var(--ops-accent);
             background-color: var(--ops-accent-soft);
         }
+        .dark .ops-kpi-icon {
+            background-color: color-mix(in srgb, var(--ops-accent) 18%, transparent);
+        }
         .ops-kpi-icon svg { width: 1rem; height: 1rem; }
         .ops-kpi-label {
             font-size: 0.8125rem;
             font-weight: 600;
             color: var(--gray-600);
+            line-height: 1.2;
+            overflow-wrap: anywhere;
         }
         .dark .ops-kpi-label { color: var(--gray-400); }
         .ops-kpi-value {
-            font-size: 2rem;
+            font-size: 1.875rem;
             font-weight: 700;
             line-height: 1.1;
             color: var(--gray-950);
+            font-variant-numeric: tabular-nums;
         }
         .dark .ops-kpi-value { color: var(--color-white); }
         .ops-kpi-hint { font-size: 0.8125rem; color: var(--gray-500); }
         .dark .ops-kpi-hint { color: var(--gray-500); }
 
-        .ops-statuses {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
-            gap: 0.75rem;
-        }
-        .ops-status {
-            display: flex;
-            flex-direction: column;
-            gap: 0.375rem;
-            padding: 0.75rem;
-            border-radius: 0.625rem;
+        .ops-empty {
+            margin: 0;
+            padding: 0.75rem 1rem;
+            font-size: 0.875rem;
+            color: var(--gray-600);
             background-color: var(--gray-50);
             border: 1px solid var(--gray-200);
+            border-radius: 0.625rem;
         }
-        .dark .ops-status { background-color: var(--gray-900); border-color: var(--gray-800); }
-        .ops-status.ops-status-empty { opacity: 0.55; }
-        .ops-status-value {
-            font-size: 1.25rem;
-            font-weight: 700;
-            color: var(--gray-950);
-        }
-        .dark .ops-status-value { color: var(--color-white); }
-
-        .ops-empty {
-            padding: 0.25rem 0;
-            font-size: 0.875rem;
-            color: var(--gray-500);
+        .dark .ops-empty {
+            color: var(--gray-300);
+            background-color: var(--gray-900);
+            border-color: var(--gray-800);
         }
 
         .ops-table-scroll { overflow-x: auto; }
@@ -183,115 +299,153 @@
         .dark .ops-table tfoot td { color: var(--color-white); background-color: var(--gray-900); }
 
         @media (max-width: 640px) {
-            .ops-period { margin-inline-start: 0; padding-bottom: 0; }
-            .ops-field { min-width: 100%; }
+            .ops-period-summary { margin-inline-start: 0; width: 100%; }
+            .ops-control { min-width: 100%; width: 100%; }
+            .ops-field { width: 100%; }
+            .ops-period-tabs { width: 100%; }
+            .ops-period-tab { flex: 1 1 0; text-align: center; }
+            .ops-grid { grid-template-columns: 1fr; }
             .ops-kpi-value { font-size: 1.75rem; }
+        }
+
+        @media (min-width: 641px) and (max-width: 900px) {
+            .ops-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
         }
     </style>
 
     <div class="ops-report">
-        {{-- Filters --}}
-        <x-filament::section>
-            <div class="ops-filters">
+        {{-- Filters —— polished toolbar --}}
+        <div class="ops-toolbar" wire:key="ops-toolbar-{{ $period }}-{{ $anchorDate }}">
+            <div class="ops-toolbar-controls">
                 <div class="ops-field">
-                    <label for="ops-report-period" class="ops-field-label">{{ __('Period') }}</label>
-                    <select id="ops-report-period" wire:model.live="period" class="ops-control">
-                        <option value="day">{{ __('Day') }}</option>
-                        <option value="week">{{ __('Week') }}</option>
-                        <option value="month">{{ __('Month') }}</option>
-                    </select>
+                    <span class="ops-field-label" id="ops-report-period-label">{{ __('Period') }}</span>
+                    <div class="ops-period-tabs" role="group" aria-labelledby="ops-report-period-label">
+                        <button
+                            type="button"
+                            wire:click="$set('period', 'day')"
+                            @class(['ops-period-tab', 'is-active' => $period === 'day'])
+                            @if ($period === 'day') aria-current="true" @endif
+                        >
+                            {{ __('Day') }}
+                        </button>
+                        <button
+                            type="button"
+                            wire:click="$set('period', 'week')"
+                            @class(['ops-period-tab', 'is-active' => $period === 'week'])
+                            @if ($period === 'week') aria-current="true" @endif
+                        >
+                            {{ __('Week') }}
+                        </button>
+                        <button
+                            type="button"
+                            wire:click="$set('period', 'month')"
+                            @class(['ops-period-tab', 'is-active' => $period === 'month'])
+                            @if ($period === 'month') aria-current="true" @endif
+                        >
+                            {{ __('Month') }}
+                        </button>
+                    </div>
                 </div>
 
                 <div class="ops-field">
-                    <label for="ops-report-date" class="ops-field-label">
-                        @if ($period === 'week')
-                            {{ __('Any day in week') }}
-                        @elseif ($period === 'month')
-                            {{ __('Any day in month') }}
-                        @else
-                            {{ __('Date') }}
-                        @endif
-                    </label>
+                    <label for="ops-report-date" class="ops-field-label">{{ $dateFieldLabel }}</label>
                     <input id="ops-report-date" type="date" wire:model.live="anchorDate" class="ops-control" />
                 </div>
-
-                <p class="ops-period">
-                    <strong>{{ $this->getPeriodLabel() }}</strong><br />
-                    {{ \App\Services\OperationalReportService::TIMEZONE }}
-                </p>
-            </div>
-        </x-filament::section>
-
-        {{-- Headline numbers --}}
-        <div class="ops-kpis card-grid" data-card-count="4">
-            <div class="ops-kpi" style="--ops-accent: var(--primary-600); --ops-accent-soft: var(--primary-50);">
-                <div class="ops-kpi-head">
-                    <span class="ops-kpi-icon">
-                        <x-filament::icon icon="heroicon-m-calendar-days" />
-                    </span>
-                    <span class="ops-kpi-label">{{ __('Total bookings') }}</span>
-                </div>
-                <div class="ops-kpi-value">{{ number_format($totals['total']) }}</div>
-                <div class="ops-kpi-hint">{{ __('Everything booked in this period') }}</div>
             </div>
 
-            <div class="ops-kpi" style="--ops-accent: var(--success-600); --ops-accent-soft: var(--success-50);">
-                <div class="ops-kpi-head">
-                    <span class="ops-kpi-icon">
-                        <x-filament::icon icon="heroicon-m-check-circle" />
-                    </span>
-                    <span class="ops-kpi-label">{{ __('Completed') }}</span>
+            <div class="ops-period-summary" aria-live="polite">
+                <span class="ops-period-summary-icon" aria-hidden="true">
+                    <x-filament::icon icon="heroicon-m-calendar-days" />
+                </span>
+                <div class="ops-period-summary-text">
+                    <span class="ops-period-summary-label">{{ __('Showing') }}</span>
+                    <span class="ops-period-summary-value">{{ $this->getPeriodLabel() }}</span>
+                    <span class="ops-period-summary-tz">{{ \App\Services\OperationalReportService::TIMEZONE }}</span>
                 </div>
-                <div class="ops-kpi-value">{{ number_format($totals['completed']) }}</div>
-                <div class="ops-kpi-hint">
-                    @if ($completionRate !== null)
-                        {{ __(':rate% of all bookings', ['rate' => $completionRate]) }}
-                    @else
-                        {{ __('Visits finished with the doctor') }}
-                    @endif
-                </div>
-            </div>
-
-            <div class="ops-kpi" style="--ops-accent: var(--info-600); --ops-accent-soft: var(--info-50);">
-                <div class="ops-kpi-head">
-                    <span class="ops-kpi-icon">
-                        <x-filament::icon icon="heroicon-m-users" />
-                    </span>
-                    <span class="ops-kpi-label">{{ __('Still in queue') }}</span>
-                </div>
-                <div class="ops-kpi-value">{{ number_format($queueCount) }}</div>
-                <div class="ops-kpi-hint">{{ __('Waiting, called or in chamber') }}</div>
-            </div>
-
-            <div class="ops-kpi" style="--ops-accent: var(--danger-600); --ops-accent-soft: var(--danger-50);">
-                <div class="ops-kpi-head">
-                    <span class="ops-kpi-icon">
-                        <x-filament::icon icon="heroicon-m-exclamation-triangle" />
-                    </span>
-                    <span class="ops-kpi-label">{{ __('Needs attention') }}</span>
-                </div>
-                <div class="ops-kpi-value">{{ number_format($problemCount) }}</div>
-                <div class="ops-kpi-hint">{{ __('Skipped, no-show or cancelled') }}</div>
             </div>
         </div>
 
-        {{-- Status breakdown --}}
-        <x-filament::section :heading="__('Status breakdown')" :description="__('Every booking in this period, grouped by where it ended up.')">
-            @if ($totals['total'] === 0)
-                <p class="ops-empty">{{ __('No bookings recorded for this period yet.') }}</p>
-            @else
-                <div class="ops-statuses">
-                    @foreach ($statusMeta as $status => $meta)
-                        <div @class(['ops-status', 'ops-status-empty' => $totals[$status] === 0])>
-                            <x-filament::badge :color="$meta['color']" :icon="$meta['icon']">
-                                {{ $meta['label'] }}
-                            </x-filament::badge>
-                            <span class="ops-status-value">{{ number_format($totals[$status]) }}</span>
-                        </div>
-                    @endforeach
+        @php
+            $gridCards = [
+                [
+                    'key' => 'total',
+                    'label' => __('Total bookings'),
+                    'value' => $totals['total'],
+                    'hint' => __('Everything booked in this period'),
+                    'icon' => 'heroicon-m-calendar-days',
+                    'accent' => 'var(--primary-600)',
+                    'accent_soft' => 'var(--primary-50)',
+                    'empty' => $totals['total'] === 0,
+                ],
+                [
+                    'key' => 'completed',
+                    'label' => $statusMeta['completed']['label'],
+                    'value' => $totals['completed'],
+                    'hint' => $completionRate !== null
+                        ? __(':rate% of all bookings', ['rate' => $completionRate])
+                        : __('Visits finished with the doctor'),
+                    'icon' => $statusMeta['completed']['icon'],
+                    'accent' => $statusMeta['completed']['accent'],
+                    'accent_soft' => $statusMeta['completed']['accent_soft'],
+                    'empty' => $totals['completed'] === 0,
+                ],
+                [
+                    'key' => 'queue',
+                    'label' => __('Still in queue'),
+                    'value' => $queueCount,
+                    'hint' => __('Waiting + called + in chamber'),
+                    'icon' => 'heroicon-m-users',
+                    'accent' => 'var(--info-600)',
+                    'accent_soft' => 'var(--info-50)',
+                    'empty' => $queueCount === 0,
+                ],
+                'waiting',
+                'no_show',
+                'cancelled',
+            ];
+        @endphp
+
+        @if ($totals['total'] === 0)
+            <p class="ops-empty">{{ __('No bookings recorded for this period yet.') }}</p>
+        @endif
+
+        {{-- One grid: headline totals + Waiting / No-show / Cancelled (mid-flow statuses live under Still in queue) --}}
+        <div class="ops-grid" role="list" aria-label="{{ __('Booking summary') }}">
+            @foreach ($gridCards as $card)
+                @php
+                    if (is_string($card)) {
+                        $meta = $statusMeta[$card];
+                        $card = [
+                            'key' => $card,
+                            'label' => $meta['label'],
+                            'value' => $totals[$card],
+                            'hint' => null,
+                            'icon' => $meta['icon'],
+                            'accent' => $meta['accent'],
+                            'accent_soft' => $meta['accent_soft'],
+                            'empty' => $totals[$card] === 0,
+                        ];
+                    }
+                @endphp
+                <div
+                    class="ops-kpi{{ $card['empty'] ? ' ops-kpi-empty' : '' }}"
+                    style="--ops-accent: {{ $card['accent'] }}; --ops-accent-soft: {{ $card['accent_soft'] }};"
+                    role="listitem"
+                    wire:key="ops-grid-{{ $card['key'] }}"
+                >
+                    <div class="ops-kpi-head">
+                        <span class="ops-kpi-icon" aria-hidden="true">
+                            <x-filament::icon :icon="$card['icon']" />
+                        </span>
+                        <span class="ops-kpi-label">{{ $card['label'] }}</span>
+                    </div>
+                    <div class="ops-kpi-value">{{ number_format($card['value']) }}</div>
+                    @if (filled($card['hint']))
+                        <div class="ops-kpi-hint">{{ $card['hint'] }}</div>
+                    @endif
                 </div>
-            @endif
-        </x-filament::section>
+            @endforeach
+        </div>
 
         {{-- Detail --}}
         @if ($period === 'day')
