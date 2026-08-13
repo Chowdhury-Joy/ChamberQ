@@ -104,6 +104,11 @@ class Booking extends Model
     {
         return $this->hasOne(VisitRecord::class);
     }
+
+    public function cashEntry()
+    {
+        return $this->hasOne(ChamberCashEntry::class);
+    }
     
     public function bookable()
     {

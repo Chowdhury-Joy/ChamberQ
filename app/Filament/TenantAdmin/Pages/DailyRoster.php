@@ -13,11 +13,13 @@ use Filament\Actions\Action;
 use App\Filament\TenantAdmin\Support\CompleteBookingWithVisitNotes;
 use App\Filament\TenantAdmin\Support\VisitNotesFormSchema;
 use App\Models\Booking;
+use App\Models\ChamberCashEntry;
 use App\Models\Doctor;
 use App\Models\LiveSession;
 use App\Models\Patient;
 use Carbon\Carbon;
 use App\Services\BookingService;
+use App\Services\ChamberCashService;
 use App\Services\LiveSessionService;
 use App\Services\MedicineService;
 use App\Services\PatientService;
@@ -65,7 +67,7 @@ class DailyRoster extends Page implements HasTable, HasForms
             ->query(
                 Booking::query()
                     ->where('booking_date', today()->toDateString())
-                    ->with(['visitRecord.prescription'])
+                    ->with(['visitRecord.prescription', 'cashEntry', 'labTests'])
                     ->orderByRaw("CASE WHEN status = 'in_chamber' THEN 1 WHEN status = 'waiting' THEN 2 WHEN status = 'completed' THEN 3 WHEN status = 'cancelled' THEN 4 ELSE 5 END")
                     ->orderBy('serial_number')
             )
@@ -82,12 +84,34 @@ class DailyRoster extends Page implements HasTable, HasForms
                         'cancelled' => 'danger',
                         default => 'primary',
                     }),
+                TextColumn::make('cashEntry.amount')
+                    ->label(__('Fee'))
+                    ->formatStateUsing(function (?int $state, Booking $record): string {
+                        if ($record->cashEntry?->isWaived()) {
+                            $amount = (int) $record->cashEntry->amount;
+
+                            return $amount > 0
+                                ? __('Waived :amount', ['amount' => '৳'.number_format($amount)])
+                                : __('Waived');
+                        }
+
+                        if ($record->cashEntry) {
+                            return '৳'.number_format($record->cashEntry->amount);
+                        }
+
+                        if (in_array($record->status, ['cancelled', 'no_show'], true)) {
+                            return '—';
+                        }
+
+                        return __('Due');
+                    }),
             ])
             ->recordActions([
                 Action::make('call')
                     ->label('Call to Chamber')
                     ->color('primary')
-                    ->visible(fn (Booking $record): bool => auth()->user()?->canOperateQueueControls()
+                    ->visible(fn (Booking $record): bool => (tenant()?->hasLiveQueue() ?? false)
+                        && (auth()->user()?->canOperateQueueControls() ?? false)
                         && $record->status === 'waiting')
                     ->action(function (Booking $record): void {
                         // Refused while someone else is mid-consult. Say so —
@@ -105,11 +129,43 @@ class DailyRoster extends Page implements HasTable, HasForms
                             ->send();
                     }),
 
+                // Front-door day list (no live queue): mark arrival without Call next.
+                Action::make('arrived')
+                    ->label(__('Arrived'))
+                    ->color('info')
+                    ->visible(fn (Booking $record): bool => ! (tenant()?->hasLiveQueue() ?? true)
+                        && (auth()->user()?->canManageQueue() ?? false)
+                        && $record->status === 'waiting')
+                    ->action(function (Booking $record): void {
+                        $record->update(['status' => 'in_chamber']);
+
+                        Notification::make()
+                            ->title(__('Marked arrived'))
+                            ->success()
+                            ->send();
+                    }),
+
+                Action::make('noShow')
+                    ->label(__('No-show'))
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->visible(fn (Booking $record): bool => ! (tenant()?->hasLiveQueue() ?? true)
+                        && (auth()->user()?->canManageQueue() ?? false)
+                        && in_array($record->status, ['waiting', 'in_chamber', 'called'], true))
+                    ->action(function (Booking $record): void {
+                        $record->update(['status' => 'no_show']);
+
+                        Notification::make()
+                            ->title(__('Marked no-show'))
+                            ->success()
+                            ->send();
+                    }),
+
                 VisitNotesFormSchema::configureModal(Action::make('complete'))
                     ->label('Mark Completed')
                     ->color('success')
-                    ->visible(fn (Booking $record): bool => auth()->user()?->canOperateQueueControls()
-                        && in_array($record->status, ['waiting', 'in_chamber', 'called']))
+                    ->visible(fn (Booking $record): bool => static::canCompleteFromRoster($record)
+                        && in_array($record->status, ['waiting', 'in_chamber', 'called'], true))
                     ->form(fn (Booking $record): array => auth()->user()?->canRecordVisitNotes()
                         ? VisitNotesFormSchema::components(
                             $record->patient,
@@ -163,6 +219,60 @@ class DailyRoster extends Page implements HasTable, HasForms
                             ->success()
                             ->send();
                     }),
+
+                Action::make('collectFee')
+                    ->label(fn (Booking $record): string => $record->cashEntry
+                        ? __('Edit fee')
+                        : __('Collect fee'))
+                    ->icon('heroicon-o-banknotes')
+                    ->color('success')
+                    ->visible(fn (Booking $record): bool => (auth()->user()?->canManageCash() ?? false)
+                        && ! in_array($record->status, ['cancelled', 'no_show'], true))
+                    ->fillForm(function (Booking $record): array {
+                        $entry = $record->cashEntry;
+
+                        return [
+                            'amount' => $entry?->amount ?? app(ChamberCashService::class)->suggestedAmountTaka($record),
+                            'method' => $entry?->method ?? ChamberCashEntry::METHOD_CASH,
+                            'waived' => $entry?->isWaived() ?? false,
+                            'note' => $entry?->note,
+                        ];
+                    })
+                    ->form([
+                        TextInput::make('amount')
+                            ->label(__('Amount (৳)'))
+                            ->numeric()
+                            ->minValue(0)
+                            ->required(fn (Get $get): bool => ! $get('waived')),
+                        Select::make('method')
+                            ->label(__('Paid how'))
+                            ->options(ChamberCashEntry::methods())
+                            ->required()
+                            ->native(false),
+                        Checkbox::make('waived')
+                            ->label(__('Waive this fee'))
+                            ->live(),
+                        TextInput::make('note')
+                            ->label(__('Note')),
+                    ])
+                    ->action(function (Booking $record, array $data): void {
+                        /** @var \App\Models\User $user */
+                        $user = auth()->user();
+
+                        app(ChamberCashService::class)->recordPatientIncome(
+                            $record,
+                            $user,
+                            (int) ($data['amount'] ?? 0),
+                            $data['method'],
+                            waived: (bool) ($data['waived'] ?? false),
+                            note: filled($data['note'] ?? null) ? (string) $data['note'] : null,
+                        );
+
+                        Notification::make()
+                            ->title(($data['waived'] ?? false) ? __('Fee waived') : __('Fee collected'))
+                            ->success()
+                            ->send();
+                    }),
             ])
             ->headerActions([
                 // Same Mark Late path as Live Queue Control — here so staff can
@@ -173,7 +283,7 @@ class DailyRoster extends Page implements HasTable, HasForms
                     ->label(__('Mark Late'))
                     ->color('warning')
                     ->icon('heroicon-o-clock')
-                    ->visible(fn (): bool => (auth()->user()?->canOperateQueueControls() ?? false)
+                    ->visible(fn (): bool => (auth()->user()?->canManageQueue() ?? false)
                         && static::markableSessionOptions() !== [])
                     ->form([
                         Select::make('schedule_session_id')
@@ -403,6 +513,10 @@ class DailyRoster extends Page implements HasTable, HasForms
      */
     protected static function staffMayEnterPrescriptionFor(Booking $booking): bool
     {
+        if (! tenant()?->hasPrescription()) {
+            return false;
+        }
+
         /** @var \App\Models\User|null $user */
         $user = auth()->user();
 
@@ -413,6 +527,26 @@ class DailyRoster extends Page implements HasTable, HasForms
         return $user->canEnterPrescriptionFor(
             app(MedicineService::class)->resolvePrescribingDoctor($booking)
         );
+    }
+
+    /**
+     * Live-queue runners keep Call-next ownership; front-door-only day lists
+     * let any queue-capable staff mark Done without Live Queue Control.
+     */
+    protected static function canCompleteFromRoster(Booking $booking): bool
+    {
+        /** @var \App\Models\User|null $user */
+        $user = auth()->user();
+
+        if (! $user) {
+            return false;
+        }
+
+        if (tenant()?->hasLiveQueue()) {
+            return $user->canOperateQueueControls();
+        }
+
+        return $user->canManageQueue();
     }
 
     /**
