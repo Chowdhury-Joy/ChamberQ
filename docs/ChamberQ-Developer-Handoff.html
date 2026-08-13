@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>ChamberQ — Developer Handoff (13 August 2026)</title>
+<style>
+  :root {
+    --ink: #0f3d3e;
+    --ink-soft: #134e4a;
+    --accent: #0f766e;
+    --body: #1a2332;
+    --muted: #6b7280;
+    --muted-2: #64748b;
+    --line: #e5e7eb;
+    --card: #f4f7f7;
+    --card-accent: #ecf6f5;
+    --mint: #5eead4;
+    --warn-bg: #fef3c7;
+    --warn-border: #f59e0b;
+    --danger-bg: #fef2f2;
+    --danger-border: #dc2626;
+  }
+
+  @page { size: A4; margin: 16mm 14mm 16mm; }
+  @page cover { size: A4; margin: 0; }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: var(--body);
+    font-size: 10pt;
+    line-height: 1.5;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .cover {
+    page: cover;
+    page-break-after: always;
+    width: 210mm;
+    height: 297mm;
+    min-height: 297mm;
+    margin: 0;
+    padding: 28mm 22mm 20mm;
+    background: #0a2f30;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover-brand {
+    font-size: 12pt;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin: 0 0 8px;
+  }
+  .cover-tag {
+    font-size: 10.5pt;
+    color: rgba(255,255,255,0.78);
+    max-width: 400px;
+    margin: 0;
+    line-height: 1.5;
+  }
+  .cover-hero { margin-top: 48mm; max-width: 480px; }
+  .cover-rule {
+    width: 40px;
+    height: 2px;
+    background: var(--mint);
+    border: 0;
+    margin: 0 0 20px;
+  }
+  .cover-title {
+    font-size: 28pt;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    line-height: 1.12;
+    margin: 0 0 16px;
+    color: #fff;
+  }
+  .cover-lead {
+    font-size: 12pt;
+    color: rgba(255,255,255,0.9);
+    max-width: 440px;
+    line-height: 1.55;
+    margin: 0;
+  }
+  .cover-meta {
+    position: absolute;
+    left: 22mm;
+    bottom: 18mm;
+    font-size: 10.5pt;
+    line-height: 1.7;
+    color: rgba(255,255,255,0.88);
+  }
+  .cover-meta strong { color: #fff; font-weight: 700; }
+
+  .sheet { page-break-after: always; padding-bottom: 4mm; }
+  .sheet:last-child { page-break-after: auto; }
+
+  .eyebrow {
+    font-size: 8pt;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 8px;
+  }
+  h1 {
+    font-size: 20pt;
+    font-weight: 700;
+    color: var(--ink);
+    margin: 0 0 10px;
+    line-height: 1.15;
+  }
+  h2 {
+    font-size: 12pt;
+    font-weight: 700;
+    color: var(--ink-soft);
+    margin: 16px 0 8px;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 3px;
+  }
+  h3 {
+    font-size: 10.5pt;
+    font-weight: 700;
+    color: var(--body);
+    margin: 12px 0 6px;
+  }
+  p { margin: 0 0 8px; }
+  .subhead {
+    font-size: 10.5pt;
+    color: var(--muted-2);
+    margin: 0 0 14px;
+    line-height: 1.45;
+  }
+  ul, ol { margin: 0 0 10px; padding-left: 1.2em; }
+  li { margin-bottom: 4px; }
+  li strong { color: var(--ink-soft); }
+  code {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 8.5pt;
+    background: var(--card);
+    padding: 1px 4px;
+    border-radius: 2px;
+  }
+
+  .callout {
+    background: var(--card-accent);
+    border-left: 3px solid var(--accent);
+    padding: 8px 12px;
+    margin: 10px 0 14px;
+    font-size: 9.5pt;
+  }
+  .callout-warn {
+    background: var(--warn-bg);
+    border-left-color: var(--warn-border);
+  }
+  .callout-danger {
+    background: var(--danger-bg);
+    border-left-color: var(--danger-border);
+  }
+  .callout strong { color: var(--ink); }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0 14px;
+    font-size: 8.5pt;
+    line-height: 1.35;
+  }
+  th, td {
+    border: 1px solid var(--line);
+    padding: 5px 7px;
+    vertical-align: top;
+    text-align: left;
+  }
+  th {
+    background: var(--ink);
+    color: #fff;
+    font-weight: 700;
+    font-size: 8pt;
+    letter-spacing: 0.03em;
+  }
+  tr:nth-child(even) td { background: var(--card); }
+
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 8px;
+    margin: 10px 0 14px;
+  }
+  .stat-box {
+    background: var(--card);
+    border: 1px solid var(--line);
+    padding: 8px 10px;
+    border-radius: 4px;
+  }
+  .stat-label {
+    font-size: 7.5pt;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 3px;
+  }
+  .stat-value {
+    font-size: 12pt;
+    font-weight: 700;
+    color: var(--ink);
+    line-height: 1.2;
+  }
+  .stat-note {
+    font-size: 8pt;
+    color: var(--muted-2);
+    margin-top: 2px;
+  }
+
+  .two-col {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+  }
+  .footer-note {
+    font-size: 8pt;
+    color: var(--muted);
+    margin-top: 16px;
+    border-top: 1px solid var(--line);
+    padding-top: 6px;
+  }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <p class="cover-brand">ChamberQ</p>
+  <p class="cover-tag">Laravel 12 · Filament 4 · stancl/tenancy · PHP 8.3</p>
+  <div class="cover-hero">
+    <hr class="cover-rule">
+    <h1 class="cover-title">Developer Handoff</h1>
+    <p class="cover-lead">What this product is, what shipped from 25 July to 13 August 2026, what you must not change, and how to run it without breaking a chamber day.</p>
+  </div>
+  <div class="cover-meta">
+    <strong>Audience:</strong> Incoming / collaborating developer<br>
+    <strong>Prepared:</strong> 13 August 2026<br>
+    <strong>Repo:</strong> ChamberQ (product formerly Doctor Gemini / Solo Doc)<br>
+    <strong>Status:</strong> Pre-production — feature-complete enough to demo and sell; live host not fully stood up
+  </div>
+</div>
+
+<!-- 1. Read this first -->
+<div class="sheet">
+  <p class="eyebrow">Section 1</p>
+  <h1>Read this first</h1>
+  <p class="subhead">This is not a hospital HIS. It is a chamber product for Bangladesh solo doctors and small clinics. Patients book a serial online and pay at the desk. There is no patient login and no payment gateway.</p>
+
+  <div class="callout">
+    <strong>Before any code change,</strong> read these four files in the repo root: <code>decisions.md</code>, <code>bug_history.md</code>, <code>architecture.md</code>, <code>sitemap.md</code>. The operating protocol is <code>AGENTS.md</code> (symlink to <code>~/AGENTS.md</code>). Do not edit a copy of those rules.
+  </div>
+
+  <div class="stat-grid">
+    <div class="stat-box">
+      <div class="stat-label">Built in</div>
+      <div class="stat-value">20 days</div>
+      <div class="stat-note">25 Jul → 13 Aug 2026</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Sellable modules</div>
+      <div class="stat-value">3</div>
+      <div class="stat-note">Front door · Queue · Rx</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Medicine SKUs</div>
+      <div class="stat-value">24,491</div>
+      <div class="stat-note">16,029 brands (BD market)</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">Maestro bundle</div>
+      <div class="stat-value">৳15k / ৳3k</div>
+      <div class="stat-note">Setup / monthly. Clinic ৳75k / ৳7.5k</div>
+    </div>
+  </div>
+
+  <h2>What the product does</h2>
+  <p>Each paying doctor (a <strong>tenant</strong>) gets a branded website, online serial booking, a live waiting-room queue with outdoor TV, and a digital prescription pad. Super Admin creates tenants by hand after a WhatsApp sales chat. Marketers earn commission on setup and monthly fees (manual bKash). SMS is a prepaid wallet, not included in the plan.</p>
+
+  <h2>Three product modules (à la carte for Solo / Maestro)</h2>
+  <table>
+    <thead>
+      <tr><th>Module</th><th>Flag</th><th>What the doctor gets</th><th>List price</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Front door</strong></td>
+        <td><code>front_door</code></td>
+        <td>Website + online booking + Daily Roster. Ticket shows sitting name and time window only.</td>
+        <td>৳7,500 / ৳1,000 mo</td>
+      </tr>
+      <tr>
+        <td><strong>Live queue</strong></td>
+        <td><code>live_queue</code></td>
+        <td>Live Queue Control, outdoor TV <code>/screen</code>, ticket “now serving” + come-around ETA, Branding queue settings.</td>
+        <td>৳7,500 / ৳2,000 mo</td>
+      </tr>
+      <tr>
+        <td><strong>Prescription</strong></td>
+        <td><code>prescription</code></td>
+        <td>Consult Screen / Rx pad, print/share, medicines APIs, follow-up reminders, visit media.</td>
+        <td>৳2,500 / ৳0 mo</td>
+      </tr>
+    </tbody>
+  </table>
+  <p>All three together is the Maestro bundle (internal plan key stays <code>solo</code>). Clinic tier still uses Clinic list price. Modules default <strong>on</strong> when the flag is absent so existing chambers keep the full product. Routes use <code>tenant.module:{name}</code> middleware (<code>EnsureTenantHasModule</code>).</p>
+
+  <div class="callout callout-danger">
+    <strong>Do not build online patient payment</strong> unless the owner explicitly asks. Pay-at-chamber is a logged decision (27 Jul, restated 31 Jul). Do not “restore a sane session timeout.” Do not restyle the solo patient homepage. Unlock phrases are in Section 6.
+  </div>
+</div>
+
+<!-- 2. Run it -->
+<div class="sheet">
+  <p class="eyebrow">Section 2</p>
+  <h1>How to run it</h1>
+  <p class="subhead">PHP 8.3+, Composer, Node. Local DB is SQLite. Production DB is MySQL — CI runs both. Do not drop the MySQL job to speed CI.</p>
+
+  <h2>Setup</h2>
+<pre style="background:#f4f7f7;border:1px solid #e5e7eb;padding:10px 12px;font-size:8.5pt;line-height:1.45;overflow:hidden;">
+composer install
+cp .env.example .env
+php artisan key:generate
+touch database/database.sqlite
+php artisan migrate --seed
+php artisan catalogues:load   # required — ~24k medicines + conditions (~12s)
+npm install &amp;&amp; npm run build
+php artisan serve
+</pre>
+
+  <div class="callout callout-warn">
+    <strong>Migrations leave catalogues empty.</strong> Forgetting <code>catalogues:load</code> makes prescription pickers blank with no error. <code>app:production-check</code> treats an empty medicines or conditions table as a blocker. CI runs the load before the readiness gate.
+  </div>
+
+  <h2>Local URLs</h2>
+  <table>
+    <thead><tr><th>URL</th><th>What</th></tr></thead>
+    <tbody>
+      <tr><td><code>http://localhost/</code></td><td>Marketing site (Maestro + Clinic). WhatsApp CTAs. Captures <code>?ref=</code> / <code>?code=</code>.</td></tr>
+      <tr><td><code>http://localhost/admin</code></td><td>Super Admin (tenants, modules, marketers, commissions, Client Health, Research, backup).</td></tr>
+      <tr><td><code>http://localhost/partner</code></td><td>Marketer partner panel.</td></tr>
+      <tr><td><code>http://localhost/solo/</code></td><td>Demo solo tenant (path tenancy). Book at <code>/solo/book</code>, admin at <code>/solo/admin</code>.</td></tr>
+      <tr><td><code>http://localhost/nusraturmi/</code></td><td>Dr. Nusrat Urmi demo. Seed: <code>php artisan db:seed --class=NusratUrmiSeeder</code>.</td></tr>
+    </tbody>
+  </table>
+  <p>Optional custom domain in local: <code>http://solo.localhost/</code> (root paths, no slug). Production uses the doctor’s own domain the same way.</p>
+
+  <h2>Tests</h2>
+  <p><code>php artisan test</code> (SQLite in-memory). MySQL: create <code>soldoc_mysql_test</code>, then <code>DB_CONNECTION=mysql DB_DATABASE=soldoc_mysql_test … php artisan test</code>. Shell env overrides <code>.env</code> and <code>phpunit.xml</code>. GitHub Actions: <code>.github/workflows/tests.yml</code> — SQLite job + <code>phpunit-mysql</code> on MySQL 8.4.</p>
+
+  <h2>Tenancy (the thing that bites)</h2>
+  <ul>
+    <li><strong>Path tenancy</strong> on the central host: <code>/{tenant}/…</code> (e.g. <code>/drkarim/book</code>).</li>
+    <li><strong>Domain tenancy</strong> for optional custom domains: routes at root (<code>/book</code>, <code>/admin</code>).</li>
+    <li>Never use stancl’s <code>tenant_route()</code> for patient links. Use <code>tenant_web_url()</code> / <code>tenant_web_route()</code> / <code>tenant_safe_href()</code> / <code>TenancyUrl::publicAbsolute()</code>.</li>
+    <li>Outbound links (SMS, WhatsApp, ticket Copy, TV bookmark) must go through <code>TenancyUrl::publicAbsolute()</code> or they bake localhost. Same-origin polls stay relative.</li>
+    <li>All three Filament panels share one session cookie on one host. Role checks are not enough — tenant-owned clinical routes also check <code>User::belongsToCurrentTenant()</code>.</li>
+  </ul>
+</div>
+
+<!-- 3. Architecture -->
+<div class="sheet">
+  <p class="eyebrow">Section 3</p>
+  <h1>Architecture snapshot</h1>
+  <p class="subhead">Single shared database, tenant-scoped rows. Live truth is <code>architecture.md</code> — this page is the map, not a substitute.</p>
+
+  <h2>Stack</h2>
+  <p>PHP ^8.3 (Composer <code>platform.php = 8.3.0</code> — match the live host, not a newer laptop). Laravel 12, Filament 4, Livewire, stancl/tenancy 3.10, Vite 7, Tailwind 4, PHPUnit 11. Filament HTML sanitiser pinned to Symfony 7 (8.x needs PHP 8.4).</p>
+
+  <h2>Write paths (do not bypass)</h2>
+  <table>
+    <thead><tr><th>Job</th><th>Single write path</th><th>Why it matters</th></tr></thead>
+    <tbody>
+      <tr><td>Create a booking</td><td><code>BookingService</code></td><td>Row lock, serials, capacity, patient resolve, duplicate-person guard. Wizard, roster walk-in, and queue walk-in all go here.</td></tr>
+      <tr><td>Queue mutations</td><td><code>LiveSessionService</code></td><td>Every mutation is <code>DB::transaction</code> + <code>lockForUpdate()</code> on the session. Roster and Live Queue Control share this so the TV and ticket stay in sync.</td></tr>
+      <tr><td>Visit notes / Rx</td><td><code>VisitRecordService::saveForCompletedBooking()</code></td><td>Desktop pad, phone modal, and Complete visit all land here. Empty form creates no row.</td></tr>
+      <tr><td>Staff paper Rx</td><td><code>VisitRecordService::saveStaffEnteredPrescription()</code></td><td>Whitelist of fields. Cannot inject diagnosis/vitals. Off by default per doctor.</td></tr>
+      <tr><td>Cancel a date</td><td><code>SlotBlockService</code></td><td>Only path. Completes in-chamber patients; cancels waiting/called/skipped.</td></tr>
+      <tr><td>SMS</td><td><code>SmsService::send()</code></td><td>Every body goes through <code>GsmText::toSingleSegment()</code>. Debit before send, refund on hard failure. Never use <code>__()</code> in SMS bodies.</td></tr>
+      <tr><td>Doctor’s shortlist</td><td><code>MedicineService::saveDoctorMedicine()</code></td><td>Only from My medicines or the ★ on the desk. Prescribing does not “learn.”</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Key screens (tenant admin)</h2>
+  <ul>
+    <li><strong>Daily Roster</strong> — day’s list, walk-ins, Mark Late, Mark Completed. When live queue is off: Arrived / Done / No-show.</li>
+    <li><strong>Live Queue Control</strong> — start sitting, Call next, arrived, skip, pause, end. Outdoor TV bookmark (date-free <code>/screen/{session}</code>). Catch-up banner for notes not written.</li>
+    <li><strong>Consult Screen</strong> — auto-follows <code>current_booking_id</code>. ≥1024px + in-chamber = full Rx desk. Phones keep the modal. Complete visit then Call next are two steps.</li>
+    <li><strong>My medicines</strong> — doctor-curated defaults + Rx packs. Packs are created here, applied on the desk.</li>
+    <li><strong>Follow-up reminders</strong> — WhatsApp confirm queue. SMS auto-sends 3 days before (daily 07:00).</li>
+  </ul>
+
+  <h2>Roles</h2>
+  <p>Central: Super Admin, Marketer. Tenant: <code>admin</code> (full, but not the queue runner by default), <code>doctor</code>, <code>staff</code>. Queue is doctor or staff only — never the account-owner admin unless they also have that role. Consult Screen and visit notes are doctor-only, except staff paper-entry when that doctor opted in.</p>
+</div>
+
+<!-- 4. Timeline -->
+<div class="sheet">
+  <p class="eyebrow">Section 4</p>
+  <h1>What shipped, in order</h1>
+  <p class="subhead">Source: <code>architecture_history.md</code> and <code>decisions.md</code>. Do not treat this as a licence to re-open locked UX.</p>
+
+  <table>
+    <thead><tr><th>When</th><th>What landed</th></tr></thead>
+    <tbody>
+      <tr><td>25–28 Jul</td><td>Laravel 12 + Filament 4 + tenancy foundation. Payment gateway removed. Admin/doctor/staff. Prepaid SMS wallet. Operational Reports.</td></tr>
+      <tr><td>31 Jul</td><td>Hybrid path + domain tenancy. Marketer commissions + <code>/partner</code>. Waiting-time ETA. Project memory files created.</td></tr>
+      <tr><td>1–5 Aug</td><td>Solo homepage (then locked). Booking wizard mobile pass. Ticket print/PDF. Outdoor TV token-machine voice. Sessions never expire (owner decision). Clinic Clireo design approved.</td></tr>
+      <tr><td>6 Aug</td><td>Patient records (not just bookings). Consult Screen. Condition master list. Client Health. Clinic homepage design freeze for port.</td></tr>
+      <tr><td>7 Aug</td><td>Clinic site fully ported. Staff paper-prescription entry. Voice transcription deferred. Nusrat Urmi client seed.</td></tr>
+      <tr><td>8 Aug</td><td><strong>Reclassified pre-production.</strong> MySQL proven (three SQLite-hidden migration bugs). Privacy + queue safety. Short Rx link <code>/p/{token}</code>. Vitals. <code>app:production-check</code>. GsmText at SMS choke point.</td></tr>
+      <tr><td>9–10 Aug</td><td>Disaster-recovery ZIP backup. Date-first booking. Clinic departments/blog CMS. Catalogue grew toward full BD market.</td></tr>
+      <tr><td>11 Aug</td><td>Patient merge no longer orphans notes. Full 24,491-SKU catalogue. Automatic prescribing “learning” removed — My medicines is hand-curated.</td></tr>
+      <tr><td>12 Aug</td><td>Desktop Rx pad. Three-layer dosing prefill. Packs. Condition advice presets. Warn-only Rx safety + 221 clash pairs. Follow-up reminders. BD pad print sheet. Portal lists up to 2 prescriptions.</td></tr>
+      <tr><td>13 Aug</td><td>Cross-chamber clinical share (opt-in, default on) + optional NID. Booking identity cleaned up. Product modules + Maestro sales name. Rising Star retired.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Prescription pad — current behaviour</h2>
+  <p>Desktop Consult Screen is a BD pad: left clinical (C/C rows, H/O chips seeded from the patient file, O/E vitals with last-visit grey reference, Dx, Inv), right medicine table. Prefill is <strong>doctor saved default → catalogue default → blank</strong>, field by field. Vitals are never pre-filled. Packs apply but never wipe existing rows. Safety warnings never block save. The disclaimer must appear beside every warning (desk + modal) — <code>RxSafetyTest</code> fails if either drops it.</p>
+  <p>Print and patient copy share one Blade sheet. Patient copy is the full clinical pad (no voice/photo). Share: <code>/p/{token}</code> (48h) plus durable portal backup gated by phone.</p>
+</div>
+
+<!-- 5. Patient + staff journeys -->
+<div class="sheet">
+  <p class="eyebrow">Section 5</p>
+  <h1>Journeys you must not break</h1>
+  <p class="subhead">Full map: <code>sitemap.md</code>. If you add/remove a route or change a CTA, update that file in the same task.</p>
+
+  <h2>Patient</h2>
+  <ol>
+    <li>Open tenant home (or custom domain) → Book.</li>
+    <li>Wizard: chamber/doctor if needed → <strong>When can you come?</strong> (only dates with seats, 60-day window) → name / phone / optional NID / optional other WhatsApp / share-history checkbox.</li>
+    <li>Household on a known phone: masked initials only (<code>F. R., 34</code>), never full names on the public API.</li>
+    <li>Ticket UUID. Share WhatsApp / copy / print. Live queue poll if that module is on.</li>
+    <li>Later: <code>/portal</code> by phone — bookings + up to 2 recent prescriptions.</li>
+    <li>Waiting room: staff bookmark <code>/screen/{session}</code> once (always today).</li>
+  </ol>
+
+  <h2>Sitting day</h2>
+  <ol>
+    <li>Queue runner (staff or doctor per Branding) opens Live Queue Control → Start → Call → Patient arrived → doctor writes on Consult Screen.</li>
+    <li>Doctor: Complete visit (patient stays on screen for print/WhatsApp) → Call next.</li>
+    <li>Mark Late (roster or queue) texts waiting patients if that doctor’s late SMS is on — after-response job, not inline, because there is no queue worker.</li>
+    <li>End session / doctor absent: in-chamber patient is completed, not cancelled; staff get a tell-cancelled-patients hand-off.</li>
+  </ol>
+
+  <h2>Sales / Super Admin</h2>
+  <p>No self-signup. WhatsApp CTA → Super Admin creates tenant (slug, modules, marketer, discount, doctor login email required) → confirm bKash → commissions move pending → owed → paid. Client Health is counts only — never patient names or diagnoses. Research is coded-diagnosis aggregates with k-anonymity (min group 10).</p>
+</div>
+
+<!-- 6. Locks -->
+<div class="sheet">
+  <p class="eyebrow">Section 6</p>
+  <h1>Locked decisions — do not “fix”</h1>
+  <p class="subhead">A security audit, a Laravel default, or “this lifetime looks wrong” does not unlock these. Only the exact phrases do.</p>
+
+  <table>
+    <thead><tr><th>Lock</th><th>Rule</th><th>Unlock phrase</th></tr></thead>
+    <tbody>
+      <tr>
+        <td>Pay at chamber</td>
+        <td>No bKash/Nagad/SSLCommerz for patients. Do not suggest or build pre-payment.</td>
+        <td>Owner explicitly asks for online / pre-payment</td>
+      </tr>
+      <tr>
+        <td>Solo patient homepage</td>
+        <td>Do not edit <code>resources/views/tenant/solo/webpage.blade.php</code> or <code>tenant/solo/sections/**</code>. Book CTAs must keep <code>tenant_safe_href(..., '/book')</code>.</td>
+        <td><code>update patient homepage</code> or <code>change patient homepage</code></td>
+      </tr>
+      <tr>
+        <td>Session never expires</td>
+        <td><code>SESSION_LIFETIME=525600</code> in <code>.env</code>, <code>.env.example</code>, <strong>and</strong> <code>config/session.php</code> default. <code>SESSION_EXPIRE_ON_CLOSE=false</code>. <code>AUTH_PASSWORD_TIMEOUT=31536000</code>. Do not tidy the config default back to 120.</td>
+        <td><code>change session expiry</code> or <code>restore session timeout</code></td>
+      </tr>
+      <tr>
+        <td>No self-signup</td>
+        <td>Marketing CTA is WhatsApp. Super Admin creates tenants.</td>
+        <td>Owner asks to change sales model</td>
+      </tr>
+      <tr>
+        <td>No prescribing “learning”</td>
+        <td>Do not restore usage counters / auto-ranking from what was prescribed. My medicines is explicit curation only.</td>
+        <td>Owner asks to bring learning back</td>
+      </tr>
+      <tr>
+        <td>No named clinician on drug list</td>
+        <td>No <code>reviewed_by</code>. Disclaimer beside every Rx warning. Incomplete list is acknowledged in product copy.</td>
+        <td>Owner asks to name a reviewer</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>Pre-production (since 8 Aug)</h2>
+  <p>This repo is <strong>not</strong> a prototype. Security, backups, MySQL correctness, and unrecoverable-data bugs are in scope by default. That still does not unlock the homepage or session locks above.</p>
+
+  <h2>How to close a task</h2>
+  <ul>
+    <li>If you add/delete/rename a file under <code>app/</code>, <code>routes/</code>, <code>config/</code>, <code>database/</code>, <code>resources/views/</code>, or <code>public/</code> — update <code>architecture.md</code> and append one line to <code>architecture_history.md</code>. No exemption for “only a bug fix.”</li>
+    <li>Behavioural changes are architecture changes even with no new files.</li>
+    <li>Never rewrite past <code>architecture_history.md</code> entries. Append a correction.</li>
+    <li>Verify claims with <code>git log -S</code> and by reading the file. Do not copy unverified audit summaries into the log.</li>
+  </ul>
+</div>
+
+<!-- 7. Gaps + traps -->
+<div class="sheet">
+  <p class="eyebrow">Section 7</p>
+  <h1>Not live yet, and traps already paid for</h1>
+
+  <h2>Known production gaps (as of 13 Aug)</h2>
+  <table>
+    <thead><tr><th>Gap</th><th>Why it matters</th></tr></thead>
+    <tbody>
+      <tr><td>Nothing backed up off the machine</td><td>In-app ZIP exists for table CSVs. Voice notes and prescription photos are still on local disk and not in the ZIP.</td></tr>
+      <tr><td>No real SMS sent</td><td><code>SMS_DRIVER</code> defaults to <code>log</code>. Confirmations would silently not go out.</td></tr>
+      <tr><td>Password-reset mail goes nowhere</td><td><code>MAIL_MAILER=log</code>.</td></tr>
+      <tr><td>No production host config</td><td>Local is still debug + SQLite. Run <code>php artisan app:production-check</code> as the last deploy step.</td></tr>
+      <tr><td>No error monitoring</td><td>A crash on a sitting day would be silent.</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Traps (do not reintroduce)</h2>
+  <ul>
+    <li><strong>SQLite is not proof.</strong> Three migrations were unrunnable on MySQL (tenants table order, composite FKs, SET NULL on composite keys). Always think MySQL.</li>
+    <li><strong>Date columns:</strong> use <code>DateOnly</code> cast and plain <code>where()</code>, not <code>whereDate()</code> — the function kills the booking indexes and SQLite stores a time component.</li>
+    <li><strong>SMS segments:</strong> one non-GSM character (em dash) turned a 1-credit message into 3. Guard is in <code>GsmText</code> inside <code>send()</code>, not a comment.</li>
+    <li><strong>Patient merge</strong> must move visit_records and prescriptions via <code>repointPatientOwnedRows()</code>. Moving only bookings NULLed clinical history.</li>
+    <li><strong>Filament bulk delete</strong> authorizes <code>deleteAny()</code>, not <code>delete()</code>. Policies that omit it allow the bulk action. Chambers/Doctors have no bulk delete.</li>
+    <li><strong>This panel has no Tailwind on Live Queue Control</strong> — use scoped plain CSS (<code>lqc-</code>). Arbitrary utilities are silently dropped.</li>
+    <li><strong>There is no queue worker.</strong> Jobs that must run today use <code>-&gt;afterResponse()</code> (doctor-late SMS). A queued job would never send.</li>
+    <li><strong>Medicine search</strong> must not hydrate the whole 24k catalogue. Path is <code>MedicineService::search()</code> only.</li>
+    <li><strong>Dose chips</strong> come from the catalogue for that brand, never a hardcoded 500/10/20/40/5 mg list.</li>
+  </ul>
+
+  <h2>Deferred on purpose</h2>
+  <ul>
+    <li>Voice transcription — code stashed in <code>docs/deferred/voice-transcription/</code>. Do not reload it.</li>
+    <li>Handwriting OCR on prescription photos.</li>
+    <li>Licensed US drug-interaction database. Coverage report: 3.7% of real BD medicines have no US vocabulary entry. Shipped checker is a short curated list + disclaimer.</li>
+  </ul>
+
+  <div class="callout">
+    <strong>First week on the repo:</strong> run setup, book a serial on <code>/solo/book</code>, start a sitting, write a prescription on Consult Screen at desktop width, print it, open the patient copy. Then read <code>bug_history.md</code> end to end before touching queue, SMS, or tenancy URLs.
+  </div>
+
+  <p class="footer-note">
+    ChamberQ developer handoff · 13 August 2026 · Living detail: architecture.md, sitemap.md, decisions.md, bug_history.md · This PDF is a snapshot; the repo wins if they disagree.
+  </p>
+</div>
+
+</body>
+</html>

@@ -2,7 +2,7 @@
 
 **Audience:** Marketing team, sales partners (marketers), anyone pitching ChamberQ  
 **Product:** ChamberQ  
-**Last updated:** 2026-08-03  
+**Last updated:** 2026-08-13  
 
 Use this as your one source of truth when talking to doctors, writing ads, or training new partners. Keep language simple. Sell the **calmer chamber**, not the software.
 
@@ -41,12 +41,17 @@ Think of a busy bakery that used to shout numbers and leave people standing for 
 
 ## 3. Who to target
 
-### Best fit — Solo plan (featured)
+### Best fit — Maestro (featured, full one-doctor package)
 - One doctor
 - Practices at **1–5 chambers / hospital OPDs** on different days
 - Frustrated by phone calls and long waits
-- Wants a professional online presence without hiring a web agency
+- Wants website + booking + live queue + prescription together
 - Comfortable with WhatsApp (almost everyone)
+
+### Also sell — modules (same doctor, pick pieces)
+- **Website + booking** only, or add **Prescription**, or add **Live queue**
+- Prices under the Maestro card on the marketing site — not a separate brand
+- **Rising Star is retired** as a named plan (no third product story)
 
 ### Best fit — Clinic plan
 - Multi-doctor practice
@@ -64,21 +69,29 @@ Think of a busy bakery that used to shout numbers and leave people standing for 
 
 | Plan | Who it’s for | Setup | Monthly |
 |------|----------------|--------|---------|
-| **Solo** (featured) | One doctor, up to 5 locations | ৳15,000 | ৳3,000 / month |
+| **Maestro** (featured) | One doctor, all three modules | ৳15,000 | ৳3,000 / month |
 | **Clinic** | Multi-doctor clinics & labs | ৳75,000 | ৳7,500 / month |
 
-### Solo includes
+### Maestro includes
 - One doctor, up to 5 locations
-- Branded patient site & online serial
-- Live queue & patient ticket
-- Prepaid SMS confirmations (credits extra)
+- Website + online booking
+- Live queue + outdoor TV
+- Digital prescription
 - Done-with-you setup
+
+### Or pick modules (one doctor)
+| What they want | Setup | Monthly |
+|----------------|--------|---------|
+| Website + booking | ৳7,500 | ৳1,000 |
+| + Prescription | +৳2,500 | +৳0 |
+| + Live queue | +৳7,500 | +৳2,000 |
+| All three = Maestro | ৳15,000 | ৳3,000 |
 
 ### Clinic includes
 - Multiple doctors & chambers
 - Lab tests catalogue
 - Same patient experience, scaled
-- Prepaid SMS confirmations (credits extra)
+- Prepaid SMS confirmations (credits extra, optional)
 - Done-with-you setup
 
 ### SMS (extra, prepaid — not free)
@@ -100,7 +113,7 @@ Think of a busy bakery that used to shout numbers and leave people standing for 
 
 1. Doctor lands on the marketing site (or your referral link).
 2. They tap **WhatsApp** — that is the only primary CTA. No self-signup form.
-3. You (or central sales) qualify Solo vs Clinic, answer FAQs, collect chamber details.
+3. You (or central sales) qualify Maestro vs modules vs Clinic, answer FAQs, collect chamber details.
 4. **Super Admin** creates their tenant (URL like `chamberq.com/drkarim`), attaches your referral / discount if any, and hands over admin login.
 5. We set up branding, sessions, and go live together.
 6. Doctor pays setup → then monthly. Super Admin confirms payments in the system.
@@ -132,6 +145,21 @@ If you are a sales partner:
 3. Super Admin pays you out → status **paid**
 
 Keep your own bKash / payout details ready. Do not promise same-day payouts unless ops agrees.
+
+### When a doctor asks for a feature or module (meeting, phone, or SMS)
+
+If they ask for something specific — a module we already sell, or a new idea — **do not invent a price or a promise on the spot.**
+
+1. **Write it down** (what they want, in their words) and send it to central / product.
+2. We will **try our best to include it for free, as soon as we can**, when it fits the product and our capacity.
+3. We will **tell them clearly whether it is possible or not** — no silent “maybe forever.”
+4. If it is **outside our budget** (big custom work, new systems, long build), we **may charge an extra fee** — and we will **tell them the fee before any paid work starts**. Never surprise them after the fact.
+
+**What you may say on the call:**  
+“We’ll check with the team. If we can fold it into ChamberQ, we’ll try to include it at no extra charge and tell you how soon. If it’s a bigger custom job, we’ll say so and quote any extra fee before we start.”
+
+**What you must not say:**  
+“Yes, next week, free” — unless central has already confirmed that.
 
 ---
 

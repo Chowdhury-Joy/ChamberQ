@@ -35,3 +35,6 @@ Thumbs.db
 
 # Local agent/tooling config
 .claude/
+
+# Build-time extract of macOS Helvetica Neue for slide font embedding (do not commit)
+/docs/slides/.font-cache/

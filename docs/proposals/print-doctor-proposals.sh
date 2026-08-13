@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Print doctor proposal HTML → portrait A4 PDF via Brave (headless).
+# Print Maestro chamber proposal HTML → portrait A4 PDF via Brave (headless).
+# Duplicate Maestro-ChamberQ-Proposal.html before personalising for a specific doctor.
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
 BRAVE="${BRAVE_BIN:-/Applications/Brave Browser.app/Contents/MacOS/Brave Browser}"
@@ -17,6 +18,5 @@ print_one() {
   ls -la "$pdf"
 }
 
-print_one "$ROOT/docs/proposals/Dr-Shamim-Ahmed-ChamberQ-Proposal.html"
-print_one "$ROOT/docs/proposals/Dr-Sharfuddin-Mahmood-ChamberQ-Proposal.html"
+print_one "$ROOT/docs/proposals/Maestro-ChamberQ-Proposal.html"
 echo "Done."

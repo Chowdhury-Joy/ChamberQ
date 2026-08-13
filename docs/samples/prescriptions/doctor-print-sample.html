@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ChamberQ — Doctor print (sample)</title>
+    <style>
+    * { box-sizing: border-box; }
+    body {
+        margin: 0;
+        font-family: 'Helvetica Neue', Arial, sans-serif;
+        color: #111;
+        background: #fff;
+        font-size: 13px;
+        line-height: 1.45;
+    }
+    .sheet {
+        max-width: 794px;
+        margin: 0 auto;
+        padding: 16px 20px 24px;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+    .sample-banner {
+        margin-bottom: 12px;
+        padding: 8px 12px;
+        background: #eff6ff;
+        border: 1px solid #bfdbfe;
+        color: #1e3a8a;
+        font-size: 12px;
+        border-radius: 6px;
+    }
+    .pad {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid #cbd5e1;
+        overflow: hidden;
+        background: #fff;
+        min-height: 980px;
+    }
+    .pad-header {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 12px 20px;
+        padding: 14px 16px 12px;
+        border-bottom: 2px solid #0f172a;
+    }
+    .doctor-name { font-size: 18px; font-weight: 700; margin: 0 0 4px; }
+    .muted { color: #475569; font-size: 12px; margin: 0 0 2px; }
+    .chamber-block { text-align: right; max-width: 46%; }
+    .chamber-name { font-weight: 700; font-size: 13px; margin: 0 0 2px; }
+    .patient-band {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px 18px;
+        align-items: baseline;
+        padding: 8px 16px;
+        background: #f1f5f9;
+        border-bottom: 1px solid #cbd5e1;
+        font-size: 13px;
+    }
+    .patient-band .field { display: inline-flex; gap: 6px; align-items: baseline; }
+    .patient-band .label {
+        color: #64748b;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.03em;
+    }
+    .patient-band .value { font-weight: 600; color: #0f172a; }
+    .patient-band .grow { margin-left: auto; }
+    .pad-body {
+        display: grid;
+        grid-template-columns: minmax(0, 38%) minmax(0, 62%);
+        flex: 1;
+    }
+    .pad-clinical {
+        padding: 12px 14px 16px;
+        border-right: 1px solid #e2e8f0;
+        background: #fafafa;
+    }
+    .pad-rx { padding: 12px 14px 16px; }
+    .rx-symbol { font-size: 26px; font-weight: 700; margin: 0 0 10px; line-height: 1; }
+    .clinical-block { margin-bottom: 12px; }
+    .clinical-block strong {
+        display: block;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: #64748b;
+        margin-bottom: 3px;
+    }
+    .clinical-block .body { white-space: pre-wrap; font-size: 13px; }
+    .med-list { list-style: none; margin: 0; padding: 0; }
+    .med-row {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 6px 12px;
+        padding: 8px 0;
+        border-bottom: 1px solid #e2e8f0;
+        align-items: start;
+    }
+    .med-row:last-child { border-bottom: none; }
+    .medicine-brand { font-weight: 700; text-transform: uppercase; font-size: 13px; }
+    .medicine-meta { font-size: 11px; color: #475569; margin-top: 2px; }
+    .med-dosing {
+        text-align: right;
+        font-size: 13px;
+        font-weight: 600;
+        font-variant-numeric: tabular-nums;
+    }
+    .med-dosing .duration,
+    .med-dosing .timing {
+        display: block;
+        font-size: 11px;
+        font-weight: 500;
+        color: #475569;
+        margin-top: 2px;
+        white-space: normal;
+        max-width: 11rem;
+    }
+    .pad-footer {
+        margin-top: auto;
+        padding: 10px 16px;
+        border-top: 1px solid #cbd5e1;
+        background: #f8fafc;
+        font-size: 12px;
+        color: #334155;
+    }
+    .bring-back { font-weight: 600; margin: 0 0 4px; }
+    .chamber-line { margin: 0; color: #64748b; font-size: 11px; }
+    @media print {
+        .sample-banner { display: none !important; }
+        .sheet { padding: 0; max-width: none; min-height: auto; }
+        .pad { border: none; min-height: 0; }
+    }
+    </style>
+</head>
+<body>
+<div class="sheet">
+    <div class="sample-banner no-print">
+        <strong>Sample — Doctor print / Preview.</strong>
+        What the chamber printer (and Consult Screen Preview) produce. Filled with a full visit.
+    </div>
+
+    <div class="pad">
+        <header class="pad-header">
+            <div>
+                <p class="doctor-name">Dr. Champa Chowdhury</p>
+                <p class="muted">MBBS, BCS (Health), MD (Obs &amp; Gynae), BSMMU</p>
+                <p class="muted">Reg. No. / রেজি. নং A-62681</p>
+            </div>
+            <div class="chamber-block">
+                <p class="chamber-name">Lancet Diagnostic Center</p>
+                <p class="muted">108/B, KB Fazlul Kader Road, Panchlaish, Chattogram</p>
+                <p class="muted">018XX-XXXXXX · Sun–Thu 5–9 pm</p>
+            </div>
+        </header>
+
+        <div class="patient-band">
+            <div class="field"><span class="label">Patient / রোগী</span><span class="value">Mrs. Gouri Chowdhury</span></div>
+            <div class="field"><span class="label">Age / বয়স</span><span class="value">52 years</span></div>
+            <div class="field"><span class="label">Female / মহিলা</span></div>
+            <div class="field"><span class="label">BP / রক্তচাপ</span><span class="value">170/100</span></div>
+            <div class="field"><span class="label">Pulse / নাড়ি</span><span class="value">88 /min</span></div>
+            <div class="field grow"><span class="label">Date / তারিখ</span><span class="value">24 May 2025</span></div>
+        </div>
+
+        <div class="pad-body">
+            <aside class="pad-clinical">
+                <div class="clinical-block">
+                    <strong>Diagnosis / রোগ নির্ণয়</strong>
+                    <div class="body">Fibroid uterus</div>
+                </div>
+                <div class="clinical-block">
+                    <strong>C/C / প্রধান অভিযোগ</strong>
+                    <div class="body">Diagnosed case of Fibroid uterus (1.5 × 1.1 cm, 0.7 × 0.5 cm)</div>
+                </div>
+                <div class="clinical-block">
+                    <strong>H/O / ইতিহাস</strong>
+                    <div class="body">Rehansil — for 3 months
+LMP: 11/05/25 · Flow: Average · Dysmenorrhoea: Absent</div>
+                </div>
+                <div class="clinical-block">
+                    <strong>O/E / পরীক্ষা</strong>
+                    <div class="body">Anaemia (−)
+BP 170/100 mmHg
+P/A/E: NAD</div>
+                </div>
+                <div class="clinical-block">
+                    <strong>Inv / তদন্ত</strong>
+                    <div class="body">CBC, TSH, USG of lower abdomen (follow-up)</div>
+                </div>
+                <div class="clinical-block">
+                    <strong>Advice / পরামর্শ</strong>
+                    <div class="body">Refer to cardiologist for high BP.
+Continue current gynae medicines for 3 months.
+Bring this slip and previous USG on next visit.</div>
+                </div>
+                <div class="clinical-block">
+                    <strong>Follow-up / ফলোআপ</strong>
+                    <div class="body">After 3 months</div>
+                </div>
+            </aside>
+
+            <section class="pad-rx">
+                <div class="rx-symbol">℞</div>
+                <ul class="med-list">
+                    <li class="med-row">
+                        <div>
+                            <div class="medicine-brand">CORALEX-D <span style="font-weight:600;text-transform:none;">— Cap</span></div>
+                            <div class="medicine-meta">Calcium + Vitamin D3</div>
+                        </div>
+                        <div class="med-dosing">0+0+1<span class="duration">3 months</span><span class="timing">After food / খাবারের পর</span></div>
+                    </li>
+                    <li class="med-row">
+                        <div>
+                            <div class="medicine-brand">NEUROS-B <span style="font-weight:600;text-transform:none;">— Tab</span></div>
+                            <div class="medicine-meta">Vitamin B-complex</div>
+                        </div>
+                        <div class="med-dosing">0+0+1<span class="duration">3 months</span><span class="timing">After food / খাবারের পর</span></div>
+                    </li>
+                    <li class="med-row">
+                        <div>
+                            <div class="medicine-brand">OSARTIL <span style="font-weight:600;text-transform:none;">— 50 mg</span></div>
+                            <div class="medicine-meta">Losartan · Hypertension</div>
+                        </div>
+                        <div class="med-dosing">0+0+1<span class="duration">Continue</span><span class="timing">At night / রাতে</span></div>
+                    </li>
+                    <li class="med-row">
+                        <div>
+                            <div class="medicine-brand">AMILIN <span style="font-weight:600;text-transform:none;">— 10 mg</span></div>
+                            <div class="medicine-meta">Amlodipine</div>
+                        </div>
+                        <div class="med-dosing">0+0+1<span class="duration">Continue</span><span class="timing">At night / রাতে</span></div>
+                    </li>
+                    <li class="med-row">
+                        <div>
+                            <div class="medicine-brand">TENOBIS <span style="font-weight:600;text-transform:none;">— 2.5 mg</span></div>
+                            <div class="medicine-meta">Bisoprolol</div>
+                        </div>
+                        <div class="med-dosing">1+0+0<span class="duration">Continue</span><span class="timing">After food / খাবারের পর</span></div>
+                    </li>
+                </ul>
+            </section>
+        </div>
+
+        <footer class="pad-footer">
+            <p class="bring-back">Please bring this prescription when you visit again. / পুনরায় আসার সময় অবশ্যই ব্যবস্থাপত্র সঙ্গে নিয়ে আসবেন।</p>
+            <p class="chamber-line">Lancet Diagnostic Center — 108/B, KB Fazlul Kader Road, Panchlaish, Chattogram · 018XX-XXXXXX</p>
+        </footer>
+    </div>
+</div>
+</body>
+</html>

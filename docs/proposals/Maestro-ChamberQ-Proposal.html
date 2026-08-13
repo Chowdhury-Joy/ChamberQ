@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>ChamberQ — Maestro Proposal for Dr. Shamim Ahmed</title>
+<title>ChamberQ — Maestro Proposal</title>
 <style>
   :root {
     --ink: #0f3d3e;
@@ -130,69 +130,108 @@
   }
   .sheet:last-child { page-break-after: auto; }
 
-  /* Section 3: keep shared/personal + busy-day flows on one page */
-  .sheet-tight .eyebrow { margin-bottom: 10px; }
-  .sheet-tight h1 {
+  /* —— Content page rhythm (all inner pages) —— */
+  .sheet h1 {
+    margin-bottom: 14px;
+  }
+  .lede {
+    margin: 0 0 26px;
+    max-width: 100%;
+  }
+  .lede p {
+    margin: 0 0 12px;
+    font-size: 11pt;
+    line-height: 1.65;
+    color: var(--body);
+  }
+  .lede p:last-child { margin-bottom: 0; }
+
+  h2.section-head {
+    font-size: 22px !important;
+    margin: 30px 0 12px !important;
+    letter-spacing: 0;
+  }
+  .flow-section h2.section-head,
+  .flow-section > h2.section-head {
+    margin-top: 0 !important;
+  }
+  .flow-section + .flow-section {
+    margin-top: 28px;
+  }
+
+  .sheet-chamber .blocks {
+    margin-top: 40px;
+  }
+  .sheet-chamber .eyebrow {
+    margin-bottom: 12px;
+  }
+  .sheet-chamber .lede {
+    margin-bottom: 22px;
+    max-width: 100%;
+  }
+  .sheet-chamber .lede p {
+    margin-bottom: 10px;
+    line-height: 1.6;
+    font-size: 11pt;
+  }
+  .sheet-chamber .lede p:last-child {
+    margin-bottom: 0;
+  }
+  .sheet-chamber .block {
+    padding: 16px 0;
+  }
+  .sheet-chamber .block:first-child {
+    padding-top: 4px;
+  }
+  .sheet-chamber .block p:not(.block-title) {
+    font-size: 11pt;
+    margin-bottom: 0;
+    line-height: 1.6;
+  }
+  .sheet-chamber .block-title {
+    font-size: 30px !important;
+    margin-bottom: 8px !important;
+  }
+  .sheet-chamber h1 {
+    font-size: 40pt;
+    margin-bottom: 12px;
+  }
+  .sheet-day .blocks-continued {
+    margin-bottom: 16px;
+  }
+  .sheet-day .blocks-continued .block {
+    padding: 12px 0;
+  }
+  .sheet-day .blocks-continued .block-title {
+    margin-bottom: 8px !important;
+  }
+  .sheet-day .flow-section {
+    margin-bottom: 14px;
+  }
+  .sheet-day h1 {
     font-size: 36pt;
     margin-bottom: 8px;
   }
-  .sheet-tight .subhead {
+  .sheet-day .subhead {
+    margin-bottom: 14px;
     font-size: 11pt;
-    margin-bottom: 16px;
-    line-height: 1.45;
+    line-height: 1.55;
   }
-  .sheet-tight h2 {
-    font-size: 12.5pt;
-    margin: 36px 0 10px;
+  .sheet-day .flow-lead {
+    margin-bottom: 10px;
   }
-  .sheet-tight .pair {
-    gap: 12px;
-    margin: 4px 0 8px;
+  .sheet-day .flow-follow {
+    margin-top: 10px;
+    line-height: 1.6;
   }
-  .sheet-tight .card {
-    padding: 12px 12px 10px;
+  .sheet-day .flow-block {
+    padding-top: 0;
+    margin-top: 0;
   }
-  .sheet-tight .card-label { margin-bottom: 6px; font-size: 8.5pt; }
-  .sheet-tight .card-title {
-    font-size: 24px !important;
-    margin-bottom: 8px;
+  .sheet-day .note {
+    margin-top: 16px;
+    padding: 14px 16px;
   }
-  .sheet-tight .card li {
-    font-size: 9.5pt;
-    padding-bottom: 6px;
-    line-height: 1.35;
-  }
-  .sheet-tight .flow-block {
-    padding: 12px 0;
-  }
-  .sheet-tight .flow-block-title {
-    font-size: 24px !important;
-    margin-bottom: 4px;
-  }
-  .sheet-tight .flow-caption {
-    font-size: 9.5pt;
-    margin-bottom: 6px;
-  }
-  .sheet-tight .flow {
-    gap: 6px 5px;
-    margin: 6px 0 8px;
-  }
-  .sheet-tight .flow-step {
-    font-size: 9.5pt;
-    padding: 6px 10px;
-  }
-  .sheet-tight .flow-arrow { font-size: 11pt; }
-  .sheet-tight .flow-note {
-    font-size: 10pt;
-    line-height: 1.45;
-  }
-
-  /* Section 2: near-original spacing; light trim so all 6 steps stay on one page */
-  .sheet-s2 .eyebrow { margin-bottom: 10px; }
-  .sheet-s2 .subhead { margin-bottom: 14px; }
-  .sheet-s2 .steps { margin-top: 4px; }
-  .sheet-s2 .step { padding: 16px 0; }
-  .sheet-s2 .step-for { margin: 0 0 8px; }
 
   .eyebrow {
     font-size: 9.5pt;
@@ -225,13 +264,13 @@
   .meta-grid .v { color: var(--body); }
 
   /* Numbered feature blocks (Joy style) */
-  .blocks { margin: 4px 0 0; }
+  .blocks { margin: 0; }
   .block {
-    padding: 20px 0;
+    padding: 22px 0;
     border-bottom: 1px solid var(--line);
   }
-  .block:first-child { padding-top: 8px; }
-  .block:last-child { border-bottom: 0; padding-bottom: 4px; }
+  .block:first-child { padding-top: 6px; }
+  .block:last-child { border-bottom: 0; padding-bottom: 6px; }
   /* .block-title → Bebas headline block */
   .block-for {
     font-size: 10.5pt;
@@ -239,11 +278,12 @@
     margin: 0 0 10px;
   }
   .block p:not(.block-title) {
-    margin: 0;
+    margin: 0 0 10px;
     font-size: 11pt;
     color: #334155;
-    line-height: 1.6;
+    line-height: 1.65;
   }
+  .block p:not(.block-title):last-child { margin-bottom: 0; }
 
   /* Flowchart chips */
   .flow {
@@ -288,10 +328,26 @@
     line-height: 1.6;
   }
   .flow-block {
-    padding: 22px 0;
-    border-bottom: 1px solid var(--line);
+    padding: 28px 0 0;
+    border-bottom: 0;
+    margin-top: 8px;
   }
   .flow-block:last-child { border-bottom: 0; }
+  .flow-section {
+    margin: 0 0 28px;
+  }
+  .flow-lead {
+    margin: 0 0 14px;
+    font-size: 11pt;
+    color: #334155;
+    line-height: 1.65;
+  }
+  .flow-follow {
+    margin: 14px 0 0;
+    font-size: 11pt;
+    color: #334155;
+    line-height: 1.65;
+  }
   /* .flow-block-title → Bebas headline block */
 
   /* Journey steps */
@@ -526,14 +582,14 @@
   }
   .step-title, .block-title, .flow-block-title,
   .step p.step-title, .block p.block-title, p.flow-block-title {
-    font-size: 24px !important;
-    margin: 0 0 6px !important;
+    font-size: 30px !important;
+    margin: 0 0 10px !important;
     letter-spacing: 0;
     line-height: 0.95;
     color: var(--ink);
   }
   .card-title, .card p.card-title {
-    font-size: 24px !important;
+    font-size: 30px !important;
     margin: 0 0 12px !important;
     letter-spacing: 0;
     line-height: 0.95;
@@ -557,10 +613,20 @@
     display: flex;
     flex-direction: column;
   }
-  .sheet.sheet-closing {
+  .sheet  .sheet-closing {
     /* closing page is content-heavy — do not force min-height */
     min-height: 0;
     display: block;
+  }
+  .sheet-closing h2.section-head {
+    margin-top: 32px !important;
+  }
+  .sheet-closing h2.section-head:first-of-type {
+    margin-top: 4px !important;
+  }
+  .sheet-invest .price-card {
+    margin-top: 14px;
+    margin-bottom: 24px;
   }
   .sign-foot {
     margin-top: auto;
@@ -705,16 +771,15 @@
 <section class="cover">
   <img class="cover-logo" src="data:image/png;base64,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" alt="ChamberQ" width="1024" height="242">
   <p class="cover-tag">MAESTRO</p>
-  <p class="cover-tag-sub">For Dr. Shamim Ahmed’s chamber practice</p>
+  <p class="cover-tag-sub">For your chamber practice</p>
 
   <div class="cover-hero">
     <hr class="cover-rule">
     <h1 class="cover-title">Product<br>Proposal</h1>
-    <p class="cover-lead">Your diabetes &amp; medicine chamber — clearer serials, a waiting-room screen that matches your sittings, and a portfolio site that already feels like you.</p>
+    <p class="cover-lead">Your chamber — clearer serials, a waiting-room screen that matches your sittings, and a portfolio site that already feels like you.</p>
   </div>
 
   <div class="cover-meta">
-    Prepared for <strong>Dr. Shamim Ahmed</strong><br>
     Prepared by <strong>Joy Chowdhury</strong><br>
     WhatsApp <strong>01818-614349</strong><br>
     August 2026
@@ -722,33 +787,35 @@
 </section>
 
 <!-- ===================== PAGE 2 — YOUR CHAMBER ===================== -->
-<section class="sheet sheet-s2">
-  <p class="eyebrow">Maestro · Dr. Shamim Ahmed</p>
+<section class="sheet sheet-chamber">
+  <p class="eyebrow">Maestro</p>
   <h1>Your chamber with&nbsp;ChamberQ</h1>
 
-  <p>Your Belle Vue mornings already fill Room&nbsp;311. Families still call for serials. The waiting area gets loud. By the time you sit at Labaid, you have already spent energy managing the queue instead of the consult.</p>
-  <p>ChamberQ is built for that day — clearer serials at Belle Vue and Labaid, one calm board per sitting, and a portfolio site that already feels like you.</p>
+  <div class="lede">
+    <p>Your chamber days fill up fast — families call for serials, the waiting area gets loud, and you spend energy on the queue instead of the consult.</p>
+    <p>ChamberQ is built for that: clearer serials, one calm board per sitting, and a portfolio site under your name.</p>
+  </div>
 
   <div class="blocks">
     <div class="block">
       <p class="block-title">1. Portfolio website under your&nbsp;name</p>
-      <p>Credentials, Belle Vue &amp; Labaid chambers, FAQ, and Book — so families find you, not a template hospital.</p>
+      <p>Credentials, chambers, FAQ, and Book — so families find <strong>you</strong>, not a hospital template. We set up the first version; you edit when you want.</p>
     </div>
     <div class="block">
       <p class="block-title">2. Online serial&nbsp;booking</p>
-      <p>Patients take a serial for the sitting they need. Soft launch beside 01333-709771 — no app, no password.</p>
+      <p>Patients book a sitting and get a ticket link — no app, no password. Walk-ins and phone serials stay in the same queue.</p>
     </div>
     <div class="block">
       <p class="block-title">3. Ticket + waiting-room&nbsp;TV</p>
-      <p>One ticket per visit; one outdoor screen per sitting. Families see whose number is being called.</p>
+      <p>Live position on the phone; one outdoor screen per sitting calls the next numbers aloud.</p>
     </div>
     <div class="block">
       <p class="block-title">4. Consult&nbsp;screen</p>
-      <p>Notes, medicines, follow-up — clinical data stays with you, under your name.</p>
+      <p>Notes, vitals, medicines, and follow-up in one place. Your favourites are remembered; records stay under your name.</p>
     </div>
     <div class="block">
       <p class="block-title">5. Prescription print / WhatsApp&nbsp;home</p>
-      <p>Print a clean slip or send a short link — medicines, advice, follow-up on the family’s phone.</p>
+      <p>Print a slip or send a short link on WhatsApp — medicines and advice for the family; diagnosis stays in your consult record.</p>
     </div>
   </div>
 
@@ -756,41 +823,44 @@
 </section>
 
 <!-- ===================== PAGE 3 — A DAY ===================== -->
-<section class="sheet sheet-tight">
-  <p class="eyebrow">Maestro · Dr. Shamim Ahmed</p>
+<section class="sheet sheet-day">
+  <p class="eyebrow">Maestro</p>
   <h1>A day at your&nbsp;chamber</h1>
-  <p class="subhead">Belle Vue Room&nbsp;311 and Labaid — same flow, separate sittings.</p>
+  <p class="subhead">One doctor, up to five chambers — same flow every sitting. Patients book or walk in; you run one sitting at a time from your desk.</p>
 
-  <h2>Patient path</h2>
-  <div class="flow">
-    <span class="flow-step">Open your site</span>
-    <span class="flow-arrow">→</span>
-    <span class="flow-step">Book sitting</span>
-    <span class="flow-arrow">→</span>
-    <span class="flow-step">Get ticket</span>
-    <span class="flow-arrow">→</span>
-    <span class="flow-step">TV call</span>
-    <span class="flow-arrow">→</span>
-    <span class="flow-step">Consult + Rx</span>
+  <div class="flow-section">
+    <h2 class="section-head">Patient path</h2>
+    <p class="flow-lead">From the family’s phone — no sign-up, just their mobile number.</p>
+    <div class="flow">
+      <span class="flow-step">Open your site</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-step">Book sitting</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-step">Get ticket</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-step">TV call</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-step">Consult + Rx</span>
+    </div>
+    <p class="flow-follow">They can share the ticket, check live position, and get a notice if you mark the day late — without you repeating the same update at the desk.</p>
   </div>
 
-  <h2>At your desk</h2>
-  <div class="flow">
-    <span class="flow-step">Start sitting</span>
-    <span class="flow-arrow">→</span>
-    <span class="flow-step">Call next</span>
-    <span class="flow-arrow">→</span>
-    <span class="flow-step">Complete visit</span>
-    <span class="flow-arrow">→</span>
-    <span class="flow-step muted">Next / switch sitting</span>
+  <div class="flow-section">
+    <h2 class="section-head">At your desk</h2>
+    <p class="flow-lead">Live Queue Control — one screen for the whole sitting.</p>
+    <div class="flow">
+      <span class="flow-step">Start sitting</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-step">Call next</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-step">Complete visit</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-step muted">Next / switch sitting</span>
+    </div>
+    <p class="flow-follow">Staff can help with arrivals and the outdoor TV without seeing clinical notes. Switch sitting when you move chamber — the queue and screen follow that location.</p>
   </div>
 
-  <div class="flow-block" style="padding-top:20px;">
-    <p class="flow-block-title">Prescription&nbsp;home</p>
-    <p class="flow-note">After consult: print or WhatsApp the slip. Diagnosis and clinical notes stay with you — the link is the patient’s copy only.</p>
-  </div>
-
-  <div class="note" style="margin-top:24px;">Full experience without sign-up — book, follow the ticket, check by phone, receive prescription links. Soft launch beside phone serial; no big-bang day required.</div>
+  <div class="note">Full experience without sign-up — book, follow the ticket, check status by phone, receive prescription links. Soft launch beside phone serial; no big-bang day required.</div>
 
   <div class="footer"><span>ChamberQ</span><span>Page 3</span></div>
 </section>
@@ -816,7 +886,7 @@
 </section>
 
 <!-- ===================== INVESTMENT ===================== -->
-<section class="sheet">
+<section class="sheet sheet-invest">
   <p class="eyebrow">Investment</p>
   <h1>Maestro for your&nbsp;chamber</h1>
 
@@ -834,7 +904,7 @@
     </ul>
   </div>
 
-  <p class="flow-note" style="margin-top:14px;">SMS confirmations are optional (prepaid wallet; empty wallet skips SMS — booking still succeeds). We bill directly (bKash / bank).</p>
+  <p class="flow-note" style="margin-top:18px;">SMS confirmations are optional (prepaid wallet; empty wallet skips SMS — booking still succeeds). We bill directly (bKash / bank).</p>
 
   <div class="footer"><span>ChamberQ</span><span>Page 5</span></div>
 </section>
@@ -844,15 +914,15 @@
   <p class="eyebrow">Closing</p>
   <h1>Whenever you are&nbsp;ready</h1>
 
-  <h2>How we go&nbsp;live</h2>
+  <h2 class="section-head">How we go&nbsp;live</h2>
   <ol class="next">
-    <li>You pick which chambers and sittings start first (Belle Vue, Labaid, or both)</li>
+    <li>You pick which chambers and sittings start first</li>
     <li>We build your site, schedules, TV links, and login — plus short training</li>
     <li>Soft launch beside your current phone serial — no big-bang day</li>
   </ol>
 
-  <h2>Recommended next&nbsp;step</h2>
-  <div class="flow" style="margin-top:10px;margin-bottom:12px;">
+  <h2 class="section-head">Recommended next&nbsp;step</h2>
+  <div class="flow" style="margin-top:14px;margin-bottom:16px;">
     <span class="flow-step">WhatsApp</span>
     <span class="flow-arrow">→</span>
     <span class="flow-step">Live walkthrough</span>
@@ -871,7 +941,6 @@
       <p class="sign-name">Joy Chowdhury</p>
       <p class="sign-org">ChamberQ · WhatsApp 01818-614349</p>
     </div>
-    <div class="note">for <strong>Dr. Shamim Ahmed</strong> · Diabetes &amp; Medicine Specialist · Belle Vue Hospital, Chattogram</div>
   </div>
 
   <div class="footer"><span>ChamberQ · MAESTRO</span><span>Page 6</span></div>
