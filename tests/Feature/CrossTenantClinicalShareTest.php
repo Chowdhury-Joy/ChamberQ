@@ -37,9 +37,18 @@ class CrossTenantClinicalShareTest extends TestCase
 
     private User $doctorB;
 
+    /**
+     * A fixed Monday morning, safely inside the 09:00–12:00 sessions below.
+     * Without this the suite books against the real clock, and
+     * BookingService rejects every booking once the app timezone passes noon.
+     */
+    private const FROZEN_NOW = '2026-01-05 09:00';
+
     protected function setUp(): void
     {
         parent::setUp();
+
+        Carbon::setTestNow(Carbon::parse(self::FROZEN_NOW));
 
         Cache::flush();
 
@@ -91,6 +100,7 @@ class CrossTenantClinicalShareTest extends TestCase
 
     protected function tearDown(): void
     {
+        Carbon::setTestNow();
         tenancy()->end();
         parent::tearDown();
     }

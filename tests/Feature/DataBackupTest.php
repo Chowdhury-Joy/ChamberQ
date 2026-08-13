@@ -19,6 +19,7 @@ use Carbon\Carbon;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
@@ -33,9 +34,14 @@ class DataBackupTest extends TestCase
 
     private Tenant $tenantB;
 
+    /** @var list<string> */
+    private array $artifactsBefore = [];
+
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->artifactsBefore = $this->backupArtifacts();
 
         $this->tenantA = Tenant::create(['id' => 'backup-a', 'plan_tier' => 'solo', 'name' => 'Chamber A']);
         $this->tenantB = Tenant::create(['id' => 'backup-b', 'plan_tier' => 'solo', 'name' => 'Chamber B']);
@@ -45,7 +51,37 @@ class DataBackupTest extends TestCase
     {
         tenancy()->end();
 
+        $this->deleteArtifactsWrittenByThisTest();
+
         parent::tearDown();
+    }
+
+    /**
+     * Every ZIP and scratch directory the backup feature can leave behind:
+     * `backup-temp` holds exports written by the service and the artisan
+     * command, `backup-test` the directories this class creates for hostile
+     * and extracted ZIPs. Neither is cleaned by the application.
+     *
+     * @return list<string>
+     */
+    private function backupArtifacts(): array
+    {
+        return array_merge(
+            glob(storage_path('app/backup-temp/*')) ?: [],
+            glob(storage_path('app/backup-test/*')) ?: [],
+        );
+    }
+
+    /**
+     * Remove only what this test added. Leftovers from earlier runs are not
+     * ours to delete, and diffing against the setUp snapshot stays correct
+     * whatever order the tests run in.
+     */
+    private function deleteArtifactsWrittenByThisTest(): void
+    {
+        foreach (array_diff($this->backupArtifacts(), $this->artifactsBefore) as $path) {
+            is_dir($path) ? File::deleteDirectory($path) : @unlink($path);
+        }
     }
 
     public function test_tenant_export_zip_contains_manifest_and_patient_without_password(): void
@@ -261,12 +297,21 @@ class DataBackupTest extends TestCase
         Patient::create(['name' => 'Artisan Patient', 'phone' => '01715556666']);
         tenancy()->end();
 
+        $before = glob(storage_path('app/backup-temp/*-backup-a.zip')) ?: [];
+
         $this->artisan('data:backup-export', ['tenant' => 'backup-a'])
             ->assertSuccessful();
 
-        $files = glob(storage_path('app/backup-temp/*-backup-a.zip'));
-        $this->assertNotEmpty($files);
-        $zipPath = $files[array_key_last($files)];
+        // glob() sorts alphabetically and these filenames lead with a UUID, so
+        // array_key_last() returned the alphabetically-largest ZIP left over by
+        // any previous run rather than the one this test just wrote.
+        $created = array_values(array_diff(
+            glob(storage_path('app/backup-temp/*-backup-a.zip')) ?: [],
+            $before,
+        ));
+
+        $this->assertCount(1, $created, 'The export command should write exactly one new ZIP');
+        $zipPath = $created[0];
 
         tenancy()->initialize($this->tenantA);
         Patient::query()->delete();

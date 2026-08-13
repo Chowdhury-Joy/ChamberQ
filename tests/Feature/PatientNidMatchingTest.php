@@ -29,9 +29,18 @@ class PatientNidMatchingTest extends TestCase
 
     private ScheduleSession $session;
 
+    /**
+     * A fixed Monday morning, safely inside the 09:00–12:00 session below.
+     * Without this the suite books against the real clock, and
+     * BookingService rejects every booking once the app timezone passes noon.
+     */
+    private const FROZEN_NOW = '2026-01-05 09:00';
+
     protected function setUp(): void
     {
         parent::setUp();
+
+        Carbon::setTestNow(Carbon::parse(self::FROZEN_NOW));
 
         Cache::flush();
 
@@ -61,6 +70,7 @@ class PatientNidMatchingTest extends TestCase
 
     protected function tearDown(): void
     {
+        Carbon::setTestNow();
         tenancy()->end();
         parent::tearDown();
     }
