@@ -390,3 +390,9 @@
 
 ## 2026-08-13T02:08:02+0600
 - Booking wizard no longer shows seat counts or “Pay at the clinic” on date/identity steps; capacity still enforced silently.
+
+## 2026-08-13T02:24:42+0600
+- Booking identity: summary strip first, then Your details; separate Date field removed.
+
+## 2026-08-13T10:15:17+0600
+- Booking identity: dark summary; Phone then Name; footer Change booking date (btn-back style) beside Confirm Booking.

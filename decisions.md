@@ -1588,3 +1588,19 @@
   <action>Shorter inputs (~42px) with floating labels inside Name / Phone / NID / WhatsApp / Date; Change stays beside Date.</action>
   <reason>Looks more like a compact phone form and puts less scrolling between date and Confirm.</reason>
 </decision>
+
+## 2026-08-13T02:24:42+0600
+<decision>
+  <category>UI/UX</category>
+  <context>The Date field + Change control duplicated the booking summary and competed with Your details.</context>
+  <action>Identity step order is appointment summary strip → **Your details** → fields. Removed the separate Date input.</action>
+  <reason>One place shows the appointment; the heading sits with the fields it introduces.</reason>
+</decision>
+
+## 2026-08-13T10:15:17+0600
+<decision>
+  <category>UI/UX</category>
+  <context>Patients need an obvious way to change the day without a second date field, and Phone should come before Name. The Change booking date control on the summary strip fought the dark receipt look.</context>
+  <action>Dark summary strip (doctor / day / session / chamber) first, then **Your details** with **Phone** then **Name**. Footer: **Change booking date** (same style as the old Back button) beside **Confirm Booking** — no Back on this step, no Change link on the strip.</action>
+  <reason>Matches how patients think (number first), keeps the summary clean, and puts Change booking date where Back used to be.</reason>
+</decision>

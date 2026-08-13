@@ -196,18 +196,18 @@
         .selection-card .seats.is-closed { color: #92400e; }
 
         .booking-review {
-            background: #FAFAFA;
-            border: 1px solid #E0E0E0;
-            border-radius: 1rem;
-            padding: 1rem 1.15rem;
-            margin: 0 0 1.5rem;
-            font-size: 0.95rem;
-            line-height: 1.5;
-            color: #334155;
+            background: #0f172a;
+            border: none;
+            border-radius: 0.75rem;
+            padding: 0.85rem 1rem;
+            margin: 0 0 1.15rem;
+            font-size: 0.9rem;
+            line-height: 1.45;
+            color: #f8fafc;
         }
-        .booking-review strong { color: #0f172a; }
-        .booking-review .seats-line { margin-top: 0.35rem; font-weight: 600; color: var(--color-primary); }
-        .booking-review .seats-line.is-full, .booking-review .seats-line.is-closed { color: #b91c1c; }
+        .booking-review strong { color: #ffffff; font-weight: 600; }
+        .booking-review .seats-line { margin-top: 0.35rem; font-weight: 600; color: #e2e8f0; }
+        .booking-review .seats-line.is-full, .booking-review .seats-line.is-closed { color: #fecaca; }
 
         /* Keep Back/Continue reachable without scrolling past a long date list.
            Sticky (not fixed) so the bar settles inline on short steps. */

@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-13T02:12:11+0600
+Last Updated: 2026-08-13T10:15:17+0600
 
 ## Full Site Map
 
@@ -113,7 +113,7 @@ The one patient-facing route that shows prescription content. Deliberately outsi
 
 ### Patient → book serial → ticket
 1. Open `/{slug}/` or custom domain home — see doctor brand + Book CTA. On clinic-tier sites the Book Appointment CTA now also sits in the header nav (desktop) and the mobile drawer, per the Clireo design port; solo keeps its locked layout.
-2. Book flow — chamber/doctor when needed, then **When can you come?** (only dates with seats left, soonest first; earliest option highlighted). **Your details** step: short floating labels (Date / Name / Phone / NID optional / Different WhatsApp / Share with other ChamberQ doctors), locked date with **Change** beside it. If the number is known, choose **Who for?** inline — masked initials (`F. R., 34`); picking one stands the name field down. Clinic hero form can POST name/phone into the session first.
+2. Book flow — chamber/doctor when needed, then **When can you come?** (only dates with seats left, soonest first; earliest option highlighted). Dark booking summary first, then **Your details** (Phone then Name / NID optional / Different WhatsApp / Share with other ChamberQ doctors); footer **Change booking date** beside Confirm Booking. If the number is known, choose **Who for?** inline — masked initials (`F. R., 34`); picking one stands the name field down. Clinic hero form can POST name/phone into the session first.
 3. Submit → ticket at `…/bookings/{uuid}`. Goal: proof of serial; share via WhatsApp/copy, or Print / Save as PDF for a paper or file copy.
 4. Optional: PWA install scoped to tenant path or custom domain.
 

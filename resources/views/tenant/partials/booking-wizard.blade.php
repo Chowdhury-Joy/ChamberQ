@@ -144,28 +144,14 @@
                     </div>
                 </div>
 
-                <!-- Identity & date -->
+                <!-- Identity -->
                 <div class="step" id="step-identity" data-step-name="identity">
-                    <h3>{{ __('Your details') }}</h3>
-
                     <div class="booking-review" id="bookingReview" aria-live="polite">
                         <div id="reviewSummary"></div>
                     </div>
 
-                    <div class="form-group field-row" style="margin-top:1rem;">
-                        <div class="field-float field-float--filled" style="flex:1;min-width:0;">
-                            <p id="chosenDateDisplay" class="form-control field-display"></p>
-                            <span class="field-float-label">{{ __('Date') }}</span>
-                            <input type="hidden" name="booking_date" id="booking_date" required>
-                        </div>
-                        <button type="button" class="btn btn-back btn-change-date" id="changeDateBtn">{{ __('Change') }}</button>
-                    </div>
-
-                    <div class="form-group field-float">
-                        <input type="text" name="patient_name" id="patient_name" class="form-control" autocomplete="name" placeholder=" " required>
-                        <label class="field-float-label" for="patient_name">{{ __('Name') }}</label>
-                        <small class="text-muted" id="patientNameHint" style="display:none;margin-top:0.4rem"></small>
-                    </div>
+                    <h3>{{ __('Your details') }}</h3>
+                    <input type="hidden" name="booking_date" id="booking_date" required>
 
                     <div class="form-group field-float">
                         <input type="tel" name="patient_phone" id="patient_phone" class="form-control"
@@ -173,6 +159,12 @@
                                placeholder=" " required>
                         <label class="field-float-label" for="patient_phone">{{ __('Phone') }}</label>
                         <span class="field-error" id="phone-error" role="alert" aria-live="polite" style="display:none"></span>
+                    </div>
+
+                    <div class="form-group field-float">
+                        <input type="text" name="patient_name" id="patient_name" class="form-control" autocomplete="name" placeholder=" " required>
+                        <label class="field-float-label" for="patient_name">{{ __('Name') }}</label>
+                        <small class="text-muted" id="patientNameHint" style="display:none;margin-top:0.4rem"></small>
                     </div>
 
                     <div class="form-group field-float">
@@ -212,7 +204,7 @@
                     </div>
 
                     <div class="btn-group">
-                        <button type="button" class="btn btn-back" onclick="prevStep()">{{ __('Back') }}</button>
+                        <button type="button" class="btn btn-back" id="changeDateBtn">{{ __('Change booking date') }}</button>
                         <button type="submit" class="btn btn-primary" id="submitBtn">{{ __('Confirm Booking') }}</button>
                     </div>
                 </div>
@@ -506,10 +498,8 @@
 
         function setupDateConstraint() {
             const dateInput = document.getElementById('booking_date');
-            const dateDisplay = document.getElementById('chosenDateDisplay');
             const submitBtn = document.getElementById('submitBtn');
             const phoneError = document.getElementById('phone-error');
-            const changeBtn = document.getElementById('changeDateBtn');
 
             if (!state.prefilledDate) {
                 goToWhenStep();
@@ -517,11 +507,8 @@
             }
 
             dateInput.value = state.prefilledDate;
-            const d = new Date(state.prefilledDate + 'T00:00:00');
-            dateDisplay.textContent = d.toLocaleDateString(config.localeTag, {
-                weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
-            });
 
+            const changeBtn = document.getElementById('changeDateBtn');
             if (changeBtn && !changeBtn.dataset.bound) {
                 changeBtn.dataset.bound = '1';
                 changeBtn.addEventListener('click', goToWhenStep);
