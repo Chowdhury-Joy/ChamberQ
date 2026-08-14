@@ -16,10 +16,19 @@ class PatientAccount extends Authenticatable
 {
     use HasUuids;
 
+    /**
+     * `nid` is deliberately NOT fillable.
+     *
+     * `PlatformPatientHistoryService` treats a matching NID as proof that this
+     * account owns a `patients` row — in `assertOwnsPrescription()` and in
+     * `matchingPatientIds()`. An NID this account could set for itself would
+     * therefore be a self-issued key to any patient record carrying that
+     * number, at any chamber. Only a chamber that has seen the card may write
+     * one, and nothing does today.
+     */
     protected $fillable = [
         'phone',
         'name',
-        'nid',
         'last_login_at',
     ];
 

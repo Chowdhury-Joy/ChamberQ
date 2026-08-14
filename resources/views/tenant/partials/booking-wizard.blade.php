@@ -168,6 +168,19 @@
                     </div>
 
                     <div class="form-group field-float">
+                        {{-- Whole years, not a date of birth: patients here know
+                             "42" far more reliably than a date, and it is one tap
+                             on a phone keypad. Optional, but it is what lets this
+                             chamber recognise the same person's records from
+                             another chamber. --}}
+                        <input type="number" name="age" id="patient_age" class="form-control"
+                               inputmode="numeric" autocomplete="off" min="0" max="120" step="1"
+                               placeholder=" ">
+                        <label class="field-float-label" for="patient_age">{{ __('Age in years (optional)') }}</label>
+                        <small class="text-muted" style="display:block;margin-top:0.4rem">{{ __('Helps the doctor see your past visits from other chambers.') }}</small>
+                    </div>
+
+                    <div class="form-group field-float">
                         <input type="text" name="nid" id="patient_nid" class="form-control"
                                inputmode="numeric" autocomplete="off" maxlength="17"
                                placeholder=" ">
@@ -1068,6 +1081,10 @@
             const nidValue = document.getElementById('patient_nid')?.value.trim();
             if (nidValue) {
                 formData.append('nid', nidValue);
+            }
+            const ageValue = document.getElementById('patient_age')?.value.trim();
+            if (ageValue) {
+                formData.append('age', ageValue);
             }
             if (differentWa && waInput.value.trim()) {
                 formData.append('whatsapp_phone', waInput.value.trim());

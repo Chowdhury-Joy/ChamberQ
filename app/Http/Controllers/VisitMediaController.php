@@ -75,16 +75,29 @@ class VisitMediaController extends Controller
     {
         $this->authorizeClinicalRead($request);
 
-        return app(VisitMediaService::class)->streamResponse($visitRecord->voice_path)
-            ?? abort(404);
+        $media = app(VisitMediaService::class);
+
+        // Same rule the report photos already enforce: the stored path is
+        // client-written, so it must sit under this practice's own directory
+        // before anything is streamed from it.
+        if (! $media->isOwnedVoicePath($visitRecord->voice_path)) {
+            abort(404);
+        }
+
+        return $media->streamResponse($visitRecord->voice_path) ?? abort(404);
     }
 
     public function photo(Request $request, VisitRecord $visitRecord): StreamedResponse
     {
         $this->authorizeClinicalRead($request);
 
-        return app(VisitMediaService::class)->streamResponse($visitRecord->photo_path)
-            ?? abort(404);
+        $media = app(VisitMediaService::class);
+
+        if (! $media->isOwnedPhotoPath($visitRecord->photo_path)) {
+            abort(404);
+        }
+
+        return $media->streamResponse($visitRecord->photo_path) ?? abort(404);
     }
 
     public function reportPhoto(Request $request, VisitRecord $visitRecord, int $index): StreamedResponse

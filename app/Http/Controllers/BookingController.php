@@ -7,10 +7,12 @@ use App\Models\Booking;
 use App\Models\Chamber;
 use App\Models\Doctor;
 use App\Models\LabCollectionSlot;
+use App\Models\LabTest;
 use App\Models\Patient;
 use App\Models\Prescription;
 use App\Models\ScheduleSession;
 use App\Services\BookingService;
+use App\Support\BdNid;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -83,7 +85,7 @@ class BookingController extends Controller
             // Only offered when the tenant actually has the capability, and
             // only tests the clinic has left switched on.
             'labTests' => $hasLabTests
-                ? \App\Models\LabTest::active()->ordered()->get()
+                ? LabTest::active()->ordered()->get()
                 : collect(),
             'bookingAvailable' => $canBookConsultation || $canBookLab,
             'canBookConsultation' => $canBookConsultation,
@@ -183,6 +185,11 @@ class BookingController extends Controller
             'share_clinical_history' => 'nullable|boolean',
             // Optional BD NID — never required; blank skips validation length.
             'nid' => ['nullable', 'string', 'max:20'],
+            // Age in whole years, not a date of birth: patients here reliably
+            // know "42" and often not the date. Optional, but it is what lets
+            // this visit's record be matched to the same person at another
+            // chamber — see CrossTenantClinicalHistoryService::isSamePerson().
+            'age' => ['nullable', 'integer', 'min:0', 'max:120'],
         ], [
             'booking_date.after_or_equal' => __('Please choose today or a future date.'),
             'booking_date.before_or_equal' => __('Please choose a date within the next 60 days.'),
@@ -190,7 +197,7 @@ class BookingController extends Controller
             'whatsapp_phone.regex' => __('Please enter a valid Bangladeshi WhatsApp number, for example 01712345678.'),
         ]);
 
-        if (filled($validated['nid'] ?? null) && ! \App\Support\BdNid::isValid($validated['nid'])) {
+        if (filled($validated['nid'] ?? null) && ! BdNid::isValid($validated['nid'])) {
             throw ValidationException::withMessages([
                 'nid' => __('Please enter a valid NID (10 or 13 digits), or leave it blank.'),
             ]);
@@ -237,6 +244,7 @@ class BookingController extends Controller
                     ? filter_var($validated['share_clinical_history'], FILTER_VALIDATE_BOOLEAN)
                     : true,
                 $validated['nid'] ?? null,
+                isset($validated['age']) ? (int) $validated['age'] : null,
             );
         } catch (BookingUnavailableException $e) {
             // Only this exception type is safe to echo back to an anonymous
@@ -296,6 +304,7 @@ class BookingController extends Controller
                     'remaining' => 0,
                     'missing' => true,
                 ];
+
                 continue;
             }
 
@@ -465,8 +474,8 @@ class BookingController extends Controller
 
         return array_values(array_unique([
             $digits,
-            '88' . $digits,
-            '+88' . $digits,
+            '88'.$digits,
+            '+88'.$digits,
             trim($phone),
         ]));
     }

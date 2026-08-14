@@ -532,8 +532,33 @@
 ## 2026-08-14T01:12:58+0600
 - Replaced every remaining website image **URL** field in the tenant admin with the `PublicMediaFields` uploader (gallery slides, testimonial avatars, FAQ panel, About Practice cards, blog, departments, doctor photos, branding logo/favicon); model `saving` hooks now promote the disk path to `/storage/…` before `SafeUrl` scrubs it, the shared image field no longer accepts SVG, and `PublicStoredImage::toPublicPath()` refuses to prefix `/storage/` onto a scheme-carrying value.
 
+## 2026-08-14
+- Cross-chamber clinical history now requires age agreement (or NID) on top of phone + name, and rejects a conflicting recorded sex; fails closed when no age is known. Booking wizard asks for age in whole years (optional) and carries it through BookingController → BookingService → PatientService, filling a missing age without overwriting a chamber-recorded one.
+- Migration `2026_08_13_235900_reset_share_clinical_history_for_pre_consent_patients` clears the sharing flag for patients created before the consent checkbox existed; `down()` intentionally no-ops.
+- `VisitMediaService::isOwnedMediaPath()` generalises the report-photo guard to voice and photo, applied in `VisitMediaController` (defence in depth — `FilesystemTenancyBootstrapper` already roots the `local` disk per tenant).
+- `VisitRecord::markAsForeignChamberRecord()` + a `saving` guard: rows loaded from another chamber cannot be saved back with their stripped media paths.
+- `nid` removed from `PatientAccount::$fillable` — it is accepted as proof of ownership and must never be self-asserted.
+
+## 2026-08-14T12:34:23+0600
+- Solo module one-time setup prices changed in `config/marketing.php`: Front door ৳3,000, Live queue ৳12,000, Prescription ৳2,000; monthly and Maestro/Clinic bundle stickers unchanged.
+
+## 2026-08-14T12:59:37+0600
+- Prescription module re-priced in `config/marketing.php` and `.env.example`: setup ৳2,000 → ৳5,000, monthly ৳0 → ৳250. Maestro bundle unchanged (৳15,000/৳3,000 — now ৳5,000 off the ৳20,000 unit setup sum). Launch offer updated to "Prescription free for life" covering both setup and monthly for website signups before 31 August; marketing homepage, Maestro proposal, Super Admin helper text, and sales docs updated to match.
+
 ## 2026-08-14T13:38:25+0600
 - Visiting / camp patient handoff is the printed sheet only. Print / WhatsApp / SMS stay on Live Queue Control and Consult Screen after complete; upload does not send SMS. Dropped the leftover “SMS waits until then” copy on that page.
 
+## 2026-08-14T14:15:38+0600
+- Prescription module one-time setup re-priced ৳5,000 → ৳2,500 in `config/marketing.php` default and `.env.example` (`MARKETING_MODULE_PRESCRIPTION_SETUP`); monthly stays ৳250. Maestro bundle unchanged (৳15,000/৳3,000) — the setup discount vs the ৳17,500 unit sum is now ৳2,500. Offer copy, Super Admin helper text, Maestro proposal (`.md` + `.html`), Client Guide, Marketing Playbook, tests (`ModulePricingTest` prescription-only 2500/250, website+prescription 5500/1250, tenant-read 2500/250; `MarketingLandingPageTest` offer line) updated to match.
+
+## 2026-08-14T22:39:27+0600
+- Super Admin billing cashbook: Maestro labels, config-driven module prices, launch-offer ticks on `tenants`, live list/due + partner commission preview, pending commission refresh on re-price, and Confirm 12 months prepaid. Migration `2026_08_14_223000_add_billing_offer_flags_to_tenants`.
+
+## 2026-08-14T22:39:16+0600
+- Super Admin billing ledger: `tenants.offer_prescription_lifetime_free` and `offer_prepaid_year_setup`; `PlanPricingService::quote` / `quoteForTenant`; pending commission refresh; `confirmYearPrepaid` (12 monthly rows). Tenant form shows Maestro, config prices, offer ticks, and partner commission preview. Doctors list and partner referred list show Maestro/modules/due amounts.
+
 ## 2026-08-14T23:45:02+0600
 - Super Admin panel UX: Restore/Delete behind a **Dangerous** overflow; platform restore defaults to dry-run with loading buttons; dashboard finance → totals → latest 8 tenants (Maestro labels, amber/sky colours, no AccountWidget); Tenants first under Platform; Client Health names link to tenant edit (`seller-client-cell` partial); Copy referral link uses the clipboard.
+
+## 2026-08-15T00:23:45+0600
+- Super Admin panel UX follow-up: restored the deleted `.backup-card-body` padding rule (both cards were rendering edge-to-edge); keyed the platform restore submit on the dry-run state so the danger colour actually paints, plus a red callout and `wire:confirm` naming what gets wiped; Tenants list row actions moved into an `ActionGroup` with the finance columns toggled off by default and the name column wrapping, so Edit is reachable without horizontal scroll at 1280 and 375.

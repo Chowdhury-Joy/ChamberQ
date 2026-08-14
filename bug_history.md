@@ -971,6 +971,47 @@
   <prevention_rule>A helper that turns user input into a same-origin path must reject anything carrying a URL scheme (`^[a-zA-Z][a-zA-Z0-9+.-]*:`) rather than assume a disk path by elimination — and when a sanitiser runs *after* such a promotion, the test suite must include a hostile-scheme case for each promoted key, not only the happy path.</prevention_rule>
 </bug>
 
+## 2026-08-14T10:07:51+0600
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>A doctor at one chamber could be shown a *different person's* diagnoses and prescriptions while prescribing — a relative who shared the patient's household phone and had the same common name.</symptom>
+ <root_cause>`CrossTenantClinicalHistoryService::findMatchingPatients()` treated normalized phone + normalized name as identity. Household phones are the norm here (the booking wizard has a household picker precisely because several `patients` rows share one number), so relatives matched each other.</root_cause>
+ <prevention_rule>Identity across chambers needs a discriminator that separates household members. Phone + name is not identity: require age agreement (or NID) and fail closed when it is unknown. Any future matching rule must be able to tell a father from a son on one phone. Pinned by `CrossTenantClinicalShareTest::test_two_relatives_on_one_phone_with_the_same_name_do_not_link`.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>Every patient who existed before the consent checkbox shipped was sharing their clinical history with other chambers without ever having been asked.</symptom>
+ <root_cause>The column was added with `->default(true)`, which backfills existing rows. The checkbox that collects the real answer only affects bookings made afterwards.</root_cause>
+ <prevention_rule>A column that records consent must never be added with a permissive default — add it nullable or false and let the answer arrive from the person. If a default is unavoidable, ship the corrective backfill in the same task.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Code</category>
+ <symptom>Visit records loaded from another chamber are handed to Consult Screen with their media paths blanked, merged into the same collection as the chamber's own records. Saving one would have written those blanks back and destroyed the real voice-note and photo paths in the chamber that owns them.</symptom>
+ <root_cause>`fetchSharedVisits()` mutates live `VisitRecord` models for display instead of returning a read-only projection, and nothing marked them as foreign.</root_cause>
+ <prevention_rule>Never hand out a mutated Eloquent model as a read-only view. Mark it (`markAsForeignChamberRecord()`) so the model itself refuses to save, rather than trusting every future caller to notice which half of a merged collection it is holding.</prevention_rule>
+</bug>
+
+## 2026-08-14T22:39:27+0600
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>Changing a doctor’s modules or offer ticks before they paid left the partner’s pending commission on the old package — e.g. Maestro ৳15,000 still showing after the sale was cut to website-only ৳3,000.</symptom>
+ <root_cause>`Commission::firstOrCreate` created the pending setup row once and never updated `base_amount` / `commission_amount` on later re-prices. Monthly pending rows had the same freeze.</root_cause>
+ <prevention_rule>When Super Admin re-prices a tenant, recalculate every **pending** commission row from the new due amounts. Never rewrite **owed** or **paid** rows.</prevention_rule>
+</bug>
+
+## 2026-08-14T22:39:16+0600
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>Changing a doctor's modules or a launch offer before they paid left the partner's pending commission on the old amount — Super Admin would later confirm payment against a quote that no longer matched the ledger.</symptom>
+ <root_cause>`Commission::firstOrCreate` wrote the pending setup row once and never updated `base_amount` / `commission_amount` when `applyPricingToTenant` re-snapshotted due amounts. Monthly pending rows had the same gap.</root_cause>
+ <prevention_rule>When due amounts change, recalculate every **pending** setup/monthly commission for that tenant. Never rewrite **owed** or **paid** rows.</prevention_rule>
+</bug>
+
 ## 2026-08-14T23:45:02+0600
 
 <bug>
@@ -992,4 +1033,27 @@
  <symptom>Dashboard said SOLO in all-caps, overdue/SMS stats had no colour, and Client Health clinic names were dead text with no phone.</symptom>
  <root_cause>Recent tenants used `strtoupper($tenant->plan_tier)` instead of `Tenant::planTierLabel()`. Panel colours never registered `amber`/`sky`. Seller overview rendered names without `tenantEditUrl()` or `contact_phone`.</root_cause>
  <prevention_rule>Use `Tenant::planTierLabel()` everywhere Super Admin shows a plan. Register Filament colour keys before using them on stats. Client Health names must link to tenant edit and show phone when set.</prevention_rule>
+</bug>
+
+## 2026-08-15T00:23:45+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>Both cards on Platform data backup rendered edge-to-edge: the upload field, restore mode select and submit button sat flush against the card border with no inset.</symptom>
+ <root_cause>A UX pass replaced the `.backup-card-body { padding: 1.25rem; … }` rule with new `.backup-btn-row` / `.backup-restore-submit` rules, but both `<div class="backup-card-body">` wrappers stayed in the markup — so the class resolved to `padding: 0px`.</root_cause>
+ <prevention_rule>Never delete a CSS rule from a page-scoped `<style>` block without grepping the same file for the class. `SuperAdminPanelUxTest::test_backup_card_body_keeps_its_padding_rule` fails if the rule goes missing while the class is still used.</prevention_rule>
+</bug>
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>Unchecking dry-run on the platform restore flipped the button text to “Upload and restore platform data” but the button stayed primary blue, so the single most destructive control in the product looked identical to the safe one. Measured background stayed `oklch(0.546 … 262.881)` (primary) while its own `--color-600` had already resolved to danger red; forcing a style recalc snapped it to red.</symptom>
+ <root_cause>The colour was expressed only as a Filament colour class swapped on re-render. Livewire morphs the existing button in place, and the browser did not re-resolve the custom-property-driven background against the new class — the class was right, the paint was stale.</root_cause>
+ <prevention_rule>Do not let a destructive-state cue depend on a class swapped by a Livewire morph. Give the element a `wire:key` that changes with the state so Livewire replaces it, and back the colour with a cue that cannot go stale — here a freshly rendered red callout plus a `wire:confirm` that names what will be wiped. Covered by `SuperAdminPanelUxTest::test_turning_dry_run_off_arms_the_destructive_restore_with_a_confirmation`.</prevention_rule>
+</bug>
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>On the Super Admin Tenants list the Edit and Download chamber backup actions sat off the right edge — at 1280 the table was 1488px inside an 896px container (Edit at x=1555), and at 375 it was 862px inside 343px. The operator's main screen needed a horizontal drag to open any tenant.</symptom>
+ <root_cause>Eleven columns plus two fully labelled row buttons (a ~290px actions column), and the practice name set a ~290px min-content width. An earlier fix used `visibleFrom`, which is viewport-based — but the sidebar takes ~380px, so at a 1280 viewport every `lg`/`xl` column still rendered into a 896px container.</root_cause>
+ <prevention_rule>Size a Filament table against the content container, not the viewport: `visibleFrom` cannot see the sidebar. Keep row actions in an `ActionGroup`, start secondary/finance columns `toggleable(isToggledHiddenByDefault: true)`, and `wrap()` any free-text column that would otherwise set the table's min-content width.</prevention_rule>
 </bug>

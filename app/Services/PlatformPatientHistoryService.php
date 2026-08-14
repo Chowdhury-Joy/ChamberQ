@@ -99,6 +99,10 @@ class PlatformPatientHistoryService
             return;
         }
 
+        // NID is accepted as proof of ownership, so it must only ever be one a
+        // chamber recorded from the card in front of them — never one this
+        // account typed about itself. `PatientAccount::$fillable` deliberately
+        // omits it; keep it that way.
         $accountNid = BdNid::normalize($account->nid);
         $patientNid = BdNid::normalize($patient?->nid);
         if ($accountNid !== null && $patientNid !== null && $accountNid === $patientNid) {

@@ -2,9 +2,20 @@
 
 namespace Tests\Feature;
 
-use App\Services\VisitMediaService;
+use App\Models\Booking;
+use App\Models\Chamber;
+use App\Models\Doctor;
+use App\Models\Domain;
+use App\Models\Patient;
+use App\Models\Prescription;
+use App\Models\ScheduleSession;
 use App\Models\Tenant;
+use App\Models\User;
+use App\Models\VisitRecord;
+use App\Services\VisitMediaService;
+use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
@@ -118,6 +129,60 @@ class ClinicalMediaPrivacyTest extends TestCase
             ->assertForbidden();
     }
 
+    /**
+     * Defence in depth, not a live hole.
+     *
+     * `FilesystemTenancyBootstrapper` already suffixes the `local` disk per
+     * tenant, so a path naming another chamber's folder resolves inside the
+     * *viewing* chamber's own root and simply is not there. This asserts the
+     * stored-path contract directly instead: these columns are written from
+     * browser form state, so the service must reject anything that is not under
+     * this practice's own directory — which is what keeps the rule true if the
+     * disk is ever moved to S3, where that per-tenant suffixing does not apply
+     * the same way.
+     */
+    public function test_the_service_refuses_media_paths_outside_this_practice(): void
+    {
+        tenancy()->initialize(Tenant::create([
+            'id' => 'own-practice',
+            'plan_tier' => 'solo',
+        ]));
+
+        $media = app(VisitMediaService::class);
+
+        $this->assertTrue($media->isOwnedVoicePath('visit-audio/own-practice/note.webm'));
+        $this->assertTrue($media->isOwnedPhotoPath('visit-photos/own-practice/slip.jpg'));
+        $this->assertTrue($media->isOwnedReportPhotoPath('visit-reports/own-practice/cbc.jpg'));
+
+        $this->assertFalse($media->isOwnedVoicePath('visit-audio/other-practice/note.webm'));
+        $this->assertFalse($media->isOwnedPhotoPath('visit-photos/other-practice/slip.jpg'));
+        $this->assertFalse($media->isOwnedReportPhotoPath('visit-reports/other-practice/cbc.jpg'));
+
+        // A prefix collision must not read as ownership.
+        $this->assertFalse($media->isOwnedVoicePath('visit-audio/own-practice-evil/note.webm'));
+
+        $this->assertFalse($media->isOwnedVoicePath('visit-audio/own-practice/../../../.env'));
+        $this->assertFalse($media->isOwnedVoicePath(null));
+        $this->assertFalse($media->isOwnedVoicePath(''));
+
+        tenancy()->end();
+    }
+
+    public function test_a_traversing_media_path_is_refused(): void
+    {
+        [$ownTenant, $ownDoctor, $visitRecord] = $this->seedPracticeWithVisitRecord('trav-a');
+
+        tenancy()->initialize($ownTenant);
+        $visitRecord->forceFill([
+            'voice_path' => 'visit-audio/trav-a/../../../.env',
+        ])->save();
+        tenancy()->end();
+
+        $this->actingAs($ownDoctor)
+            ->get("http://trav-a.localhost/visit-records/{$visitRecord->id}/voice")
+            ->assertNotFound();
+    }
+
     public function test_report_photo_directory_is_private(): void
     {
         tenancy()->initialize(Tenant::create([
@@ -155,7 +220,7 @@ class ClinicalMediaPrivacyTest extends TestCase
         [, $outsideDoctor] = $this->seedPracticeWithVisitRecord('print-b');
 
         tenancy()->initialize(Tenant::find('print-a'));
-        $prescription = \App\Models\Prescription::create([
+        $prescription = Prescription::create([
             'visit_record_id' => $visitRecord->id,
             'patient_id' => $visitRecord->patient_id,
             'prescribed_by' => $ownDoctor->id,
@@ -172,41 +237,41 @@ class ClinicalMediaPrivacyTest extends TestCase
     }
 
     /**
-     * @return array{0: Tenant, 1: \App\Models\User, 2: \App\Models\VisitRecord}
+     * @return array{0: Tenant, 1: User, 2: VisitRecord}
      */
     private function seedPracticeWithVisitRecord(string $id): array
     {
         $tenant = Tenant::create(['id' => $id, 'plan_tier' => 'solo']);
-        \App\Models\Domain::create(['domain' => $id.'.localhost', 'tenant_id' => $id]);
+        Domain::create(['domain' => $id.'.localhost', 'tenant_id' => $id]);
 
         tenancy()->initialize($tenant);
 
-        $doctorUser = \App\Models\User::create([
+        $doctorUser = User::create([
             'name' => 'Dr '.$id,
             'email' => 'doctor@'.$id.'.loc',
-            'password' => \Illuminate\Support\Facades\Hash::make('secret'),
-            'role' => \App\Models\User::ROLE_DOCTOR,
+            'password' => Hash::make('secret'),
+            'role' => User::ROLE_DOCTOR,
             'tenant_id' => $id,
         ]);
 
-        $chamber = \App\Models\Chamber::create(['name' => 'Main']);
-        $doctor = \App\Models\Doctor::create(['name' => 'Dr '.$id]);
-        $session = \App\Models\ScheduleSession::create([
+        $chamber = Chamber::create(['name' => 'Main']);
+        $doctor = Doctor::create(['name' => 'Dr '.$id]);
+        $session = ScheduleSession::create([
             'chamber_id' => $chamber->id,
             'doctor_id' => $doctor->id,
-            'day_of_week' => \Carbon\Carbon::today()->dayOfWeek,
+            'day_of_week' => Carbon::today()->dayOfWeek,
             'session_name' => 'Morning',
             'start_time' => '09:00',
             'end_time' => '23:59',
             'slot_cap' => 10,
         ]);
 
-        $patient = \App\Models\Patient::create(['name' => 'Patient '.$id, 'phone' => '01712345678']);
+        $patient = Patient::create(['name' => 'Patient '.$id, 'phone' => '01712345678']);
 
-        $booking = \App\Models\Booking::create([
-            'bookable_type' => \App\Models\ScheduleSession::class,
+        $booking = Booking::create([
+            'bookable_type' => ScheduleSession::class,
             'bookable_id' => $session->id,
-            'booking_date' => \Carbon\Carbon::today()->toDateString(),
+            'booking_date' => Carbon::today()->toDateString(),
             'patient_id' => $patient->id,
             'patient_name' => $patient->name,
             'patient_phone' => $patient->phone,
@@ -221,7 +286,7 @@ class ClinicalMediaPrivacyTest extends TestCase
         Storage::disk('local')->put($voicePath, 'consultation-audio');
         Storage::disk('local')->put($reportPath, 'lab-report');
 
-        $visitRecord = \App\Models\VisitRecord::create([
+        $visitRecord = VisitRecord::create([
             'booking_id' => $booking->id,
             'patient_id' => $patient->id,
             'recorded_by' => $doctorUser->id,

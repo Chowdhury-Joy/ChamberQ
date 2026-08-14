@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Booking;
 use App\Models\Patient;
 use App\Models\Tenant;
+use App\Models\VisitRecord;
 use App\Support\BdNid;
 use App\Support\BdPhone;
 use App\Support\SharedClinicalVisit;
@@ -26,6 +27,15 @@ class CrossTenantClinicalHistoryService
 
     public const MAX_VISITS = 20;
 
+    /**
+     * How far two recorded ages may drift and still be one person.
+     *
+     * `Patient::displayAge()` ages a stored `age` forward from
+     * `age_recorded_at`, so the same person written down at two chambers months
+     * apart can round to a year's difference.
+     */
+    public const AGE_MATCH_TOLERANCE_YEARS = 1;
+
     public function __construct(
         private readonly PatientService $patientService,
     ) {}
@@ -41,7 +51,7 @@ class CrossTenantClinicalHistoryService
     /**
      * Visit records from other chambers (media paths stripped), oldest-first callers sort themselves.
      *
-     * @return Collection<int, \App\Models\VisitRecord>
+     * @return Collection<int, VisitRecord>
      */
     public function sharedVisitRecordsFor(Patient $patient, ?string $viewerUserId = null): Collection
     {
@@ -158,6 +168,13 @@ class CrossTenantClinicalHistoryService
                 $visit->photo_path = null;
                 $visit->report_photo_paths = null;
                 $visit->setRelation('booking', $booking);
+
+                // These are another chamber's rows, stripped for display only.
+                // Consult Screen merges them into the same collection as this
+                // chamber's own records, so a later `->save()` is easy to add by
+                // accident — and it would write the nulls above back and destroy
+                // the real media paths at source. Mark them so the model refuses.
+                $visit->markAsForeignChamberRecord();
             }
 
             $medicines = [];
@@ -210,7 +227,60 @@ class CrossTenantClinicalHistoryService
             ->whereKeyNot($patient->id)
             ->get()
             ->filter(fn (Patient $other) => $this->patientService->normalizeName((string) $other->name) === $normalizedName)
+            ->filter(fn (Patient $other) => $this->isSamePerson($patient, $other))
             ->values();
+    }
+
+    /**
+     * Is this really the same human, or just the same phone and name?
+     *
+     * One mobile is routinely a whole household's here — the booking wizard's
+     * own household picker exists because several `patients` rows share one
+     * number — and common names repeat inside a family. Phone + name alone
+     * therefore matched relatives to each other, which does not merely leak
+     * across chambers: it puts *somebody else's* diagnoses and prescriptions in
+     * front of a doctor who is prescribing right now.
+     *
+     * Age is what actually separates those people (a father and son sharing a
+     * name differ by decades), so it is required, and sex is checked whenever
+     * both sides recorded it.
+     *
+     * **Fails closed.** No age on either side means no match. That costs
+     * cross-chamber history for chambers that never record an age, which is the
+     * correct direction to be wrong about a wrong-patient hazard.
+     */
+    private function isSamePerson(Patient $local, Patient $other): bool
+    {
+        $localSex = $this->normalizedSex($local);
+        $otherSex = $this->normalizedSex($other);
+
+        if ($localSex !== null && $otherSex !== null && $localSex !== $otherSex) {
+            return false;
+        }
+
+        // Exact when both sides hold a real date of birth.
+        if ($local->date_of_birth && $other->date_of_birth) {
+            return $local->date_of_birth->isSameDay($other->date_of_birth);
+        }
+
+        $localAge = $local->displayAge();
+        $otherAge = $other->displayAge();
+
+        if ($localAge === null || $otherAge === null) {
+            return false;
+        }
+
+        // `displayAge()` ages a recorded `age` forward from `age_recorded_at`,
+        // so two chambers that wrote the same person down months apart can be a
+        // year out. Wider than that and they are different people.
+        return abs($localAge - $otherAge) <= self::AGE_MATCH_TOLERANCE_YEARS;
+    }
+
+    private function normalizedSex(Patient $patient): ?string
+    {
+        $sex = trim((string) $patient->sex);
+
+        return $sex === '' ? null : mb_strtolower($sex);
     }
 
     /**

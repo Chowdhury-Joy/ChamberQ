@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Filament\TenantAdmin\Support\VisitNotesFormSchema;
 use App\Models\Concerns\BelongsToTenant;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -11,6 +12,34 @@ use Illuminate\Database\Eloquent\Relations\HasOne;
 class VisitRecord extends Model
 {
     use BelongsToTenant, HasUuids;
+
+    /**
+     * Set on rows loaded from *another* chamber for display only.
+     *
+     * `CrossTenantClinicalHistoryService` blanks the media paths on those rows
+     * before handing them over, and Consult Screen then merges them into the
+     * same collection as this chamber's own records. Saving one would write
+     * those blanks back and destroy the real voice note and photo paths in the
+     * chamber the record actually belongs to — so it is refused outright rather
+     * than left to every future caller to notice.
+     */
+    public bool $isForeignChamberRecord = false;
+
+    public function markAsForeignChamberRecord(): void
+    {
+        $this->isForeignChamberRecord = true;
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (self $record): void {
+            if ($record->isForeignChamberRecord) {
+                throw new \RuntimeException(
+                    'This visit record belongs to another chamber and was loaded read-only; saving it would erase that chamber’s media paths.'
+                );
+            }
+        });
+    }
 
     protected $fillable = [
         'booking_id',
@@ -170,7 +199,7 @@ class VisitRecord extends Model
 
     public function followUpLabel(): ?string
     {
-        return \App\Filament\TenantAdmin\Support\VisitNotesFormSchema::followUpDisplayLabel(
+        return VisitNotesFormSchema::followUpDisplayLabel(
             $this->follow_up_date,
             $this->follow_up_note,
         );

@@ -2207,6 +2207,63 @@
  <reason>Staff think in photos, not URLs, and the URL box was quietly costing us every section that needed a real picture of the chamber. Promoting the path on save (not in the field) is the rule `bug_history.md` already set after uploads were wiped by a `dehydrateStateUsing` rewrite. SVG is excluded because these files are served from this app's own origin, where a script inside one would run as us; the scheme guard exists so `javascript:` cannot be dressed up as a same-origin path and walk past `SafeUrl`.</reason>
 </decision>
 
+## 2026-08-14T10:04:24+0600
+<decision>
+  <category>Business_Logic</category>
+  <context>Cross-chamber clinical history treated "same normalized phone + same normalized name" as the same person. One mobile is routinely a whole household's here — the booking wizard has a household picker for exactly that reason — and names repeat inside a family, so two relatives cross-matched. That is not only a privacy leak: it put another person's diagnoses and prescriptions in front of a doctor who was prescribing.</context>
+  <action>`CrossTenantClinicalHistoryService::isSamePerson()` now also requires age agreement (exact `date_of_birth` when both sides have one, otherwise `displayAge()` within `AGE_MATCH_TOLERANCE_YEARS` = 1 to absorb `age_recorded_at` drift) and rejects a recorded sex that disagrees. **Fails closed** — no age on either side means no match. The NID path is unchanged and still matches on its own. To make the rule affordable, the booking wizard now asks for **age in whole years** (optional, not a date of birth), carried through `BookingController` → `BookingService` → `PatientService::resolveForBooking()`; it fills a missing age and never overwrites one a chamber recorded.</action>
+  <reason>Age is what actually separates the people this feature kept colliding — a father and son sharing a name differ by decades. A doctor-confirmation step was considered and rejected by the owner: a chamber working through forty patients will not stop for an identity dialog, and a prompt everyone reflex-clicks is worse than none. Age was chosen over date of birth because patients here reliably know "42" and often not the date, and it is one keypad entry. Fail-closed costs history for chambers that never record an age, which is the correct direction to be wrong about a wrong-patient hazard.</reason>
+</decision>
+
+<decision>
+  <category>Business_Logic</category>
+  <context>`add_share_clinical_history_to_patients_table` added the column with `->default(true)`, which backfilled every patient row that already existed to "sharing on". Those people registered before the consent checkbox existed, so their `true` was a column default rather than an answer — and what it opted them into was another chamber's doctor reading their diagnoses.</context>
+  <action>Migration `2026_08_13_235900_reset_share_clinical_history_for_pre_consent_patients` sets the flag false for rows created strictly before the consent checkbox went live. `down()` deliberately does nothing.</action>
+  <reason>Scoped by `created_at` so anyone who has booked since — and therefore saw the checkbox and had their real answer written by `PatientService` — keeps it. Reversing would re-assert consent nobody gave, which is the bug. Costs some cross-chamber history until those patients are asked properly at their next booking.</reason>
+</decision>
+
+<decision>
+  <category>Code</category>
+  <context>`isOwnedReportPhotoPath()` validated stored report-photo paths, but `voice_path` and `photo_path` — written from the same browser form state — were streamed unchecked. Separately, `CrossTenantClinicalHistoryService` blanks media paths on live `VisitRecord` models and Consult Screen merges those foreign rows into the same collection as the chamber's own.</context>
+  <action>Generalised the guard to `isOwnedMediaPath(/Users/chowdhuryjoy/.npm-global/bin /Users/chowdhuryjoy/.kimi-code/bin /usr/local/bin /System/Cryptexes/App/usr/bin /usr/bin /bin /usr/sbin /sbin /var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/local/bin /var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/bin /var/run/com.apple.security.cryptexd/codex.system/bootstrap/usr/appleinternal/bin /pkg/env/global/bin /opt/homebrew/bin /Users/chowdhuryjoy/.local/bin /Users/chowdhuryjoy/Library/Application Support/Claude/local-agent-mode-sessions/3f62bf5a-3551-4514-938f-aafdcd7d8231/18ba12dd-ec53-48a6-97c8-da4f76eb96f3/rpm/plugin_0155zZVATbJU3jHUmPP9NvMC/bin /Users/chowdhuryjoy/Library/Application Support/Claude/local-agent-mode-sessions/3f62bf5a-3551-4514-938f-aafdcd7d8231/18ba12dd-ec53-48a6-97c8-da4f76eb96f3/rpm/plugin_01Eeb9y5m4iFuY3yRtytYfdc/bin /Users/chowdhuryjoy/Library/Application Support/Claude/local-agent-mode-sessions/3f62bf5a-3551-4514-938f-aafdcd7d8231/18ba12dd-ec53-48a6-97c8-da4f76eb96f3/rpm/plugin_01VUWKAs3gYLNqeKbDtxv1Xs/bin /Users/chowdhuryjoy/Library/Application Support/Claude/local-agent-mode-sessions/skills-plugin/18ba12dd-ec53-48a6-97c8-da4f76eb96f3/3f62bf5a-3551-4514-938f-aafdcd7d8231/bin, )` with `isOwnedVoicePath()` / `isOwnedPhotoPath()` / `isOwnedReportPhotoPath()` wrappers, applied in `VisitMediaController::voice()` and `::photo()`. Foreign visit records are marked via `VisitRecord::markAsForeignChamberRecord()`, and a `saving` hook throws on them. `nid` removed from `PatientAccount::`.</action>
+  <reason>**The media guard is defence in depth, not a live hole** — `FilesystemTenancyBootstrapper` already suffixes the `local` disk per tenant, so a foreign path resolves inside the viewing chamber's own root and is simply absent. It matters if that disk ever moves to S3, where the suffixing does not apply the same way, and it blocks `..` explicitly rather than relying on Flysystem. The read-only marking exists because saving a stripped foreign record would erase the real media paths in the chamber that owns them, and the merge into one collection makes that an easy accident. `nid` is treated as proof of ownership in `PlatformPatientHistoryService`, so an account must never be able to assert its own.</reason>
+</decision>
+
+## 2026-08-14T12:34:23+0600
+<decision>
+  <category>Business_Logic</category>
+  <context>Owner changed Solo à la carte one-time setup: website cheaper, live queue the main setup cost, prescription a small add-on. Monthly fees were left alone so a doctor already quoted ৳1,000 / ৳2,000 / ৳0 per month is not surprised.</context>
+  <action>Update `config/marketing.php` module setup defaults (and `.env.example`): Front door ৳3,000, Live queue ৳12,000, Prescription ৳2,000. Monthly stays ৳1,000 / ৳2,000 / ৳0. All-three Maestro bundle stays ৳15,000 setup / ৳3,000 mo (now ৳2,000 off the ৳17,000 unit sum). Partial combos still sum units. Clinic unchanged. Existing tenant `setup_amount_due` snapshots are not rewritten unless Super Admin changes that tenant's plan, discount, or modules.</action>
+  <reason>The public pricing table, Super Admin helper, and billing snapshots all read this config. Keeping the bundle sticker means "full package" sales copy does not move. Doctors already billed keep their quoted setup until someone deliberately re-prices them.</reason>
+</decision>
+
+## 2026-08-14T12:55:46+0600
+
+<decision>
+  <category>CRO</category>
+  <context>Owner wants a deadline pull to convert solo doctors during the launch window: anyone who commits to the website before 31 August gets the prescription module free for life.</context>
+  <action>Launch offer copy on the Maestro pricing story: "Get your website by 31 August and Prescription is free for life (৳2,000 setup waived)." Written into the Maestro sales proposal (`docs/proposals/Maestro-ChamberQ-Proposal.md` + `.html` — module table with all-three = Maestro bundle row, plus the offer note) and the live marketing homepage pricing section (`resources/views/marketing/partials/pricing.blade.php` with a new `.mk-offer` band in `public/css/marketing.css`). MarketingLandingPageTest asserts the offer copy. Config and billing prices are unchanged — the offer is sales copy, not a config change; discount handling still flows through the normal discount code path.</action>
+  <reason>A dated offer gives sales and the WhatsApp close a concrete reason to act now; it rides the existing modules table (website + prescription are both rows there) without moving any sticker price or billing logic. Kept as copy rather than config because it is a temporary promotion, and config stays the single source for list prices.</reason>
+</decision>
+
+## 2026-08-14T12:59:37+0600
+
+<decision>
+  <category>Business_Logic</category>
+  <context>Owner re-priced the prescription module (৳2,000/৳0 → ৳5,000 one-time / ৳250 monthly) and expanded the launch offer: the website-by-31-August deal now waives the prescription monthly fee as well as the setup fee — free for life means both.</context>
+  <action>`config/marketing.php` + `.env.example`: `prescription` module setup ৳5,000, monthly ৳250. Maestro bundle stays ৳15,000 / ৳3,000 — the setup discount vs the ৳20,000 unit sum is now ৳5,000 (was ৳2,000 off ৳17,000), and monthly bundle (৳3,000) is ৳250 below the ৳3,250 unit sum. Offer copy everywhere reads "Prescription free for life (৳5,000 setup + ৳250/month waived)" for website signups by 31 August. Updated: Maestro proposal (`.md` + `.html`), marketing homepage pricing partial (`.mk-offer` band + modules table via config), Super Admin module helper text, Client Guide, Marketing Playbook, Developer Handoff, CHANGELOG, `architecture.md`, `ModulePricingTest` (prescription-only 5000/250; website+prescription 8000/1250; tenant-read 5000/250), `MarketingLandingPageTest` offer assertion. Existing tenant `setup_amount_due` / monthly snapshots are not rewritten unless Super Admin re-prices that tenant.</action>
+  <reason>The owner set both numbers; the bundle sticker is untouched so "full package" sales copy and already-quoted tenants do not move. Because the offer now waives a recurring fee, it is a real billing caveat, not just copy — but it is still executed as sales copy, not config: the pricing source of truth keeps one shape, and a waived ৳250/month is the sales team's call to honour, exactly like a discount code.</reason>
+</decision>
+
+## 2026-08-14T13:03:37+0600
+
+<decision>
+  <category>CRO</category>
+  <context>Owner wants a second dated incentive aimed at annual commitment: confirming one year of payment upfront earns 50% off the one-time setup fees, for signups confirmed before 30 September.</context>
+  <action>Added a **Prepaid-year offer** next to the launch offer on the Maestro proposal (`docs/proposals/Maestro-ChamberQ-Proposal.md` + `.html`) and the marketing homepage pricing section (a second `.mk-offer` band in `resources/views/marketing/partials/pricing.blade.php`): "Confirm one year of payment before 30 September and every one-time setup fee is 50% off (Maestro setup ৳15,000 → ৳7,500)." MarketingLandingPageTest asserts the copy. No config or billing change — it is executed as sales copy, with the actual discount handled through the normal discount path (like the launch offer).</action>
+  <reason>An annual-prepayment sweetener converts doctors who are already sold on the package but hesitating on when to start, and the 30 September deadline pairs with the 31 August launch offer to keep both close dates on the page without changing sticker prices. Copy-only keeps the config as the single source for list prices.</reason>
+</decision>
+
 ## 2026-08-14T13:38:25+0600
 
 <decision>
@@ -2214,6 +2271,33 @@
   <context>A prescription-only client has no Live Queue Control and an empty Consult Screen, so they cannot reach Print / WhatsApp / SMS (`prescription-share-actions`). Visiting / camp only offers Save & print. Owner confirmed the printed sheet is enough — do not add WhatsApp/SMS send on that page.</context>
   <action>Keep Visiting / camp print-only. Share buttons stay on Live Queue Control and Consult Screen after complete (Maestro / live-queue consult). Upload stores the visit; it does not send SMS. Drop the leftover “SMS waits until then” copy on Visiting / camp so the screen does not promise a send that never happens.</action>
   <reason>Paper in the patient’s hand is the real camp/Rx-only handoff. WhatsApp/SMS from the desk belongs to the queued consult, where the patient is still in the room after Complete visit.</reason>
+</decision>
+
+## 2026-08-14T14:15:38+0600
+
+<decision>
+  <category>Business_Logic</category>
+  <context>Owner lowered the prescription module's one-time setup from ৳5,000 to ৳2,500 so the Rx-only entry price is a smaller add-on for doctors who are not buying the full Maestro bundle. Monthly fee stays ৳250.</context>
+  <action>`config/marketing.php` `modules.prescription.setup` default and `.env.example` `MARKETING_MODULE_PRESCRIPTION_SETUP` 5000 → 2500. Monthly unchanged. Maestro bundle sticker (৳15,000 / ৳3,000) unchanged — the all-three setup discount vs the ৳17,500 unit sum is now ৳2,500. Offer copy ("Prescription free for life — ৳2,500 setup + ৳250/month waived"), Super Admin module helper text, Maestro proposal (`.md` + `.html`), Client Guide, Marketing Playbook, and tests updated (`ModulePricingTest` prescription-only 2500/250, website+prescription 5500/1250, tenant-read 2500/250; `MarketingLandingPageTest` offer line). Existing tenant `setup_amount_due` / monthly snapshots are not rewritten unless Super Admin re-prices that tenant.</action>
+  <reason>Lower one-time cost lowers the barrier for the Visiting/camp Rx-only workflow (verified sellable standalone) while keeping recurring revenue at ৳250/mo; the bundle sticker is untouched so quoted Maestro tenants and "full package" copy do not move.</reason>
+</decision>
+
+## 2026-08-14T22:39:27+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Sales quotes Maestro/modules plus two launch offers, but Super Admin still said “Solo Doctor”, showed list/due without the partner’s cut, and could not tick the offers — so confirming payment at the sticker over-paid commissions. Changing modules before the doctor paid also left the pending commission on the old amount.</context>
+ <action>Super Admin tenant form labels `solo` as **Maestro**. Module helper text reads `config/marketing.php`. Two tenant flags: `offer_prescription_lifetime_free` (waive Rx units on Solo when Prescription is included) and `offer_prepaid_year_setup` (50% off setup after other discounts). Live preview shows list → due plus partner setup/monthly commission. `PlanPricingService::quote()` is the single path; Clinic list is unchanged by Rx-free. `syncPendingCommissions()` updates **pending** rows only. Header action **Confirm 12 months prepaid** after setup is paid. Doctors list and partner referred list show Maestro/Clinic, module chips, and due amounts. Existing tenant snapshots are not rewritten unless that tenant is edited.</action>
+ <reason>The back-office cashbook has to match the WhatsApp quote. Offer ticks persist so monthly commission stays waived for life; a percent discount code cannot waive one module. Recalculating pending (never owed/paid) keeps the partner’s ledger honest when the package changes before the doctor pays.</reason>
+</decision>
+
+## 2026-08-14T22:39:16+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Sales quotes Maestro, modules, and two launch offers on WhatsApp, but Super Admin still said “Solo Doctor”, showed no partner commission until after save, and could not tick the offers — so due amounts and commissions often matched the sticker instead of the deal.</context>
+ <action>Super Admin tenant form labels `solo` as Maestro; module helper text and amount preview read live config; preview includes partner setup/monthly commission. Two saved ticks: Prescription free for life (waive Rx units on Solo when Rx is included) and prepaid-year 50% off setup. Quote order: module list → Rx-free → percent discount code → 50% setup. Pending commissions refresh on re-price. Header action confirms up to 12 monthly payments + owed commissions after setup is paid. Doctors list and partner referred list show Maestro/Clinic, module chips, and due amounts. Prescription list price stays ৳2,500 / ৳250. Existing tenant snapshots are not rewritten unless that tenant is edited.</action>
+ <reason>The back-office cashbook has to match the WhatsApp quote. Offer ticks persist so monthly commission stays waived for life, which a one-off “amount paid” box cannot do. Percent discount codes cannot waive one module, so the ticks are not a discount-code workaround.</reason>
 </decision>
 
 ## 2026-08-14T23:45:02+0600
@@ -2230,4 +2314,13 @@
  <context>Super Admin platform restore opened with dry-run off and replace on, so submitting the form without reading the checkboxes would wipe central tables.</context>
  <action>`DataBackup` and `TenantBackupActions` default `dry_run` to true; a missing checkbox fails closed as dry-run. The REPLACE confirmation field only appears for a live replace. Chamber Admin Data backup is unchanged (still opt-in dry-run).</action>
  <reason>A Super Admin restore is a platform-wide write. Checking the ZIP first is the safe default; writing stays a deliberate uncheck plus typed confirmation.</reason>
+</decision>
+
+## 2026-08-15T00:23:45+0600
+
+<decision>
+  <category>UI/UX</category>
+  <context>A Super Admin UX pass had just landed. Testing it in the browser rather than reading it showed three things still wrong: both backup cards had lost their inner padding, the new danger colour on the platform restore never actually painted, and the Tenants list still put Edit off-screen at both 1280 and 375.</context>
+  <action>Restore the `.backup-card-body` padding rule. Key the platform restore submit on the dry-run state (`wire:key="restore-submit-dry|live"`) so Livewire replaces the button instead of morphing it, and add a red callout plus a `wire:confirm` naming exactly what a live replace wipes. On the Tenants list, move Edit + Download chamber backup into a row `ActionGroup`, start Modules / Marketer / Setup due / Monthly due / Domains toggled off, push Tier and Billing to `sm`, and wrap the name column.</action>
+  <reason>The colour cue alone was not survivable: the class was correct and the paint was stale, so the guard has to be something rendered fresh (callout) or handled outside CSS (confirm dialog). For the table, `visibleFrom` is viewport-based and cannot account for the ~380px sidebar, so the only reliable lever was reducing total column width — and every column now hidden is still one toggle away and already visible on tenant edit or Client Health.</reason>
 </decision>

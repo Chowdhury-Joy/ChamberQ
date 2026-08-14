@@ -439,5 +439,7 @@
     "My prescription: :link": "আমার ব্যবস্থাপত্র: :link",
     "No printer? Take a screenshot of this page to keep it on your phone.": "প্রিন্টার নেই? ফোনে রাখতে এই পাতার স্ক্রিনশট নিন।",
     "Print / Save as PDF": "প্রিন্ট / পিডিএফ সেভ করুন",
-    "This link expires :hours hours after it was sent. Save or print this page to keep a copy.": "পাঠানোর :hours ঘণ্টা পর এই লিঙ্কটি আর কাজ করবে না। কপি রাখতে এই পাতা সেভ বা প্রিন্ট করুন।"
+    "This link expires :hours hours after it was sent. Save or print this page to keep a copy.": "পাঠানোর :hours ঘণ্টা পর এই লিঙ্কটি আর কাজ করবে না। কপি রাখতে এই পাতা সেভ বা প্রিন্ট করুন।",
+    "Age in years (optional)": "বয়স, বছরে (ঐচ্ছিক)",
+    "Helps the doctor see your past visits from other chambers.": "এতে ডাক্তার অন্য চেম্বারে আপনার আগের ভিজিটগুলো দেখতে পারবেন।"
 }

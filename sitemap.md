@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-14T23:45:02+0600
+Last Updated: 2026-08-15T00:23:45+0600
 
 ## Full Site Map
 
@@ -17,7 +17,7 @@ Hosts: values in `CENTRAL_DOMAINS` (e.g. `localhost`).
 | `/me/history` | Past visits and prescriptions for this phone (own records; no share-flag gate; no voice/photo) | patient login |
 | `/me/prescriptions/{id}` | Full patient pad for one prescription belonging to this phone | patient login |
 | `/admin` | Super Admin Filament login | public login |
-| `/admin/*` | Super Admin: Tenants under **Platform** (incl. **Product modules** checkboxes: Front door / Live queue / Prescription; **Maestro**/Clinic label; launch-offer ticks; live list/due + partner commission preview), Marketers, Discount Codes, Commissions; finance dashboard then platform totals then latest 8 tenants; **Client Health** seller overview (`/admin/seller-overview`, names link to tenant edit); **Research data** aggregate view (`/admin/research`); **Platform data backup** (`/admin/data-backup`, restore defaults to dry-run); per-tenant chamber backup download plus Restore/Delete behind **Dangerous** on tenant edit; confirm doctor setup/monthly/**12 months prepaid** on tenant edit | super_admin only |
+| `/admin/*` | Super Admin: Tenants under **Platform** (incl. **Product modules** checkboxes: Front door / Live queue / Prescription; **Maestro**/Clinic label; launch-offer ticks; live list/due + partner commission preview), Marketers, Discount Codes, Commissions; finance dashboard then platform totals then latest 8 tenants; **Client Health** seller overview (`/admin/seller-overview`, names link to tenant edit); **Research data** aggregate view (`/admin/research`); **Platform data backup** (`/admin/data-backup`, restore defaults to dry-run and confirms before a live replace); Tenants list row actions (Edit / Download chamber backup) sit in a **⋮** menu with finance columns behind the column manager; per-tenant chamber backup download plus Restore/Delete behind **Dangerous** on tenant edit; confirm doctor setup/monthly/**12 months prepaid** on tenant edit | super_admin only |
 | `/partner` | Marketer partner panel login | public login |
 | `/partner/*` | Marketer: referral link, owed/paid stats, referred doctors list, commission history | marketer only |
 | `/up` | Laravel health check | public |
@@ -261,7 +261,7 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 
 ### Disaster-recovery backup (Super Admin)
 - **Trigger:** Platform wipe or per-chamber restore without logging into that chamber.
-- **Steps:** **Platform data backup** (`/admin/data-backup`) — download first; restore starts as **Check ZIP without writing** (dry-run on). Uncheck dry-run only when ready to write; replace still requires typing `REPLACE`. Per-chamber: Tenants → **Download chamber backup**, or tenant edit → **Dangerous** → Restore / Delete.
+- **Steps:** **Platform data backup** (`/admin/data-backup`) — download first; restore starts as **Check ZIP without writing** (dry-run on). Uncheck dry-run only when ready to write — the button turns red, a warning callout appears, and submitting asks a confirmation naming what gets wiped; replace still requires typing `REPLACE`. Per-chamber: Tenants → row **⋮** → **Download chamber backup**, or tenant edit → **Dangerous** → Restore / Delete.
 - **Success:** ZIP checked without writing unless Super Admin deliberately opts into a live restore; passwords reset via Forgot password.
 
 ### Ops review (admin/doctor)

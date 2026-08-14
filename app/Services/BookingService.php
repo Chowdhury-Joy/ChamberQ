@@ -4,9 +4,10 @@ namespace App\Services;
 
 use App\Exceptions\BookingUnavailableException;
 use App\Models\Booking;
-use App\Models\ScheduleSession;
+use App\Models\Doctor;
 use App\Models\LabCollectionSlot;
 use App\Models\LabTest;
+use App\Models\ScheduleSession;
 use App\Models\SlotBlock;
 use App\Support\BdPhone;
 use Carbon\Carbon;
@@ -123,6 +124,7 @@ class BookingService
         ?string $whatsappPhone = null,
         ?bool $shareClinicalHistory = null,
         ?string $nid = null,
+        ?int $age = null,
     ): Booking {
         $patientPhone = $this->normalizeBdPhone($patientPhone);
         $whatsappPhone = filled($whatsappPhone) ? $this->normalizeBdPhone($whatsappPhone) : null;
@@ -130,7 +132,7 @@ class BookingService
             $whatsappPhone = null;
         }
 
-        $booking = DB::transaction(function () use ($bookable, $bookingDate, $patientName, $patientPhone, $labTestIds, $patientId, $wantsEarlierDate, $whatsappPhone, $shareClinicalHistory, $nid) {
+        $booking = DB::transaction(function () use ($bookable, $bookingDate, $patientName, $patientPhone, $labTestIds, $patientId, $wantsEarlierDate, $whatsappPhone, $shareClinicalHistory, $nid, $age) {
             $tenant = tenant();
             $capMode = $tenant->slot_cap_mode ?? 'per_session';
             if ($capMode === 'per_day') {
@@ -139,7 +141,7 @@ class BookingService
 
             // Pessimistic lock — Fatima and Rahim cannot both take the last seat.
             if ($bookable instanceof ScheduleSession && $capMode === 'per_doctor_chamber') {
-                \App\Models\Doctor::where('id', $bookable->doctor_id)->lockForUpdate()->first();
+                Doctor::where('id', $bookable->doctor_id)->lockForUpdate()->first();
                 $lockedBookable = get_class($bookable)::where('id', $bookable->id)->lockForUpdate()->first();
             } else {
                 $lockedBookable = get_class($bookable)::where('id', $bookable->id)->lockForUpdate()->first();
@@ -174,6 +176,7 @@ class BookingService
                 $patientId,
                 $shareClinicalHistory,
                 $nid,
+                $age,
             );
 
             $duplicateQuery = Booking::where('bookable_type', get_class($lockedBookable))

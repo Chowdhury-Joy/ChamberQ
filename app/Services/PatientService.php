@@ -64,6 +64,7 @@ class PatientService
         ?string $patientId = null,
         ?bool $shareClinicalHistory = null,
         ?string $nid = null,
+        ?int $age = null,
     ): Patient {
         $phone = $this->normalizePhone($phone);
         $name = trim($name);
@@ -78,7 +79,7 @@ class PatientService
                 // so a submitted name is not that person's real name — writing
                 // it back would overwrite "Fatima Rahman" with "F. R.". Staff
                 // correct spellings in the Patients resource instead.
-                $this->applyBookingUpdates($patient, $phone, $name, $nid, $shareClinicalHistory, rename: false);
+                $this->applyBookingUpdates($patient, $phone, $name, $nid, $shareClinicalHistory, $age, rename: false);
 
                 return $patient->fresh() ?? $patient;
             }
@@ -88,7 +89,7 @@ class PatientService
             $byNid = Patient::query()->where('nid', $nid)->first();
 
             if ($byNid) {
-                $this->applyBookingUpdates($byNid, $phone, $name, $nid, $shareClinicalHistory, rename: true);
+                $this->applyBookingUpdates($byNid, $phone, $name, $nid, $shareClinicalHistory, $age, rename: true);
 
                 return $byNid->fresh() ?? $byNid;
             }
@@ -102,7 +103,7 @@ class PatientService
             ->first(fn (Patient $patient) => $this->normalizeName($patient->name) === $normalizedName);
 
         if ($existing) {
-            $this->applyBookingUpdates($existing, $phone, $name, $nid, $shareClinicalHistory, rename: true);
+            $this->applyBookingUpdates($existing, $phone, $name, $nid, $shareClinicalHistory, $age, rename: true);
 
             return $existing->fresh() ?? $existing;
         }
@@ -112,6 +113,10 @@ class PatientService
             'phone' => $phone,
             'nid' => $nid,
             'share_clinical_history' => $shareClinicalHistory ?? true,
+            'age' => $age,
+            // Stamped so `displayAge()` can carry a stated age forward; a bare
+            // number with no date drifts wrong the moment a year passes.
+            'age_recorded_at' => $age !== null ? today() : null,
         ]);
     }
 
@@ -124,6 +129,7 @@ class PatientService
         string $name,
         ?string $nid,
         ?bool $shareClinicalHistory,
+        ?int $age,
         bool $rename,
     ): void {
         $updates = [];
@@ -143,6 +149,15 @@ class PatientService
         if ($shareClinicalHistory !== null
             && (bool) $patient->share_clinical_history !== $shareClinicalHistory) {
             $updates['share_clinical_history'] = $shareClinicalHistory;
+        }
+
+        // Fill a missing age, never overwrite one. Staff record ages at the desk
+        // from the person in front of them; a number typed into the public
+        // wizard — possibly by a relative booking on their behalf — does not get
+        // to overrule that.
+        if ($age !== null && $patient->age === null && ! $patient->date_of_birth) {
+            $updates['age'] = $age;
+            $updates['age_recorded_at'] = today();
         }
 
         if ($updates !== []) {

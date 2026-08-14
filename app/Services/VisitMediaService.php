@@ -5,6 +5,7 @@ namespace App\Services;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class VisitMediaService
 {
@@ -26,7 +27,7 @@ class VisitMediaService
 
     public const REPORT_PHOTO_MAX_FILES = 8;
 
-  /**
+    /**
      * @return list<string>
      */
     public static function allowedVoiceMimeTypes(): array
@@ -73,17 +74,37 @@ class VisitMediaService
     }
 
     /**
-     * Stored report-photo paths must live under this practice's directory.
-     * A hand-crafted save must not be able to point at another tenant's file
-     * or walk out with `..`.
+     * A stored media path must live under this practice's own directory.
+     *
+     * Every one of these columns (`voice_path`, `photo_path`,
+     * `report_photo_paths`) is written from form state the browser sends, so
+     * without this a doctor could point a visit record at another chamber's
+     * file and have the authenticated stream controller hand it over. `..` and
+     * null bytes are rejected outright rather than relied on Flysystem to
+     * catch.
      */
-    public function isOwnedReportPhotoPath(?string $path): bool
+    public function isOwnedMediaPath(?string $path, string $directory): bool
     {
         if (blank($path) || str_contains($path, '..') || str_contains($path, "\0")) {
             return false;
         }
 
-        return str_starts_with($path, $this->reportPhotoDirectory().'/');
+        return str_starts_with($path, rtrim($directory, '/').'/');
+    }
+
+    public function isOwnedVoicePath(?string $path): bool
+    {
+        return $this->isOwnedMediaPath($path, $this->voiceDirectory());
+    }
+
+    public function isOwnedPhotoPath(?string $path): bool
+    {
+        return $this->isOwnedMediaPath($path, $this->photoDirectory());
+    }
+
+    public function isOwnedReportPhotoPath(?string $path): bool
+    {
+        return $this->isOwnedMediaPath($path, $this->reportPhotoDirectory());
     }
 
     public function storeVoiceUpload(UploadedFile $file): string
@@ -167,7 +188,7 @@ class VisitMediaService
      * and any Flysystem-backed disk (`s3`, etc.), so moving `DISK` is a config
      * change, not a code change.
      */
-    public function streamResponse(?string $path): ?\Symfony\Component\HttpFoundation\StreamedResponse
+    public function streamResponse(?string $path): ?StreamedResponse
     {
         if (! $this->exists($path)) {
             return null;
