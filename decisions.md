@@ -2206,3 +2206,12 @@
  <action>Every one of those fields is now the same Filament `FileUpload` (`PublicMediaFields::image`) writing to Laravel's `public` disk under a per-tenant folder — `webpage-gallery/`, `webpage-testimonials/`, `webpage-faq/`, `webpage-facility/`, `blog-images/`, `department-images/`, `doctor-photos/`, `branding-logos/`, `branding-icons/`. The disk path is promoted to a same-origin `/storage/…` src at the model boundary (`HasClinicContentFields`, `Doctor::saving`, `WebPage::saving`, `BrandingSettings::save`), never inside the upload component. A link pasted before today still shows until staff replace it. `PublicMediaFields::image` was narrowed from `image/*` to JPEG/PNG/WebP/GIF, and `PublicStoredImage::toPublicPath()` now refuses to prefix `/storage/` onto a value carrying a URL scheme.</action>
  <reason>Staff think in photos, not URLs, and the URL box was quietly costing us every section that needed a real picture of the chamber. Promoting the path on save (not in the field) is the rule `bug_history.md` already set after uploads were wiped by a `dehydrateStateUsing` rewrite. SVG is excluded because these files are served from this app's own origin, where a script inside one would run as us; the scheme guard exists so `javascript:` cannot be dressed up as a same-origin path and walk past `SafeUrl`.</reason>
 </decision>
+
+## 2026-08-14T13:38:25+0600
+
+<decision>
+  <category>Business_Logic</category>
+  <context>A prescription-only client has no Live Queue Control and an empty Consult Screen, so they cannot reach Print / WhatsApp / SMS (`prescription-share-actions`). Visiting / camp only offers Save & print. Owner confirmed the printed sheet is enough — do not add WhatsApp/SMS send on that page.</context>
+  <action>Keep Visiting / camp print-only. Share buttons stay on Live Queue Control and Consult Screen after complete (Maestro / live-queue consult). Upload stores the visit; it does not send SMS. Drop the leftover “SMS waits until then” copy on Visiting / camp so the screen does not promise a send that never happens.</action>
+  <reason>Paper in the patient’s hand is the real camp/Rx-only handoff. WhatsApp/SMS from the desk belongs to the queued consult, where the patient is still in the room after Complete visit.</reason>
+</decision>

@@ -531,3 +531,6 @@
 
 ## 2026-08-14T01:12:58+0600
 - Replaced every remaining website image **URL** field in the tenant admin with the `PublicMediaFields` uploader (gallery slides, testimonial avatars, FAQ panel, About Practice cards, blog, departments, doctor photos, branding logo/favicon); model `saving` hooks now promote the disk path to `/storage/…` before `SafeUrl` scrubs it, the shared image field no longer accepts SVG, and `PublicStoredImage::toPublicPath()` refuses to prefix `/storage/` onto a scheme-carrying value.
+
+## 2026-08-14T13:38:25+0600
+- Visiting / camp patient handoff is the printed sheet only. Print / WhatsApp / SMS stay on Live Queue Control and Consult Screen after complete; upload does not send SMS. Dropped the leftover “SMS waits until then” copy on that page.

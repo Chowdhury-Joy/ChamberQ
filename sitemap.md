@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-13T23:35:10+0600
+Last Updated: 2026-08-14T13:38:25+0600
 
 ## Full Site Map
 
@@ -196,7 +196,7 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 
 ### Visiting day / camp (doctor — bad internet away from the chamber)
 - **Trigger:** Doctor will sit somewhere with unstable internet (village camp, second chamber, outreach), or the main chamber line is expected to drop.
-- **Steps:** On good internet → **Operations → Visiting / camp** → **Pack bag** (copies packs, My medicines, known patients, letterhead onto this laptop). At the remote room → add name + phone or pick a packed patient → write medicines from the bag → **Save & print** (paper is the record until upload). When signal returns → **Upload pending visits** (or the yellow banner's Upload now). SMS / WhatsApp Rx links wait until then. This is not Live Queue — no Call next, no outdoor TV.
+- **Steps:** On good internet → **Operations → Visiting / camp** → **Pack bag** (copies packs, My medicines, known patients, letterhead onto this laptop). At the remote room → add name + phone or pick a packed patient → write medicines from the bag → **Save & print** (the printed sheet is what the patient takes home). When signal returns → **Upload pending visits** (or the yellow banner's Upload now) so the visit is stored in ChamberQ. This page has no WhatsApp/SMS send. This is not Live Queue — no Call next, no outdoor TV.
 - **Data/systems touched:** IndexedDB on the laptop; `GET /api/offline/bag`; `POST /api/offline/sync` → `bookings` + `visit_records` (`offline_sync_id`) + `prescriptions`. Does not mutate the live queue.
 - **Success:** Patient leaves with a printed pad; the same visit appears in ChamberQ when the line is back, without calling the next serial at the main chamber.
 

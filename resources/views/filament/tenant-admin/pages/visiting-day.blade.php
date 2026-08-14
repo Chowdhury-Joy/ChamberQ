@@ -35,7 +35,7 @@
     >
         <div class="vd-card">
             <h2 class="vd-title">{{ __('Pack the bag before you leave') }}</h2>
-            <p class="vd-muted">{{ __('On good internet, tap Pack bag. That copies your packs, My medicines, and known patients onto this computer. At the camp you write and print here even if the line is dead. Uploading happens when signal returns — SMS waits until then.') }}</p>
+            <p class="vd-muted">{{ __('On good internet, tap Pack bag. That copies your packs, My medicines, and known patients onto this computer. At the camp you write and print here even if the line is dead. The printed sheet is what the patient takes home. Uploading happens when signal returns.') }}</p>
             <div class="vd-row">
                 <x-filament::button type="button" color="primary" x-on:click="packBag()" x-bind:disabled="packing">
                     <span x-text="packing ? '{{ __('Packing…') }}' : '{{ __('Pack bag') }}'"></span>
