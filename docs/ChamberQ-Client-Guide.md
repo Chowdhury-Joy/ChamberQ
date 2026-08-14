@@ -45,6 +45,15 @@ Not sure which fits? Message us on WhatsApp — we’ll recommend based on how y
 | **Solo** | ৳15,000 | ৳3,000 |
 | **Clinic** | ৳75,000 | ৳7,500 |
 
+You can also buy pieces (one doctor):
+
+| What you want | Setup (one-time) | Monthly |
+|---------------|------------------|---------|
+| Website + booking | ৳3,000 | ৳1,000 |
+| + Prescription | +৳2,500 | +৳250 |
+| + Live queue | +৳12,000 | +৳2,000 |
+| All three together | ৳15,000 | ৳3,000 |
+
 ### What’s included in the plan
 **Solo**
 - One doctor, up to 5 locations

@@ -1780,6 +1780,32 @@ body.mk {
     color: var(--mk-muted);
 }
 
+.mk-offer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.25rem;
+    margin: 0 0 1.1rem;
+    padding: 1rem 1.25rem;
+    border: 1px solid color-mix(in srgb, var(--mk-teal) 35%, white);
+    border-radius: var(--mk-radius-card);
+    background: var(--mk-teal-soft);
+}
+
+.mk-offer-label {
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--mk-teal);
+}
+
+.mk-offer-text {
+    margin: 0;
+    font-size: 0.95rem;
+    color: var(--mk-ink);
+}
+
 .mk-modules-cta { display: inline-flex; }
 
 /* —— FAQ (heading left, answers right) —— */

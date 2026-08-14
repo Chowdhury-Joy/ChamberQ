@@ -52,9 +52,9 @@
 
         @php
             $modules = config('marketing.modules', []);
-            $frontDoor = $modules['front_door'] ?? ['setup' => 7500, 'monthly' => 1000];
-            $prescription = $modules['prescription'] ?? ['setup' => 2500, 'monthly' => 0];
-            $liveQueue = $modules['live_queue'] ?? ['setup' => 7500, 'monthly' => 2000];
+            $frontDoor = $modules['front_door'] ?? ['setup' => 3000, 'monthly' => 1000];
+            $prescription = $modules['prescription'] ?? ['setup' => 2500, 'monthly' => 250];
+            $liveQueue = $modules['live_queue'] ?? ['setup' => 12000, 'monthly' => 2000];
             $bundle = $modules['bundle_all'] ?? ['setup' => 15000, 'monthly' => 3000];
             $modulesWa = $wa('Hi — I\'m a solo doctor. I want to pick ChamberQ modules (website / prescription / queue).'.$refSuffix);
         @endphp
@@ -93,6 +93,14 @@
                         </tr>
                     </tbody>
                 </table>
+            </div>
+            <div class="mk-offer">
+                <span class="mk-offer-label">Launch offer</span>
+                <p class="mk-offer-text">Get your website by <strong>31 August</strong> and <strong>Prescription is free for life</strong> (৳2,500 setup + ৳250/month waived).</p>
+            </div>
+            <div class="mk-offer">
+                <span class="mk-offer-label">Prepaid-year offer</span>
+                <p class="mk-offer-text">Confirm one year of payment before <strong>30 September</strong> and your one-time setup is <strong>50% off</strong> (Maestro setup ৳15,000 → ৳7,500).</p>
             </div>
             <p class="mk-modules-note">SMS confirmations optional (prepaid credits). Walk-ins included with website.</p>
             <a class="mk-btn mk-btn-secondary mk-modules-cta" href="{{ $modulesWa }}" target="_blank" rel="noopener noreferrer">

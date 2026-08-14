@@ -34,6 +34,8 @@ class MarketingLandingPageTest extends TestCase
         $response->assertSee('Who is next?', escape: false);
         $response->assertSee('৳15,000', escape: false);
         $response->assertSee('৳3,000', escape: false);
+        $response->assertSee('৳12,000', escape: false);
+        $response->assertSee('৳2,000', escape: false);
         $response->assertSee('৳75,000', escape: false);
         $response->assertSee('৳7,500', escape: false);
         $response->assertSee('One doctor, up to 5 locations', escape: false);
@@ -43,6 +45,14 @@ class MarketingLandingPageTest extends TestCase
         $response->assertSee('All three = Maestro', escape: false);
         $response->assertSee('Choose Maestro', escape: false);
         $response->assertSee('Choose Clinic', escape: false);
+        $response->assertSee('Launch offer', escape: false);
+        $response->assertSee('31 August', escape: false);
+        $response->assertSee('Prescription is free for life', escape: false);
+        $response->assertSee('৳2,500 setup + ৳250/month waived', escape: false);
+        $response->assertSee('30 September', escape: false);
+        $response->assertSee('one-time setup is', escape: false);
+        $response->assertSee('50% off', escape: false);
+        $response->assertSee('৳15,000 → ৳7,500', escape: false);
         $response->assertDontSee('Rising Star', escape: false);
         $response->assertDontSee('Choose Solo', escape: false);
         $response->assertDontSee('Running a multi-doctor clinic?', escape: false);

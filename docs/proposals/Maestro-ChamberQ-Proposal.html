@@ -521,6 +521,50 @@
     top: 7px;
   }
 
+  /* Pricing table */
+  .price-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 22px 0 0;
+    font-size: 11pt;
+  }
+  .price-table th,
+  .price-table td {
+    border: 0.5pt solid #c8c8c8;
+    padding: 8px 12px;
+    text-align: left;
+  }
+  .price-table th {
+    background: #eaeaea;
+    font-weight: 700;
+    font-size: 9pt;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #111;
+  }
+  .price-table th:not(:first-child),
+  .price-table td:not(:first-child) {
+    text-align: right;
+    white-space: nowrap;
+  }
+  .price-table td { color: #1a1a1a; }
+  .price-table tr.price-bundle td {
+    background: #f0f0f0;
+    font-weight: 700;
+    color: #111;
+  }
+  .offer-note {
+    border: 1.5px solid #111;
+    background: #f5f5f5;
+    border-radius: 8px;
+    padding: 13px 16px;
+    margin: 20px 0 0;
+    font-size: 11pt;
+    line-height: 1.6;
+    color: #1a1a1a;
+  }
+  .offer-note strong { color: #111; }
+
   .sign {
     margin-top: 36px;
   }
@@ -903,6 +947,42 @@
       <li>New features roll out automatically — no per-feature fees</li>
     </ul>
   </div>
+
+  <table class="price-table">
+    <thead>
+      <tr>
+        <th>What you get</th>
+        <th>Setup (one-time)</th>
+        <th>Monthly</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Front door — website + online booking</td>
+        <td>৳3,000</td>
+        <td>৳1,000</td>
+      </tr>
+      <tr>
+        <td>Live queue — queue + outdoor TV</td>
+        <td>৳12,000</td>
+        <td>৳2,000</td>
+      </tr>
+      <tr>
+        <td>Prescription — digital Rx + WhatsApp</td>
+        <td>৳2,500</td>
+        <td>৳250</td>
+      </tr>
+      <tr class="price-bundle">
+        <td>All three = Maestro (save ৳2,500 setup)</td>
+        <td>৳15,000</td>
+        <td>৳3,000</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <p class="offer-note"><strong>Launch offer:</strong> get your website by <strong>31 August</strong> and Prescription is <strong>free for life</strong> (৳2,500 setup + ৳250/month waived).</p>
+
+  <p class="offer-note"><strong>Prepaid-year offer:</strong> confirm one year of payment before <strong>30 September</strong> and every one-time setup fee is <strong>50% off</strong> (Maestro setup ৳15,000 → ৳7,500).</p>
 
   <p class="flow-note" style="margin-top:18px;">SMS confirmations are optional (prepaid wallet; empty wallet skips SMS — booking still succeeds). We bill directly (bKash / bank).</p>
 
