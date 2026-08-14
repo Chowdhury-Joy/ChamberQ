@@ -23,7 +23,9 @@ class MarketersTable
                     ->label(__('Ref code'))
                     ->searchable()
                     ->copyable()
-                    ->copyableState(fn (Marketer $record): string => $record->referralUrl()),
+                    ->copyableState(fn (Marketer $record): string => $record->referralUrl())
+                    ->tooltip(__('Click to copy the referral URL'))
+                    ->icon('heroicon-m-clipboard'),
                 TextColumn::make('user.email')
                     ->label(__('Login email'))
                     ->searchable(),

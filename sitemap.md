@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-14T22:39:27+0600
+Last Updated: 2026-08-14T23:45:02+0600
 
 ## Full Site Map
 
@@ -17,7 +17,7 @@ Hosts: values in `CENTRAL_DOMAINS` (e.g. `localhost`).
 | `/me/history` | Past visits and prescriptions for this phone (own records; no share-flag gate; no voice/photo) | patient login |
 | `/me/prescriptions/{id}` | Full patient pad for one prescription belonging to this phone | patient login |
 | `/admin` | Super Admin Filament login | public login |
-| `/admin/*` | Super Admin: Tenants (incl. **Product modules** checkboxes: Front door / Live queue / Prescription; **Maestro**/Clinic label; launch-offer ticks; live list/due + partner commission preview), Marketers, Discount Codes, Commissions; finance dashboard widgets; **Client Health** seller overview (`/admin/seller-overview`); **Research data** aggregate view (`/admin/research`); **Platform data backup** (`/admin/data-backup`); per-tenant chamber backup download/restore on Tenants; confirm doctor setup/monthly/**12 months prepaid** on tenant edit | super_admin only |
+| `/admin/*` | Super Admin: Tenants under **Platform** (incl. **Product modules** checkboxes: Front door / Live queue / Prescription; **Maestro**/Clinic label; launch-offer ticks; live list/due + partner commission preview), Marketers, Discount Codes, Commissions; finance dashboard then platform totals then latest 8 tenants; **Client Health** seller overview (`/admin/seller-overview`, names link to tenant edit); **Research data** aggregate view (`/admin/research`); **Platform data backup** (`/admin/data-backup`, restore defaults to dry-run); per-tenant chamber backup download plus Restore/Delete behind **Dangerous** on tenant edit; confirm doctor setup/monthly/**12 months prepaid** on tenant edit | super_admin only |
 | `/partner` | Marketer partner panel login | public login |
 | `/partner/*` | Marketer: referral link, owed/paid stats, referred doctors list, commission history | marketer only |
 | `/up` | Laravel health check | public |
@@ -165,9 +165,9 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 
 ### Sunday client-health review (Super Admin)
 - **Trigger:** Weekly check on whether clients are still using the product (usage predicts churn earlier than payment).
-- **Steps:** Super Admin → **Client Health** (`/admin/seller-overview`) — review **Quiet clients** (worst first: days since last live session, booking drop vs their own baseline, schedule set but never started), **Go-live funnel** (recent signups and where onboarding stalls), **SMS credit warnings** (balance ≤ 5 — confirmations stop silently at zero), **Overdue payments** (who owes and for how long).
+- **Steps:** Super Admin → **Client Health** (`/admin/seller-overview`) — review **Quiet clients** (worst first: days since last live session, booking drop vs their own baseline, schedule set but never started), **Go-live funnel** (recent signups and where onboarding stalls), **SMS credit warnings** (balance ≤ 5 — confirmations stop silently at zero), **Overdue payments** (who owes and for how long). Tap a clinic name to open tenant edit; call the listed contact phone.
 - **Data/systems touched:** `tenants`, aggregate counts from `live_sessions`, `bookings`, `schedule_sessions`, `web_pages`, `billing_payments` — **never** patient names, diagnoses, prescriptions, or visit contents.
-- **Success:** Actionable call list of tenant/clinic names; no clinical data crosses the central-panel boundary.
+- **Success:** Actionable call list of tenant/clinic names with a tap-through to that tenant; no clinical data crosses the central-panel boundary.
 
 ### Research data review (Super Admin)
 - **Trigger:** Platform owner wants anonymous disease-pattern statistics across all practices.
@@ -261,8 +261,8 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 
 ### Disaster-recovery backup (Super Admin)
 - **Trigger:** Platform wipe or per-chamber restore without logging into that chamber.
-- **Steps:** **Platform data backup** (`/admin/data-backup`) for central tables; or Tenants → **Download chamber backup** / **Restore chamber backup** on a row or tenant edit.
-- **Success:** Platform or single-chamber data restored; passwords reset via Forgot password.
+- **Steps:** **Platform data backup** (`/admin/data-backup`) — download first; restore starts as **Check ZIP without writing** (dry-run on). Uncheck dry-run only when ready to write; replace still requires typing `REPLACE`. Per-chamber: Tenants → **Download chamber backup**, or tenant edit → **Dangerous** → Restore / Delete.
+- **Success:** ZIP checked without writing unless Super Admin deliberately opts into a live restore; passwords reset via Forgot password.
 
 ### Ops review (admin/doctor)
 - **Trigger:** End of day/week.

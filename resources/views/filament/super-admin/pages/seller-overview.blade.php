@@ -83,10 +83,22 @@
             font-size: 0.75rem;
             font-weight: 600;
         }
-        .seller-badge-danger { background: #fee2e2; color: #991b1b; }
-        .seller-badge-warning { background: #fef3c7; color: #92400e; }
-        .seller-badge-success { background: #dcfce7; color: #166534; }
+        .seller-badge-danger { background: var(--danger-50); color: var(--danger-800); }
+        .seller-badge-warning { background: var(--warning-50); color: var(--warning-800); }
+        .seller-badge-success { background: var(--success-50); color: var(--success-800); }
         .seller-badge-muted { background: var(--gray-100); color: var(--gray-700); }
+        .dark .seller-badge-danger {
+            background: color-mix(in srgb, var(--danger-500) 20%, transparent);
+            color: var(--danger-200);
+        }
+        .dark .seller-badge-warning {
+            background: color-mix(in srgb, var(--warning-500) 20%, transparent);
+            color: var(--warning-200);
+        }
+        .dark .seller-badge-success {
+            background: color-mix(in srgb, var(--success-500) 20%, transparent);
+            color: var(--success-200);
+        }
         .dark .seller-badge-muted { background: var(--gray-800); color: var(--gray-300); }
         .seller-funnel-steps {
             display: flex;
@@ -100,10 +112,24 @@
             font-weight: 600;
             white-space: nowrap;
         }
-        .seller-funnel-step-done { background: #dcfce7; color: #166534; }
+        .seller-funnel-step-done { background: var(--success-50); color: var(--success-800); }
         .seller-funnel-step-pending { background: var(--gray-100); color: var(--gray-500); }
-        .seller-funnel-step-stall { background: #fef3c7; color: #92400e; outline: 2px solid #f59e0b; }
+        .seller-funnel-step-stall { background: var(--warning-50); color: var(--warning-800); outline: 2px solid var(--warning-500); }
+        .dark .seller-funnel-step-done {
+            background: color-mix(in srgb, var(--success-500) 20%, transparent);
+            color: var(--success-200);
+        }
         .dark .seller-funnel-step-pending { background: var(--gray-800); color: var(--gray-400); }
+        .dark .seller-funnel-step-stall {
+            background: color-mix(in srgb, var(--warning-500) 20%, transparent);
+            color: var(--warning-200);
+            outline-color: var(--warning-400);
+        }
+        .seller-client-link { color: inherit; text-decoration: none; }
+        .seller-client-link:hover { text-decoration: underline; }
+        .seller-client-meta { color: var(--gray-500); font-size: 0.75rem; }
+        .seller-phone-link { color: var(--primary-600); font-size: 0.75rem; }
+        .dark .seller-phone-link { color: var(--primary-400); }
         .seller-note {
             padding: 0.75rem 1rem;
             border-radius: 0.5rem;
@@ -147,7 +173,7 @@
                         <tbody>
                             @foreach ($quietClients as $row)
                                 <tr>
-                                    <td><strong>{{ $row['tenant_name'] }}</strong><br><span style="color:var(--gray-500);font-size:0.75rem;">/{{ $row['tenant_id'] }}</span></td>
+                                    <td>@include('filament.super-admin.pages.partials.seller-client-cell', ['row' => $row])</td>
                                     <td>
                                         @if ($row['days_since_last_session'] === null)
                                             <span class="seller-badge seller-badge-danger">Never ran</span>
@@ -204,7 +230,7 @@
                         <tbody>
                             @foreach ($goLiveFunnel as $row)
                                 <tr>
-                                    <td><strong>{{ $row['tenant_name'] }}</strong></td>
+                                    <td>@include('filament.super-admin.pages.partials.seller-client-cell', ['row' => $row])</td>
                                     <td>{{ $row['signed_up_at']->format('d M Y') }}</td>
                                     <td>
                                         <div class="seller-funnel-steps">
@@ -255,7 +281,7 @@
                         <tbody>
                             @foreach ($smsWarnings as $row)
                                 <tr>
-                                    <td><strong>{{ $row['tenant_name'] }}</strong></td>
+                                    <td>@include('filament.super-admin.pages.partials.seller-client-cell', ['row' => $row])</td>
                                     <td>
                                         @if ($row['is_empty'])
                                             <span class="seller-badge seller-badge-danger">{{ $row['sms_balance'] }} — empty</span>
@@ -293,7 +319,7 @@
                         <tbody>
                             @foreach ($overduePayments as $row)
                                 <tr>
-                                    <td><strong>{{ $row['tenant_name'] }}</strong></td>
+                                    <td>@include('filament.super-admin.pages.partials.seller-client-cell', ['row' => $row])</td>
                                     <td>{{ str_replace('_', ' ', ucfirst($row['reason'])) }}</td>
                                     <td>
                                         <span class="seller-badge {{ $row['days_overdue'] >= 30 ? 'seller-badge-danger' : 'seller-badge-warning' }}">

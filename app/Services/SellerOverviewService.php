@@ -69,7 +69,7 @@ class SellerOverviewService
 
         $tenants = Tenant::query()
             ->whereIn('billing_status', ['trial', 'active', 'past_due'])
-            ->get(['id', 'name', 'created_at']);
+            ->get(['id', 'name', 'created_at', 'contact_phone']);
 
         $rows = $tenants->map(function (Tenant $tenant) use (
             $asOf,
@@ -115,6 +115,7 @@ class SellerOverviewService
             return [
                 'tenant_id' => $tenant->id,
                 'tenant_name' => $tenant->displayName(),
+                'contact_phone' => $tenant->contact_phone,
                 'days_since_last_session' => $daysSinceLastSession,
                 'bookings_this_week' => $thisWeek,
                 'bookings_baseline_weekly' => $baselineWeekly,
@@ -180,7 +181,7 @@ class SellerOverviewService
         return Tenant::query()
             ->where('created_at', '>=', $cutoff)
             ->orderByDesc('created_at')
-            ->get(['id', 'name', 'created_at'])
+            ->get(['id', 'name', 'created_at', 'contact_phone'])
             ->map(function (Tenant $tenant) use (
                 $chamberCounts,
                 $scheduleCounts,
@@ -212,6 +213,7 @@ class SellerOverviewService
                 return [
                     'tenant_id' => $tenant->id,
                     'tenant_name' => $tenant->displayName(),
+                    'contact_phone' => $tenant->contact_phone,
                     'signed_up_at' => $tenant->created_at,
                     'steps' => $completed,
                     'completed_count' => $completedCount,
@@ -230,10 +232,11 @@ class SellerOverviewService
             ->whereIn('billing_status', ['trial', 'active', 'past_due'])
             ->orderBy('sms_balance')
             ->orderBy('name')
-            ->get(['id', 'name', 'sms_balance', 'billing_status'])
+            ->get(['id', 'name', 'sms_balance', 'billing_status', 'contact_phone'])
             ->map(fn (Tenant $tenant) => [
                 'tenant_id' => $tenant->id,
                 'tenant_name' => $tenant->displayName(),
+                'contact_phone' => $tenant->contact_phone,
                 'sms_balance' => (int) $tenant->sms_balance,
                 'billing_status' => $tenant->billing_status,
                 'is_empty' => (int) $tenant->sms_balance <= 0,
@@ -270,6 +273,7 @@ class SellerOverviewService
                     return [
                         'tenant_id' => $tenant->id,
                         'tenant_name' => $tenant->displayName(),
+                        'contact_phone' => $tenant->contact_phone,
                         'reason' => $reason,
                         'days_overdue' => (int) $overdueSince->diffInDays($asOf->copy()->startOfDay()),
                         'billing_status' => $tenant->billing_status,
@@ -294,6 +298,7 @@ class SellerOverviewService
                 return [
                     'tenant_id' => $tenant->id,
                     'tenant_name' => $tenant->displayName(),
+                    'contact_phone' => $tenant->contact_phone,
                     'reason' => in_array($tenant->billing_status, ['past_due', 'suspended'], true)
                         ? 'billing_'.$tenant->billing_status
                         : 'monthly_missing',

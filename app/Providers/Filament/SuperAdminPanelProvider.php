@@ -10,7 +10,6 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
-use Filament\Widgets\AccountWidget;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -31,6 +30,8 @@ class SuperAdminPanelProvider extends PanelProvider
             ->domains(config('tenancy.central_domains') ?? [])
             ->colors([
                 'primary' => Color::Blue,
+                'amber' => Color::Amber,
+                'sky' => Color::Sky,
             ])
             ->discoverResources(in: app_path('Filament/SuperAdmin/Resources'), for: 'App\Filament\SuperAdmin\Resources')
             ->discoverPages(in: app_path('Filament/SuperAdmin/Pages'), for: 'App\Filament\SuperAdmin\Pages')
@@ -39,7 +40,6 @@ class SuperAdminPanelProvider extends PanelProvider
             ])
             ->discoverWidgets(in: app_path('Filament/SuperAdmin/Widgets'), for: 'App\Filament\SuperAdmin\Widgets')
             ->widgets([
-                AccountWidget::class,
                 \App\Filament\SuperAdmin\Widgets\PlatformFinanceOverview::class,
                 \App\Filament\SuperAdmin\Widgets\SuperAdminStatsOverview::class,
                 \App\Filament\SuperAdmin\Widgets\RecentTenantsWidget::class,

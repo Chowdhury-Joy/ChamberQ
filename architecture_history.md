@@ -534,3 +534,6 @@
 
 ## 2026-08-14T13:38:25+0600
 - Visiting / camp patient handoff is the printed sheet only. Print / WhatsApp / SMS stay on Live Queue Control and Consult Screen after complete; upload does not send SMS. Dropped the leftover “SMS waits until then” copy on that page.
+
+## 2026-08-14T23:45:02+0600
+- Super Admin panel UX: Restore/Delete behind a **Dangerous** overflow; platform restore defaults to dry-run with loading buttons; dashboard finance → totals → latest 8 tenants (Maestro labels, amber/sky colours, no AccountWidget); Tenants first under Platform; Client Health names link to tenant edit (`seller-client-cell` partial); Copy referral link uses the clipboard.

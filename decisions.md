@@ -2215,3 +2215,19 @@
   <action>Keep Visiting / camp print-only. Share buttons stay on Live Queue Control and Consult Screen after complete (Maestro / live-queue consult). Upload stores the visit; it does not send SMS. Drop the leftover “SMS waits until then” copy on Visiting / camp so the screen does not promise a send that never happens.</action>
   <reason>Paper in the patient’s hand is the real camp/Rx-only handoff. WhatsApp/SMS from the desk belongs to the queued consult, where the patient is still in the room after Complete visit.</reason>
 </decision>
+
+## 2026-08-14T23:45:02+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Super Admin on a phone put Restore and Delete next to Confirm paid — same red weight, easy to tap the wrong one. The dashboard said SOLO in all-caps, colourless stats, a login-account card, and Client Health listed clinics with no way to open them.</context>
+ <action>Restore and Delete sit in a **Dangerous** overflow (same pattern as Live Queue Control’s Session actions). Platform restore defaults to dry-run; the live button is labelled **Upload and restore platform data** and still needs REPLACE. Download/restore buttons disable while working. Dashboard order is finance → platform totals → latest 8 tenants (Maestro/Clinic, no AccountWidget). Amber and sky colours are registered so overdue/SMS stats tint. Tenants sit first under **Platform** with filters and extra columns hidden on phones. Client Health names link to tenant edit and show phone. Copy referral link writes the clipboard.</action>
+ <reason>Like a cash drawer: everyday buttons stay in reach; the shredder lives in a marked folder. Dry-run-first means a mis-click checks the ZIP instead of wiping the platform. Maestro on the dashboard matches the quote the salesperson already sent.</reason>
+</decision>
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Super Admin platform restore opened with dry-run off and replace on, so submitting the form without reading the checkboxes would wipe central tables.</context>
+ <action>`DataBackup` and `TenantBackupActions` default `dry_run` to true; a missing checkbox fails closed as dry-run. The REPLACE confirmation field only appears for a live replace. Chamber Admin Data backup is unchanged (still opt-in dry-run).</action>
+ <reason>A Super Admin restore is a platform-wide write. Checking the ZIP first is the safe default; writing stays a deliberate uncheck plus typed confirmation.</reason>
+</decision>

@@ -141,7 +141,7 @@
         <p class="research-note">
             <strong>Aggregate anonymous research only.</strong>
             Counts come from coded diagnoses across all practices — never individual patient records, names, or phone numbers.
-            Doctors agreed to anonymous statistics at signup (see signup agreement, Appendix B in <code>patient-records-plan.md</code>).
+            Doctors agreed to anonymous statistics at signup.
             Groups smaller than {{ $minGroup }} are never shown, so narrow filters cannot identify a single person.
         </p>
 
@@ -163,8 +163,8 @@
                     <label for="research-plan-tier">Plan tier</label>
                     <select id="research-plan-tier" wire:model.live="planTier">
                         <option value="">All plans</option>
-                        <option value="solo">Solo</option>
-                        <option value="clinic">Clinic</option>
+                        <option value="solo">{{ \App\Models\Tenant::planTierLabel('solo') }}</option>
+                        <option value="clinic">{{ \App\Models\Tenant::planTierLabel('clinic') }}</option>
                     </select>
                 </div>
             </div>

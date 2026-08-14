@@ -9,6 +9,7 @@ use App\Models\Tenant;
 use App\Services\CommissionService;
 use App\Services\SmsService;
 use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -238,9 +239,17 @@ class EditTenant extends EditRecord
                         ->success()
                         ->send();
                 }),
-            TenantBackupActions::downloadAction(),
-            TenantBackupActions::restoreAction(),
-            DeleteAction::make(),
+            TenantBackupActions::downloadAction()
+                ->color('gray'),
+            ActionGroup::make([
+                TenantBackupActions::restoreAction(),
+                DeleteAction::make(),
+            ])
+                ->label(__('Dangerous'))
+                ->icon('heroicon-m-exclamation-triangle')
+                ->color('gray')
+                ->button()
+                ->dropdownPlacement('bottom-end'),
         ];
     }
 }

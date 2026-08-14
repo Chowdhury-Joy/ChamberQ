@@ -50,7 +50,7 @@ class DataBackup extends Page implements HasForms
     {
         $this->importForm->fill([
             'mode' => ImportOptions::MODE_REPLACE,
-            'dry_run' => false,
+            'dry_run' => true,
         ]);
     }
 
@@ -71,6 +71,9 @@ class DataBackup extends Page implements HasForms
                     ->acceptedFileTypes(['application/zip', 'application/x-zip-compressed'])
                     ->required()
                     ->maxSize(512000),
+                Checkbox::make('dry_run')
+                    ->label(__('Dry run — check the ZIP without writing anything'))
+                    ->live(),
                 Select::make('mode')
                     ->label(__('Restore mode'))
                     ->options([
@@ -78,14 +81,13 @@ class DataBackup extends Page implements HasForms
                         ImportOptions::MODE_MERGE => __('Merge — update matching rows only'),
                     ])
                     ->required()
+                    ->live()
                     ->native(false),
-                Checkbox::make('dry_run')
-                    ->label(__('Dry run — check the ZIP without writing anything')),
                 TextInput::make('confirmation')
                     ->label(__('Type REPLACE to confirm platform restore'))
-                    ->required(fn (): bool => ! ($this->importData['dry_run'] ?? false))
+                    ->required(fn (): bool => ! ($this->importData['dry_run'] ?? true))
                     ->visible(fn (): bool => ($this->importData['mode'] ?? ImportOptions::MODE_REPLACE) === ImportOptions::MODE_REPLACE
-                        && ! ($this->importData['dry_run'] ?? false))
+                        && ! ($this->importData['dry_run'] ?? true))
                     ->rule('in:REPLACE'),
             ]);
     }
@@ -93,6 +95,11 @@ class DataBackup extends Page implements HasForms
     public function downloadPlatformBackup(): StreamedResponse
     {
         return app(DataBackupService::class)->streamPlatformBackup();
+    }
+
+    public function isDryRunRestore(): bool
+    {
+        return (bool) ($this->importData['dry_run'] ?? true);
     }
 
     public function restorePlatformBackup(): void
@@ -127,7 +134,7 @@ class DataBackup extends Page implements HasForms
                     scope: ImportOptions::SCOPE_PLATFORM,
                     tenantId: null,
                     mode: $data['mode'] ?? ImportOptions::MODE_REPLACE,
-                    dryRun: (bool) ($data['dry_run'] ?? false),
+                    dryRun: (bool) ($data['dry_run'] ?? true),
                 ),
             );
 
@@ -139,7 +146,7 @@ class DataBackup extends Page implements HasForms
 
             $this->importForm->fill([
                 'mode' => ImportOptions::MODE_REPLACE,
-                'dry_run' => false,
+                'dry_run' => true,
             ]);
         } catch (\Throwable $exception) {
             Notification::make()

@@ -35,7 +35,8 @@ class DiscountCodesTable
                 TextColumn::make('redemption_count')
                     ->label(__('Used')),
                 IconColumn::make('is_active')
-                    ->boolean(),
+                    ->boolean()
+                    ->label(__('Active')),
             ])
             ->recordActions([
                 EditAction::make(),

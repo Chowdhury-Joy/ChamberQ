@@ -18,6 +18,10 @@ class TenantResource extends Resource
 {
     protected static ?string $model = Tenant::class;
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Platform';
+
+    protected static ?int $navigationSort = 0;
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedRectangleStack;
 
     public static function form(Schema $schema): Schema

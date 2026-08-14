@@ -9,7 +9,7 @@ use Filament\Widgets\TableWidget as BaseWidget;
 
 class RecentTenantsWidget extends BaseWidget
 {
-    protected static ?int $sort = 2;
+    protected static ?int $sort = 3;
 
     protected int | string | array $columnSpan = 'full';
 
@@ -19,12 +19,14 @@ class RecentTenantsWidget extends BaseWidget
     {
         return $table
             ->query(
-                Tenant::query()->latest()
+                Tenant::query()->latest()->limit(8)
             )
+            ->paginated(false)
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->label('Clinic / Practice Name')
                     ->weight('bold')
+                    ->placeholder('—')
                     ->searchable(),
 
                 Tables\Columns\TextColumn::make('id')
@@ -49,11 +51,12 @@ class RecentTenantsWidget extends BaseWidget
                         'solo' => 'warning',
                         default => 'gray',
                     })
-                    ->formatStateUsing(fn (string $state): string => strtoupper($state)),
+                    ->formatStateUsing(fn (string $state): string => Tenant::planTierLabel($state)),
 
                 Tables\Columns\TextColumn::make('contact_phone')
                     ->label('Contact Phone')
-                    ->icon('heroicon-m-phone'),
+                    ->icon('heroicon-m-phone')
+                    ->placeholder('—'),
 
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Registered Date')

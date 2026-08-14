@@ -27,12 +27,8 @@
             color: var(--gray-950);
         }
         .dark .backup-card-title { color: var(--color-white); }
-        .backup-card-body {
-            padding: 1.25rem;
-            display: flex;
-            flex-direction: column;
-            gap: 1rem;
-        }
+        .backup-restore-submit { margin-top: 1.25rem; }
+        .backup-btn-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
         .backup-hint {
             margin: 0.25rem 0 0;
             font-size: 0.875rem;
@@ -66,13 +62,18 @@
                 <p class="backup-hint">{{ __('ZIP of all central platform tables.') }}</p>
             </div>
             <div class="backup-card-body">
-                <x-filament::button
-                    wire:click="downloadPlatformBackup"
-                    icon="heroicon-o-arrow-down-tray"
-                    color="primary"
-                >
-                    {{ __('Download platform backup') }}
-                </x-filament::button>
+                <div class="backup-btn-row">
+                    <x-filament::button
+                        wire:click="downloadPlatformBackup"
+                        wire:target="downloadPlatformBackup"
+                        wire:loading.attr="disabled"
+                        icon="heroicon-o-arrow-down-tray"
+                        color="primary"
+                    >
+                        <span wire:loading.remove wire:target="downloadPlatformBackup">{{ __('Download platform backup') }}</span>
+                        <span wire:loading wire:target="downloadPlatformBackup">{{ __('Preparing download…') }}</span>
+                    </x-filament::button>
+                </div>
             </div>
         </section>
 
@@ -85,9 +86,22 @@
                 <form wire:submit="restorePlatformBackup">
                     {{ $this->importForm }}
 
-                    <x-filament::button type="submit" icon="heroicon-o-arrow-up-tray" color="danger">
-                        {{ __('Upload and restore platform data') }}
-                    </x-filament::button>
+                    <div class="backup-restore-submit">
+                        <x-filament::button
+                            type="submit"
+                            wire:target="restorePlatformBackup"
+                            wire:loading.attr="disabled"
+                            icon="heroicon-o-arrow-up-tray"
+                            :color="$this->isDryRunRestore() ? 'primary' : 'danger'"
+                        >
+                            <span wire:loading.remove wire:target="restorePlatformBackup">
+                                {{ $this->isDryRunRestore()
+                                    ? __('Check ZIP without writing')
+                                    : __('Upload and restore platform data') }}
+                            </span>
+                            <span wire:loading wire:target="restorePlatformBackup">{{ __('Working…') }}</span>
+                        </x-filament::button>
+                    </div>
                 </form>
             </div>
         </section>

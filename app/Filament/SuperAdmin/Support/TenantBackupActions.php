@@ -35,6 +35,10 @@ class TenantBackupActions
                     ->acceptedFileTypes(['application/zip', 'application/x-zip-compressed'])
                     ->required()
                     ->maxSize(512000),
+                Checkbox::make('dry_run')
+                    ->label(__('Dry run only — check the ZIP without writing anything'))
+                    ->default(true)
+                    ->live(),
                 Select::make('mode')
                     ->label(__('Restore mode'))
                     ->options([
@@ -43,9 +47,8 @@ class TenantBackupActions
                     ])
                     ->default(ImportOptions::MODE_REPLACE)
                     ->required()
+                    ->live()
                     ->native(false),
-                Checkbox::make('dry_run')
-                    ->label(__('Dry run only')),
                 TextInput::make('confirmation')
                     ->label(__('Type the chamber ID to confirm'))
                     ->required()
@@ -54,7 +57,7 @@ class TenantBackupActions
             ->action(function (Tenant $record, array $data): void {
                 if (
                     ($data['mode'] ?? ImportOptions::MODE_REPLACE) === ImportOptions::MODE_REPLACE
-                    && ! ($data['dry_run'] ?? false)
+                    && ! ($data['dry_run'] ?? true)
                     && ($data['confirmation'] ?? '') !== $record->id
                 ) {
                     Notification::make()
@@ -84,7 +87,7 @@ class TenantBackupActions
                             scope: ImportOptions::SCOPE_TENANT,
                             tenantId: $record->id,
                             mode: $data['mode'] ?? ImportOptions::MODE_REPLACE,
-                            dryRun: (bool) ($data['dry_run'] ?? false),
+                            dryRun: (bool) ($data['dry_run'] ?? true),
                         ),
                     );
 

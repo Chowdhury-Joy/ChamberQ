@@ -2,6 +2,7 @@
 
 namespace App\Filament\SuperAdmin\Pages;
 
+use App\Filament\SuperAdmin\Resources\Tenants\TenantResource;
 use App\Services\SellerOverviewService;
 use Filament\Pages\Page;
 
@@ -77,5 +78,10 @@ class SellerOverview extends Page
             'first_booking' => 'First booking',
             'first_live_session' => 'First live session',
         ];
+    }
+
+    public function tenantEditUrl(string $tenantId): string
+    {
+        return TenantResource::getUrl('edit', ['record' => $tenantId]);
     }
 }

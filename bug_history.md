@@ -970,3 +970,26 @@
   <root_cause>`toPublicPath()` was written for one caller — a Filament FileUpload, which only ever hands back a clean disk path — so "not http(s), not absolute" was treated as proof of a disk path. Widening it to guard every image field meant it began receiving arbitrary typed input, and the assumption stopped holding. Ordering made it worse: promotion has to run *before* the scrub (a disk path has no scheme and would be blanked), so the weakened value was the one the allowlist saw.</root_cause>
   <prevention_rule>A helper that turns user input into a same-origin path must reject anything carrying a URL scheme (`^[a-zA-Z][a-zA-Z0-9+.-]*:`) rather than assume a disk path by elimination — and when a sanitiser runs *after* such a promotion, the test suite must include a hostile-scheme case for each promoted key, not only the happy path.</prevention_rule>
 </bug>
+
+## 2026-08-14T23:45:02+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>On a phone, Super Admin Restore and Delete sat beside Confirm paid as equally loud red buttons — a mis-tap could open a wipe instead of recording a payment.</symptom>
+ <root_cause>Header actions were a flat list; Restore used Filament danger colour with no extra grouping, matching Delete.</root_cause>
+ <prevention_rule>Put Restore and Delete in a labelled **Dangerous** overflow. Keep Confirm paid / Top up / Download as standalone header actions.</prevention_rule>
+</bug>
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>Platform restore submitted as a live replace unless Super Admin remembered to tick dry-run; download/restore could be double-clicked with no loading state.</symptom>
+ <root_cause>`DataBackup::mount()` defaulted `dry_run` to false and `mode` to replace. Buttons had no `wire:loading` target.</root_cause>
+ <prevention_rule>Super Admin restore defaults to dry-run (missing value = true). Show REPLACE only for a live replace. Disable download/restore while Livewire is working.</prevention_rule>
+</bug>
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>Dashboard said SOLO in all-caps, overdue/SMS stats had no colour, and Client Health clinic names were dead text with no phone.</symptom>
+ <root_cause>Recent tenants used `strtoupper($tenant->plan_tier)` instead of `Tenant::planTierLabel()`. Panel colours never registered `amber`/`sky`. Seller overview rendered names without `tenantEditUrl()` or `contact_phone`.</root_cause>
+ <prevention_rule>Use `Tenant::planTierLabel()` everywhere Super Admin shows a plan. Register Filament colour keys before using them on stats. Client Health names must link to tenant edit and show phone when set.</prevention_rule>
+</bug>
