@@ -2,6 +2,7 @@
 
 namespace App\Filament\Marketer\Resources\ReferredTenants\Tables;
 
+use App\Models\Tenant;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -17,7 +18,10 @@ class ReferredTenantsTable
                     ->searchable(),
                 TextColumn::make('plan_tier')
                     ->badge()
-                    ->formatStateUsing(fn (?string $state) => ucfirst((string) $state)),
+                    ->formatStateUsing(fn (?string $state) => Tenant::planTierLabel($state)),
+                TextColumn::make('modules')
+                    ->label(__('Modules'))
+                    ->state(fn (Tenant $record): string => implode(' · ', $record->productModuleChipLabels()) ?: '—'),
                 TextColumn::make('billing_status')
                     ->badge()
                     ->label(__('Status')),

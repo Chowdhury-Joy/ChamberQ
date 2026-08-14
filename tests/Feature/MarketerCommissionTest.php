@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\BillingPayment;
 use App\Models\Commission;
 use App\Models\DiscountCode;
 use App\Models\Marketer;
@@ -10,6 +11,7 @@ use App\Models\User;
 use App\Services\CommissionService;
 use App\Services\DiscountCalculator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
@@ -214,7 +216,7 @@ class MarketerCommissionTest extends TestCase
 
     public function test_uppercase_referral_query_matches_legacy_code(): void
     {
-        \Illuminate\Support\Facades\DB::table('marketers')
+        DB::table('marketers')
             ->where('id', $this->marketer->id)
             ->update(['code' => 'JOY20']);
 
@@ -323,6 +325,214 @@ class MarketerCommissionTest extends TestCase
         $this->assertSame(1, $first);
         $this->assertSame(0, $second);
         $this->assertSame(1, Commission::where('tenant_id', $tenant->id)->where('type', Commission::TYPE_MONTHLY)->count());
+    }
+
+    public function test_pending_setup_commission_updates_when_modules_change(): void
+    {
+        $tenant = Tenant::create([
+            'id' => 'drmodules',
+            'plan_tier' => 'solo',
+            'marketer_id' => $this->marketer->id,
+            'feature_flags' => Tenant::featureFlagsWithModules([], Tenant::productModules()),
+        ]);
+
+        $service = app(CommissionService::class);
+        $service->applyPricingToTenant($tenant);
+        $tenant->save();
+        $service->createPendingSetupCommission($tenant);
+
+        $commission = Commission::where('tenant_id', $tenant->id)->first();
+        $this->assertSame(15000, $commission->base_amount);
+        $this->assertSame(3000, $commission->commission_amount);
+
+        $tenant->feature_flags = Tenant::featureFlagsWithModules([], [Tenant::MODULE_FRONT_DOOR]);
+        $service->applyPricingToTenant($tenant);
+        $tenant->save();
+        $service->syncPendingCommissions($tenant);
+
+        $commission->refresh();
+        $this->assertSame(3000, $commission->base_amount);
+        $this->assertSame(600, $commission->commission_amount);
+        $this->assertSame(Commission::STATUS_PENDING, $commission->status);
+    }
+
+    public function test_pending_monthly_commission_updates_when_offers_change(): void
+    {
+        $tenant = Tenant::create([
+            'id' => 'droffer',
+            'plan_tier' => 'solo',
+            'marketer_id' => $this->marketer->id,
+            'billing_status' => 'active',
+            'setup_paid_at' => now(),
+            'feature_flags' => Tenant::featureFlagsWithModules([], Tenant::productModules()),
+        ]);
+
+        $service = app(CommissionService::class);
+        $service->applyPricingToTenant($tenant);
+        $tenant->save();
+        $period = now()->format('Y-m');
+        $service->generateMonthlyPendingCommissions($period);
+
+        $commission = Commission::where('tenant_id', $tenant->id)
+            ->where('type', Commission::TYPE_MONTHLY)
+            ->first();
+        $this->assertSame(3000, $commission->base_amount);
+        $this->assertSame(300, $commission->commission_amount);
+
+        $tenant->offer_prescription_lifetime_free = true;
+        $service->applyPricingToTenant($tenant);
+        $tenant->save();
+        $service->syncPendingCommissions($tenant);
+
+        $commission->refresh();
+        $this->assertSame(2750, $commission->base_amount);
+        $this->assertSame(275, $commission->commission_amount);
+        $this->assertSame(Commission::STATUS_PENDING, $commission->status);
+    }
+
+    public function test_paid_commission_is_not_rewritten_when_modules_change(): void
+    {
+        $tenant = Tenant::create([
+            'id' => 'drpaid',
+            'plan_tier' => 'solo',
+            'marketer_id' => $this->marketer->id,
+            'feature_flags' => Tenant::featureFlagsWithModules([], Tenant::productModules()),
+        ]);
+        $superAdmin = User::create([
+            'name' => 'Super',
+            'email' => 'super-paid-modules@test.com',
+            'password' => Hash::make('password'),
+            'role' => User::ROLE_SUPER_ADMIN,
+            'tenant_id' => null,
+        ]);
+
+        $service = app(CommissionService::class);
+        $service->applyPricingToTenant($tenant);
+        $tenant->save();
+        $service->createPendingSetupCommission($tenant);
+        $service->confirmSetupPayment($tenant, $superAdmin);
+        $commission = Commission::where('tenant_id', $tenant->id)->first();
+        $service->markCommissionPaid($commission, 'already-paid');
+
+        $tenant->feature_flags = Tenant::featureFlagsWithModules([], [Tenant::MODULE_FRONT_DOOR]);
+        $service->applyPricingToTenant($tenant);
+        $tenant->save();
+        $service->syncPendingCommissions($tenant);
+
+        $commission->refresh();
+        $this->assertSame(Commission::STATUS_PAID, $commission->status);
+        $this->assertSame(15000, $commission->base_amount);
+        $this->assertSame(3000, $commission->commission_amount);
+        $this->assertSame('already-paid', $commission->payout_note);
+    }
+
+    public function test_prepaid_year_creates_twelve_monthly_payments_and_owed_commissions(): void
+    {
+        $tenant = Tenant::create([
+            'id' => 'dryear',
+            'plan_tier' => 'solo',
+            'marketer_id' => $this->marketer->id,
+            'billing_status' => 'active',
+            'feature_flags' => Tenant::featureFlagsWithModules([], Tenant::productModules()),
+        ]);
+        $superAdmin = User::create([
+            'name' => 'Super',
+            'email' => 'super-year@test.com',
+            'password' => Hash::make('password'),
+            'role' => User::ROLE_SUPER_ADMIN,
+            'tenant_id' => null,
+        ]);
+
+        $service = app(CommissionService::class);
+        $service->applyPricingToTenant($tenant);
+        $tenant->save();
+        $service->confirmSetupPayment($tenant, $superAdmin);
+
+        $created = $service->confirmYearPrepaid($tenant, $superAdmin, 'bkash year', null, '2026-08');
+
+        $this->assertSame(12, $created);
+        $this->assertSame(12, BillingPayment::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('type', BillingPayment::TYPE_MONTHLY)
+            ->count());
+        $this->assertSame(12, Commission::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('type', Commission::TYPE_MONTHLY)
+            ->where('status', Commission::STATUS_OWED)
+            ->count());
+        $this->assertSame(3000, (int) BillingPayment::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('type', BillingPayment::TYPE_MONTHLY)
+            ->where('period', '2026-08')
+            ->value('amount_paid'));
+        $this->assertSame(300, (int) Commission::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('type', Commission::TYPE_MONTHLY)
+            ->where('period', '2026-08')
+            ->value('commission_amount'));
+        $this->assertSame(36000, (int) BillingPayment::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('type', BillingPayment::TYPE_MONTHLY)
+            ->sum('amount_paid'));
+    }
+
+    public function test_prepaid_year_skips_already_confirmed_months(): void
+    {
+        $tenant = Tenant::create([
+            'id' => 'drskip',
+            'plan_tier' => 'solo',
+            'marketer_id' => $this->marketer->id,
+            'billing_status' => 'active',
+            'feature_flags' => Tenant::featureFlagsWithModules([], Tenant::productModules()),
+        ]);
+        $superAdmin = User::create([
+            'name' => 'Super',
+            'email' => 'super-skip@test.com',
+            'password' => Hash::make('password'),
+            'role' => User::ROLE_SUPER_ADMIN,
+            'tenant_id' => null,
+        ]);
+
+        $service = app(CommissionService::class);
+        $service->applyPricingToTenant($tenant);
+        $tenant->save();
+        $service->confirmSetupPayment($tenant, $superAdmin);
+        $service->confirmMonthlyPayment($tenant, '2026-08', $superAdmin, null, 3000);
+
+        $created = $service->confirmYearPrepaid($tenant, $superAdmin, null, 33000, '2026-08');
+
+        $this->assertSame(11, $created);
+        $this->assertSame(12, BillingPayment::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('type', BillingPayment::TYPE_MONTHLY)
+            ->count());
+        $this->assertSame(3000, (int) BillingPayment::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('period', '2026-08')
+            ->value('amount_paid'));
+    }
+
+    public function test_prepaid_year_requires_setup_paid(): void
+    {
+        $tenant = Tenant::create([
+            'id' => 'drnosetup',
+            'plan_tier' => 'solo',
+            'marketer_id' => $this->marketer->id,
+        ]);
+        $superAdmin = User::create([
+            'name' => 'Super',
+            'email' => 'super-nosetup@test.com',
+            'password' => Hash::make('password'),
+            'role' => User::ROLE_SUPER_ADMIN,
+            'tenant_id' => null,
+        ]);
+
+        $service = app(CommissionService::class);
+        $service->applyPricingToTenant($tenant);
+        $tenant->save();
+
+        $this->expectException(\InvalidArgumentException::class);
+        $service->confirmYearPrepaid($tenant, $superAdmin);
     }
 
     private function createReferredTenant(string $id = 'drkarim', bool $withSetupPaid = false): Tenant

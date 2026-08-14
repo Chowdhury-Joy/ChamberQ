@@ -61,7 +61,13 @@ class EditTenant extends EditRecord
         // again, and that second save re-syncs `$model->changes` — so asking
         // afterwards whether the marketer changed returns false, and the partner
         // silently loses their setup commission.
-        $pricingChanged = $tenant->wasChanged(['plan_tier', 'discount_code_id', 'feature_flags']);
+        $pricingChanged = $tenant->wasChanged([
+            'plan_tier',
+            'discount_code_id',
+            'feature_flags',
+            'offer_prescription_lifetime_free',
+            'offer_prepaid_year_setup',
+        ]);
         $discountChanged = $tenant->wasChanged('discount_code_id');
         $marketerChanged = $tenant->wasChanged('marketer_id');
 
@@ -147,6 +153,65 @@ class EditTenant extends EditRecord
                     Notification::make()
                         ->title(__('Monthly payment confirmed'))
                         ->body(__('Period :period', ['period' => $data['period']]))
+                        ->success()
+                        ->send();
+                }),
+            Action::make('confirmYearPrepaid')
+                ->label(__('Confirm 12 months prepaid'))
+                ->icon('heroicon-o-calendar-days')
+                ->color('success')
+                ->visible(fn () => $this->record->hasSetupPaid())
+                ->schema([
+                    TextInput::make('start_period')
+                        ->label(__('First month'))
+                        ->placeholder(now()->format('Y-m'))
+                        ->default(now()->format('Y-m'))
+                        ->required()
+                        ->regex('/^\d{4}-\d{2}$/')
+                        ->helperText(__('Twelve months from this period. Already-confirmed months are skipped.')),
+                    TextInput::make('amount_paid')
+                        ->label(__('Total amount paid'))
+                        ->numeric()
+                        ->default(fn () => (int) $this->record->monthly_amount_due * Tenant::PREPAID_YEAR_MONTHS)
+                        ->required()
+                        ->helperText(__('Default is 12 × monthly due. Already-confirmed months are skipped; a custom total is split across months still open.')),
+                    Textarea::make('notes')
+                        ->rows(2),
+                ])
+                ->action(function (array $data, CommissionService $commissions): void {
+                    try {
+                        $count = $commissions->confirmYearPrepaid(
+                            $this->record,
+                            auth()->user(),
+                            $data['notes'] ?? null,
+                            isset($data['amount_paid']) ? (int) $data['amount_paid'] : null,
+                            $data['start_period'] ?? null,
+                        );
+                    } catch (\InvalidArgumentException $e) {
+                        Notification::make()
+                            ->title($e->getMessage())
+                            ->danger()
+                            ->send();
+
+                        return;
+                    }
+                    $this->record->refresh();
+
+                    if ($count === 0) {
+                        Notification::make()
+                            ->title(__('No months left to confirm'))
+                            ->body(__('The next 12 months already have a confirmed payment.'))
+                            ->warning()
+                            ->send();
+
+                        return;
+                    }
+
+                    Notification::make()
+                        ->title(__('Year prepaid confirmed'))
+                        ->body(__(':count months marked paid. Partner commission is owed on those months.', [
+                            'count' => $count,
+                        ]))
                         ->success()
                         ->send();
                 }),

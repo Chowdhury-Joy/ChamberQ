@@ -3,7 +3,6 @@
 namespace App\Filament\SuperAdmin\Widgets;
 
 use App\Filament\Concerns\UsesCardGridColumns;
-
 use App\Models\Booking;
 use App\Models\Doctor;
 use App\Models\Tenant;
@@ -15,6 +14,7 @@ use Filament\Widgets\StatsOverviewWidget\Stat;
 class SuperAdminStatsOverview extends BaseWidget
 {
     use UsesCardGridColumns;
+
     protected static ?int $sort = 2;
 
     protected function getStats(): array
@@ -32,7 +32,7 @@ class SuperAdminStatsOverview extends BaseWidget
 
         return [
             Stat::make('Total Platform Tenants', $totalTenants)
-                ->description("Clinics: {$clinicTenants} | Solo: {$soloTenants}")
+                ->description("Clinics: {$clinicTenants} | Maestro: {$soloTenants}")
                 ->descriptionIcon('heroicon-m-building-library')
                 ->color('amber'),
 

@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-14T13:38:25+0600
+Last Updated: 2026-08-14T22:39:27+0600
 
 ## Full Site Map
 
@@ -17,7 +17,7 @@ Hosts: values in `CENTRAL_DOMAINS` (e.g. `localhost`).
 | `/me/history` | Past visits and prescriptions for this phone (own records; no share-flag gate; no voice/photo) | patient login |
 | `/me/prescriptions/{id}` | Full patient pad for one prescription belonging to this phone | patient login |
 | `/admin` | Super Admin Filament login | public login |
-| `/admin/*` | Super Admin: Tenants (incl. **Product modules** checkboxes: Front door / Live queue / Prescription), Marketers, Discount Codes, Commissions; finance dashboard widgets; **Client Health** seller overview (`/admin/seller-overview`); **Research data** aggregate view (`/admin/research`); **Platform data backup** (`/admin/data-backup`); per-tenant chamber backup download/restore on Tenants; confirm doctor payments on tenant edit | super_admin only |
+| `/admin/*` | Super Admin: Tenants (incl. **Product modules** checkboxes: Front door / Live queue / Prescription; **Maestro**/Clinic label; launch-offer ticks; live list/due + partner commission preview), Marketers, Discount Codes, Commissions; finance dashboard widgets; **Client Health** seller overview (`/admin/seller-overview`); **Research data** aggregate view (`/admin/research`); **Platform data backup** (`/admin/data-backup`); per-tenant chamber backup download/restore on Tenants; confirm doctor setup/monthly/**12 months prepaid** on tenant edit | super_admin only |
 | `/partner` | Marketer partner panel login | public login |
 | `/partner/*` | Marketer: referral link, owed/paid stats, referred doctors list, commission history | marketer only |
 | `/up` | Laravel health check | public |
@@ -153,14 +153,14 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 
 ### New tenant → go live (Super Admin)
 - **Trigger:** Sales closes a doctor/clinic.
-- **Steps:** Create Tenant with URL **slug** (e.g. `drkarim`; rejected if already taken or if it matches a reserved path prefix such as `admin` / `book` / `find` / `me`) → optional custom **domain** → set `plan_tier` → tick **Product modules** (Front door / Live queue / Prescription; default all on) → attach **marketer** / **discount code**, snapshot pricing → set SMS, `billing_status` → **doctor login email** (required; creates doctor user) → hand off admin + doctor logins.
+- **Steps:** Create Tenant with URL **slug** (e.g. `drkarim`; rejected if already taken or if it matches a reserved path prefix such as `admin` / `book` / `find` / `me`) → optional custom **domain** → set `plan_tier` (**Maestro** or Clinic) → tick **Product modules** (Front door / Live queue / Prescription; default all on) → tick launch offers if honouring them (Prescription free for life / prepaid-year 50% setup) → attach **marketer** / **discount code**, read the amount + commission preview → set SMS, `billing_status` → **doctor login email** (required; creates doctor user) → hand off admin + doctor logins.
 - **URLs:** Platform `/{slug}/…`; after custom domain DNS, also `drkarim.com/…` at root.
 - **Modules:** Front door alone = website + book + day list (no outdoor TV / Call next / come-around). Live queue adds TV + live ticket. Prescription adds consult/Rx. Booking confirmation SMS is optional (credits + doctor toggle).
 - **Success:** Enabled module routes work; disabled ones 404. Admin at `/{slug}/admin` (or `/admin` on custom domain).
 
 ### Confirm doctor payment & pay marketer (Super Admin)
 - **Trigger:** bKash/bank payment received from doctor.
-- **Steps:** Tenant edit → **Confirm setup paid** or **Confirm monthly paid** (period YYYY-MM) → Commissions list shows **owed** → **Mark payout paid** with bKash trx note.
+- **Steps:** Tenant edit → tick modules and launch offers (Prescription free for life / prepaid-year 50% setup) so due amounts and pending commission match the quote → **Confirm setup paid**, **Confirm monthly paid** (period YYYY-MM), or **Confirm 12 months prepaid** after setup is paid → Commissions list shows **owed** → **Mark payout paid** with bKash trx note.
 - **Success:** Platform finance widget reflects collected cash, owed, paid, and net revenue.
 
 ### Sunday client-health review (Super Admin)

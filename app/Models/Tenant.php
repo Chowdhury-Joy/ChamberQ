@@ -2,8 +2,10 @@
 
 namespace App\Models;
 
-use Stancl\Tenancy\Database\Models\Tenant as BaseTenant;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Stancl\Tenancy\Database\Concerns\HasDomains;
+use Stancl\Tenancy\Database\Models\Tenant as BaseTenant;
 
 class Tenant extends BaseTenant
 {
@@ -25,6 +27,9 @@ class Tenant extends BaseTenant
 
     /** Max chambers on Solo when multiple_chambers is enabled. Clinic has no cap. */
     public const SOLO_MAX_CHAMBERS = 5;
+
+    /** Months recorded by Super Admin “Confirm 12 months prepaid”. */
+    public const PREPAID_YEAR_MONTHS = 12;
 
     /**
      * Sellable product modules (independent of Solo/Clinic size tier).
@@ -207,6 +212,8 @@ class Tenant extends BaseTenant
             'referral_note',
             'referred_at',
             'setup_paid_at',
+            'offer_prescription_lifetime_free',
+            'offer_prepaid_year_setup',
             'slot_cap_mode',
             'feature_flags',
             'call_timeout_seconds',
@@ -267,25 +274,27 @@ class Tenant extends BaseTenant
             'monthly_amount_due' => 'integer',
             'referred_at' => 'datetime',
             'setup_paid_at' => 'datetime',
+            'offer_prescription_lifetime_free' => 'boolean',
+            'offer_prepaid_year_setup' => 'boolean',
         ];
     }
 
-    public function marketer(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function marketer(): BelongsTo
     {
         return $this->belongsTo(Marketer::class);
     }
 
-    public function discountCode(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    public function discountCode(): BelongsTo
     {
         return $this->belongsTo(DiscountCode::class);
     }
 
-    public function billingPayments(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function billingPayments(): HasMany
     {
         return $this->hasMany(BillingPayment::class);
     }
 
-    public function commissions(): \Illuminate\Database\Eloquent\Relations\HasMany
+    public function commissions(): HasMany
     {
         return $this->hasMany(Commission::class);
     }
@@ -373,6 +382,38 @@ class Tenant extends BaseTenant
             self::productModules(),
             fn (string $module): bool => $this->hasFeature($module),
         ));
+    }
+
+    public static function planTierLabel(?string $planTier): string
+    {
+        if ($planTier === 'clinic') {
+            return (string) (config('marketing.plans.clinic.name') ?? 'Clinic');
+        }
+
+        return (string) (config('marketing.plans.solo.name') ?? 'Maestro');
+    }
+
+    /**
+     * Short chips for Super Admin / partner lists (Website / Queue / Rx).
+     *
+     * @return list<string>
+     */
+    public function productModuleChipLabels(): array
+    {
+        $labels = [
+            self::MODULE_FRONT_DOOR => 'Website',
+            self::MODULE_LIVE_QUEUE => 'Queue',
+            self::MODULE_PRESCRIPTION => 'Rx',
+        ];
+
+        $chips = [];
+        foreach (self::productModules() as $module) {
+            if ($this->hasFeature($module)) {
+                $chips[] = $labels[$module] ?? $module;
+            }
+        }
+
+        return $chips;
     }
 
     public function isClinic(): bool

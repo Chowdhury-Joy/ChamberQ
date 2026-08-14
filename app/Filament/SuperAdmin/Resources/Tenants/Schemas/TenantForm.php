@@ -4,17 +4,18 @@ namespace App\Filament\SuperAdmin\Resources\Tenants\Schemas;
 
 use App\Models\DiscountCode;
 use App\Models\Tenant;
-use App\Services\DiscountCalculator;
+use App\Services\CommissionService;
 use App\Services\PlanPricingService;
-use Filament\Forms\Components\Placeholder;
-use Filament\Schemas\Components\Fieldset;
+use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\KeyValue;
+use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 
@@ -86,12 +87,13 @@ class TenantForm
                         Select::make('plan_tier')
                             ->label(__('Plan Tier'))
                             ->options([
-                                'solo' => 'Solo Doctor',
-                                'clinic' => 'Clinic',
+                                'solo' => Tenant::planTierLabel('solo'),
+                                'clinic' => Tenant::planTierLabel('clinic'),
                             ])
                             ->default('solo')
                             ->required()
-                            ->live(),
+                            ->live()
+                            ->helperText(__('Maestro is one doctor. Clinic is the multi-doctor / lab sticker — unchecking modules does not lower Clinic price.')),
                         Select::make('slot_cap_mode')
                             ->label(__('Slot Cap Mode'))
                             ->helperText(__('Per session: each schedule has its own daily cap. Per doctor & chamber: all that doctor’s sessions at one chamber share one daily cap.'))
@@ -125,13 +127,27 @@ class TenantForm
                     ->schema([
                         CheckboxList::make('product_modules')
                             ->label(__('Included for this client'))
-                            ->helperText(__('Front door ৳7,500 + ৳1,000/mo · Prescription ৳2,500 setup (৳0/mo) · Live queue ৳7,500 + ৳2,000/mo · All three ৳15,000 + ৳3,000/mo. SMS is optional. Solo pricing follows these boxes; Clinic uses Clinic list price.'))
+                            ->helperText(fn (): string => app(PlanPricingService::class)->modulePriceHelperText())
                             ->options(Tenant::productModuleOptions())
                             ->default(Tenant::productModules())
                             ->columns(1)
                             ->required()
                             ->live()
                             ->columnSpanFull(),
+                    ]),
+
+                Fieldset::make(__('Launch offers'))
+                    ->schema([
+                        Checkbox::make('offer_prescription_lifetime_free')
+                            ->label(__('Prescription free for life'))
+                            ->helperText(__('Deadline 31 August — tick only if you are honouring it. Waives Prescription setup and monthly whenever Prescription is included. Super Admin can still tick after the date.'))
+                            ->default(false)
+                            ->live(),
+                        Checkbox::make('offer_prepaid_year_setup')
+                            ->label(__('Prepaid year — 50% off setup'))
+                            ->helperText(__('Deadline 30 September — tick only if they confirmed a year. Halves setup after other discounts. Confirm the twelve months with the header action after setup is paid.'))
+                            ->default(false)
+                            ->live(),
                     ]),
 
                 Fieldset::make(__('Referral & Discount'))
@@ -162,28 +178,7 @@ class TenantForm
                         Placeholder::make('pricing_preview')
                             ->label(__('Amount preview'))
                             ->content(function (Get $get): string {
-                                $tier = (string) ($get('plan_tier') ?: 'solo');
-                                $modules = $get('product_modules');
-                                if (! is_array($modules) || $modules === []) {
-                                    $modules = Tenant::productModules();
-                                }
-                                $list = app(PlanPricingService::class)->listPricesForModules($tier, $modules);
-                                $code = $get('discount_code_id')
-                                    ? DiscountCode::find($get('discount_code_id'))
-                                    : null;
-                                $amounts = app(DiscountCalculator::class)->calculate(
-                                    $list['setup'],
-                                    $list['monthly'],
-                                    $code
-                                );
-
-                                return sprintf(
-                                    'List: setup ৳%s / monthly ৳%s → Due: setup ৳%s / monthly ৳%s',
-                                    number_format($amounts['list_setup']),
-                                    number_format($amounts['list_monthly']),
-                                    number_format($amounts['setup_due']),
-                                    number_format($amounts['monthly_due']),
-                                );
+                                return self::pricingPreviewContent($get);
                             })
                             ->columnSpanFull(),
                         TextInput::make('list_setup_amount')
@@ -210,7 +205,7 @@ class TenantForm
                     ->schema([
                         ColorPicker::make('theme_color')
                             ->label(__('Theme Color'))
-                            ->default(\App\Models\Tenant::DEFAULT_THEME_COLOR),
+                            ->default(Tenant::DEFAULT_THEME_COLOR),
                         Select::make('default_locale')
                             ->label(__('Default Locale'))
                             ->helperText(__('System UI default (book/ticket/portal). Homepage Bangla requires the bangla_homepage feature flag.'))
@@ -245,5 +240,59 @@ class TenantForm
                     ->columnSpanFull()
                     ->helperText(__('Custom domains serve the tenant at the site root (/book). The platform path always works at /{slug} using the URL slug above.')),
             ]);
+    }
+
+    public static function pricingPreviewContent(Get $get): string
+    {
+        $tier = (string) ($get('plan_tier') ?: 'solo');
+        $modules = $get('product_modules');
+        if (! is_array($modules) || $modules === []) {
+            $modules = Tenant::productModules();
+        }
+
+        $code = $get('discount_code_id')
+            ? DiscountCode::find($get('discount_code_id'))
+            : null;
+
+        $commissions = app(CommissionService::class);
+        $amounts = $commissions->quoteAmounts(
+            $tier,
+            $modules,
+            $code,
+            filter_var($get('offer_prescription_lifetime_free'), FILTER_VALIDATE_BOOLEAN),
+            filter_var($get('offer_prepaid_year_setup'), FILTER_VALIDATE_BOOLEAN),
+        );
+
+        $lines = [
+            sprintf(
+                'List: setup ৳%s / monthly ৳%s → Due: setup ৳%s / monthly ৳%s',
+                number_format($amounts['list_setup']),
+                number_format($amounts['list_monthly']),
+                number_format($amounts['setup_due']),
+                number_format($amounts['monthly_due']),
+            ),
+        ];
+
+        $marketerId = $get('marketer_id');
+        $preview = $commissions->previewCommission(
+            $marketerId !== null && $marketerId !== '' ? (int) $marketerId : null,
+            $amounts['setup_due'],
+            $amounts['monthly_due'],
+        );
+
+        if ($preview === null) {
+            $lines[] = 'No partner attached — no commission.';
+        } else {
+            $lines[] = sprintf(
+                'Partner %s (%s%% / %s%%): setup commission ৳%s · monthly ৳%s',
+                $preview['display_name'],
+                round($preview['setup_rate'] * 100),
+                round($preview['monthly_rate'] * 100),
+                number_format($preview['setup_commission']),
+                number_format($preview['monthly_commission']),
+            );
+        }
+
+        return implode(' — ', $lines);
     }
 }

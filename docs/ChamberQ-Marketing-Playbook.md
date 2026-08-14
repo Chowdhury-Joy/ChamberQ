@@ -2,7 +2,7 @@
 
 **Audience:** Marketing team, sales partners (marketers), anyone pitching ChamberQ  
 **Product:** ChamberQ  
-**Last updated:** 2026-08-13  
+**Last updated:** 2026-08-14  
 
 Use this as your one source of truth when talking to doctors, writing ads, or training new partners. Keep language simple. Sell the **calmer chamber**, not the software.
 
@@ -82,9 +82,9 @@ Think of a busy bakery that used to shout numbers and leave people standing for 
 ### Or pick modules (one doctor)
 | What they want | Setup | Monthly |
 |----------------|--------|---------|
-| Website + booking | ৳7,500 | ৳1,000 |
-| + Prescription | +৳2,500 | +৳0 |
-| + Live queue | +৳7,500 | +৳2,000 |
+| Website + booking | ৳3,000 | ৳1,000 |
+| + Prescription | +৳2,500 | +৳250 |
+| + Live queue | +৳12,000 | +৳2,000 |
 | All three = Maestro | ৳15,000 | ৳3,000 |
 
 ### Clinic includes
@@ -106,6 +106,7 @@ Think of a busy bakery that used to shout numbers and leave people standing for 
 ### Billing reality (say this clearly)
 - Billing is **manual** (bKash / bank) — no card gateway for the doctor’s subscription
 - Monthly plan after setup; they can pause by messaging us
+- Launch offers are not automatic: Super Admin must tick **Prescription free for life** and/or **Prepaid year — 50% off setup** on that doctor’s account so the due amount and partner commission match the WhatsApp quote. After setup is paid, **Confirm 12 months prepaid** records the year in one click. Do not type a custom “amount paid” and hope the next monthly invoice remembers.
 
 ---
 
@@ -114,7 +115,7 @@ Think of a busy bakery that used to shout numbers and leave people standing for 
 1. Doctor lands on the marketing site (or your referral link).
 2. They tap **WhatsApp** — that is the only primary CTA. No self-signup form.
 3. You (or central sales) qualify Maestro vs modules vs Clinic, answer FAQs, collect chamber details.
-4. **Super Admin** creates their tenant (URL like `chamberq.com/drkarim`), attaches your referral / discount if any, and hands over admin login.
+4. **Super Admin** creates their tenant (URL like `chamberq.com/drkarim`), ticks modules and any launch offers, attaches your referral / discount if any, and hands over admin login.
 5. We set up branding, sessions, and go live together.
 6. Doctor pays setup → then monthly. Super Admin confirms payments in the system.
 

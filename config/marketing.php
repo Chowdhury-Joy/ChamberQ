@@ -98,21 +98,22 @@ return [
     |--------------------------------------------------------------------------
     |
     | Unit prices when a client buys a subset. Selecting all three uses the
-    | bundle amounts (setup discount vs sum of units; monthly equals the sum).
+    | bundle amounts (setup ৳2,500 off vs ৳17,500 unit sum; monthly ৳250
+    | below the ৳3,250 unit sum).
     | Clinic tier still uses `plans.clinic` list prices.
     |
     */
     'modules' => [
         'front_door' => [
-            'setup' => (int) env('MARKETING_MODULE_FRONT_DOOR_SETUP', 7500),
+            'setup' => (int) env('MARKETING_MODULE_FRONT_DOOR_SETUP', 3000),
             'monthly' => (int) env('MARKETING_MODULE_FRONT_DOOR_MONTHLY', 1000),
         ],
         'prescription' => [
             'setup' => (int) env('MARKETING_MODULE_PRESCRIPTION_SETUP', 2500),
-            'monthly' => (int) env('MARKETING_MODULE_PRESCRIPTION_MONTHLY', 0),
+            'monthly' => (int) env('MARKETING_MODULE_PRESCRIPTION_MONTHLY', 250),
         ],
         'live_queue' => [
-            'setup' => (int) env('MARKETING_MODULE_LIVE_QUEUE_SETUP', 7500),
+            'setup' => (int) env('MARKETING_MODULE_LIVE_QUEUE_SETUP', 12000),
             'monthly' => (int) env('MARKETING_MODULE_LIVE_QUEUE_MONTHLY', 2000),
         ],
         'bundle_all' => [

@@ -3,6 +3,7 @@
 namespace App\Filament\SuperAdmin\Resources\Tenants\Tables;
 
 use App\Filament\SuperAdmin\Support\TenantBackupActions;
+use App\Models\Tenant;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -24,19 +25,25 @@ class TenantsTable
                 TextColumn::make('plan_tier')
                     ->label('Tier')
                     ->badge()
+                    ->formatStateUsing(fn (?string $state): string => Tenant::planTierLabel($state))
                     ->color(fn (?string $state): string => match ($state) {
                         'clinic' => 'success',
                         'solo' => 'info',
                         default => 'gray',
                     }),
+                TextColumn::make('modules')
+                    ->label(__('Modules'))
+                    ->state(fn (Tenant $record): string => implode(' · ', $record->productModuleChipLabels()) ?: '—'),
                 TextColumn::make('marketer.display_name')
                     ->label(__('Marketer'))
                     ->placeholder('—')
                     ->toggleable(),
                 TextColumn::make('setup_amount_due')
                     ->label(__('Setup due'))
-                    ->formatStateUsing(fn ($state) => $state ? '৳'.number_format((int) $state) : '—')
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->formatStateUsing(fn ($state) => $state ? '৳'.number_format((int) $state) : '—'),
+                TextColumn::make('monthly_amount_due')
+                    ->label(__('Monthly due'))
+                    ->formatStateUsing(fn ($state) => $state ? '৳'.number_format((int) $state) : '—'),
                 TextColumn::make('billing_status')
                     ->label('Billing')
                     ->badge()

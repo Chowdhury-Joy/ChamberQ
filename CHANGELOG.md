@@ -9,15 +9,23 @@ Solo-doctor v1 work lives on branch `Solo-Doc-V1`.
 
 ### Added
 - Waiting-room call announcements: Branding → Live Queue Settings — chime only, voice only (“Calling number N”), or chime + voice; optional Bangla phrase via browser speech
+- Super Admin launch-offer ticks (Prescription free for life, prepaid-year 50% setup) saved on the tenant, live list/due + partner commission preview, and **Confirm 12 months prepaid** after setup is paid
 
 ### Changed
+- Solo module one-time setup: website ৳3,000, live queue ৳12,000, prescription ৳2,500 (monthly: ৳1,000 / ৳2,000 / ৳250; Maestro bundle still ৳15,000 / ৳3,000 — now ৳2,500 off the ৳17,500 unit sum)
 - Marketing list prices: Solo ৳15,000 setup / ৳3,000 mo; Clinic ৳75,000 setup / ৳7,500 mo
+- Launch offer: get your website by 31 August and Prescription is free for life (৳2,500 setup + ৳250/month waived) — Super Admin ticks it on the tenant so due amounts and commissions match the quote
+- Prepaid-year offer: confirm one year of payment before 30 September and every one-time setup fee is 50% off (Maestro setup ৳15,000 → ৳7,500) — Super Admin ticks it on the tenant; **Confirm 12 months prepaid** records the year
+- Super Admin tenant form and doctors list say **Maestro** (not Solo); module prices come from config; doctors list shows Website/Queue/Rx chips and setup/monthly due
 - Patient marketing site: brand-first full-bleed hero with Book CTA; Portal quiet in nav; mobile menu; default theme blue (`#2563eb`) and English locale
 - Homepage EN/BN switch only when Super Admin enables `bangla_homepage` (paid add-on); Book/Ticket/Portal always offer EN/BN for system strings
 - Booking Phase A: session cards show seats left / Full / Closed for the next matching day; identity step review strip; local (not UTC) dates; BD phone check before submit; “Booking…” while saving; capacity race returns a clear code + message; phones stored normalized as `01…`
 - Booking Phase B: ticket handoff for reception + WhatsApp/copy link; “Now serving” i18n fixed; people-ahead ignores skipped serials; WhatsApp/copy include chamber Google Maps link when lat/lng or address exists
 - Booking Phase C: book wizard JS strings follow EN/BN; lab Continue requires ≥1 test; tighter mobile padding; `?doctor=` / `?test=` deep links skip extra steps and pre-check tests
 - Booking Phase D: `per_day` slot_cap_mode aliases to `per_doctor_chamber`; ending a live session completes `in_chamber` patients instead of cancelling them; happy-path booking tests
+
+### Fixed
+- Pending marketer commissions now update when Super Admin changes modules or offers before the doctor pays (owed/paid rows stay frozen)
 
 ## [Solo-Doc-V1 Phase 3] — 2026-07-27
 
