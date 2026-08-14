@@ -27,6 +27,12 @@
             color: var(--gray-950);
         }
         .dark .backup-card-title { color: var(--color-white); }
+        .backup-card-body {
+            padding: 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
         .backup-restore-submit { margin-top: 1.25rem; }
         .backup-btn-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; }
         .backup-hint {
@@ -48,6 +54,22 @@
         .dark .backup-note {
             background: color-mix(in srgb, var(--warning-500) 15%, transparent);
             color: var(--warning-200);
+        }
+        .backup-danger-note {
+            margin: 0;
+            padding: 0.75rem 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--danger-200);
+            background: var(--danger-50);
+            color: var(--danger-800);
+            font-size: 0.875rem;
+            font-weight: 600;
+            line-height: 1.5;
+        }
+        .dark .backup-danger-note {
+            border-color: color-mix(in srgb, var(--danger-500) 40%, transparent);
+            background: color-mix(in srgb, var(--danger-500) 15%, transparent);
+            color: var(--danger-200);
         }
     </style>
 
@@ -83,12 +105,28 @@
                 <p class="backup-hint">{{ __('Dangerous — only use after a wipe or cyber attack. Per-chamber data is on each tenant’s backup action.') }}</p>
             </div>
             <div class="backup-card-body">
-                <form wire:submit="restorePlatformBackup">
+                <form
+                    wire:submit="restorePlatformBackup"
+                    @if (! $this->isDryRunRestore())
+                        wire:confirm="{{ __('This wipes every central platform table and replaces them from the ZIP. Tenants, marketers, commissions and billing payments will be overwritten. Continue?') }}"
+                    @endif
+                >
                     {{ $this->importForm }}
 
+                    @unless ($this->isDryRunRestore())
+                        <p class="backup-danger-note">
+                            {{ __('Dry run is off — submitting will write to the live platform database.') }}
+                        </p>
+                    @endunless
+
                     <div class="backup-restore-submit">
+                        {{-- Keyed on the dry-run state so Livewire swaps the element instead of
+                             morphing it: a morphed button keeps its painted background, so the
+                             danger red never appeared and the destructive submit still looked
+                             like the safe one. --}}
                         <x-filament::button
                             type="submit"
+                            wire:key="restore-submit-{{ $this->isDryRunRestore() ? 'dry' : 'live' }}"
                             wire:target="restorePlatformBackup"
                             wire:loading.attr="disabled"
                             icon="heroicon-o-arrow-up-tray"

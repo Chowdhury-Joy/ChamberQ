@@ -147,4 +147,69 @@ class SuperAdminPanelUxTest extends TestCase
             ->assertSee('Call Me Clinic')
             ->assertSee('01711112222');
     }
+
+    public function test_backup_card_body_keeps_its_padding_rule(): void
+    {
+        // The rule was deleted once while both cards still used the class, so the
+        // whole restore form rendered flush against the card border.
+        $html = Livewire::test(SuperAdminDataBackup::class)
+            ->assertSuccessful()
+            ->html();
+
+        $this->assertMatchesRegularExpression(
+            '/\.backup-card-body\s*\{[^}]*padding:/',
+            $html,
+            'The .backup-card-body padding rule is missing while the class is still in use.',
+        );
+    }
+
+    public function test_turning_dry_run_off_arms_the_destructive_restore_with_a_confirmation(): void
+    {
+        $dryRun = Livewire::test(SuperAdminDataBackup::class)
+            ->assertSuccessful()
+            ->html();
+
+        $this->assertStringNotContainsString('wire:confirm', $dryRun);
+        $this->assertStringContainsString('restore-submit-dry', $dryRun);
+
+        $live = Livewire::test(SuperAdminDataBackup::class)
+            ->set('importData.dry_run', false)
+            ->assertSuccessful()
+            ->assertSee('Upload and restore platform data')
+            ->assertSee('Dry run is off')
+            ->html();
+
+        $this->assertStringContainsString('wire:confirm', $live);
+        // Keyed per state so Livewire replaces the button instead of morphing it —
+        // a morphed button kept its old paint and the danger red never appeared.
+        $this->assertStringContainsString('restore-submit-live', $live);
+    }
+
+    public function test_tenants_list_keeps_the_row_actions_reachable_without_horizontal_scroll(): void
+    {
+        Tenant::create([
+            'id' => 'wide-row',
+            'name' => 'A Very Long Practice Name That Used To Set The Column Width',
+            'plan_tier' => 'solo',
+            'billing_status' => 'active',
+        ]);
+
+        $table = Livewire::test(ListTenants::class)
+            ->assertSuccessful()
+            ->instance()
+            ->getTable();
+
+        $hiddenByDefault = [];
+        foreach ($table->getColumns() as $name => $column) {
+            if ($column->isToggledHiddenByDefault()) {
+                $hiddenByDefault[] = $name;
+            }
+        }
+
+        // These four are what pushed Edit past the right edge; each is still one
+        // toggle away, and all of them are also on tenant edit or Client Health.
+        foreach (['modules', 'marketer.display_name', 'setup_amount_due', 'monthly_amount_due'] as $column) {
+            $this->assertContains($column, $hiddenByDefault, "{$column} should start hidden on the tenants list.");
+        }
+    }
 }
