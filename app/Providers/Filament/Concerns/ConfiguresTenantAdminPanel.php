@@ -31,9 +31,9 @@ trait ConfiguresTenantAdminPanel
                 'primary' => Color::Blue,
             ])
             ->navigationGroups([
-                'Operations' => NavigationGroup::make()->label(__('Operations')),
-                'Website' => NavigationGroup::make()->label(__('Website')),
-                'Settings' => NavigationGroup::make()->label(__('Settings')),
+                'Operations' => NavigationGroup::make()->label(fn (): string => __('Operations')),
+                'Website' => NavigationGroup::make()->label(fn (): string => __('Website')),
+                'Settings' => NavigationGroup::make()->label(fn (): string => __('Settings')),
             ])
             ->userMenuItems([
                 Action::make('displayLanguage')

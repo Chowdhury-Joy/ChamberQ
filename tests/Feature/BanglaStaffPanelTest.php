@@ -102,4 +102,74 @@ class BanglaStaffPanelTest extends TestCase
 
         tenancy()->end();
     }
+
+    public function test_chamber_language_bangla_renders_the_desk_in_bangla_over_http(): void
+    {
+        $desk = 'http://bn-desk.localhost/admin/live-queue-control';
+
+        $this->actingAs($this->doctor)
+            ->get($desk)
+            ->assertOk()
+            ->assertSee('সেশন শেষ করুন')
+            ->assertDontSee('Finish / End Session')
+            ->assertSee('/lang/en', escape: false);
+    }
+
+    public function test_switch_to_bangla_from_the_desk_stays_there_and_shows_bangla(): void
+    {
+        $this->tenant->update(['default_locale' => 'en']);
+
+        $desk = 'http://bn-desk.localhost/admin/live-queue-control';
+
+        $this->actingAs($this->doctor)
+            ->get($desk)
+            ->assertOk()
+            ->assertSee('Finish / End Session')
+            ->assertDontSee('সেশন শেষ করুন')
+            ->assertSee('/lang/bn', escape: false);
+
+        $this->get('http://bn-desk.localhost/lang/bn', [
+            'Referer' => $desk,
+        ])->assertRedirect($desk);
+
+        $this->assertSame('bn', session('locale'));
+
+        $this->get($desk)
+            ->assertOk()
+            ->assertSee('সেশন শেষ করুন')
+            ->assertDontSee('Finish / End Session');
+    }
+
+    public function test_staff_language_switch_without_referer_returns_to_the_desk(): void
+    {
+        $this->actingAs($this->doctor)
+            ->get('http://bn-desk.localhost/lang/bn')
+            ->assertRedirect('http://bn-desk.localhost/admin');
+
+        $this->assertSame('bn', session('locale'));
+    }
+
+    public function test_guest_language_switch_without_referer_stays_on_the_public_site(): void
+    {
+        $this->get('http://bn-desk.localhost/lang/bn')
+            ->assertRedirect('http://bn-desk.localhost');
+    }
+
+    public function test_path_staff_language_switch_without_referer_returns_to_the_desk(): void
+    {
+        $this->actingAs($this->doctor)
+            ->get('http://localhost/bn-desk/lang/bn')
+            ->assertRedirect('http://localhost/bn-desk/admin');
+    }
+
+    public function test_path_admin_follows_chamber_language_bangla(): void
+    {
+        $desk = 'http://localhost/bn-desk/admin/live-queue-control';
+
+        $this->actingAs($this->doctor)
+            ->get($desk)
+            ->assertOk()
+            ->assertSee('সেশন শেষ করুন')
+            ->assertDontSee('Finish / End Session');
+    }
 }

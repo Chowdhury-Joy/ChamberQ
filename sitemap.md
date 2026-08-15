@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-15T14:26:41+0600
+Last Updated: 2026-08-15T22:37:54+0600
 
 ## Full Site Map
 
@@ -35,6 +35,7 @@ Same central host; tenant identified by URL slug (tenant `id`), e.g. `drkarim`.
 | `/{slug}/portal` | Phone lookup — bookings + every prescription with medicines (Rx list needs **Prescription**) | public (throttled, **Front door**) |
 | `/{slug}/screen/{session}` | Outdoor TV (always today for that schedule session — bookmark once) | public (**Live queue**) |
 | `/{slug}/screen/{session}/{date}` | Outdoor display for a specific date (legacy / deep link) | public (**Live queue**) |
+| `/{slug}/lang/{locale}` | Switch session locale `en` / `bn` (same-host Referer; signed-in staff without Referer return to `/{slug}/admin`) | public |
 | `/{slug}/departments` | Clinic departments listing (clinic tier only) | public |
 | `/{slug}/departments/{slug}` | Single department page | public |
 | `/{slug}/blog` | Clinic health articles listing (clinic tier only) | public |
@@ -67,7 +68,7 @@ When a doctor connects their own domain (e.g. `drkarim.com`), routes live at the
 | `/portal` | Phone lookup — bookings + every prescription with medicines | public (throttled) |
 | `/screen/{session}` | Outdoor waiting-room TV (always today — bookmark once per schedule session) | public (throttled) |
 | `/screen/{session}/{date}` | Outdoor waiting-room display for a specific date (legacy) | public (throttled) |
-| `/lang/{locale}` | Switch session locale `en` / `bn` | public |
+| `/lang/{locale}` | Switch session locale `en` / `bn`. Same-host Referer only (off-site Referer is ignored). Signed-in chamber staff with no Referer return to `/admin`; guests stay on the public site | public |
 | `/manifest.webmanifest`, `/sw.js`, `/pwa-icon-{192\|512}.svg` | PWA bits | public |
 | `/admin` | Tenant staff Filament panel | staff login |
 | `/admin/cashbook` | Desk khata: income, expense, net, waived (day/week/month) | staff / doctor / admin |

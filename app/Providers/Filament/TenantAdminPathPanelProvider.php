@@ -2,6 +2,8 @@
 
 namespace App\Providers\Filament;
 
+use App\Http\Middleware\Localization;
+use App\Http\Middleware\SetPathTenantUrlDefaults;
 use App\Providers\Filament\Concerns\ConfiguresTenantAdminPanel;
 use App\Support\FilamentPanelUrl;
 use Filament\Http\Middleware\Authenticate;
@@ -17,7 +19,6 @@ use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
-use App\Http\Middleware\SetPathTenantUrlDefaults;
 use Stancl\Tenancy\Middleware\InitializeTenancyByPath;
 
 class TenantAdminPathPanelProvider extends PanelProvider
@@ -51,6 +52,7 @@ class TenantAdminPathPanelProvider extends PanelProvider
                     // InitializeTenancyForTenantHosts on the global `web` group.
                     InitializeTenancyByPath::class,
                     SetPathTenantUrlDefaults::class,
+                    Localization::class,
                     // Sign-out diagnostics, off unless AUTH_DEBUG=true (config/diagnostics.php).
                     \App\Http\Middleware\SessionProbe::class,
                     DisableBladeIconComponents::class,

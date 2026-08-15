@@ -1221,5 +1221,14 @@
  <category>Code</category>
  <symptom>`FiveQueueHonestyTest` passed all morning and failed with "the clinic is closed on the date you chose" every evening — 3 errors and 1 failure on any run after 20:00 local, on unmodified code.</symptom>
  <root_cause>The class books a 17:00–20:00 sitting *today* and never froze the clock, so `BookingService::sessionAlreadyEndedToday()` correctly refused the booking once the real time passed 20:00. The product was right; the test was time-dependent.</root_cause>
- <prevention_rule>Any test that books, calls or completes against a sitting with a wall-clock window freezes time in `setUp()` (`Carbon::setTestNow()`), and clears it in `tearDown()`. A suite that goes red every evening trains everyone to ignore it, which is when a real regression lands.</prevention_rule>
+  <prevention_rule>Any test that books, calls or completes against a sitting with a wall-clock window freezes time in `setUp()` (`Carbon::setTestNow()`), and clears it in `tearDown()`. A suite that goes red every evening trains everyone to ignore it, which is when a real regression lands.</prevention_rule>
+</bug>
+
+## 2026-08-15T22:37:54+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>Staff tapped **Switch to Bangla** in the desk user menu and the panel stayed English. Chamber language set to Bangla in Branding also never reached the desk. A click with no Referer dumped them onto the public homepage.</symptom>
+ <root_cause>Filament prepends `SetUpPanel` (which runs `bootUsing`) before `StartSession` and tenancy init, so the locale callback there never saw a session or a tenant. Neither tenant admin panel ran `Localization`. `LocaleController` with no same-host Referer always sent people to the public home.</root_cause>
+ <prevention_rule>Apply `Localization` on both tenant Filament panels after session and tenancy, not in `bootUsing`. Signed-in chamber staff hitting `/lang/{locale}` without a same-host Referer return to `/admin`; guests stay on the public site. Off-site Referer is still ignored. HTTP tests must hit the real switcher — `Livewire::test` plus `app()->setLocale('bn')` does not prove the desk follows chamber language.</prevention_rule>
 </bug>

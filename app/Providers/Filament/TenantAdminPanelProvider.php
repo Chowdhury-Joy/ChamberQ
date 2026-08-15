@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Http\Middleware\Localization;
 use App\Providers\Filament\Concerns\ConfiguresTenantAdminPanel;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -42,6 +43,9 @@ class TenantAdminPanelProvider extends PanelProvider
                     SubstituteBindings::class,
                     InitializeTenancyByDomain::class,
                     PreventAccessFromCentralDomains::class,
+                    // After session + tenancy: SetUpPanel (bootUsing) runs first
+                    // and cannot see either, so locale must be applied here.
+                    Localization::class,
                     DisableBladeIconComponents::class,
                     DispatchServingFilamentEvent::class,
                 ], isPersistent: true)

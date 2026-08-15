@@ -595,3 +595,6 @@
 
 ## 2026-08-15T21:12:17+0600
 - Booking confirmation SMS moved off the patient's request into `SendBookingConfirmation` (`->afterResponse()`, skips a cancelled serial, swallows gateway failures); `HttpSmsGateway::redact()` strips the api_key/sender out of a gateway error before it reaches `sms_messages.error` and the log; sign-out diagnostics re-gated on new `config/diagnostics.php` because `env()` is null under `config:cache`; new `tests/Feature/SourceHygieneTest.php` fails CI on absolute developer paths and on `env()` outside `config/`; froze the clock in `FiveQueueHonestyTest`, which failed on unmodified code on any run after 20:00.
+
+## 2026-08-15T22:37:54+0600
+- Tenant admin panels run `Localization` after tenancy init so chamber language and **Switch to Bangla** actually apply; `LocaleController` returns signed-in chamber staff without a Referer to `/admin` instead of the public homepage.
