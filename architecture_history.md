@@ -598,3 +598,9 @@
 
 ## 2026-08-15T22:37:54+0600
 - Tenant admin panels run `Localization` after tenancy init so chamber language and **Switch to Bangla** actually apply; `LocaleController` returns signed-in chamber staff without a Referer to `/admin` instead of the public homepage.
+
+## 2026-08-15T23:46:24+0600
+- Tenant admin desk chrome (sidebar, Live Queue, Daily Roster, dashboard widgets) goes through `__()` via `TranslatesStaffChrome` / `TranslatesResourceChrome`; `StaffDeskBanglaTest` guards `lang/bn.json`.
+
+## 2026-08-16T00:01:07+0600
+- Removed `TranslatesStaffChrome` / `TranslatesResourceChrome`; added `EnglishFilamentLoader` so Filament vendor chrome stays English. Sidebar, titles, and buttons stay English; desk reading copy still uses `__()`.

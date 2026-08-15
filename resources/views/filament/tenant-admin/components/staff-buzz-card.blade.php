@@ -16,8 +16,8 @@
     </p>
   @if ($vapidPublicKey !== '')
     <div id="staffBuzzActions" style="display:flex;flex-wrap:wrap;gap:0.5rem;">
-        <button type="button" id="staffBuzzAllow" class="fi-btn fi-btn-size-sm fi-color-primary">{{ __('Allow once') }}</button>
-        <button type="button" id="staffBuzzLater" class="fi-btn fi-btn-size-sm fi-color-gray">{{ __('Not now') }}</button>
+        <button type="button" id="staffBuzzAllow" class="fi-btn fi-btn-size-sm fi-color-primary">Allow once</button>
+        <button type="button" id="staffBuzzLater" class="fi-btn fi-btn-size-sm fi-color-gray">Not now</button>
     </div>
     <p id="staffBuzzDenied" hidden style="margin:0.75rem 0 0;font-size:0.875rem;color:rgb(185 28 28);">{{ __('Notifications blocked — check browser settings.') }}</p>
   @endif

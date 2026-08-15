@@ -24,6 +24,8 @@ class SlotBlockResource extends Resource
 
     protected static string|\UnitEnum|null $navigationGroup = 'Operations';
 
+    protected static ?string $navigationLabel = 'Slot Blocks';
+
     public static function canViewAny(): bool
     {
         return (auth()->user()?->canManageOps() ?? false)

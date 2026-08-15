@@ -1232,3 +1232,21 @@
  <root_cause>Filament prepends `SetUpPanel` (which runs `bootUsing`) before `StartSession` and tenancy init, so the locale callback there never saw a session or a tenant. Neither tenant admin panel ran `Localization`. `LocaleController` with no same-host Referer always sent people to the public home.</root_cause>
  <prevention_rule>Apply `Localization` on both tenant Filament panels after session and tenancy, not in `bootUsing`. Signed-in chamber staff hitting `/lang/{locale}` without a same-host Referer return to `/admin`; guests stay on the public site. Off-site Referer is still ignored. HTTP tests must hit the real switcher — `Livewire::test` plus `app()->setLocale('bn')` does not prove the desk follows chamber language.</prevention_rule>
 </bug>
+
+## 2026-08-15T23:46:24+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>After Switch to Bangla started applying, most of the desk was still English — sidebar items, Live Queue stats (Waiting / Seen), Daily Roster columns, dashboard widgets.</symptom>
+ <root_cause>Filament prints `$navigationLabel` and `$title` as-is, so locale never reached those signs. `lang/bn.json` had Operations / Website / Settings and a few queue buttons, not the daily chrome.</root_cause>
+ <prevention_rule>Staff chrome labels must go through `TranslatesStaffChrome` / `TranslatesResourceChrome` (or `__()` at the call site). `StaffDeskBanglaTest` must stay red if a Live Queue / roster / dashboard / sidebar string has no `lang/bn.json` entry.</prevention_rule>
+</bug>
+
+## 2026-08-16T00:01:07+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>After the 23:46 pass, sidebar names, page titles, and buttons (Call next, Finish / End Session) were Bangla. Staff already know those English control names and found the translated knobs harder, not easier.</symptom>
+ <root_cause>That pass treated painted signs (nav, titles, buttons, Filament Save/Search) as the same as reading copy. Staff want the recipe card in Bangla and the stove knobs in English.</root_cause>
+ <prevention_rule>Do not wrap sidebar labels, page titles, or action buttons in `__()`. Reading copy (stats, badges, empty states, sitting notes, column headers, field labels, notifications) still goes through `__()`. `EnglishFilamentLoader` remaps `filament*` namespaces to English when locale is `bn`. `BanglaStaffPanelTest` must see **Finish / End Session** and must not see `সেশন শেষ করুন` on the Bangla desk. The 23:46 traits are deleted — do not restore them.</prevention_rule>
+</bug>

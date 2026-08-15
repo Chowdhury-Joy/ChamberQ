@@ -10,7 +10,8 @@ use Tests\TestCase;
  * The language switcher offers Bangla on every public page, so a patient can
  * book in Bangla, get a Bangla ticket, then open the portal and hit English —
  * which is what used to happen (15 of the portal's 18 strings were missing).
- * The staff/admin panel is deliberately out of scope here; see decisions.md.
+ * Daily desk chrome (sidebar, Live Queue, roster, dashboard) is covered by
+ * StaffDeskBanglaTest. Branding / page-builder form labels are a later pass.
  */
 class PatientFacingBanglaTest extends TestCase
 {

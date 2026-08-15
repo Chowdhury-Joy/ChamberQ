@@ -338,12 +338,12 @@ class SittingPrompt
     public function delayOptionsFor(int $currentDelay = 0): array
     {
         $labels = [
-            15 => '15 minutes',
-            30 => '30 minutes',
-            45 => '45 minutes',
-            60 => '1 hour',
-            90 => '1.5 hours',
-            120 => '2 hours',
+            15 => __('15 minutes'),
+            30 => __('30 minutes'),
+            45 => __('45 minutes'),
+            60 => __('1 hour'),
+            90 => __('1.5 hours'),
+            120 => __('2 hours'),
         ];
 
         if ($currentDelay < 1) {

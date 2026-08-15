@@ -27,6 +27,8 @@ class WebPageResource extends Resource
 
     protected static string|\UnitEnum|null $navigationGroup = 'Website';
 
+    protected static ?string $navigationLabel = 'Web Pages';
+
     protected static ?int $navigationSort = 1;
 
     public static function canViewAny(): bool

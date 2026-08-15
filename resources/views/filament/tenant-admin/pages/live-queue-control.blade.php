@@ -137,7 +137,7 @@
                     color="warning"
                     wire:click="mountAction('catchUpNotes')"
                 >
-                    {{ __('Fill in now') }}
+                    {{ 'Fill in now' }}
                 </x-filament::button>
             </div>
         @endif
@@ -146,9 +146,9 @@
         <x-filament::section>
             @if($this->sessions->isEmpty())
                 <div class="lqc-empty">
-                    <div class="lqc-empty-title">No sessions scheduled for today</div>
+                    <div class="lqc-empty-title">{{ __('No sessions scheduled for today') }}</div>
                     <p class="lqc-muted">
-                        Live Queue only lists sessions that run on {{ now()->translatedFormat('l') }}. Add or edit a schedule that includes today, then return here.
+                        {{ __('Live Queue only lists sessions that run on :day. Add or edit a schedule that includes today, then return here.', ['day' => now()->translatedFormat('l')]) }}
                     </p>
                     @if(auth()->user()?->canManageOps())
                         <x-filament::button
@@ -157,7 +157,7 @@
                             color="primary"
                             icon="heroicon-m-calendar-days"
                         >
-                            Manage schedules
+                            {{ 'Manage schedules' }}
                         </x-filament::button>
                     @endif
                 </div>
@@ -165,11 +165,11 @@
                 <div class="lqc-row">
                     <div class="lqc-field">
                         <label for="lqc-session" class="lqc-label">
-                            Session for today ({{ now()->translatedFormat('l, j F Y') }})
+                            {{ __('Session for today (:date)', ['date' => now()->translatedFormat('l, j F Y')]) }}
                         </label>
                         <x-filament::input.wrapper>
                             <x-filament::input.select wire:model.live="selectedSessionId" id="lqc-session">
-                                <option value="">Choose a session…</option>
+                                <option value="">{{ __('Choose a session…') }}</option>
                                 @foreach($this->sessions as $id => $label)
                                     <option value="{{ $id }}" @selected($this->selectedSessionId == $id)>{{ $label }}</option>
                                 @endforeach
@@ -179,7 +179,7 @@
 
                     @if($this->selectedSessionId && app()->isLocal())
                         <x-filament::button wire:click="addMockPatients" color="gray" size="sm" icon="heroicon-m-user-plus">
-                            Add sample patients
+                            {{ 'Add sample patients' }}
                         </x-filament::button>
                     @endif
                 </div>
@@ -201,29 +201,29 @@
             @if(in_array($status, ['active', 'paused'], true))
                 <div class="lqc-stats" style="--lqc-stat-count: {{ $statCount }};">
                     <div class="lqc-stat">
-                        <div class="lqc-eyebrow">Waiting</div>
+                        <div class="lqc-eyebrow">{{ __('Waiting') }}</div>
                         <div class="lqc-stat-value">{{ $stats['waiting'] }}</div>
                     </div>
                     <div class="lqc-stat">
-                        <div class="lqc-eyebrow">Seen</div>
+                        <div class="lqc-eyebrow">{{ __('Seen') }}</div>
                         <div class="lqc-stat-value">{{ $stats['done'] }}</div>
                     </div>
                     @if($stats['no_show'] > 0)
                         <div class="lqc-stat">
-                            <div class="lqc-eyebrow">No-show</div>
+                            <div class="lqc-eyebrow">{{ __('No-show') }}</div>
                             <div class="lqc-stat-value">{{ $stats['no_show'] }}</div>
                         </div>
                     @endif
                     <div class="lqc-stat">
-                        <div class="lqc-eyebrow">Avg consult</div>
+                        <div class="lqc-eyebrow">{{ __('Avg consult') }}</div>
                         <div class="lqc-stat-value">{{ $stats['avg_minutes'] }}m</div>
-                        <div class="lqc-xs">{{ $stats['avg_is_observed'] ? 'measured today' : 'from schedule' }}</div>
+                        <div class="lqc-xs">{{ $stats['avg_is_observed'] ? __('measured today') : __('from schedule') }}</div>
                     </div>
                     @if($stats['finishes_at'])
                         <div class="lqc-stat">
-                            <div class="lqc-eyebrow">Finishes about</div>
+                            <div class="lqc-eyebrow">{{ __('Finishes about') }}</div>
                             <div class="lqc-stat-value">{{ $stats['finishes_at']->format('g:i a') }}</div>
-                            <div class="lqc-xs">at today's pace</div>
+                            <div class="lqc-xs">{{ __('at today\'s pace') }}</div>
                         </div>
                     @endif
                 </div>
@@ -234,22 +234,22 @@
                 {{-- Controls & current call --}}
                 <div class="lqc-stack lqc-side">
                     <x-filament::section>
-                        <x-slot name="heading">Session status</x-slot>
+                        <x-slot name="heading">{{ __('Session status') }}</x-slot>
                         <x-slot name="headerEnd">
                             @if($status === 'scheduled')
-                                <x-filament::badge color="gray">Not started</x-filament::badge>
+                                <x-filament::badge color="gray">{{ __('Not started') }}</x-filament::badge>
                             @elseif($status === 'delayed')
-                                <x-filament::badge color="warning">Delayed {{ $liveSession->delay_minutes }}m</x-filament::badge>
+                                <x-filament::badge color="warning">{{ __('Delayed :minutes m', ['minutes' => $liveSession->delay_minutes]) }}</x-filament::badge>
                             @elseif($status === 'active')
                                 <x-filament::badge color="success">
-                                    <span class="lqc-dot"><span></span><span></span></span>Live
+                                    <span class="lqc-dot"><span></span><span></span></span>{{ __('Live') }}
                                 </x-filament::badge>
                             @elseif($status === 'paused')
-                                <x-filament::badge color="warning" icon="heroicon-m-pause">Paused</x-filament::badge>
+                                <x-filament::badge color="warning" icon="heroicon-m-pause">{{ __('Paused') }}</x-filament::badge>
                             @elseif($status === 'completed')
-                                <x-filament::badge color="info">Finished</x-filament::badge>
+                                <x-filament::badge color="info">{{ __('Finished') }}</x-filament::badge>
                             @elseif($status === 'cancelled')
-                                <x-filament::badge color="danger">Cancelled</x-filament::badge>
+                                <x-filament::badge color="danger">{{ __('Cancelled') }}</x-filament::badge>
                             @endif
                         </x-slot>
 
@@ -260,36 +260,36 @@
                                          a default slot is silently dropped. --}}
                                     <x-filament::callout color="warning" icon="heroicon-m-clock">
                                         <x-slot name="description">
-                                            Patients have been told the doctor is running {{ $liveSession->delay_minutes }} minutes late. Starting now clears the yellow banner; the clock follows when you actually begin.
+                                            {{ __('Patients have been told the doctor is running :minutes minutes late. Starting now clears the yellow banner; the clock follows when you actually begin.', ['minutes' => $liveSession->delay_minutes]) }}
                                         </x-slot>
                                     </x-filament::callout>
                                 @endif
                                 <div class="lqc-actions">
                                     <x-filament::button wire:click="mountStartSessionOrRun" color="success" icon="heroicon-m-play" size="lg">
-                                        {{ __('Start live session') }}
+                                        {{ 'Start live session' }}
                                     </x-filament::button>
                                 </div>
                                 <p class="lqc-muted">
-                                    {{ $bookings->whereIn('status', ['waiting', 'skipped'])->count() }} patients booked. Starting calls the first serial straight away.
+                                    {{ __(':count patients booked. Starting calls the first serial straight away.', ['count' => $bookings->whereIn('status', ['waiting', 'skipped'])->count()]) }}
                                 </p>
                             @endif
 
                             @if($status === 'paused')
-                                <x-filament::callout color="warning" icon="heroicon-m-pause" heading="{{ $liveSession->pause_reason ?: 'Session paused' }}">
+                                <x-filament::callout color="warning" icon="heroicon-m-pause" heading="{{ $liveSession->pause_reason ?: __('Session paused') }}">
                                     <x-slot name="description">
                                         @if($liveSession->pauseEndsAt())
-                                            Expected back around {{ $liveSession->pauseEndsAt()->format('g:i a') }} ({{ $liveSession->estimated_pause_minutes }} minute break).
+                                            {{ __('Expected back around :time (:minutes minute break).', ['time' => $liveSession->pauseEndsAt()->format('g:i a'), 'minutes' => $liveSession->estimated_pause_minutes]) }}
                                         @else
-                                            No end time was estimated for this break.
+                                            {{ __('No end time was estimated for this break.') }}
                                         @endif
                                         @if($stats['waiting'] > 0)
-                                            {{ $stats['waiting'] }} patients are still waiting.
+                                            {{ __(':count patients are still waiting.', ['count' => $stats['waiting']]) }}
                                         @endif
                                     </x-slot>
                                 </x-filament::callout>
                                 <div class="lqc-actions">
                                     <x-filament::button wire:click="mountAction('resumeSession')" color="success" icon="heroicon-m-play" size="lg">
-                                        Resume session
+                                        {{ "He's back" }}
                                     </x-filament::button>
                                 </div>
                             @endif
@@ -297,9 +297,9 @@
                             @if(in_array($status, ['completed', 'cancelled'], true))
                                 <p class="lqc-muted">
                                     @if($status === 'cancelled')
-                                        This session was cancelled{{ $liveSession->cancellation_reason ? ' — '.$liveSession->cancellation_reason : '' }}. All active bookings were cancelled.
+                                        {{ __('This session was cancelled') }}{{ $liveSession->cancellation_reason ? ' — '.$liveSession->cancellation_reason : '' }}. {{ __('All active bookings were cancelled.') }}
                                     @else
-                                        Session finished{{ $liveSession->completed_at ? ' at '.$liveSession->completed_at->format('g:i a') : '' }}. {{ $bookings->where('status', 'completed')->count() }} patients seen.
+                                        {{ __('Session finished') }}{{ $liveSession->completed_at ? ' '.__('at :time', ['time' => $liveSession->completed_at->format('g:i a')]) : '' }}. {{ __(':count patients seen.', ['count' => $bookings->where('status', 'completed')->count()]) }}
                                     @endif
                                 </p>
                             @endif
@@ -322,11 +322,11 @@
                                             </div>
                                             @if($current->status === 'called')
                                                 {{-- Short enough not to truncate on a phone. --}}
-                                                <x-filament::badge color="warning" icon="heroicon-m-bell-alert">Not arrived</x-filament::badge>
+                                                <x-filament::badge color="warning" icon="heroicon-m-bell-alert">{{ __('Not arrived') }}</x-filament::badge>
                                             @elseif($current->status === 'completed')
-                                                <x-filament::badge color="info" icon="heroicon-m-check-circle">Done</x-filament::badge>
+                                                <x-filament::badge color="info" icon="heroicon-m-check-circle">{{ __('Done') }}</x-filament::badge>
                                             @else
-                                                <x-filament::badge color="success" icon="heroicon-m-check-circle">In chamber</x-filament::badge>
+                                                <x-filament::badge color="success" icon="heroicon-m-check-circle">{{ __('In chamber') }}</x-filament::badge>
                                             @endif
                                         </div>
 
@@ -370,16 +370,16 @@
                                                 }"
                                             >
                                                 {{-- Not "In chamber" — the badge above already says that. --}}
-                                                {{ $timeoutSeconds !== null ? 'Called' : 'With the doctor for' }}
+                                                {{ $timeoutSeconds !== null ? __('Called') : __('With the doctor for') }}
                                                 <span class="lqc-elapsed" :class="{ 'lqc-elapsed-over': over }" x-text="text"></span>
-                                                <span x-show="over" x-cloak>— no response yet</span>
+                                                <span x-show="over" x-cloak>{{ __('— no response yet') }}</span>
                                             </div>
                                         @endif
 
                                         <div class="lqc-actions">
                                             @if($current->status === 'called')
                                                 <x-filament::button wire:click="patientArrived" color="success" icon="heroicon-m-check" size="lg" class="cq-offline-queue-allowed" data-cq-queue-action="patient_arrived">
-                                                    {{ __('Patient arrived') }}
+                                                    {{ 'Patient arrived' }}
                                                 </x-filament::button>
                                                 <x-filament::button
                                                     wire:click="skipPatient"
@@ -389,16 +389,16 @@
                                                     data-cq-queue-action="skip"
                                                 >
                                                     @if($current->skip_count >= 2)
-                                                        No response — mark no-show
+                                                        {{ 'No response — mark no-show' }}
                                                     @else
-                                                        No response — skip ({{ $current->skip_count + 1 }} of 2)
+                                                        {{ 'No response — skip ('.($current->skip_count + 1).' of 2)' }}
                                                     @endif
                                                 </x-filament::button>
                                                 <p class="lqc-xs">
                                                     @if($current->skip_count >= 2)
-                                                        They have missed both calls — this removes them from today's queue.
+                                                        {{ __('They have missed both calls — this removes them from today\'s queue.') }}
                                                     @else
-                                                        Moves them down the queue; called again after #{{ $current->serial_number + 1 }}.
+                                                        {{ __('Moves them down the queue; called again after #:serial.', ['serial' => $current->serial_number + 1]) }}
                                                     @endif
                                                 </p>
                                             @elseif($current->status === 'completed')
@@ -410,31 +410,31 @@
                                                     'prescription' => $current->visitRecord?->prescription,
                                                 ])
                                                 <x-filament::button wire:click="callNextPatientOnly" color="primary" icon="heroicon-m-megaphone" size="lg" class="cq-offline-queue-allowed" data-cq-queue-action="call_next">
-                                                    {{ __('Call next patient') }}
+                                                    {{ 'Call next patient' }}
                                                 </x-filament::button>
                                             @else
                                                 <x-filament::button class="cs-complete-visit-btn cq-offline-queue-allowed" wire:click="completeVisit" color="success" icon="heroicon-m-check-badge" size="lg" data-cq-queue-action="complete_without_advance">
-                                                    {{ __('Complete visit') }}
+                                                    {{ 'Complete visit' }}
                                                 </x-filament::button>
                                             @endif
                                         </div>
                                     @else
-                                        <div class="lqc-eyebrow">No active call</div>
+                                        <div class="lqc-eyebrow">{{ __('No active call') }}</div>
                                         @if($nextWaiting)
                                             <div class="lqc-serial">#{{ $nextWaiting->serial_number }}</div>
                                             <div class="lqc-name">{{ $nextWaiting->patient_name }}</div>
                                             <div class="lqc-actions">
                                                 <x-filament::button wire:click="callNextPatientOnly" color="primary" icon="heroicon-m-megaphone" size="lg" class="cq-offline-queue-allowed" data-cq-queue-action="call_next">
-                                                    {{ __('Call #:serial', ['serial' => $nextWaiting->serial_number]) }}
+                                                    {{ 'Call #'.$nextWaiting->serial_number }}
                                                 </x-filament::button>
                                             </div>
                                         @else
                                             <p class="lqc-muted">
-                                                Nobody left waiting. Use <strong>Session actions → Finish / End session</strong> to close today.
+                                                {{ __('Nobody left waiting. Use Session actions → Finish / End session to close today.') }}
                                             </p>
                                             <div class="lqc-actions">
                                                 <x-filament::button color="gray" icon="heroicon-m-megaphone" size="lg" disabled>
-                                                    No one waiting
+                                                    {{ __('No one waiting') }}
                                                 </x-filament::button>
                                             </div>
                                         @endif
@@ -453,16 +453,16 @@
                     @endphp
                     <x-filament::section>
                         <div class="lqc-stack-sm" x-data="{ copied: false, copy() { navigator.clipboard.writeText(@js($screenUrl)).then(() => { this.copied = true; setTimeout(() => this.copied = false, 2000) }) } }">
-                            <div class="lqc-name">Waiting-room TV screen</div>
+                            <div class="lqc-name">{{ __('Waiting-room TV screen') }}</div>
                             <p class="lqc-muted">
-                                Bookmark this link on the TV once — it always shows today's queue for this session. No need to paste a new link each morning.
+                                {{ __('Bookmark this link on the TV once — it always shows today\'s queue for this session. No need to paste a new link each morning.') }}
                             </p>
                             <div class="lqc-btn-row">
                                 <x-filament::button :href="$screenUrl" tag="a" target="_blank" color="gray" icon="heroicon-m-arrow-top-right-on-square" size="sm">
-                                    Open screen
+                                    {{ 'Open screen' }}
                                 </x-filament::button>
                                 <x-filament::button x-on:click="copy()" color="gray" icon="heroicon-m-clipboard" size="sm">
-                                    <span x-text="copied ? 'Link copied' : 'Copy link'">Copy link</span>
+                                    <span x-text="copied ? @js('Link copied') : @js('Copy link')">Copy link</span>
                                 </x-filament::button>
                             </div>
                         </div>
@@ -476,8 +476,8 @@
             </div>
         @elseif($this->sessions->isNotEmpty())
             <x-filament::section>
-                <x-slot name="heading">Today's sessions</x-slot>
-                <x-slot name="description">Pick the session you are running to open its live queue.</x-slot>
+                <x-slot name="heading">{{ __('Today\'s sessions') }}</x-slot>
+                <x-slot name="description">{{ __('Pick the session you are running to open its live queue.') }}</x-slot>
                 <div class="lqc-cards">
                     @foreach($this->sessions as $id => $label)
                         <button type="button" class="lqc-session-card" wire:click="$set('selectedSessionId', '{{ $id }}')">

@@ -43,10 +43,7 @@ class DailyRoster extends Page implements HasTable, HasForms
 
     protected static string|\UnitEnum|null $navigationGroup = 'Operations';
 
-    public static function getNavigationLabel(): string
-    {
-        return __('Daily Roster');
-    }
+    protected static ?string $navigationLabel = 'Daily Roster';
 
     protected string $view = 'filament.tenant-admin.pages.daily-roster';
 
@@ -85,11 +82,21 @@ class DailyRoster extends Page implements HasTable, HasForms
                     ->orderBy('serial_number')
             )
             ->columns([
-                TextColumn::make('serial_number')->label('Serial'),
-                TextColumn::make('patient_name')->label('Name')->searchable(),
-                TextColumn::make('patient_phone')->label('Phone')->searchable(),
+                TextColumn::make('serial_number')->label(__('Serial')),
+                TextColumn::make('patient_name')->label(__('Name'))->searchable(),
+                TextColumn::make('patient_phone')->label(__('Phone'))->searchable(),
                 TextColumn::make('status')
                     ->badge()
+                    ->formatStateUsing(fn (string $state): string => match ($state) {
+                        'waiting' => __('Waiting'),
+                        'called' => __('Called'),
+                        'in_chamber' => __('In chamber'),
+                        'completed' => __('Completed'),
+                        'cancelled' => __('Cancelled'),
+                        'no_show' => __('No-show'),
+                        'skipped' => __('Skipped'),
+                        default => $state,
+                    })
                     ->color(fn (string $state): string => match ($state) {
                         'waiting' => 'warning',
                         'in_chamber' => 'success',
@@ -144,7 +151,7 @@ class DailyRoster extends Page implements HasTable, HasForms
 
                 // Front-door day list (no live queue): mark arrival without Call next.
                 Action::make('arrived')
-                    ->label(__('Arrived'))
+                    ->label('Arrived')
                     ->color('info')
                     ->visible(fn (Booking $record): bool => ! (tenant()?->hasLiveQueue() ?? true)
                         && (auth()->user()?->canManageQueue() ?? false)
@@ -159,7 +166,7 @@ class DailyRoster extends Page implements HasTable, HasForms
                     }),
 
                 Action::make('noShow')
-                    ->label(__('No-show'))
+                    ->label('No-show')
                     ->color('danger')
                     ->requiresConfirmation()
                     ->visible(fn (Booking $record): bool => ! (tenant()?->hasLiveQueue() ?? true)
@@ -192,7 +199,7 @@ class DailyRoster extends Page implements HasTable, HasForms
                     ->modalDescription(fn (): ?string => auth()->user()?->canRecordVisitNotes()
                         ? __('Add optional notes, or leave everything blank and tap Complete.')
                         : null)
-                    ->modalSubmitActionLabel(__('Complete'))
+                    ->modalSubmitActionLabel('Complete')
                     ->action(function (
                         Booking $record,
                         array $data,
@@ -211,14 +218,14 @@ class DailyRoster extends Page implements HasTable, HasForms
                 // Only appears for doctors who switched the delegation on.
                 VisitNotesFormSchema::configureModal(Action::make('enterPrescription'))
                     ->label(fn (Booking $record): string => $record->visitRecord?->prescription
-                        ? __('Edit prescription')
-                        : __('Enter prescription'))
+                        ? 'Edit prescription'
+                        : 'Enter prescription')
                     ->icon('heroicon-o-pencil-square')
                     ->color('warning')
                     ->visible(fn (Booking $record): bool => static::staffMayEnterPrescriptionFor($record))
-                    ->modalHeading(__('Enter paper prescription'))
+                    ->modalHeading('Enter paper prescription')
                     ->modalDescription(__('Copy in what the doctor wrote by hand. This does not change the visit status.'))
-                    ->modalSubmitActionLabel(__('Save prescription'))
+                    ->modalSubmitActionLabel('Save prescription')
                     ->fillForm(fn (Booking $record): array => VisitNotesFormSchema::staffStateFromRecord($record->visitRecord))
                     ->form(fn (Booking $record): array => VisitNotesFormSchema::staffPrescriptionComponents($record))
                     ->action(function (Booking $record, array $data, VisitRecordService $visitRecordService): void {
@@ -235,8 +242,8 @@ class DailyRoster extends Page implements HasTable, HasForms
 
                 Action::make('collectFee')
                     ->label(fn (Booking $record): string => $record->cashEntry
-                        ? __('Edit fee')
-                        : __('Collect fee'))
+                        ? 'Edit fee'
+                        : 'Collect fee')
                     ->icon('heroicon-o-banknotes')
                     ->color('success')
                     ->visible(fn (Booking $record): bool => (auth()->user()?->canManageCash() ?? false)
@@ -293,7 +300,7 @@ class DailyRoster extends Page implements HasTable, HasForms
                 // the queue screen or pressing Start. Only before the session
                 // is running (no live row, or still scheduled).
                 Action::make('markLate')
-                    ->label(__('Mark Late'))
+                    ->label('Mark Late')
                     ->color('warning')
                     ->icon('heroicon-o-clock')
                     ->visible(fn (): bool => (auth()->user()?->canManageQueue() ?? false)
@@ -382,12 +389,12 @@ class DailyRoster extends Page implements HasTable, HasForms
                     }),
 
                 Action::make('notifyDelayed')
-                    ->label(__('Tell waiting patients'))
+                    ->label('Tell waiting patients')
                     ->icon('heroicon-o-chat-bubble-left-right')
                     ->color('warning')
-                    ->modalHeading(__('Doctor is running late'))
+                    ->modalHeading('Doctor is running late')
                     ->modalSubmitAction(false)
-                    ->modalCancelActionLabel(__('Done'))
+                    ->modalCancelActionLabel('Done')
                     ->modalContent(function (): \Illuminate\Contracts\View\View {
                         $bookings = Booking::whereIn('id', $this->delayedNotifyBookingIds)
                             ->orderBy('serial_number')
@@ -416,7 +423,7 @@ class DailyRoster extends Page implements HasTable, HasForms
                     ->visible(fn (): bool => auth()->user()?->canAccessLiveQueueControl() ?? false),
 
                 Action::make('newWalkIn')
-                    ->label(__('New Walk-In'))
+                    ->label('New Walk-In')
                     ->icon('heroicon-o-user-plus')
                     ->schema([
                         TextInput::make('patient_phone')

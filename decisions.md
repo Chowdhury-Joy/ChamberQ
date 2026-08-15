@@ -2442,3 +2442,30 @@
   <action>`SendBookingConfirmation`, dispatched from `BookingService` with `->afterResponse()`. It re-reads the booking and skips one cancelled between the response and the job running, and swallows a throwing gateway into the log so an outage cannot surface as a 500 on a booking that succeeded. The wallet debit moves with the send.</action>
   <reason>`->afterResponse()` rather than the queue, matching `SendDoctorLateNotices`: **no queue worker runs**, so a queued confirmation would never be delivered and no patient would learn their serial — a silent failure far worse than the spinner it replaced. `ShouldQueue` and the tenant id are carried so adding a worker later is deleting one call. The two HTTP booking tests are what prove the SMS still goes out; direct service calls in tests must `$this->app->terminate()`, as `NotifyChannelsTest` already does.</reason>
 </decision>
+
+## 2026-08-15T23:41:08+0600
+
+<decision>
+ <category>Code</category>
+ <context>Local demo logins used the Laravel default `password`, which is easy to forget and longer than needed on a single-operator laptop.</context>
+ <action>Every seeded staff login (Super Admin, Solo, Clinic, Nusrat Urmi) now uses `pass`. Seeders `updateOrCreate` the user so re-seeding actually applies the new password instead of leaving the old hash on an existing row. README demo table matches. Tests and the user factory still use `password` so the automated suite is unchanged.</action>
+  <reason>Owner asked to type `pass` at every demo login. A four-character password is only for this local demo machine — production and any shared chamber must still rotate it.</reason>
+</decision>
+
+## 2026-08-15T23:46:24+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Switch to Bangla started applying, but the desk still looked English: Filament prints sidebar labels as painted signs, and `lang/bn.json` only had a handful of staff strings.</context>
+ <action>Traits run nav / title / model labels through `__()` at render. Live Queue, Daily Roster, dashboard widgets, and sitting notes use `__()` at the call site. Desk strings added to `lang/bn.json`. `StaffDeskBanglaTest` fails CI if one is missing. Rx-pad clinical shorthand (C/C, H/O, O/E) and Branding / Web Pages form labels stay English this round.</action>
+ <reason>Like unlocking the language drawer but leaving the signs on the walls in English. Daily desk (sidebar, queue, roster, today's numbers) is what staff stare at for hours. Machine-translating the whole Rx pad needs a doctor's read before it should ship.</reason>
+</decision>
+
+## 2026-08-16T00:01:07+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Owner correction: sidebar, topbar, and buttons do not need translation. Staff already know Call next / Finish / End Session in English. The 23:46 pass had translated those knobs as well as the reading copy.</context>
+ <action>Sidebar group labels, page titles (`$navigationLabel` / `$title`), and action buttons stay hardcoded English. Filament vendor chrome (Save / Search / Sign out) stays English via `EnglishFilamentLoader` (when locale is `bn`, `filament*` namespaces load `en`). Reading copy still follows chamber language: Waiting / Seen / No-show, session badges, empty states, sitting-note text, dashboard widget headings, table column headers, form field labels, notification bodies. Traits `TranslatesStaffChrome` / `TranslatesResourceChrome` removed. `BanglaStaffPanelTest` asserts the Finish / End Session button stays English on a Bangla desk.</action>
+ <reason>Like a Bangla recipe card next to a stove whose knobs still say Start / Off. Translating the knobs makes a trained operator hunt for a new name for a control they already know. Supersedes the 23:46 action that ran nav / title labels through `__()`.</reason>
+</decision>

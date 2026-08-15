@@ -22,6 +22,8 @@ class LabCollectionSlotResource extends Resource
 
     protected static string|\UnitEnum|null $navigationGroup = 'Operations';
 
+    protected static ?string $navigationLabel = 'Lab Collection Slots';
+
     public static function canViewAny(): bool
     {
         $user = auth()->user();

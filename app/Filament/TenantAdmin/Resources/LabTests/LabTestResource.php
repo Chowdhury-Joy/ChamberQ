@@ -23,6 +23,8 @@ class LabTestResource extends Resource
 
     protected static string|\UnitEnum|null $navigationGroup = 'Operations';
 
+    protected static ?string $navigationLabel = 'Lab Tests';
+
     public static function canViewAny(): bool
     {
         $user = auth()->user();

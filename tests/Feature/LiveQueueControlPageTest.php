@@ -175,7 +175,7 @@ class LiveQueueControlPageTest extends TestCase
         $this->queuePage()
             ->assertSee('Prayer break')
             ->assertSee($this->liveSession->fresh()->pauseEndsAt()->format('g:i a'))
-            ->assertSee('Resume session');
+            ->assertSee("He's back");
     }
 
     public function test_an_empty_queue_offers_no_call_button_to_press(): void

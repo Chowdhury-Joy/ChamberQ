@@ -13,7 +13,7 @@ class CompleteBookingWithVisitNotes
     public static function makeTableAction(string $name = 'complete'): Action
     {
         return Action::make($name)
-            ->label(__('Mark Completed'))
+            ->label('Mark Completed')
             ->color('success')
             ->action(function (Booking $record, array $data, LiveSessionService $liveSessionService, VisitRecordService $visitRecordService): void {
                 static::finish($record, $data, $liveSessionService, $visitRecordService);
@@ -23,10 +23,10 @@ class CompleteBookingWithVisitNotes
     public static function applyDoctorModal(Action $action): Action
     {
         return VisitNotesFormSchema::configureModal($action)
-            ->modalHeading(__('Complete visit'))
+            ->modalHeading('Complete visit')
             ->modalDescription(__('Add optional notes, or leave everything blank and tap Complete.'))
             ->schema(VisitNotesFormSchema::components())
-            ->modalSubmitActionLabel(__('Complete'));
+            ->modalSubmitActionLabel('Complete');
     }
 
     public static function applyStaffDirectComplete(Action $action): Action

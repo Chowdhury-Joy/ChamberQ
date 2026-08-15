@@ -22,6 +22,8 @@ class ScheduleSessionResource extends Resource
 
     protected static string|\UnitEnum|null $navigationGroup = 'Settings';
 
+    protected static ?string $navigationLabel = 'Schedule Sessions';
+
     public static function canViewAny(): bool
     {
         return (auth()->user()?->canManageOps() ?? false)

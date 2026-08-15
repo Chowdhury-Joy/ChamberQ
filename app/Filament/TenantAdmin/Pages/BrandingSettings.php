@@ -25,6 +25,8 @@ class BrandingSettings extends Page implements HasForms
 
     protected static ?string $title = 'Branding & Website Customization';
 
+    protected static ?string $navigationLabel = 'Branding Settings';
+
     protected static string|\UnitEnum|null $navigationGroup = 'Settings';
 
     protected string $view = 'filament.tenant-admin.pages.branding-settings';

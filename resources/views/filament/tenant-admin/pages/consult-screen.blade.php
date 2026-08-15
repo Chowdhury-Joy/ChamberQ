@@ -757,15 +757,15 @@
             <div class="cs-sticky-actions cq-freeze-queue {{ $showRxDesk ? 'is-desk-active' : '' }}">
                 @if ($booking->status === 'called')
                     <x-filament::button class="cs-sticky-actions__btn" color="success" wire:click="mountAction('patientArrived')">
-                        {{ __('Patient arrived') }}
+                        {{ 'Patient arrived' }}
                     </x-filament::button>
                 @elseif ($canWriteNotes && $booking->status === 'in_chamber')
                     <x-filament::button class="cs-sticky-actions__btn cs-complete-visit-btn" color="success" wire:click="mountAction('completeVisit')">
-                        {{ __('Complete visit') }}
+                        {{ 'Complete visit' }}
                     </x-filament::button>
                 @elseif ($booking->status === 'completed')
                     <x-filament::button class="cs-sticky-actions__btn" color="primary" wire:click="mountAction('callNext')">
-                        {{ __('Call next patient') }}
+                        {{ 'Call next patient' }}
                     </x-filament::button>
                 @endif
             </div>

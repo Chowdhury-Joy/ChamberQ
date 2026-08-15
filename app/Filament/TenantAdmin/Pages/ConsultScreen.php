@@ -45,17 +45,9 @@ class ConsultScreen extends Page implements HasActions
 
     protected static string|\UnitEnum|null $navigationGroup = 'Operations';
 
+    protected static ?string $navigationLabel = 'Consult Screen';
+
     protected static ?int $navigationSort = 0;
-
-    public static function getNavigationLabel(): string
-    {
-        return __('Consult Screen');
-    }
-
-    public function getTitle(): string
-    {
-        return __('Consult Screen');
-    }
 
     protected string $view = 'filament.tenant-admin.pages.consult-screen';
 
@@ -306,7 +298,7 @@ class ConsultScreen extends Page implements HasActions
 
         return [
             Action::make('patientArrived')
-                ->label(__('Patient arrived'))
+                ->label('Patient arrived')
                 ->icon('heroicon-o-check')
                 ->color('success')
                 ->visible(fn (): bool => $this->currentBooking?->status === 'called')
@@ -320,7 +312,7 @@ class ConsultScreen extends Page implements HasActions
                     Notification::make()->title(__('Patient marked as arrived'))->success()->send();
                 }),
             VisitNotesFormSchema::configureModal(Action::make('completeVisit'))
-                ->label(__('Complete visit'))
+                ->label('Complete visit')
                 ->icon('heroicon-o-check-circle')
                 ->color('success')
                 ->extraAttributes(['class' => 'cs-complete-visit-btn'])
@@ -353,10 +345,10 @@ class ConsultScreen extends Page implements HasActions
                 ->modalDescription(fn (): ?string => auth()->user()?->canRecordVisitNotes()
                     ? __('Check the notes, or leave everything blank and tap Complete.')
                     : null)
-                ->modalSubmitActionLabel(__('Complete'))
+                ->modalSubmitActionLabel('Complete')
                 ->extraModalFooterActions([
                     Action::make('editVisitNotes')
-                        ->label(__('Edit'))
+                        ->label('Edit')
                         ->color('gray')
                         ->visible(fn (): bool => (bool) $this->currentVisitRecord?->hasClinicalContent())
                         ->action(function (): void {
@@ -383,7 +375,7 @@ class ConsultScreen extends Page implements HasActions
                     $this->forgetQueueState();
                 }),
             Action::make('callNext')
-                ->label(__('Call next patient'))
+                ->label('Call next patient')
                 ->icon('heroicon-o-megaphone')
                 ->color('primary')
                 ->visible(fn (): bool => $this->runningLiveSession !== null
@@ -405,7 +397,7 @@ class ConsultScreen extends Page implements HasActions
                     Notification::make()->title(__('Called next patient'))->success()->send();
                 }),
             Action::make('doctorSteppedOut')
-                ->label(__('Doctor stepped out'))
+                ->label('Doctor stepped out')
                 ->icon('heroicon-o-pause')
                 ->color('gray')
                 ->visible(fn (): bool => $this->runningLiveSession?->status === 'active')
@@ -414,14 +406,14 @@ class ConsultScreen extends Page implements HasActions
                         ->label(__('Reason (e.g. Prayer break)'))
                         ->required(),
                     \Filament\Forms\Components\Select::make('estimated_minutes')
-                        ->label(__('Estimated duration'))
+                        ->label(__('Estimated Duration'))
                         ->options([
-                            10 => '10 minutes',
-                            15 => '15 minutes',
-                            20 => '20 minutes',
-                            30 => '30 minutes',
-                            45 => '45 minutes',
-                            60 => '1 hour',
+                            10 => __('10 minutes'),
+                            15 => __('15 minutes'),
+                            20 => __('20 minutes'),
+                            30 => __('30 minutes'),
+                            45 => __('45 minutes'),
+                            60 => __('1 hour'),
                         ])
                         ->required(),
                 ])
@@ -439,7 +431,7 @@ class ConsultScreen extends Page implements HasActions
                     Notification::make()->title(__('Doctor stepped out'))->warning()->send();
                 }),
             Action::make('doctorBack')
-                ->label(__("He's back"))
+                ->label("He's back")
                 ->icon('heroicon-o-play')
                 ->color('success')
                 ->visible(fn (): bool => $this->runningLiveSession?->status === 'paused')
@@ -540,7 +532,7 @@ class ConsultScreen extends Page implements HasActions
     public function previewPrescriptionAction(): Action
     {
         return Action::make('previewPrescription')
-            ->modalHeading(__('Prescription preview'))
+            ->modalHeading('Prescription preview')
             ->modalDescription(__('This is exactly what will print.'))
             ->modalWidth(Width::FourExtraLarge)
             ->modalContent(fn (): \Illuminate\Contracts\View\View => view(
@@ -548,7 +540,7 @@ class ConsultScreen extends Page implements HasActions
                 ['url' => $this->prescriptionPrintUrl()],
             ))
             ->modalSubmitAction(false)
-            ->modalCancelActionLabel(__('Close'));
+            ->modalCancelActionLabel('Close');
     }
 
     /**
@@ -719,14 +711,14 @@ class ConsultScreen extends Page implements HasActions
         // not yet a prescription, and calling it one before any medicine is
         // added overstates what has actually been written.
         $hasPrescription = (bool) $this->currentVisitRecord?->prescription?->items->isNotEmpty();
-        $label = $hasPrescription ? __('Edit prescription') : __('Write prescription');
+        $label = $hasPrescription ? 'Edit prescription' : __('Write prescription');
 
         return VisitNotesFormSchema::configureModal(Action::make('writePrescription'))
             ->label($label)
             ->icon('heroicon-o-pencil-square')
             ->color('primary')
             ->modalHeading($label)
-            ->modalSubmitActionLabel(__('Save'))
+            ->modalSubmitActionLabel('Save')
             ->form(fn (): array => VisitNotesFormSchema::components(
                 $this->currentPatient,
                 $this->lastVisitRecord,
@@ -791,10 +783,10 @@ class ConsultScreen extends Page implements HasActions
     public function startSessionAction(): Action
     {
         return Action::make('startSession')
-            ->label(__('Start live session'))
+            ->label('Start live session')
             ->color('success')
             ->modalSubmitAction(false)
-            ->modalCancelActionLabel(__('Cancel'))
+            ->modalCancelActionLabel('Cancel')
             ->modalHeading(fn (): string => match ($this->consultStartModalKind()) {
                 'early_during_delay' => __('Start before the announced time?'),
                 default => __('Start after sitting time?'),
@@ -810,7 +802,7 @@ class ConsultScreen extends Page implements HasActions
         $currentDelay = (int) ($live?->delay_minutes ?? 0);
 
         return Action::make('markLate')
-            ->label($live?->status === 'delayed' ? __('Add time') : __('Mark Late'))
+            ->label($live?->status === 'delayed' ? 'Add time' : 'Mark Late')
             ->color('warning')
             ->fillForm(fn (array $arguments): array => [
                 'delay_minutes' => $arguments['delay_minutes']
@@ -928,7 +920,7 @@ class ConsultScreen extends Page implements HasActions
 
             return [
                 Action::make('startNowDuringDelay')
-                    ->label(__('Start now'))
+                    ->label('Start now')
                     ->color('success')
                     ->action(function (): void {
                         $this->unmountAction();
@@ -936,8 +928,8 @@ class ConsultScreen extends Page implements HasActions
                     }),
                 Action::make('waitUntilAnnounced')
                     ->label($announcedAt
-                        ? __('Wait until :time', ['time' => $announcedAt->format('g:i a')])
-                        : __('Wait'))
+                        ? 'Wait until '.$announcedAt->format('g:i a')
+                        : 'Wait')
                     ->color('gray')
                     ->action(fn () => $this->unmountAction()),
             ];
@@ -950,14 +942,14 @@ class ConsultScreen extends Page implements HasActions
 
         return [
             Action::make('markLateFromStart')
-                ->label(__('Mark Late (:minutes min)', ['minutes' => $suggested]))
+                ->label('Mark Late ('.$suggested.' min)')
                 ->color('warning')
                 ->action(function () use ($suggested): void {
                     $this->unmountAction();
                     $this->mountAction('markLate', ['delay_minutes' => $suggested]);
                 }),
             Action::make('justStartLate')
-                ->label(__('Just start'))
+                ->label('Just start')
                 ->color('success')
                 ->action(function (): void {
                     $this->unmountAction();

@@ -5,6 +5,7 @@ namespace App\Providers;
 use App\Contracts\SmsGateway;
 use App\Contracts\WebPushSender;
 use App\Http\Responses\FilamentLoginResponse;
+use App\Support\EnglishFilamentLoader;
 use App\Support\RuntimeDirectories;
 use App\Support\TenancyUrl;
 use App\Services\Sms\HttpSmsGateway;
@@ -28,6 +29,10 @@ class AppServiceProvider extends ServiceProvider
     public function register(): void
     {
         RuntimeDirectories::ensure();
+
+        $this->app->extend('translation.loader', function ($loader) {
+            return new EnglishFilamentLoader($loader);
+        });
 
         // Filament's stock login redirect targets `Panel::getUrl()`, which falls
         // back to the raw path pattern — `/{tenant}/admin` for the path panel.

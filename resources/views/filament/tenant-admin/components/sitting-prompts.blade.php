@@ -43,7 +43,7 @@
                                 color="gray"
                                 wire:click="$set('selectedSessionId', {{ $prompt['schedule_session_id'] }})"
                             >
-                                {{ __('Switch to :session', ['session' => $prompt['session_name']]) }}
+                                {{ 'Switch to '.$prompt['session_name'] }}
                             </x-filament::button>
                         @else
                             @if (in_array($prompt['kind'], ['overdue', 'delay_expired'], true))
@@ -52,7 +52,7 @@
                                     color="warning"
                                     wire:click="mountAction('markLate', { delay_minutes: {{ $prompt['suggested_delay_minutes'] ?? 30 }} })"
                                 >
-                                    {{ $prompt['kind'] === 'delay_expired' ? __('Add time') : __('Mark Late') }}
+                                    {{ $prompt['kind'] === 'delay_expired' ? 'Add time' : 'Mark Late' }}
                                 </x-filament::button>
                             @endif
                             @if ($prompt['kind'] === 'idle_after_start')
@@ -61,7 +61,7 @@
                                     color="gray"
                                     wire:click="mountAction('pauseSession')"
                                 >
-                                    {{ __('Doctor stepped out') }}
+                                    {{ 'Doctor stepped out' }}
                                 </x-filament::button>
                             @else
                                 <x-filament::button
@@ -69,7 +69,7 @@
                                     color="success"
                                     wire:click="mountStartSessionOrRun"
                                 >
-                                    {{ __('Start') }}
+                                    {{ 'Start' }}
                                 </x-filament::button>
                             @endif
                         @endif
@@ -82,12 +82,12 @@
                                 color="warning"
                                 wire:click="mountTableAction('markLate', { schedule_session_id: {{ $prompt['schedule_session_id'] }}, delay_minutes: {{ $prompt['suggested_delay_minutes'] ?? 30 }} })"
                             >
-                                {{ $prompt['kind'] === 'delay_expired' ? __('Add time') : __('Mark Late') }}
+                                {{ $prompt['kind'] === 'delay_expired' ? 'Add time' : 'Mark Late' }}
                             </x-filament::button>
                         @endif
                         @if ($liveQueueUrl)
                             <x-filament::button :href="$liveQueueUrl" tag="a" size="sm" color="success">
-                                {{ __('Start in Live Queue') }}
+                                {{ 'Start in Live Queue' }}
                             </x-filament::button>
                         @endif
                     </div>
@@ -99,7 +99,7 @@
                                 color="warning"
                                 wire:click="mountMarkLateForPrompt({{ $prompt['schedule_session_id'] }}, {{ $prompt['suggested_delay_minutes'] ?? 30 }})"
                             >
-                                {{ $prompt['kind'] === 'delay_expired' ? __('Add time') : __('Mark Late') }}
+                                {{ $prompt['kind'] === 'delay_expired' ? 'Add time' : 'Mark Late' }}
                             </x-filament::button>
                         @endif
                         @if ($prompt['kind'] === 'idle_after_start')
@@ -108,7 +108,7 @@
                                 color="gray"
                                 wire:click="mountAction('doctorSteppedOut')"
                             >
-                                {{ __('Doctor stepped out') }}
+                                {{ 'Doctor stepped out' }}
                             </x-filament::button>
                         @else
                             <x-filament::button
@@ -116,13 +116,13 @@
                                 color="success"
                                 wire:click="startSessionFromPrompt({{ $prompt['schedule_session_id'] }})"
                             >
-                                {{ __('Start') }}
+                                {{ 'Start' }}
                             </x-filament::button>
                         @endif
                     </div>
                 @elseif ($liveQueueUrl)
                     <x-filament::button :href="$liveQueueUrl" tag="a" size="sm" color="warning">
-                        {{ __('Open Live Queue') }}
+                        {{ 'Open Live Queue' }}
                     </x-filament::button>
                 @endif
             </div>

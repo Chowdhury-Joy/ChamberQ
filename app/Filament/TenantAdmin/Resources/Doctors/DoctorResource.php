@@ -22,6 +22,8 @@ class DoctorResource extends Resource
 
     protected static string|\UnitEnum|null $navigationGroup = 'Settings';
 
+    protected static ?string $navigationLabel = 'Doctors';
+
     public static function canViewAny(): bool
     {
         return auth()->user()?->canManageOps() ?? false;

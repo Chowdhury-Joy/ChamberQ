@@ -31,15 +31,15 @@ trait ConfiguresTenantAdminPanel
                 'primary' => Color::Blue,
             ])
             ->navigationGroups([
-                'Operations' => NavigationGroup::make()->label(fn (): string => __('Operations')),
-                'Website' => NavigationGroup::make()->label(fn (): string => __('Website')),
-                'Settings' => NavigationGroup::make()->label(fn (): string => __('Settings')),
+                'Operations' => NavigationGroup::make()->label('Operations'),
+                'Website' => NavigationGroup::make()->label('Website'),
+                'Settings' => NavigationGroup::make()->label('Settings'),
             ])
             ->userMenuItems([
                 Action::make('displayLanguage')
                     ->label(fn (): string => App::getLocale() === 'bn'
-                        ? __('Switch to English')
-                        : __('Switch to Bangla'))
+                        ? 'Switch to English'
+                        : 'Switch to Bangla')
                     ->icon('heroicon-o-language')
                     ->url(fn (): string => tenant_web_url('/lang/'.(App::getLocale() === 'bn' ? 'en' : 'bn')))
                     ->visible(fn (): bool => tenancy()->initialized),

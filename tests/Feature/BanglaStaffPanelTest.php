@@ -74,7 +74,7 @@ class BanglaStaffPanelTest extends TestCase
         tenancy()->end();
     }
 
-    public function test_live_queue_renders_bangla_call_next_control(): void
+    public function test_live_queue_renders_bangla_stats_and_english_buttons(): void
     {
         tenancy()->initialize($this->tenant);
         app()->setLocale('bn');
@@ -82,8 +82,10 @@ class BanglaStaffPanelTest extends TestCase
 
         Livewire::actingAs($this->doctor)
             ->test(LiveQueueControl::class)
-            ->assertSee('সেশন শেষ করুন')
-            ->assertDontSee('Finish / End Session');
+            ->assertSee('অপেক্ষমাণ')
+            ->assertDontSee('Waiting')
+            ->assertSee('Finish / End Session')
+            ->assertDontSee('সেশন শেষ করুন');
 
         tenancy()->end();
     }
@@ -97,6 +99,8 @@ class BanglaStaffPanelTest extends TestCase
 
         Livewire::actingAs($this->doctor)
             ->test(LiveQueueControl::class)
+            ->assertSee('Waiting')
+            ->assertDontSee('অপেক্ষমাণ')
             ->assertSee('Finish / End Session')
             ->assertDontSee('সেশন শেষ করুন');
 
@@ -110,8 +114,11 @@ class BanglaStaffPanelTest extends TestCase
         $this->actingAs($this->doctor)
             ->get($desk)
             ->assertOk()
-            ->assertSee('সেশন শেষ করুন')
-            ->assertDontSee('Finish / End Session')
+            ->assertSee('অপেক্ষমাণ')
+            ->assertSee('Finish / End Session')
+            ->assertDontSee('সেশন শেষ করুন')
+            ->assertSee('Live Queue Control')
+            ->assertDontSee('লাইভ কিউ নিয়ন্ত্রণ')
             ->assertSee('/lang/en', escape: false);
     }
 
@@ -136,8 +143,9 @@ class BanglaStaffPanelTest extends TestCase
 
         $this->get($desk)
             ->assertOk()
-            ->assertSee('সেশন শেষ করুন')
-            ->assertDontSee('Finish / End Session');
+            ->assertSee('অপেক্ষমাণ')
+            ->assertSee('Finish / End Session')
+            ->assertDontSee('সেশন শেষ করুন');
     }
 
     public function test_staff_language_switch_without_referer_returns_to_the_desk(): void
@@ -169,7 +177,27 @@ class BanglaStaffPanelTest extends TestCase
         $this->actingAs($this->doctor)
             ->get($desk)
             ->assertOk()
-            ->assertSee('সেশন শেষ করুন')
-            ->assertDontSee('Finish / End Session');
+            ->assertSee('অপেক্ষমাণ')
+            ->assertSee('Finish / End Session')
+            ->assertDontSee('সেশন শেষ করুন');
+    }
+
+    public function test_dashboard_widgets_render_in_bangla(): void
+    {
+        tenancy()->initialize($this->tenant);
+        app()->setLocale('bn');
+        Filament::setCurrentPanel('tenantAdmin');
+
+        Livewire::actingAs($this->doctor)
+            ->test(\App\Filament\TenantAdmin\Widgets\TenantStatsOverview::class)
+            ->assertSee('আজকের অ্যাপয়েন্টমেন্ট')
+            ->assertDontSee("Today's Appointments");
+
+        Livewire::actingAs($this->doctor)
+            ->test(\App\Filament\TenantAdmin\Widgets\TodayAppointmentsWidget::class)
+            ->assertSee('আজকের নির্ধারিত অ্যাপয়েন্টমেন্ট')
+            ->assertDontSee("Today's Scheduled Appointments");
+
+        tenancy()->end();
     }
 }

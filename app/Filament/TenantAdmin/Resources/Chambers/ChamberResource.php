@@ -22,6 +22,8 @@ class ChamberResource extends Resource
 
     protected static string|\UnitEnum|null $navigationGroup = 'Settings';
 
+    protected static ?string $navigationLabel = 'Chambers';
+
     public static function canViewAny(): bool
     {
         return auth()->user()?->canManageOps() ?? false;

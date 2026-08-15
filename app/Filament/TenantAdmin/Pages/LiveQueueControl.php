@@ -121,7 +121,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                 $this->markAbsentAction(),
                 $this->endSessionAction(),
             ])
-                ->label(__('Session actions'))
+                ->label('Session actions')
                 ->icon('heroicon-m-ellipsis-horizontal')
                 ->color('gray')
                 ->button()
@@ -133,7 +133,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
             $this->notifyDelayedAction(),
 
             \Filament\Actions\Action::make('newWalkIn')
-                ->label(__('New Walk-In'))
+                ->label('New Walk-In')
                 ->icon('heroicon-o-user-plus')
                 ->visible(fn () => $this->selectedSessionId !== null)
                 ->schema([
@@ -240,7 +240,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
     public function endSessionAction(): Action
     {
         return Action::make('endSession')
-            ->label(__('Finish / End Session'))
+            ->label('Finish / End Session')
             ->color('danger')
             ->outlined()
             ->icon('heroicon-s-flag')
@@ -262,7 +262,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                         ->implode(', '),
                 ]);
             })
-            ->modalSubmitActionLabel(__('End session'))
+            ->modalSubmitActionLabel('End session')
             ->action(function () {
                 if (!$this->activeLiveSession) return;
                 $catchUpCount = 0;
@@ -298,7 +298,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                         ->duration(12000)
                         ->send();
                 } else {
-                    Notification::make()->title('Session Ended')->success()->send();
+                    Notification::make()->title(__('Session Ended'))->success()->send();
                 }
 
                 if ($cancelled->isNotEmpty() && $catchUpCount > 0 && auth()->user()?->canRecordVisitNotes()) {
@@ -338,12 +338,12 @@ class LiveQueueControl extends Page implements HasActions, HasTable
     public function notifyCancelledAction(): Action
     {
         return Action::make('notifyCancelled')
-            ->label(__('Tell cancelled patients'))
+            ->label('Tell cancelled patients')
             ->icon('heroicon-o-chat-bubble-left-right')
             ->color('warning')
-            ->modalHeading(__('Let these patients know'))
+            ->modalHeading('Let these patients know')
             ->modalSubmitAction(false)
-            ->modalCancelActionLabel(__('Done'))
+            ->modalCancelActionLabel('Done')
             ->modalContent(function (): \Illuminate\Contracts\View\View {
                 $bookings = Booking::whereIn('id', $this->cancelledByEndSessionIds)
                     ->orderBy('serial_number')
@@ -369,12 +369,12 @@ class LiveQueueControl extends Page implements HasActions, HasTable
     public function notifyDelayedAction(): Action
     {
         return Action::make('notifyDelayed')
-            ->label(__('Tell waiting patients'))
+            ->label('Tell waiting patients')
             ->icon('heroicon-o-chat-bubble-left-right')
             ->color('warning')
-            ->modalHeading(__('Doctor is running late'))
+            ->modalHeading('Doctor is running late')
             ->modalSubmitAction(false)
-            ->modalCancelActionLabel(__('Done'))
+            ->modalCancelActionLabel('Done')
             ->modalContent(function (): \Illuminate\Contracts\View\View {
                 $bookings = Booking::whereIn('id', $this->delayedNotifyBookingIds)
                     ->orderBy('serial_number')
@@ -516,11 +516,11 @@ class LiveQueueControl extends Page implements HasActions, HasTable
             })
             ->columns([
                 TextColumn::make('serial_number')
-                    ->label('Serial')
+                    ->label(__('Serial'))
                     ->weight('bold')
                     ->formatStateUsing(fn ($state) => "#{$state}"),
                 TextColumn::make('patient_name')
-                    ->label('Patient Details')
+                    ->label(__('Patient Details'))
                     ->description(fn (Booking $record) => $record->patient_phone)
                     ->searchable(),
                 TextColumn::make('status')
@@ -536,13 +536,24 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                         default => 'primary',
                     })
                     ->formatStateUsing(function ($state, Booking $record) {
-                        if ($state === 'skipped') return "Skipped ({$record->skip_count}/2)";
-                        return str_replace('_', ' ', Str::title($state));
+                        if ($state === 'skipped') {
+                            return __('Skipped (:count/2)', ['count' => $record->skip_count]);
+                        }
+
+                        return match ($state) {
+                            'waiting' => __('Waiting'),
+                            'called' => __('Called'),
+                            'in_chamber' => __('In chamber'),
+                            'completed' => __('Completed'),
+                            'cancelled' => __('Cancelled'),
+                            'no_show' => __('No-show'),
+                            default => str_replace('_', ' ', Str::title((string) $state)),
+                        };
                     }),
                 TextColumn::make('retry_queue_position')
-                    ->label('Back in queue')
+                    ->label(__('Back in queue'))
                     ->formatStateUsing(fn ($state, Booking $record) => $state && $record->status === 'skipped'
-                        ? 'After #'.($state - 1)
+                        ? __('After #:serial', ['serial' => $state - 1])
                         : null)
                     ->color('warning')
                     ->visible(fn () => $this->bookings
@@ -556,8 +567,8 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                     ->icon('heroicon-m-megaphone')
                     ->color('primary')
                     ->requiresConfirmation()
-                    ->modalHeading(fn (Booking $record) => "Call #{$record->serial_number} out of turn?")
-                    ->modalDescription('Anyone already called but not yet arrived goes back to waiting — they keep their place and get no skip strike.')
+                    ->modalHeading(fn (Booking $record) => 'Call #'.$record->serial_number.' out of turn?')
+                    ->modalDescription(__('Anyone already called but not yet arrived goes back to waiting — they keep their place and get no skip strike.'))
                     ->modalSubmitActionLabel('Call now')
                     // Hidden while someone is with the doctor: a consult in
                     // progress must never be interrupted by a queue jump.
@@ -592,7 +603,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
 
         app(LiveSessionService::class)->startSession($scheduleSession);
 
-        Notification::make()->title('Session Started')->success()->send();
+        Notification::make()->title(__('Session Started'))->success()->send();
         $this->forgetQueueState();
         $this->dispatchCallAnnounce();
     }
@@ -600,11 +611,11 @@ class LiveQueueControl extends Page implements HasActions, HasTable
     public function startSessionAction(): Action
     {
         return Action::make('startSession')
-            ->label(__('Start live session'))
+            ->label('Start live session')
             ->color('success')
             ->icon('heroicon-m-play')
             ->modalSubmitAction(false)
-            ->modalCancelActionLabel(__('Cancel'))
+            ->modalCancelActionLabel('Cancel')
             ->modalHeading(fn (): string => match ($this->startModalKind()) {
                 'early_during_delay' => __('Start before the announced time?'),
                 default => __('Start after sitting time?'),
@@ -657,7 +668,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
 
             return [
                 Action::make('startNowDuringDelay')
-                    ->label(__('Start now'))
+                    ->label('Start now')
                     ->color('success')
                     ->action(function (): void {
                         $this->unmountAction();
@@ -665,8 +676,8 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                     }),
                 Action::make('waitUntilAnnounced')
                     ->label($announcedAt
-                        ? __('Wait until :time', ['time' => $announcedAt->format('g:i a')])
-                        : __('Wait'))
+                        ? 'Wait until '.$announcedAt->format('g:i a')
+                        : 'Wait')
                     ->color('gray')
                     ->action(fn () => $this->unmountAction()),
             ];
@@ -679,14 +690,14 @@ class LiveQueueControl extends Page implements HasActions, HasTable
 
         return [
             Action::make('markLateFromStart')
-                ->label(__('Mark Late (:minutes min)', ['minutes' => $suggested]))
+                ->label('Mark Late ('.$suggested.' min)')
                 ->color('warning')
                 ->action(function () use ($suggested): void {
                     $this->unmountAction();
                     $this->mountAction('markLate', ['delay_minutes' => $suggested]);
                 }),
             Action::make('justStartLate')
-                ->label(__('Just start'))
+                ->label('Just start')
                 ->color('success')
                 ->action(function (): void {
                     $this->unmountAction();
@@ -726,7 +737,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
         app(LiveSessionService::class)->completeCurrentPatientWithoutAdvancing($this->activeLiveSession);
         $this->forgetQueueState();
 
-        Notification::make()->title('Visit completed')->success()->send();
+        Notification::make()->title(__('Visit completed'))->success()->send();
     }
 
     public function callNextPatientOnly()
@@ -754,8 +765,8 @@ class LiveQueueControl extends Page implements HasActions, HasTable
 
         if (! $called) {
             Notification::make()
-                ->title('Could not call that patient')
-                ->body('Finish the patient currently in the chamber first.')
+                ->title(__('Could not call that patient'))
+                ->body(__('Finish the patient currently in the chamber first.'))
                 ->warning()
                 ->send();
 
@@ -768,7 +779,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
     public function completeVisitAction(): Action
     {
         return VisitNotesFormSchema::configureModal(Action::make('completeVisit'))
-            ->label(__('Complete visit'))
+            ->label('Complete visit')
             ->color('success')
             ->form(function (Action $action): array {
                 if (! auth()->user()?->canRecordVisitNotes()) {
@@ -796,12 +807,12 @@ class LiveQueueControl extends Page implements HasActions, HasTable
 
                 return VisitNotesFormSchema::stateFromRecord($booking?->visitRecord);
             })
-            ->modalHeading(__('Complete visit'))
+            ->modalHeading('Complete visit')
             ->modalDescription(__('Add optional notes, or leave everything blank and tap Complete.'))
-            ->modalSubmitActionLabel(__('Complete'))
+            ->modalSubmitActionLabel('Complete')
             ->extraModalFooterActions([
                 Action::make('editVisitNotes')
-                    ->label(__('Edit'))
+                    ->label('Edit')
                     ->color('gray')
                     ->visible(fn (): bool => (bool) $this->activeLiveSession?->currentBooking?->visitRecord?->hasClinicalContent())
                     ->action(function (): void {
@@ -887,7 +898,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
     {
         $booking = Booking::findOrFail($bookingId);
         app(LiveSessionService::class)->reinstatePatient($booking);
-        Notification::make()->title('Patient Reinstated')->success()->send();
+        Notification::make()->title(__('Patient Reinstated'))->success()->send();
     }
 
     public function addMockPatients()
@@ -895,7 +906,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
         // Demo tooling only — never available outside local, and never mutates the real schedule.
         if (! app()->isLocal()) {
             Notification::make()
-                ->title('Sample patients are only available in local development')
+                ->title(__('Sample patients are only available in local development'))
                 ->danger()
                 ->send();
 
@@ -911,8 +922,10 @@ class LiveQueueControl extends Page implements HasActions, HasTable
 
         if ((int) $session->day_of_week !== $today->dayOfWeek) {
             Notification::make()
-                ->title('This session does not run today')
-                ->body('Pick a session scheduled for ' . $today->translatedFormat('l') . ', or change the session day in Schedules.')
+                ->title(__('This session does not run today'))
+                ->body(__('Pick a session scheduled for :day, or change the session day in Schedules.', [
+                    'day' => $today->translatedFormat('l'),
+                ]))
                 ->warning()
                 ->send();
 
@@ -939,7 +952,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
         }
 
         Notification::make()
-            ->title("Added {$added} Sample Patients")
+            ->title(__('Added :count Sample Patients', ['count' => $added]))
             ->success()
             ->send();
     }
@@ -994,7 +1007,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
         $isExtending = $this->activeLiveSession?->status === 'delayed';
 
         return Action::make('markLate')
-            ->label($isExtending ? __('Add time') : __('Mark Late'))
+            ->label($isExtending ? 'Add time' : 'Mark Late')
             ->color('warning')
             ->icon('heroicon-o-clock')
             ->fillForm(fn (array $arguments): array => [
@@ -1048,7 +1061,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                     : [];
                 
                 $this->forgetQueueState();
-                Notification::make()->title('Session Delayed')->success()->send();
+                Notification::make()->title(__('Session Delayed'))->success()->send();
             })
             ->visible(fn () => $this->selectedSessionId
                 && (! $this->activeLiveSession
@@ -1059,23 +1072,23 @@ class LiveQueueControl extends Page implements HasActions, HasTable
     public function pauseSessionAction(): Action
     {
         return Action::make('pauseSession')
-            ->label(__('Doctor stepped out'))
+            ->label('Doctor stepped out')
             ->color('gray')
             ->icon('heroicon-o-pause')
             ->modalDescription(__('Tickets keep their place. Call next is blocked until the doctor is back.'))
             ->form([
                 TextInput::make('reason')
-                    ->label('Reason (e.g. Prayer break)')
+                    ->label(__('Reason (e.g. Prayer break)'))
                     ->required(),
                 Select::make('estimated_minutes')
-                    ->label('Estimated Duration')
+                    ->label(__('Estimated Duration'))
                     ->options([
-                        10 => '10 minutes',
-                        15 => '15 minutes',
-                        20 => '20 minutes',
-                        30 => '30 minutes',
-                        45 => '45 minutes',
-                        60 => '1 hour',
+                        10 => __('10 minutes'),
+                        15 => __('15 minutes'),
+                        20 => __('20 minutes'),
+                        30 => __('30 minutes'),
+                        45 => __('45 minutes'),
+                        60 => __('1 hour'),
                     ])
                     ->required(),
             ])
@@ -1094,7 +1107,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
     public function resumeSessionAction(): Action
     {
         return Action::make('resumeSession')
-            ->label(__("He's back"))
+            ->label("He's back")
             ->color('success')
             ->icon('heroicon-o-play')
             ->action(function () {
@@ -1161,7 +1174,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                     return;
                 }
 
-                Notification::make()->title('Session Cancelled')->success()->send();
+                Notification::make()->title(__('Session Cancelled'))->success()->send();
             })
             ->visible(fn () => $this->selectedSessionId && (!$this->activeLiveSession || !in_array($this->activeLiveSession->status, ['completed', 'cancelled'])));
     }
@@ -1187,13 +1200,13 @@ class LiveQueueControl extends Page implements HasActions, HasTable
     public function catchUpNotesAction(): Action
     {
         return Action::make('catchUpNotes')
-            ->label(__('Fill in notes (:count)', ['count' => $this->catchUpCount]))
+            ->label('Fill in notes ('.$this->catchUpCount.')')
             ->icon('heroicon-o-pencil-square')
             ->color('warning')
-            ->modalHeading(__('Patients without notes today'))
+            ->modalHeading('Patients without notes today')
             ->modalDescription(__('Tap a patient to add optional visit notes. Nothing is required.'))
             ->modalSubmitAction(false)
-            ->modalCancelActionLabel(__('Close'))
+            ->modalCancelActionLabel('Close')
             ->modalContent(fn (): \Illuminate\Contracts\View\View => view(
                 'filament.tenant-admin.components.catch-up-notes-list',
                 ['bookings' => $this->catchUpBookings],
@@ -1203,16 +1216,16 @@ class LiveQueueControl extends Page implements HasActions, HasTable
     public function catchUpBookingAction(): Action
     {
         return VisitNotesFormSchema::configureModal(Action::make('catchUpBooking'))
-            ->label(__('Add notes'))
+            ->label('Add notes')
             ->form(function (Action $action): array {
                 $bookingId = $action->getArguments()['bookingId'] ?? null;
                 $booking = $bookingId ? Booking::with('patient')->find($bookingId) : null;
 
                 return VisitNotesFormSchema::components($booking?->patient, null, $booking);
             })
-            ->modalHeading(__('Add visit notes'))
+            ->modalHeading('Add visit notes')
             ->modalDescription(__('All fields optional — voice, photo, diagnosis, or prescription.'))
-            ->modalSubmitActionLabel(__('Save notes'))
+            ->modalSubmitActionLabel('Save notes')
             ->action(function (
                 array $data,
                 array $arguments,
