@@ -2410,3 +2410,19 @@
  <reason>A shop window should not reach into the back office. Filament's documented trait pattern is a method, not a colliding static property. A locked door should still look like ChamberQ, not a framework stamp.</reason>
 </decision>
 
+
+## 2026-08-15T14:46:39+0600 — production audit
+
+<decision>
+  <category>Code</category>
+  <context>A full-codebase audit before serving real patients. The findings that mattered were all the same shape: a guard that existed on one path and was assumed everywhere. `PlatformPatientHistoryService` opted out of the tenant scope and then built its filter conditionally, so an account with nothing to match on got an unfiltered `select * from bookings`. Clinic HTML was sanitised in a model hook that `DataImportService` bypasses. Push endpoints were validated for URL *shape* while the server treated them as a *destination*.</context>
+  <action>Fail closed and guard where the code converges. `bookingsForAccount()` returns empty when it has neither a valid phone nor a matching patient id. The three clinic detail blades call `HtmlSanitizer::clean()` inline, matching `rich_text.blade.php`, so the render boundary holds regardless of how the row was written. `App\Support\PushEndpoint` gates both push-subscribe routes (https, no userinfo, port 443, no private/reserved IP literal, no `localhost`/`.local`/`.internal`/single-label host). `InitializeTenancyForTenantHosts` restricts its `Referer` fallback to `livewire/*` on this same host and no longer lets a database fault turn a 404 into a 500. Patient logout invalidates the session. `PatientOtpService` prunes that phone's spent codes on each send. New migration `2026_08_15_160000_add_phone_lookup_indexes` adds `bookings (patient_phone, tenant_id)` and `patients (phone, tenant_id)`.</action>
+  <reason>This repo's own rule is that a rule a future author must remember has already failed. Every fix here moves the check to the place the code has to pass through — the render call, the shared validation rule, the early return — rather than adding a second place to remember. Phone-first index order is the one that serves both the cross-tenant locker and the tenant-scoped portal from a single key.</reason>
+</decision>
+
+<decision>
+  <category>Code</category>
+  <context>Web Push endpoints are attacker-chosen URLs the server later POSTs to, and the patient route is unauthenticated because booking a serial is public. The two robust options were an allowlist of known push hosts (FCM, Mozilla, Apple, WNS) or a deny-rule for internal destinations.</context>
+  <action>Deny-rule, not allowlist, and **no DNS resolution** at validation time.</action>
+  <reason>An allowlist silently kills pocket buzz the day a browser ships a new push host, and this feature already degrades quietly (missing VAPID keys no-op through `NullWebPushSender`) so nobody would notice. Resolving DNS at subscribe time is a race, not a control — the connect-time address is what matters — and it would make subscribing fail whenever DNS is slow. The residual risk (a public hostname whose record points inside) is recorded in `PushEndpoint`'s docblock rather than papered over.</reason>
+</decision>

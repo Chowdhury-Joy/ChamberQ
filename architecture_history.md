@@ -589,3 +589,6 @@
 
 ## 2026-08-15T14:26:41+0600
 - Marketing `/` served by `MarketingController` (sanitised view payload); shared `LocaleController` for `/lang/{locale}`; clinic Website nav group via `getNavigationGroup()`; branded HTML error pages under `resources/views/errors/`.
+
+## 2026-08-15T14:46:39+0600
+- Production audit: `PlatformPatientHistoryService` fails closed (an unfiltered `select * from bookings` was reachable); new `App\Support\PushEndpoint` gates both Web Push subscribe routes against SSRF; `InitializeTenancyForTenantHosts` limits its Referer fallback to same-host `livewire/*` and no longer escalates a DB fault to a 500; clinic body/bio sanitised at render as well as save; patient logout invalidates the session; OTP rows pruned per phone; `2026_08_15_160000_add_phone_lookup_indexes` adds phone-leading indexes on `bookings` and `patients` for the cross-tenant lookups; hardcoded-path debug writers removed from five files.

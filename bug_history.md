@@ -1121,3 +1121,75 @@
  <root_cause>`resources/views/errors/` did not exist, so abort(403)/abort(404) used vendor `errors::minimal`.</root_cause>
  <prevention_rule>Ship branded HTML error pages for 403, 404, 419, 429, 500, and 503. JSON clients must still receive JSON, not the HTML page.</prevention_rule>
 </bug>
+
+## 2026-08-15T14:46:39+0600 — production audit
+
+<bug>
+ <category>Code</category>
+ <symptom>A signed-in ChamberQ patient whose stored phone did not parse as a BD mobile saw every booking of every chamber on the platform at `/me` — name, serial, date, doctor and ticket URL — and every diagnosis and medicine list at `/me/history`.</symptom>
+ <root_cause>`PlatformPatientHistoryService::bookingsForAccount()` built its filter inside `->where(function ($q) { … })` and added constraints only when the phone list or patient-id list was non-empty. Laravel's `addNestedWhereQuery()` discards a nested closure that added no wheres, so with both lists empty the compiled query was `select * from bookings` — and every query in that service runs `withoutGlobalScopes()`, so the tenant scope was not there to catch it either.</root_cause>
+ <prevention_rule>A query that has opted out of the tenant scope must state its own scope before it runs: compute the identifiers first and return empty when there are none. Never let "no filters to add" fall through to an unfiltered query — conditional `where` closures fail open by design.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Code</category>
+ <symptom>Anyone could make the server issue an HTTP POST to an address of their choosing — cloud metadata (`169.254.169.254`), loopback services, private ranges — by booking a serial and registering that URL as their ticket's push endpoint.</symptom>
+ <root_cause>`POST /api/queue/{booking}/push` is unauthenticated by design (the ticket UUID is the gate) and validated `endpoint` with Laravel's `url` rule, which accepts any scheme and any host. `MinishlinkWebPushSender` then POSTs to the stored value whenever the queue advances. `POST /api/staff/push` had the same rule.</root_cause>
+ <prevention_rule>Any user-supplied URL the server will later fetch goes through `App\Support\PushEndpoint` (https, no userinfo, port 443, no private/reserved IP literal, no `localhost`/`.local`/`.internal`/single-label host) before it is stored. `url` validation is a format check, not a destination check.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Code</category>
+ <symptom>Every request on the `web` group ran a `tenants` lookup, so a database fault turned a plain 404 into a 500 — and a caller-set `Referer` header could choose which practice any central page was rendered as.</symptom>
+ <root_cause>`InitializeTenancyForTenantHosts` fell back to the referring page's first path segment on *every* route, not just Livewire's tenant-less `/livewire/update`, did not require the referrer to be on this host, and let the lookup throw.</root_cause>
+ <prevention_rule>Header-derived tenancy is scoped to the one endpoint that has no other source (`livewire/*`) and to same-host referrers. Middleware on the global `web` group must not be able to escalate an error page into a server error — wrap the lookup and continue.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Code</category>
+ <symptom>Department, blog and public-doctor HTML rendered unsanitised on the public clinic site after a disaster-recovery restore.</symptom>
+ <root_cause>`body` / `bio` were cleaned by a model `saving` hook, but `DataImportService` restores with `DB::table()->upsert()`, which fires no model events. The three detail blades echoed the columns with a raw `{!! !!}`.</root_cause>
+ <prevention_rule>Sanitise at the render boundary as well as the write boundary. Any `{!! !!}` of tenant-authored HTML calls `HtmlSanitizer::clean()` inline, the way `tenant/sections/rich_text.blade.php` already did — a guard that only exists on one write path is not a guarantee.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Code</category>
+ <symptom>`patient_otp_codes` grew by one row — a phone number and a bcrypt hash — for every login attempt ever made, and nothing deleted them.</symptom>
+ <root_cause>`PatientOtpService::send()` marked previous codes consumed but never removed them, and no scheduled prune existed.</root_cause>
+ <prevention_rule>A table written on every attempt of an unauthenticated flow needs its delete written at the same time as its insert. Prune the acting key's own spent rows (index-covered), not the whole table on a timer nobody wires up.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Code</category>
+ <symptom>Signing out of the patient locker on a shared phone left the arriving session id valid and reusable.</symptom>
+ <root_cause>`PatientAuthController::logout()` called `session()->forget()` + `regenerateToken()`, which rotates the CSRF token but not the session id.</root_cause>
+ <prevention_rule>Logout calls `session()->invalidate()` then `regenerateToken()`. Forgetting keys is not ending a session.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Code</category>
+ <symptom>The `/me` locker, OTP login, and cross-chamber patient matching each ran a full table scan (plus a filesort on login) of tables that grow with the platform rather than with one chamber.</symptom>
+ <root_cause>Every existing index was tenant-first (`patients (tenant_id, phone)`), but these queries run `withoutGlobalScopes()` and never supply `tenant_id`, so `tenant_id` being leftmost made the index unusable.</root_cause>
+ <prevention_rule>When a column is queried both with and without the tenant, index it phone-first (`(patient_phone, tenant_id)`) so one key serves both. Adding a cross-tenant query means checking that an index exists whose leftmost column it actually supplies.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Code</category>
+ <symptom>Debug blocks left in `bootstrap/app.php`, `MarketingController@home`, `LocaleController@switch`, `ClinicWebsiteResource`, and `marketing/home.blade.php` wrote JSON to the hardcoded path `/Users/chowdhuryjoy/ChamberQ/.cursor/debug-3ddb17.log` on every homepage render, every language switch, every Filament navigation build, and every thrown exception.</symptom>
+ <root_cause>Agent diagnostic scaffolding was committed rather than removed, and none of it was gated by an environment flag.</root_cause>
+ <prevention_rule>No absolute developer path may appear under `app/`, `bootstrap/`, `config/`, `routes/`, `database/` or `resources/` — `grep -rn "/Users/" ` over those directories must return nothing before a release. Diagnostics belong behind a config flag and in `Log`, never `file_put_contents` to a literal path.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Code</category>
+ <symptom>The test suite failed with "no such table: tenants" in one run and passed in the next, blaming whichever class happened to run first.</symptom>
+ <root_cause>`InitializeTenancyForTenantHosts` on the global `web` group made previously DB-free HTTP tests touch the database, and `MarketingLandingPageTest` had no `RefreshDatabase`, so it depended on an earlier class having migrated.</root_cause>
+ <prevention_rule>Any test class that issues a real HTTP request declares `RefreshDatabase`. Adding middleware to the global `web` group means re-checking which test classes now reach the database.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Code</category>
+ <symptom>`POST /api/offline/sync` answered differently for a `live_session_id` belonging to another chamber than for one that did not exist at all.</symptom>
+ <root_cause>`exists:live_sessions,id` ignores the tenant global scope — the same trap `BookingService` already documents for `lab_tests`.</root_cause>
+ <prevention_rule>Never use `exists:` / `unique:` on a tenant-scoped table. Validate the shape only, and resolve the id through the model so the scope decides.</prevention_rule>
+</bug>
