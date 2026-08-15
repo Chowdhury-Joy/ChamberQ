@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 use Stancl\Tenancy\Tenancy;
 use Symfony\Component\HttpFoundation\Response;
+use Throwable;
 
 /**
  * Domain-based tenant hosts (e.g. solo.localhost) must initialize tenancy on
@@ -26,12 +27,24 @@ class InitializeTenancyForTenantHosts
 
         $tenantId = $this->resolveTenantSlug($request);
 
-        if (is_string($tenantId) && $tenantId !== '') {
-            $tenant = Tenant::query()->find($tenantId);
+        if ($tenantId === null) {
+            return $next($request);
+        }
 
-            if ($tenant) {
-                app(Tenancy::class)->initialize($tenant);
-            }
+        // A missing tenant is a 404's job, not a 500's. This runs on the whole
+        // `web` group — including the request that is already on its way to an
+        // error page — so letting a database fault escape here turned every
+        // "page not found" into "server error" and buried the real cause.
+        try {
+            $tenant = Tenant::query()->find($tenantId);
+        } catch (Throwable $e) {
+            report($e);
+
+            return $next($request);
+        }
+
+        if ($tenant) {
+            app(Tenancy::class)->initialize($tenant);
         }
 
         return $next($request);
@@ -51,9 +64,39 @@ class InitializeTenancyForTenantHosts
             return $pathTenant;
         }
 
+        return $this->refererTenant($request);
+    }
+
+    /**
+     * Tenant slug taken from the page the request came from.
+     *
+     * Scoped to Livewire's update endpoint, which is the only reason this
+     * fallback exists: `/livewire/update` carries no `{tenant}` segment, so the
+     * panel it belongs to can only be recovered from the referring page.
+     *
+     * Deliberately not applied to every route. `Referer` is set by the caller,
+     * so a header alone could otherwise decide which practice any central page
+     * was rendered as — including pages whose whole job is that no tenant is
+     * active, where an initialized tenancy re-scopes `User` lookups away from
+     * the central admin and logs them out.
+     */
+    private function refererTenant(Request $request): ?string
+    {
+        if (! $request->is('livewire/*')) {
+            return null;
+        }
+
         $referer = $request->headers->get('referer');
 
         if (! is_string($referer) || $referer === '') {
+            return null;
+        }
+
+        // Only a referrer on this same host may name a tenant — an off-site
+        // page has no business choosing one.
+        $refererHost = parse_url($referer, PHP_URL_HOST);
+
+        if (! is_string($refererHost) || strcasecmp($refererHost, $request->getHost()) !== 0) {
             return null;
         }
 

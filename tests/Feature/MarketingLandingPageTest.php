@@ -3,11 +3,18 @@
 namespace Tests\Feature;
 
 use App\Http\Controllers\MarketingController;
+use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\Request;
 use Tests\TestCase;
 
 class MarketingLandingPageTest extends TestCase
 {
+    // These are real HTTP requests, and the `web` group reaches the database
+    // (tenant resolution, referral capture). Without this the class depended on
+    // whichever test ran before it having migrated, which made the suite fail
+    // in one order and pass in another.
+    use RefreshDatabase;
+
     public function test_central_root_shows_solo_focused_sales_landing(): void
     {
         $response = $this->get('http://localhost/');
