@@ -1066,3 +1066,12 @@
  <root_cause>`scheduleSessionStart()` always added `delay_minutes` to the sitting start. Start set `status` → `active` (yellow off) but left `delay_minutes` at 30, so the ETA engine kept using sitting + delay instead of max(sitting, started_at).</root_cause>
  <prevention_rule>Queue clock lives in `LiveSession::effectiveStartTime()` and `scheduleSessionStart()` must delegate to it: delayed + not started → sitting + delay; started → max(sitting, started_at) + pause; never zero `delay_minutes` on Start.</prevention_rule>
 </bug>
+
+## 2026-08-15T13:40:39+0600
+
+<bug>
+ <category>Code</category>
+ <symptom>Mark Late on a delayed sitting could be shortened (30 down to 15) if anything called `markDelay()` besides the Filament form, which would unsay the time patients were already told.</symptom>
+ <root_cause>The “only a larger total” rule lived on the form options and a validation closure. `LiveSessionService::markDelay()` wrote whatever minutes it was given.</root_cause>
+ <prevention_rule>`markDelay()` must refuse a new total that is not larger than the current `delay_minutes` when the sitting is already `delayed`. Form options are a convenience; the service is the lock.</prevention_rule>
+</bug>

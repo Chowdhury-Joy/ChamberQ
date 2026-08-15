@@ -503,6 +503,13 @@ class LiveSessionService
         DB::transaction(function () use ($liveSession, $minutes) {
             $liveSession = $this->lockSession($liveSession);
 
+            $current = (int) $liveSession->delay_minutes;
+            if ($liveSession->status === 'delayed' && $minutes <= $current) {
+                throw new \InvalidArgumentException(
+                    'Delay must be longer than the minutes already announced.'
+                );
+            }
+
             $liveSession->update([
                 'status' => 'delayed',
                 'delay_minutes' => $minutes,

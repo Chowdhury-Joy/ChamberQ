@@ -187,6 +187,91 @@ class HonestLateSittingTest extends TestCase
             ->assertHasActionErrors(['delay_minutes']);
     }
 
+    public function test_mark_delay_service_rejects_a_smaller_or_equal_total(): void
+    {
+        $live = $this->delayedSession(30);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('longer');
+
+        $this->service->markDelay($live, 15);
+    }
+
+    public function test_start_after_sitting_time_asks_before_starting(): void
+    {
+        LiveSession::create([
+            'schedule_session_id' => $this->session->id,
+            'session_date' => $this->today,
+            'status' => 'scheduled',
+        ]);
+        $this->waitingBooking(1);
+
+        Carbon::setTestNow(Carbon::parse($this->today.' 17:20:00'));
+
+        $this->queuePage()
+            ->call('mountStartSessionOrRun')
+            ->assertActionMounted('startSession');
+
+        $this->assertSame('scheduled', LiveSession::first()->fresh()->status);
+    }
+
+    public function test_just_start_after_sitting_time_uses_now_not_sitting_start(): void
+    {
+        LiveSession::create([
+            'schedule_session_id' => $this->session->id,
+            'session_date' => $this->today,
+            'status' => 'scheduled',
+        ]);
+        $booking = $this->waitingBooking(1);
+
+        Carbon::setTestNow(Carbon::parse($this->today.' 17:20:00'));
+
+        $this->queuePage()
+            ->call('mountStartSessionOrRun')
+            ->call('doStartSession');
+
+        $live = LiveSession::first()->fresh();
+        $this->assertSame('active', $live->status);
+
+        $estimate = $this->service->estimatedTimeForBooking($booking->fresh());
+        $expected = Carbon::parse($this->today.' 17:20:00');
+        $this->assertTrue(
+            $estimate['actual_estimate']->diffInMinutes($expected) <= 1,
+            'Expected estimate from 5:20, got '.$estimate['actual_estimate']->toDateTimeString()
+        );
+    }
+
+    public function test_start_before_sitting_time_starts_without_asking(): void
+    {
+        LiveSession::create([
+            'schedule_session_id' => $this->session->id,
+            'session_date' => $this->today,
+            'status' => 'scheduled',
+        ]);
+
+        Carbon::setTestNow(Carbon::parse($this->today.' 16:50:00'));
+
+        $this->queuePage()
+            ->call('mountStartSessionOrRun')
+            ->assertActionNotMounted('startSession');
+
+        $this->assertSame('active', LiveSession::first()->fresh()->status);
+    }
+
+    public function test_start_inside_announced_delay_asks_before_starting(): void
+    {
+        $this->delayedSession(30);
+        $this->waitingBooking(1);
+
+        Carbon::setTestNow(Carbon::parse($this->today.' 17:20:00'));
+
+        $this->queuePage()
+            ->call('mountStartSessionOrRun')
+            ->assertActionMounted('startSession');
+
+        $this->assertSame('delayed', LiveSession::first()->fresh()->status);
+    }
+
     public function test_mark_late_hidden_once_session_is_active(): void
     {
         LiveSession::create([

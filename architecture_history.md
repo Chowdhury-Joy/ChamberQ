@@ -577,3 +577,6 @@
 
 ## 2026-08-15T13:06:00+0600
 - Honest late sitting: `SittingPrompt` service + sticky callouts on Daily Roster / Live Queue / Consult Screen; `LiveSession::effectiveStartTime()` clock rule; Start confirmation modals; Mark Late on `delayed` sittings (Add time, larger total only).
+
+## 2026-08-15T13:40:39+0600
+- `LiveSessionService::markDelay()` refuses a delay total that is not larger than what was already announced, so the “Add time only” rule cannot be skipped at the service.

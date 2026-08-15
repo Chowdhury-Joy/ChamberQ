@@ -611,7 +611,9 @@ class DailyRoster extends Page implements HasTable, HasForms
 
     /**
      * Today's schedule sessions that can still be marked late — same rule as
-     * Live Queue Control: no live row yet, or the live row is still scheduled.
+     * Live Queue Control: no live row yet, or the live row is still scheduled
+     * or delayed (Add time, larger total only). Once the sitting is active,
+     * Mark Late is gone.
      *
      * @return array<int, string>
      */
