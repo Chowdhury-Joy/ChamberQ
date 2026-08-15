@@ -562,3 +562,15 @@
 
 ## 2026-08-15T00:23:45+0600
 - Super Admin panel UX follow-up: restored the deleted `.backup-card-body` padding rule (both cards were rendering edge-to-edge); keyed the platform restore submit on the dry-run state so the danger colour actually paints, plus a red callout and `wire:confirm` naming what gets wiped; Tenants list row actions moved into an `ActionGroup` with the finance columns toggled off by default and the name column wrapping, so Edit is reachable without horizontal scroll at 1280 and 375.
+
+## 2026-08-15T02:15:06+0600
+- Super Admin Create Tenant keeps field defaults via `fillPartially` (a full `fill()` had wiped Plan Tier / billing / SMS / theme / locale). Tenant form is one column of fieldsets; Amount preview is labeled large/semibold figures (empty snapshot inputs removed); module unit prices sit on each checkbox. Research date/plan filters use Filament input chrome so they match the 36px panel controls.
+
+## 2026-08-15T02:49:20+0600
+- Extracted Filament admin chrome into `resources/css/filament/shared/admin-shell.css`; tenantAdmin/theme.css now imports it then keeps `.cs-*` consult/Rx-desk styles. Super Admin gained `superAdmin/theme.css` plus the tenant-admin shell (no topbar, collapsed sidebar, outlined ungrouped row actions). Custom `amber`/`sky` panel colours removed.
+
+## 2026-08-15T09:49:04+0600
+- Sidebar expand/collapse toggle is a hamburger (`Heroicon::OutlinedBars3`) on every admin panel via `UsesHamburgerSidebarToggle`; nav-group chevrons unchanged.
+
+## 2026-08-15T10:30:45+0600
+- Pocket buzz on the live-queue ticket: `booking_push_subscriptions`, `SendQueueApproachPushes` (afterResponse, Bangla, no SMS/WhatsApp), `POST /api/queue/{booking}/push`, service worker `push` handler (`clinic-shell-v7`).

@@ -83,7 +83,7 @@ class PWAController extends Controller
         $scopePrefixJs = json_encode(rtrim($scopePrefix, '/') ?: '');
 
         $sw = <<<JS
-const CACHE_NAME = 'clinic-shell-v6';
+const CACHE_NAME = 'clinic-shell-v7';
 const SCOPE_PREFIX = {$scopePrefixJs};
 const PRECACHE = ['/css/theme.css', '/js/chamberq-offline.js'];
 
@@ -136,6 +136,27 @@ self.addEventListener('fetch', event => {
     event.respondWith(
         caches.match(request).then(cached => cached || fetch(request))
     );
+});
+
+self.addEventListener('push', event => {
+    event.waitUntil((async () => {
+        let data = {};
+        try { data = event.data ? event.data.json() : {}; } catch (e) {}
+        const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+        const ticketOpen = windows.some(c => c.visibilityState === 'visible' && String(c.url).includes('/bookings/'));
+        if (ticketOpen) return;
+        await self.registration.showNotification(data.title || '', {
+            body: data.body || '',
+            data: { url: data.url || '/' },
+            vibrate: [200, 100, 200],
+        });
+    })());
+});
+
+self.addEventListener('notificationclick', event => {
+    event.notification.close();
+    const url = (event.notification.data && event.notification.data.url) || '/';
+    event.waitUntil(self.clients.openWindow(url));
 });
 JS;
 

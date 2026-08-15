@@ -3,11 +3,15 @@
 namespace App\Providers;
 
 use App\Contracts\SmsGateway;
+use App\Contracts\WebPushSender;
 use App\Http\Responses\FilamentLoginResponse;
 use App\Support\RuntimeDirectories;
 use App\Support\TenancyUrl;
 use App\Services\Sms\HttpSmsGateway;
 use App\Services\Sms\LogSmsGateway;
+use App\Services\WebPush\MinishlinkWebPushSender;
+use App\Services\WebPush\NullWebPushSender;
+use App\Services\WebPush\RecordingWebPushSender;
 use Filament\Auth\Http\Responses\Contracts\LoginResponse as LoginResponseContract;
 use Filament\Facades\Filament;
 use Filament\Support\Facades\FilamentView;
@@ -37,6 +41,23 @@ class AppServiceProvider extends ServiceProvider
                     'Unsupported SMS_DRIVER ['.config('sms.driver').']. Use log or http.'
                 ),
             };
+        });
+
+        $this->app->singleton(RecordingWebPushSender::class);
+
+        $this->app->singleton(WebPushSender::class, function ($app) {
+            if ($app->environment('testing')) {
+                return $app->make(RecordingWebPushSender::class);
+            }
+
+            $public = (string) config('webpush.vapid.public_key');
+            $private = (string) config('webpush.vapid.private_key');
+
+            if ($public === '' || $private === '') {
+                return new NullWebPushSender;
+            }
+
+            return new MinishlinkWebPushSender;
         });
     }
 

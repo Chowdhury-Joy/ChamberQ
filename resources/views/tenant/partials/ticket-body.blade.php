@@ -71,6 +71,19 @@
                 <p class="now-serving" id="nowServing" aria-live="polite">—</p>
                 <p class="text-muted" id="aheadOfYou" aria-live="polite"></p>
             </div>
+
+            <audio id="ticketChime" src="{{ $tenant->callAudioUrl() }}" preload="auto" hidden></audio>
+
+            <div class="eta-box no-print" id="pocketAlertCard" style="margin-top:1rem;text-align:left;">
+                <p style="font-weight:700;margin:0 0 0.35rem;">{{ __('Get a buzz even if the phone is locked', [], 'bn') }}</p>
+                <p class="text-muted" style="margin:0 0 0.75rem;font-size:0.9rem;">{{ __('If you go for tea, we can still tell you. This is only for this serial.', [], 'bn') }}</p>
+                <p class="sr-only">{{ __('Start walking back — you are soon.', [], 'bn') }}</p>
+                <p class="text-muted" id="pocketAlertDenied" hidden style="margin:0;font-size:0.9rem;">{{ __('We cannot reach a locked phone. Come at your ticket time, or sit by the screen.', [], 'bn') }}</p>
+                <div id="pocketAlertActions" style="display:flex;flex-wrap:wrap;gap:0.5rem;">
+                    <button type="button" class="btn btn-primary" id="pocketAlertAllow">{{ __('Notify me', [], 'bn') }}</button>
+                    <button type="button" class="btn btn-back" id="pocketAlertLater">{{ __('Not now', [], 'bn') }}</button>
+                </div>
+            </div>
             @endif
 
             <div style="margin-top:1.5rem">
@@ -195,10 +208,95 @@
             oneAhead: @json(__('1 person ahead of you')),
             manyAhead: @json(__(':count people ahead of you')),
             copied: @json(__('Link copied')),
+            twoAway: @json(__('Start walking back — you are soon.', [], 'bn'), JSON_UNESCAPED_UNICODE),
+            stayClose: @json(__('You are next — stay close.', [], 'bn'), JSON_UNESCAPED_UNICODE),
+            yourTurn: @json(__('It is your turn! Please enter the chamber.', [], 'bn'), JSON_UNESCAPED_UNICODE),
         };
 
         @if ($hasLiveQueue)
+        const queueApproach = true;
         const statusUrl = @json(tenant_web_route('queue.status', $booking, absolute: false));
+        const pushUrl = @json(tenant_web_route('queue.push', $booking, absolute: false));
+        const csrfToken = @json(csrf_token());
+        const vapidPublicKey = @json((string) config('webpush.vapid.public_key'));
+        const chime = document.getElementById('ticketChime');
+        const STAGE_RANK = { two_away: 1, next: 2, called: 3 };
+        let lastAlertStage = 0;
+
+        function unlockChime() {
+            if (!chime) return;
+            chime.play().then(() => { chime.pause(); chime.currentTime = 0; }).catch(() => {});
+        }
+        document.addEventListener('pointerdown', unlockChime, { once: true });
+
+        function buzz(stage) {
+            const rank = STAGE_RANK[stage] || 0;
+            if (rank <= lastAlertStage) return;
+            lastAlertStage = rank;
+            try { navigator.vibrate([200, 100, 200]); } catch (e) {}
+            if (chime) chime.play().catch(() => {});
+        }
+
+        function urlBase64ToUint8Array(base64String) {
+            const padding = '='.repeat((4 - base64String.length % 4) % 4);
+            const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+            const raw = atob(base64);
+            const output = new Uint8Array(raw.length);
+            for (let i = 0; i < raw.length; ++i) output[i] = raw.charCodeAt(i);
+            return output;
+        }
+
+        (function setupPocketAlerts() {
+            const card = document.getElementById('pocketAlertCard');
+            const actions = document.getElementById('pocketAlertActions');
+            const denied = document.getElementById('pocketAlertDenied');
+            const allow = document.getElementById('pocketAlertAllow');
+            const later = document.getElementById('pocketAlertLater');
+            if (!card || !actions || !denied || !allow || !later) return;
+
+            const hideActions = () => { actions.hidden = true; };
+            later.addEventListener('click', hideActions);
+
+            if (!vapidPublicKey) {
+                hideActions();
+                return;
+            }
+
+            allow.addEventListener('click', async () => {
+                unlockChime();
+                if (!('Notification' in window) || !('serviceWorker' in navigator) || !('PushManager' in window)) {
+                    denied.hidden = false;
+                    hideActions();
+                    return;
+                }
+                try {
+                    const perm = await Notification.requestPermission();
+                    if (perm !== 'granted') {
+                        denied.hidden = false;
+                        hideActions();
+                        return;
+                    }
+                    const reg = await navigator.serviceWorker.ready;
+                    const sub = await reg.pushManager.subscribe({
+                        userVisibleOnly: true,
+                        applicationServerKey: urlBase64ToUint8Array(vapidPublicKey),
+                    });
+                    await fetch(pushUrl, {
+                        method: 'POST',
+                        headers: {
+                            'Accept': 'application/json',
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': csrfToken,
+                        },
+                        body: JSON.stringify(sub.toJSON()),
+                    });
+                    hideActions();
+                } catch (e) {
+                    denied.hidden = false;
+                    hideActions();
+                }
+            });
+        })();
 
         async function refreshQueue() {
             try {
@@ -246,10 +344,11 @@
                     banner.style.color = '#991b1b';
                     banner.textContent = @json(__('You missed your call (No Show).'));
                 } else if (data.is_called) {
+                    buzz('called');
                     banner.style.display = 'block';
                     banner.style.backgroundColor = '#dcfce7';
                     banner.style.color = '#166534';
-                    banner.textContent = @json(__('It is your turn! Please enter the chamber.'));
+                    banner.textContent = i18n.yourTurn;
                 } else if (data.status === 'skipped') {
                     banner.style.display = 'block';
                     banner.style.backgroundColor = '#ffedd5';
@@ -265,6 +364,18 @@
                     banner.style.backgroundColor = '#fef3c7';
                     banner.style.color = '#92400e';
                     banner.textContent = @json(__('Doctor is delayed by :minutes minutes.', ['minutes' => '__MIN__'])).replace('__MIN__', data.delay_minutes);
+                } else if (data.status === 'waiting' && n <= 1) {
+                    buzz('next');
+                    banner.style.display = 'block';
+                    banner.style.backgroundColor = '#dbeafe';
+                    banner.style.color = '#1e40af';
+                    banner.textContent = i18n.stayClose;
+                } else if (data.status === 'waiting' && n === 2) {
+                    buzz('two_away');
+                    banner.style.display = 'block';
+                    banner.style.backgroundColor = '#fef3c7';
+                    banner.style.color = '#92400e';
+                    banner.textContent = i18n.twoAway;
                 }
 
             } catch (e) { /* offline: keep the last known value */ }

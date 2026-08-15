@@ -30,6 +30,8 @@ class ProductionReadinessTest extends TestCase
             'sms.driver' => 'http',
             'filesystems.default' => 's3',
             'session.secure' => true,
+            'webpush.vapid.public_key' => 'B'.str_repeat('x', 86),
+            'webpush.vapid.private_key' => str_repeat('y', 43),
         ];
     }
 
@@ -75,6 +77,7 @@ class ProductionReadinessTest extends TestCase
             'sms goes to a log' => ['SMS_DRIVER', ['sms.driver' => 'log'], $blocker],
             'media on the server disk' => ['FILESYSTEM_DISK', ['filesystems.default' => 'local'], $warning],
             'insecure session cookie' => ['SESSION_SECURE_COOKIE', ['session.secure' => false], $warning],
+            'missing vapid keys' => ['VAPID', ['webpush.vapid.public_key' => '', 'webpush.vapid.private_key' => ''], $warning],
         ];
     }
 

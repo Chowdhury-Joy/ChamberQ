@@ -40,6 +40,7 @@ class BackupTableMap
         // importing live_sessions first tripped the FK on MySQL, and deleting
         // bookings first tripped it again on any chamber with a live queue.
         'bookings',
+        'booking_push_subscriptions',
         'chamber_cash_entries',
         'live_sessions',
         'booking_lab_test',
@@ -99,6 +100,7 @@ class BackupTableMap
             'blog_posts',
             'live_sessions',
             'bookings',
+            'booking_push_subscriptions',
             'chamber_cash_entries',
             'booking_lab_test',
             'visit_records',

@@ -12,6 +12,7 @@ use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PrescriptionController;
 use App\Http\Controllers\PrescriptionShareController;
 use App\Http\Controllers\PWAController;
+use App\Http\Controllers\QueuePushController;
 use App\Http\Controllers\QueueStatusController;
 use App\Http\Controllers\ScreenController;
 use App\Http\Controllers\VisitMediaController;
@@ -168,6 +169,10 @@ $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
     Route::get('/api/queue/{booking}', [QueueStatusController::class, 'show'])
         ->middleware(['throttle:120,1', 'tenant.module:live_queue'])
         ->name($routeName('queue.status'));
+
+    Route::post('/api/queue/{booking}/push', [QueuePushController::class, 'store'])
+        ->middleware(['throttle:20,1', 'tenant.module:live_queue'])
+        ->name($routeName('queue.push'));
 
     // Stable "always today" outdoor TV links — bookmark once per schedule session.
     Route::get('/screen/{session}', [ScreenController::class, 'showToday'])

@@ -2324,3 +2324,54 @@
   <action>Restore the `.backup-card-body` padding rule. Key the platform restore submit on the dry-run state (`wire:key="restore-submit-dry|live"`) so Livewire replaces the button instead of morphing it, and add a red callout plus a `wire:confirm` naming exactly what a live replace wipes. On the Tenants list, move Edit + Download chamber backup into a row `ActionGroup`, start Modules / Marketer / Setup due / Monthly due / Domains toggled off, push Tier and Billing to `sm`, and wrap the name column.</action>
   <reason>The colour cue alone was not survivable: the class was correct and the paint was stale, so the guard has to be something rendered fresh (callout) or handled outside CSS (confirm dialog). For the table, `visibleFrom` is viewport-based and cannot account for the ~380px sidebar, so the only reliable lever was reducing total column width — and every column now hidden is still one toggle away and already visible on tenant edit or Client Health.</reason>
 </decision>
+
+## 2026-08-15T02:15:06+0600
+
+<decision>
+  <category>UI/UX</category>
+  <context>A visual pass on Super Admin Create/Edit Tenant found mismatched two-column fieldsets leaving hundreds of pixels of dead space, a 250-character module-price helper that outranked the checkboxes, and Research filters that did not match Filament control height.</context>
+  <action>Stack the tenant form as one column of fieldsets (each fieldset still uses its own two-column grid for its fields). Put module unit prices on each checkbox via `PlanPricingService::modulePriceDescriptions()` and leave the helper as the Clinic caveat only. Shorten the longest remaining helpers. Render Research date/plan filters with Filament `.fi-input-wrp` / `.fi-input` / `.fi-select-input` instead of a second hand-rolled control style.</action>
+  <reason>Pairing a tall Referral block with a short Appearance block made the money preview look like leftover space. Putting prices next to each module is scannable; a run-on helper is not. Reusing Filament chrome means Research cannot drift to a third height.</reason>
+</decision>
+
+<decision>
+  <category>Code</category>
+  <context>Create Tenant declared defaults for Plan Tier, Slot Cap, Billing, SMS, theme, and locale, but Super Admin still saw “Select an option” / empty boxes because referral prefill called `form->fill($prefill)`.</context>
+  <action>Move referral prefill to `afterFill()` and apply it with `fillPartially(..., shouldFillStateWithNull: false)`. Do not call `fill()` with a partial array after the parent has already hydrated defaults. Custom-domain repeater starts at zero rows so an unused optional domain cannot fail Create.</action>
+  <reason>`fill()` replaces the whole Livewire state; `getState()` during mount would also validate empty required fields. `fillPartially` is the Filament API for “overlay these keys only.”</reason>
+</decision>
+
+## 2026-08-15T02:49:20+0600
+
+<decision>
+  <category>UI/UX</category>
+  <context>The 2026-08-13T21:43:23 Getwebfield-style tenant-admin shell closed with “Super Admin and marketer panels are unchanged.” Super Admin at `/admin` was still stock Filament (Inter, global topbar, expanded sidebar, no `--fi-shell-*` tokens). The owner now wants Super Admin to follow that shell. Marketer (`/partner`) was not asked for.</context>
+  <action>Port the tenant-admin chrome to Super Admin only: extract `resources/css/filament/shared/admin-shell.css`, add `superAdmin/theme.css`, `viteTheme()`, `topbar(false)`, `maxContentWidth(Width::Full)`, `sidebarCollapsibleOnDesktop()` with the same localStorage/Alpine closed-by-default hooks, and outlined ungrouped table row actions. Do not port `HasPrimarySaveAndDangerDelete` (tenant edit already has Confirm setup/monthly/prepaid, Top up SMS, Download backup, and Restore/Delete behind Dangerous), database notifications, the offline-shell hook, or page-builder button styling. Marketer panel stays stock Filament.</action>
+  <reason>One operator desk should not learn two admin chrome languages. Tenant edit’s six contextual actions do not fit a Save-as-header / Delete-in-footer page. Changing `/partner` without being asked would be scope creep.</reason>
+</decision>
+
+<decision>
+  <category>UI/UX</category>
+  <context>Super Admin dashboard registered custom `amber` and `sky` palettes. Live `--amber-600` was byte-identical to Filament `--warning-600`, and `--sky-600` sat a hair from `--info-600`, so “Commissions owed” (a liability) and “Net platform revenue” (profit) painted the same colour, and two unrelated counts shared the other.</context>
+  <action>Drop the custom keys; keep only `'primary' => Color::Blue`. Reassign the nine dashboard stats onto Filament’s six stock keys: warning only on commissions owed, primary only on net platform revenue, gray for plain counts, success/info unchanged. Custom-domains badge on Recent Tenants becomes gray beside the info platform-path badge.</action>
+  <reason>Colour should carry meaning. Repeating gray on three plain counts is the same category; repeating amber/warning across a liability and a profit figure was an accident.</reason>
+</decision>
+
+## 2026-08-15T09:49:04+0600
+
+<decision>
+  <category>UI/UX</category>
+  <context>The collapsed-sidebar control next to the page title (DASHBOARD) was Filament’s default right-pointing chevron. Staff read that as “go forward”, not “open the menu” — the three-line hamburger is the pattern they already know from phones.</context>
+  <action>Register `Heroicon::OutlinedBars3` for Filament’s sidebar expand/collapse icon aliases (including RTL) on every admin panel: tenant (path + domain), Super Admin, and marketer. Shared in `UsesHamburgerSidebarToggle`. Nav-group chevrons stay chevrons. Marketer chrome is otherwise unchanged.</action>
+  <reason>One menu button, one meaning. A chevron next to a title looks like breadcrumb navigation; a hamburger looks like a menu. Putting the mapping on every panel so a later shell change cannot reintroduce the chevron on one desk.</reason>
+</decision>
+
+## 2026-08-15T10:30:45+0600
+
+<decision>
+  <category>Business_Logic</category>
+  <context>Patients leave for tea with the ticket minimised and the phone locked. SMS will not be used for “you’re next”, and WhatsApp will not be used for this case either (human-tapped wa.me stays for other stages). A Play Store patient app is out of scope — the ticket is the app.</context>
+  <action>Open ticket: Bangla banners plus vibrate (and a chime if the browser allows) at two people away, next (ahead ≤ 1), and called. Closed/locked phone: one Allow tap stores a Web Push subscription on that ticket UUID; Call next then pushes Bangla copy. The service worker skips the system notification when a visible /bookings/ tab already exists, so the page buzzes once. If Allow is blocked, iPhone without Add-to-Home-Screen, or VAPID keys are missing, copy is honest: come at ticket time or sit by the TV. Staff still only tap Call next. Front-door-only tickets omit this. SendQueueApproachPushes uses afterResponse because production has no queue worker. Same stage is never sent twice.</action>
+  <reason>The realistic patient pockets the phone. SMS costs credits and was ruled out for this case; WhatsApp Business API was ruled out. Web Push on Android Chrome after one permission tap is the only way to reach a locked phone from the ticket. Bangla is forced on this copy so an English admin locale cannot send English into a patient’s pocket.</reason>
+</decision>
+

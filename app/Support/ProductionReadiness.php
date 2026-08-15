@@ -178,6 +178,21 @@ class ProductionReadiness
                         : null;
                 },
             ],
+            [
+                'severity' => self::SEVERITY_WARNING,
+                'key' => 'VAPID',
+                'fix' => 'Generate a key pair with php -r \'require "vendor/autoload.php"; echo json_encode(Minishlink\\WebPush\\VAPID::createVapidKeys()), PHP_EOL;\' and set VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY',
+                'detect' => function (): ?string {
+                    $public = (string) config('webpush.vapid.public_key');
+                    $private = (string) config('webpush.vapid.private_key');
+
+                    if ($public !== '' && $private !== '') {
+                        return null;
+                    }
+
+                    return 'VAPID keys are empty. Pocket buzz on a locked phone will not fire (the ticket can still vibrate while it is open). Open-tab alerts do not need these keys.';
+                },
+            ],
         ];
     }
 }

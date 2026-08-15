@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-15T00:23:45+0600
+Last Updated: 2026-08-15T10:30:45+0600
 
 ## Full Site Map
 
@@ -84,6 +84,7 @@ Available under both platform path (`/{slug}/api/…`) and custom domain (`/api/
 | `GET /api/conditions/search` | Coded condition autocomplete for doctor diagnosis picker | doctor auth, same tenant (throttled) |
 | `POST /api/bookings` | Create booking | public (throttled; blocked if billing closed) |
 | `GET /api/queue/{booking}` | Ticket queue poll by booking UUID | public (throttled) |
+| `POST /api/queue/{booking}/push` | Store a Web Push subscription for pocket buzz on this ticket (live queue only; no SMS) | public (throttled) |
 | `GET /api/screen/{session}` | Outdoor TV poll (always today) | public (throttled) |
 | `GET /api/screen/{session}/{date}` | Screen poll for a specific date (legacy) | public (throttled) |
 | `POST /api/bookings/{booking}/sms/cancellation` | Staff-tapped cancellation SMS (prepaid; gated by doctor `cancellation` SMS pref) | auth, same tenant (ops/queue/visit-notes), throttled |
@@ -132,7 +133,7 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 ### Patient → book serial → ticket
 1. Open `/{slug}/` or custom domain home — see doctor brand + Book CTA. On clinic-tier sites the Book Appointment CTA now also sits in the header nav (desktop) and the mobile drawer, per the Clireo design port; solo keeps its locked layout.
 2. Book flow — chamber/doctor when needed, then **When can you come?** (only dates with seats left, soonest first; earliest option highlighted). **Your details** under the booking summary strip (Name / Phone / NID optional / Different WhatsApp / Who for?; **Share with other ChamberQ doctors**); **Change date** on the summary strip (or Back). If the number is known, choose **Who for?** inline — masked initials (`F. R., 34`); picking one stands the name field down. Clinic hero form can POST name/phone into the session first. A ChamberQ patient login on the same host prefills name/phone.
-3. Submit → ticket at `…/bookings/{uuid}`. Goal: proof of serial; share via WhatsApp/copy, or Print / Save as PDF for a paper or file copy.
+3. Submit → ticket at `…/bookings/{uuid}`. Goal: proof of serial; share via WhatsApp/copy, or Print / Save as PDF for a paper or file copy. With **Live queue**, the ticket also offers **জানাতে দিন** (Bangla): Allow once so the phone can buzz when the serial is two away / next / called, even if the ticket is closed. If Allow is blocked, the copy says to come at ticket time or sit by the TV.
 4. Optional: PWA install scoped to tenant path or custom domain.
 
 ### Patient → Find a doctor (ChamberQ directory)
@@ -153,7 +154,7 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 
 ### New tenant → go live (Super Admin)
 - **Trigger:** Sales closes a doctor/clinic.
-- **Steps:** Create Tenant with URL **slug** (e.g. `drkarim`; rejected if already taken or if it matches a reserved path prefix such as `admin` / `book` / `find` / `me`) → optional custom **domain** → set `plan_tier` (**Maestro** or Clinic) → tick **Product modules** (Front door / Live queue / Prescription; default all on) → tick launch offers if honouring them (Prescription free for life / prepaid-year 50% setup) → attach **marketer** / **discount code**, read the amount + commission preview → set SMS, `billing_status` → **doctor login email** (required; creates doctor user) → hand off admin + doctor logins.
+- **Steps:** Create Tenant with URL **slug** (e.g. `drkarim`; rejected if already taken or if it matches a reserved path prefix such as `admin` / `book` / `find` / `me`) and **doctor login email** (required; creates doctor user). Plan Tier starts as **Maestro**, billing as trial, SMS as 0, all three modules on, theme and locale filled — change them only when the deal is not the default. Optional custom **domain** (repeater starts empty). Tick launch offers if honouring them (Prescription free for life / prepaid-year 50% setup) → attach **marketer** / **discount code**, read the labeled list/due + partner preview → Create → hand off admin + doctor logins.
 - **URLs:** Platform `/{slug}/…`; after custom domain DNS, also `drkarim.com/…` at root.
 - **Modules:** Front door alone = website + book + day list (no outdoor TV / Call next / come-around). Live queue adds TV + live ticket. Prescription adds consult/Rx. Booking confirmation SMS is optional (credits + doctor toggle).
 - **Success:** Enabled module routes work; disabled ones 404. Admin at `/{slug}/admin` (or `/admin` on custom domain).
@@ -178,7 +179,7 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 ### Open clinic day → run queue
 - **Trigger:** Session day starts.
 - **Steps:** Queue runner (staff or doctor per Branding **Who runs the queue**) → Live Queue Control → session auto-selected when today has only one, else pick from the dropdown/session cards → **Open screen / Copy link** once onto the waiting-room TV (stable URL, no date — bookmark and reuse every day for that session) → Start → Call → Patient arrived → Complete. A no-response patient is skipped from the current-call card (twice, then no-show); any waiting or skipped patient can be called out of turn via **Call now** on their row (unavailable while someone is in the chamber). Mark Late, Pause, Resume, Cancel session and Finish/End session all live behind the header's **Session actions** menu; **New Walk-In** is the standalone header action. **Mark Late** is also on **Daily Roster** (table header) so staff can warn waiting patients before opening Live Queue Control or pressing Start — same delay SMS / WhatsApp hand-off. **Cancel session (doctor absent)** and **Finish/End session** behave identically toward patients: both name the count and the patients in their confirmation, both leave a patient already in the chamber as *completed* rather than cancelled, and both surface **Tell cancelled patients** afterwards for a per-patient WhatsApp/SMS hand-off. Amber **patients today without notes** banner at the top when completed patients lack notes (**Fill in now** opens the catch-up list). Doctor opens **Consult Screen** for auto-updating patient context (no search). After the visit, **Daily Roster → Collect fee** records cash/bKash/Nagad/card (or waive); **Operations → Cashbook** is where rent/tea/salary go out.
-- **Success:** Outdoor screen matches control panel; consult screen shows the patient in chamber; the summary strip's waiting count and projected finish time match the table.
+- **Success:** Outdoor screen matches control panel; consult screen shows the patient in chamber; the summary strip's waiting count and projected finish time match the table. Patients who tapped **জানাতে দিন** get a Bangla pocket buzz at two away / next / called without staff sending SMS or WhatsApp.
 
 ### Tell waiting patients the doctor is late
 - **Trigger:** Doctor will arrive late (call from traffic, emergency, etc.) and patients are already booked for today.

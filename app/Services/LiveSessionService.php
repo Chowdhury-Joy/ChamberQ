@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Jobs\SendDoctorLateNotices;
+use App\Jobs\SendQueueApproachPushes;
 use App\Models\Booking;
 use App\Models\Doctor;
 use App\Models\LiveSession;
@@ -56,7 +57,10 @@ class LiveSessionService
                 $this->advanceQueue($liveSession);
             }
 
-            return $liveSession->fresh();
+            $fresh = $liveSession->fresh();
+            $this->dispatchApproachPushes($fresh);
+
+            return $fresh;
         });
     }
 
@@ -65,11 +69,15 @@ class LiveSessionService
      */
     public function callNextPatient(LiveSession $liveSession): ?Booking
     {
-        return DB::transaction(function () use ($liveSession) {
+        $called = DB::transaction(function () use ($liveSession) {
             $liveSession = $this->lockSession($liveSession);
 
             return $this->advanceQueue($liveSession);
         });
+
+        $this->dispatchApproachPushes($liveSession);
+
+        return $called;
     }
 
     /**
@@ -179,7 +187,10 @@ class LiveSessionService
                 ]);
             }
 
-            return $this->setAsCurrent($liveSession, $booking);
+            $called = $this->setAsCurrent($liveSession, $booking);
+            $this->dispatchApproachPushes($liveSession);
+
+            return $called;
         });
     }
 
@@ -210,7 +221,10 @@ class LiveSessionService
                 ]);
             }
 
-            return $this->advanceQueue($liveSession);
+            $next = $this->advanceQueue($liveSession);
+            $this->dispatchApproachPushes($liveSession);
+
+            return $next;
         });
     }
 
@@ -235,7 +249,10 @@ class LiveSessionService
                 ]);
             }
 
-            return $booking?->fresh();
+            $fresh = $booking?->fresh();
+            $this->dispatchApproachPushes($liveSession);
+
+            return $fresh;
         });
     }
 
@@ -309,6 +326,8 @@ class LiveSessionService
                 'in_chamber_at' => $now,
             ]);
 
+            $this->dispatchApproachPushes($liveSession);
+
             return true;
         });
     }
@@ -335,6 +354,7 @@ class LiveSessionService
                     }
 
                     $this->advanceQueue($liveSession);
+                    $this->dispatchApproachPushes($liveSession);
 
                     return;
                 }
@@ -344,6 +364,10 @@ class LiveSessionService
                 'status' => 'completed',
                 'completed_at' => now(),
             ]);
+
+            if ($liveSession) {
+                $this->dispatchApproachPushes($liveSession);
+            }
         });
     }
 
@@ -376,7 +400,10 @@ class LiveSessionService
                 }
             }
 
-            return $this->advanceQueue($liveSession);
+            $next = $this->advanceQueue($liveSession);
+            $this->dispatchApproachPushes($liveSession);
+
+            return $next;
         });
     }
 
@@ -399,6 +426,8 @@ class LiveSessionService
                 'skip_count' => 0, // Reset so they get 2 more chances
                 'retry_queue_position' => $currentSerial + 2,
             ]);
+
+            $this->dispatchApproachPushes($liveSession);
         });
     }
 
@@ -715,6 +744,36 @@ class LiveSessionService
         }
 
         return (int) round(array_sum($durations) / count($durations));
+    }
+
+    public function peopleAheadOf(Booking $booking, ?LiveSession $liveSession = null): int
+    {
+        $session = $liveSession ?? $booking->liveSession();
+
+        if (! $session) {
+            return 0;
+        }
+
+        return $this->aheadInQueue($booking, $session);
+    }
+
+    /**
+     * Pocket buzz for subscribed tickets (two away / next / called).
+     *
+     * After-response, not a queued worker — same reason as SendDoctorLateNotices.
+     * Open-tab banners still work when VAPID keys are missing; this job then
+     * no-ops through NullWebPushSender.
+     */
+    private function dispatchApproachPushes(LiveSession $liveSession): void
+    {
+        if (! tenant()?->hasLiveQueue()) {
+            return;
+        }
+
+        SendQueueApproachPushes::dispatch(
+            (string) tenant('id'),
+            (int) $liveSession->id,
+        )->afterResponse();
     }
 
     private function aheadInQueue(Booking $booking, LiveSession $liveSession): int
