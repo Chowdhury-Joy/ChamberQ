@@ -206,7 +206,11 @@ class SmsService
     {
         $booking->loadMissing(['bookable']);
 
-        $clinic = Tenant::find($booking->tenant_id)?->displayName() ?? 'Clinic';
+        // One lookup, used for both the letterhead name and the Live Queue
+        // check below — this runs on the booking hot path and was fetching the
+        // same row twice.
+        $tenant = Tenant::find($booking->tenant_id);
+        $clinic = $tenant?->displayName() ?? 'Clinic';
         $date = $booking->booking_date?->format('j M Y') ?? '';
         $session = '';
         $comeAround = null;
@@ -218,7 +222,6 @@ class SmsService
             $sessionName = $booking->bookable->session_name;
             $session = trim(($doctor ? $doctor.' - ' : '').($sessionName ?? ''));
 
-            $tenant = Tenant::find($booking->tenant_id);
             if ($tenant?->hasLiveQueue()) {
                 if ($booking->is_overflow) {
                     $overflowPhrase = app(PublishedComeAround::class)->overflowSmsPhrase($booking->bookable);

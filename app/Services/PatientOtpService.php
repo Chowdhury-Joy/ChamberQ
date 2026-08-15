@@ -40,6 +40,16 @@ class PatientOtpService
 
         $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
 
+        // Nothing ever deleted these, so the table grew by one row per login
+        // attempt forever — each holding a phone number and a bcrypt hash. Only
+        // the newest live code for this phone is ever read, so drop this
+        // number's spent ones now. Bounded by the `(phone, consumed_at)` index
+        // and by one phone, rather than a table-wide sweep.
+        PatientOtpCode::query()
+            ->where('phone', $phone)
+            ->whereNotNull('consumed_at')
+            ->delete();
+
         PatientOtpCode::query()
             ->where('phone', $phone)
             ->whereNull('consumed_at')
