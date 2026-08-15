@@ -18,6 +18,16 @@
             : '?';
     @endphp
 
+    @include('filament.tenant-admin.components.sitting-prompts', [
+        'prompts' => $this->sittingPrompts,
+        'canOperate' => auth()->user()?->canOperateQueueControls() ?? false,
+        'liveQueueUrl' => auth()->user()?->canOperateQueueControls()
+            ? null
+            : \App\Filament\TenantAdmin\Pages\LiveQueueControl::getUrl(),
+        'selectedSessionId' => $this->runningLiveSession?->schedule_session_id,
+        'context' => 'consult',
+    ])
+
     {{--
         This panel ships Filament's precompiled stylesheet, so custom visual
         elements below are built with Filament's own CSS variables (colors,

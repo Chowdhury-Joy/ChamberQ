@@ -95,6 +95,8 @@ class OutdoorScreenTodayTest extends TestCase
 
     public function test_screen_api_includes_next_estimated_time_as_actual_minus_five_minutes(): void
     {
+        Carbon::setTestNow(Carbon::parse($this->today.' 09:00:00'));
+
         tenancy()->initialize($this->tenant);
 
         // schedule_guess: 09:00–12:00 / 10 seats = 18 min each.
@@ -137,6 +139,8 @@ class OutdoorScreenTodayTest extends TestCase
             ->assertOk()
             ->assertJsonPath('next_booking', 4)
             ->assertJsonPath('next_estimated_time', '09:49 AM');
+
+        Carbon::setTestNow();
     }
 
     public function test_screen_api_omits_next_estimated_time_when_nobody_is_waiting(): void

@@ -2375,3 +2375,12 @@
   <reason>The realistic patient pockets the phone. SMS costs credits and was ruled out for this case; WhatsApp Business API was ruled out. Web Push on Android Chrome after one permission tap is the only way to reach a locked phone from the ticket. Bangla is forced on this copy so an English admin locale cannot send English into a patient’s pocket.</reason>
 </decision>
 
+## 2026-08-15T13:06:00+0600
+
+<decision>
+  <category>Business_Logic</category>
+  <context>Evening sittings slip in real life. Staff still press Start — the ticket is the board. Patients should see the published sitting window unchanged, but Estimated Time and the yellow delayed banner must tell the truth once someone actually begins. Staff need one sticky note when a sitting is overdue, not a repeating alarm or patient SMS.</context>
+  <action>Ticket follows the chair: humans Start (no auto-Start at sitting time). `LiveSession::effectiveStartTime()` — not started + delayed uses sitting + announced delay; started uses max(sitting, started_at) + pause; `delay_minutes` kept as “what we told them”. `SittingPrompt` (10-minute grace) drives sticky callouts on Daily Roster, Live Queue Control, and Consult Screen. Start after sitting time asks Mark Late / Just start / Cancel; inside an announced delay asks Start now / Wait. Mark Late on `delayed` sittings only with a larger total (Add time). No new DB columns; no staff push.</action>
+  <reason>Starting cleared the yellow banner but left Estimated Time on the old delay — patients were told one thing on the ticket and another by the clock. One brain for wording stops the three admin pages drifting. More late can update the ticket; less late cannot unsay what was already announced.</reason>
+</decision>
+

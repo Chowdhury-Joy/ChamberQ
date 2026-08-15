@@ -23,6 +23,7 @@ use App\Services\ChamberCashService;
 use App\Services\LiveSessionService;
 use App\Services\MedicineService;
 use App\Services\PatientService;
+use App\Services\SittingPrompt;
 use App\Services\VisitRecordService;
 use Filament\Notifications\Notification;
 use App\Models\LabCollectionSlot;
@@ -54,6 +55,11 @@ class DailyRoster extends Page implements HasTable, HasForms
 
     /** Minutes from the last Mark Late, used in WhatsApp copy. */
     public int $delayedNotifyMinutes = 0;
+
+    public function getSittingPromptsProperty(): \Illuminate\Support\Collection
+    {
+        return app(SittingPrompt::class)->promptsForToday();
+    }
 
     public static function canAccess(): bool
     {
@@ -300,16 +306,25 @@ class DailyRoster extends Page implements HasTable, HasForms
                             ->native(false)
                             ->live(),
                         Select::make('delay_minutes')
-                            ->label(__('Delay Duration'))
-                            ->options([
-                                15 => '15 minutes',
-                                30 => '30 minutes',
-                                45 => '45 minutes',
-                                60 => '1 hour',
-                                90 => '1.5 hours',
-                                120 => '2 hours',
-                            ])
-                            ->required(),
+                            ->label(fn (Get $get): string => static::isExtendingDelay(
+                                $get('schedule_session_id') ? (int) $get('schedule_session_id') : null,
+                            ) ? __('Additional delay (total)') : __('Delay Duration'))
+                            ->options(fn (Get $get): array => app(SittingPrompt::class)->delayOptionsFor(
+                                static::currentDelayForSession(
+                                    $get('schedule_session_id') ? (int) $get('schedule_session_id') : null,
+                                ),
+                            ))
+                            ->required()
+                            ->rule(fn (Get $get): \Closure => function (string $attribute, mixed $value, \Closure $fail) use ($get): void {
+                                $current = static::currentDelayForSession(
+                                    $get('schedule_session_id') ? (int) $get('schedule_session_id') : null,
+                                );
+                                if ($current > 0 && (int) $value <= $current) {
+                                    $fail(__('Choose a longer delay than the :minutes minutes already announced.', [
+                                        'minutes' => $current,
+                                    ]));
+                                }
+                            }),
                         Placeholder::make('sms_cost')
                             ->label('')
                             ->content(fn (Get $get): string => static::markLateCostWarningFor(
@@ -625,17 +640,22 @@ class DailyRoster extends Page implements HasTable, HasForms
         foreach ($sessions as $session) {
             $live = $liveBySession->get($session->id);
 
-            if ($live && $live->status !== 'scheduled') {
+            if ($live && ! in_array($live->status, ['scheduled', 'delayed'], true)) {
                 continue;
             }
 
+            $suffix = ($live && $live->status === 'delayed')
+                ? ' — '.__('delayed :minutes min', ['minutes' => $live->delay_minutes])
+                : '';
+
             $options[$session->id] = sprintf(
-                '%s — %s (%s, %s–%s)',
+                '%s — %s (%s, %s–%s)%s',
                 $session->doctor?->name ?? __('Unknown doctor'),
                 $session->chamber?->name ?? __('Unknown chamber'),
                 $session->session_name,
                 Carbon::parse($session->start_time)->format('g:i A'),
                 Carbon::parse($session->end_time)->format('g:i A'),
+                $suffix,
             );
         }
 
@@ -685,5 +705,33 @@ class DailyRoster extends Page implements HasTable, HasForms
         }
 
         return $warning;
+    }
+
+    protected static function currentDelayForSession(?int $scheduleSessionId): int
+    {
+        if (! $scheduleSessionId) {
+            return 0;
+        }
+
+        $live = LiveSession::query()
+            ->where('schedule_session_id', $scheduleSessionId)
+            ->where('session_date', Carbon::today()->toDateString())
+            ->first();
+
+        return (int) ($live?->delay_minutes ?? 0);
+    }
+
+    protected static function isExtendingDelay(?int $scheduleSessionId): bool
+    {
+        if (! $scheduleSessionId) {
+            return false;
+        }
+
+        $live = LiveSession::query()
+            ->where('schedule_session_id', $scheduleSessionId)
+            ->where('session_date', Carbon::today()->toDateString())
+            ->first();
+
+        return $live?->status === 'delayed';
     }
 }

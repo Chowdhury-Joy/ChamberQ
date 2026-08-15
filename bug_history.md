@@ -1057,3 +1057,12 @@
  <root_cause>Eleven columns plus two fully labelled row buttons (a ~290px actions column), and the practice name set a ~290px min-content width. An earlier fix used `visibleFrom`, which is viewport-based — but the sidebar takes ~380px, so at a 1280 viewport every `lg`/`xl` column still rendered into a 896px container.</root_cause>
  <prevention_rule>Size a Filament table against the content container, not the viewport: `visibleFrom` cannot see the sidebar. Keep row actions in an `ActionGroup`, start secondary/finance columns `toggleable(isToggledHiddenByDefault: true)`, and `wrap()` any free-text column that would otherwise set the table's min-content width.</prevention_rule>
 </bug>
+
+## 2026-08-15T13:06:00+0600
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>Pressing Start on a delayed sitting cleared the yellow “delayed” banner but Estimated Time still pretended the line began at the announced delay (e.g. 5:30), even when the doctor actually started at 5:20.</symptom>
+ <root_cause>`scheduleSessionStart()` always added `delay_minutes` to the sitting start. Start set `status` → `active` (yellow off) but left `delay_minutes` at 30, so the ETA engine kept using sitting + delay instead of max(sitting, started_at).</root_cause>
+ <prevention_rule>Queue clock lives in `LiveSession::effectiveStartTime()` and `scheduleSessionStart()` must delegate to it: delayed + not started → sitting + delay; started → max(sitting, started_at) + pause; never zero `delay_minutes` on Start.</prevention_rule>
+</bug>

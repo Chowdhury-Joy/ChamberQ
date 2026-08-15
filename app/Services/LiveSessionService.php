@@ -677,17 +677,7 @@ class LiveSessionService
 
     private function scheduleSessionStart(LiveSession $liveSession, Booking $booking): Carbon
     {
-        $session = $liveSession->scheduleSession;
-        $totalPause = $liveSession->total_pause_minutes;
-        if ($liveSession->status === 'paused') {
-            $totalPause += $liveSession->estimated_pause_minutes;
-        }
-
-        $start = Carbon::parse($session->start_time)->setDateFrom($booking->booking_date);
-        $start->addMinutes($liveSession->delay_minutes);
-        $start->addMinutes($totalPause);
-
-        return $start;
+        return $liveSession->effectiveStartTime();
     }
 
     private function scheduleGuessEstimate(Booking $booking, LiveSession $liveSession): ?Carbon

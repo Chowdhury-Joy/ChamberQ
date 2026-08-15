@@ -574,3 +574,6 @@
 
 ## 2026-08-15T10:30:45+0600
 - Pocket buzz on the live-queue ticket: `booking_push_subscriptions`, `SendQueueApproachPushes` (afterResponse, Bangla, no SMS/WhatsApp), `POST /api/queue/{booking}/push`, service worker `push` handler (`clinic-shell-v7`).
+
+## 2026-08-15T13:06:00+0600
+- Honest late sitting: `SittingPrompt` service + sticky callouts on Daily Roster / Live Queue / Consult Screen; `LiveSession::effectiveStartTime()` clock rule; Start confirmation modals; Mark Late on `delayed` sittings (Add time, larger total only).

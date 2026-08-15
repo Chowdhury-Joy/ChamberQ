@@ -16,6 +16,7 @@ use App\Services\CrossTenantClinicalHistoryService;
 use App\Services\LiveSessionService;
 use App\Services\MedicineService;
 use App\Services\PrescriptionTemplateService;
+use App\Services\SittingPrompt;
 use App\Services\VisitRecordService;
 use App\Support\RxSafety;
 use App\Support\SharedClinicalVisit;
@@ -87,6 +88,11 @@ class ConsultScreen extends Page implements HasActions
             $this->lastVisitRecord,
             $this->currentVisitRecord,
         );
+    }
+
+    public function getSittingPromptsProperty(): \Illuminate\Support\Collection
+    {
+        return app(SittingPrompt::class)->promptsForToday();
     }
 
     public function getRunningLiveSessionProperty(): ?LiveSession
@@ -689,5 +695,219 @@ class ConsultScreen extends Page implements HasActions
                     ->success()
                     ->send();
             });
+    }
+
+    public function startSessionFromPrompt(int $scheduleSessionId): void
+    {
+        if (! auth()->user()?->canOperateQueueControls()) {
+            return;
+        }
+
+        $this->promptSessionId = $scheduleSessionId;
+        $this->mountStartSessionOrRun();
+    }
+
+    public function mountMarkLateForPrompt(int $scheduleSessionId, int $suggestedMinutes): void
+    {
+        if (! auth()->user()?->canOperateQueueControls()) {
+            return;
+        }
+
+        $this->promptSessionId = $scheduleSessionId;
+        $this->mountAction('markLate', ['delay_minutes' => $suggestedMinutes]);
+    }
+
+    public ?int $promptSessionId = null;
+
+    public function doStartSession(): void
+    {
+        if (! $this->promptSessionId) {
+            return;
+        }
+
+        $scheduleSession = ScheduleSession::findOrFail($this->promptSessionId);
+        app(LiveSessionService::class)->startSession($scheduleSession);
+
+        Notification::make()->title(__('Session Started'))->success()->send();
+        $this->forgetQueueState();
+        $this->promptSessionId = null;
+    }
+
+    public function startSessionAction(): Action
+    {
+        return Action::make('startSession')
+            ->label(__('Start live session'))
+            ->color('success')
+            ->modalSubmitAction(false)
+            ->modalCancelActionLabel(__('Cancel'))
+            ->modalHeading(fn (): string => match ($this->consultStartModalKind()) {
+                'early_during_delay' => __('Start before the announced time?'),
+                default => __('Start after sitting time?'),
+            })
+            ->modalDescription(fn (): ?string => $this->consultStartModalDescription())
+            ->extraModalFooterActions(fn (): array => $this->consultStartModalFooterActions())
+            ->action(fn () => $this->doStartSession());
+    }
+
+    public function markLateAction(): Action
+    {
+        $live = $this->promptLiveSession();
+        $currentDelay = (int) ($live?->delay_minutes ?? 0);
+
+        return Action::make('markLate')
+            ->label($live?->status === 'delayed' ? __('Add time') : __('Mark Late'))
+            ->color('warning')
+            ->fillForm(fn (array $arguments): array => [
+                'delay_minutes' => $arguments['delay_minutes']
+                    ?? array_key_first(app(SittingPrompt::class)->delayOptionsFor($currentDelay)),
+            ])
+            ->form([
+                \Filament\Forms\Components\Select::make('delay_minutes')
+                    ->label($live?->status === 'delayed' ? __('Additional delay (total)') : __('Delay Duration'))
+                    ->options(fn (): array => app(SittingPrompt::class)->delayOptionsFor($currentDelay))
+                    ->required()
+                    ->rule(fn (): \Closure => function (string $attribute, mixed $value, \Closure $fail) use ($currentDelay): void {
+                        if ($currentDelay > 0 && (int) $value <= $currentDelay) {
+                            $fail(__('Choose a longer delay than the :minutes minutes already announced.', [
+                                'minutes' => $currentDelay,
+                            ]));
+                        }
+                    }),
+            ])
+            ->action(function (array $data): void {
+                if (! $this->promptSessionId) {
+                    return;
+                }
+
+                $scheduleSession = ScheduleSession::findOrFail($this->promptSessionId);
+
+                $liveSession = LiveSession::firstOrCreate([
+                    'tenant_id' => tenant('id'),
+                    'schedule_session_id' => $scheduleSession->id,
+                    'session_date' => Carbon::today()->toDateString(),
+                ], [
+                    'status' => 'delayed',
+                ]);
+
+                app(LiveSessionService::class)->markDelay($liveSession, (int) $data['delay_minutes']);
+
+                Notification::make()->title(__('Session Delayed'))->success()->send();
+                $this->promptSessionId = null;
+                $this->forgetQueueState();
+            });
+    }
+
+    public function mountStartSessionOrRun(): void
+    {
+        if ($this->consultStartModalKind() === null) {
+            $this->doStartSession();
+
+            return;
+        }
+
+        $this->mountAction('startSession');
+    }
+
+    protected function promptLiveSession(): ?LiveSession
+    {
+        if (! $this->promptSessionId) {
+            return null;
+        }
+
+        return LiveSession::query()
+            ->where('schedule_session_id', $this->promptSessionId)
+            ->where('session_date', Carbon::today()->toDateString())
+            ->first();
+    }
+
+    protected function consultStartModalKind(): ?string
+    {
+        if (! $this->promptSessionId) {
+            return null;
+        }
+
+        $scheduleSession = ScheduleSession::find($this->promptSessionId);
+
+        if (! $scheduleSession) {
+            return null;
+        }
+
+        return app(SittingPrompt::class)->startModalKind(
+            $scheduleSession,
+            $this->promptLiveSession(),
+        );
+    }
+
+    protected function consultStartModalDescription(): ?string
+    {
+        $prompt = app(SittingPrompt::class)->promptForSession(
+            ScheduleSession::find($this->promptSessionId),
+            $this->promptLiveSession(),
+        );
+
+        return match ($this->consultStartModalKind()) {
+            'early_during_delay' => $prompt['message'] ?? null,
+            'late_without_notice' => __('Patients have not been told the doctor is late. Mark Late to slide the ticket, or just start and the clock will follow when you actually begin.'),
+            default => null,
+        };
+    }
+
+    /**
+     * @return list<Action>
+     */
+    protected function consultStartModalFooterActions(): array
+    {
+        $kind = $this->consultStartModalKind();
+
+        if ($kind === null) {
+            return [];
+        }
+
+        $prompt = app(SittingPrompt::class)->promptForSession(
+            ScheduleSession::find($this->promptSessionId),
+            $this->promptLiveSession(),
+        );
+
+        if ($kind === 'early_during_delay') {
+            $announcedAt = $prompt['announced_at'] ?? null;
+
+            return [
+                Action::make('startNowDuringDelay')
+                    ->label(__('Start now'))
+                    ->color('success')
+                    ->action(function (): void {
+                        $this->unmountAction();
+                        $this->doStartSession();
+                    }),
+                Action::make('waitUntilAnnounced')
+                    ->label($announcedAt
+                        ? __('Wait until :time', ['time' => $announcedAt->format('g:i a')])
+                        : __('Wait'))
+                    ->color('gray')
+                    ->action(fn () => $this->unmountAction()),
+            ];
+        }
+
+        $suggested = $prompt['suggested_delay_minutes']
+            ?? app(SittingPrompt::class)->suggestedDelayMinutes(
+                (int) ($prompt['minutes_late'] ?? 15),
+            );
+
+        return [
+            Action::make('markLateFromStart')
+                ->label(__('Mark Late (:minutes min)', ['minutes' => $suggested]))
+                ->color('warning')
+                ->action(function () use ($suggested): void {
+                    $this->unmountAction();
+                    $this->mountAction('markLate', ['delay_minutes' => $suggested]);
+                }),
+            Action::make('justStartLate')
+                ->label(__('Just start'))
+                ->color('success')
+                ->action(function (): void {
+                    $this->unmountAction();
+                    $this->doStartSession();
+                }),
+        ];
     }
 }

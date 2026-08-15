@@ -10,6 +10,7 @@ use App\Models\ScheduleSession;
 use App\Models\LiveSession;
 use App\Services\LiveSessionService;
 use App\Services\PatientService;
+use App\Services\SittingPrompt;
 use Carbon\Carbon;
 use Filament\Pages\Page;
 use Filament\Actions\Action;
@@ -91,6 +92,21 @@ class LiveQueueControl extends Page implements HasActions, HasTable
         if ($this->sessions->count() === 1) {
             $this->selectedSessionId = $this->sessions->keys()->first();
         }
+    }
+
+    public function getSittingPromptsProperty(): \Illuminate\Support\Collection
+    {
+        return app(SittingPrompt::class)->promptsForToday();
+    }
+
+    public function getSittingPromptForSelectionProperty(): ?array
+    {
+        if (! $this->selectedSessionId) {
+            return null;
+        }
+
+        return $this->sittingPrompts
+            ->firstWhere('schedule_session_id', (int) $this->selectedSessionId);
     }
 
     protected function getHeaderActions(): array
@@ -407,6 +423,8 @@ class LiveQueueControl extends Page implements HasActions, HasTable
             $this->queueStats,
             $this->catchUpCount,
             $this->catchUpBookings,
+            $this->sittingPrompts,
+            $this->sittingPromptForSelection,
         );
     }
 
@@ -559,14 +577,131 @@ class LiveQueueControl extends Page implements HasActions, HasTable
 
     public function startSession()
     {
-        if (!$this->selectedSessionId) return;
-        
+        $this->mountAction('startSession');
+    }
+
+    public function doStartSession(): void
+    {
+        if (! $this->selectedSessionId) {
+            return;
+        }
+
         $scheduleSession = ScheduleSession::findOrFail($this->selectedSessionId);
-        
+
         app(LiveSessionService::class)->startSession($scheduleSession);
-        
+
         Notification::make()->title('Session Started')->success()->send();
+        $this->forgetQueueState();
         $this->dispatchCallAnnounce();
+    }
+
+    public function startSessionAction(): Action
+    {
+        return Action::make('startSession')
+            ->label(__('Start live session'))
+            ->color('success')
+            ->icon('heroicon-m-play')
+            ->modalSubmitAction(false)
+            ->modalCancelActionLabel(__('Cancel'))
+            ->modalHeading(fn (): string => match ($this->startModalKind()) {
+                'early_during_delay' => __('Start before the announced time?'),
+                default => __('Start after sitting time?'),
+            })
+            ->modalDescription(fn (): ?string => $this->startModalDescription())
+            ->extraModalFooterActions(fn (): array => $this->startModalFooterActions())
+            ->action(fn () => $this->doStartSession());
+    }
+
+    protected function startModalKind(): ?string
+    {
+        if (! $this->selectedSessionId) {
+            return null;
+        }
+
+        $scheduleSession = ScheduleSession::find($this->selectedSessionId);
+
+        if (! $scheduleSession) {
+            return null;
+        }
+
+        return app(SittingPrompt::class)->startModalKind(
+            $scheduleSession,
+            $this->activeLiveSession,
+        );
+    }
+
+    protected function startModalDescription(): ?string
+    {
+        return match ($this->startModalKind()) {
+            'early_during_delay' => $this->sittingPromptForSelection['message'] ?? null,
+            'late_without_notice' => __('Patients have not been told the doctor is late. Mark Late to slide the ticket, or just start and the clock will follow when you actually begin.'),
+            default => null,
+        };
+    }
+
+    /**
+     * @return list<Action>
+     */
+    protected function startModalFooterActions(): array
+    {
+        $kind = $this->startModalKind();
+
+        if ($kind === null) {
+            return [];
+        }
+
+        if ($kind === 'early_during_delay') {
+            $announcedAt = $this->sittingPromptForSelection['announced_at'] ?? null;
+
+            return [
+                Action::make('startNowDuringDelay')
+                    ->label(__('Start now'))
+                    ->color('success')
+                    ->action(function (): void {
+                        $this->unmountAction();
+                        $this->doStartSession();
+                    }),
+                Action::make('waitUntilAnnounced')
+                    ->label($announcedAt
+                        ? __('Wait until :time', ['time' => $announcedAt->format('g:i a')])
+                        : __('Wait'))
+                    ->color('gray')
+                    ->action(fn () => $this->unmountAction()),
+            ];
+        }
+
+        $suggested = $this->sittingPromptForSelection['suggested_delay_minutes']
+            ?? app(SittingPrompt::class)->suggestedDelayMinutes(
+                (int) ($this->sittingPromptForSelection['minutes_late'] ?? 15),
+            );
+
+        return [
+            Action::make('markLateFromStart')
+                ->label(__('Mark Late (:minutes min)', ['minutes' => $suggested]))
+                ->color('warning')
+                ->action(function () use ($suggested): void {
+                    $this->unmountAction();
+                    $this->mountAction('markLate', ['delay_minutes' => $suggested]);
+                }),
+            Action::make('justStartLate')
+                ->label(__('Just start'))
+                ->color('success')
+                ->action(function (): void {
+                    $this->unmountAction();
+                    $this->doStartSession();
+                }),
+        ];
+    }
+
+    public function mountStartSessionOrRun(): void
+    {
+        if ($this->startModalKind() === null) {
+            $this->doStartSession();
+
+            return;
+        }
+
+        $this->mountAction('startSession');
     }
 
     /**
@@ -853,22 +988,31 @@ class LiveQueueControl extends Page implements HasActions, HasTable
 
     public function markLateAction(): Action
     {
+        $currentDelay = (int) ($this->activeLiveSession?->delay_minutes ?? 0);
+        $isExtending = $this->activeLiveSession?->status === 'delayed';
+
         return Action::make('markLate')
-            ->label('Mark Late')
+            ->label($isExtending ? __('Add time') : __('Mark Late'))
             ->color('warning')
             ->icon('heroicon-o-clock')
+            ->fillForm(fn (array $arguments): array => [
+                'delay_minutes' => $arguments['delay_minutes']
+                    ?? ($isExtending
+                        ? array_key_first(app(SittingPrompt::class)->delayOptionsFor($currentDelay))
+                        : null),
+            ])
             ->form([
                 Select::make('delay_minutes')
-                    ->label('Delay Duration')
-                    ->options([
-                        15 => '15 minutes',
-                        30 => '30 minutes',
-                        45 => '45 minutes',
-                        60 => '1 hour',
-                        90 => '1.5 hours',
-                        120 => '2 hours',
-                    ])
-                    ->required(),
+                    ->label($isExtending ? __('Additional delay (total)') : __('Delay Duration'))
+                    ->options(fn (): array => app(SittingPrompt::class)->delayOptionsFor($currentDelay))
+                    ->required()
+                    ->rule(fn (): \Closure => function (string $attribute, mixed $value, \Closure $fail) use ($currentDelay): void {
+                        if ($currentDelay > 0 && (int) $value <= $currentDelay) {
+                            $fail(__('Choose a longer delay than the :minutes minutes already announced.', [
+                                'minutes' => $currentDelay,
+                            ]));
+                        }
+                    }),
             ])
             // Say what this costs before it is spent. End Session already names
             // the patients it is about to cancel; this quietly texted everyone
@@ -901,9 +1045,12 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                     ? $bookings->pluck('id')->all()
                     : [];
                 
+                $this->forgetQueueState();
                 Notification::make()->title('Session Delayed')->success()->send();
             })
-            ->visible(fn () => $this->selectedSessionId && (!$this->activeLiveSession || $this->activeLiveSession->status === 'scheduled'));
+            ->visible(fn () => $this->selectedSessionId
+                && (! $this->activeLiveSession
+                    || in_array($this->activeLiveSession->status, ['scheduled', 'delayed'], true)));
     }
 
     // Action for Pause

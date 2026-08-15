@@ -1,4 +1,4 @@
-<x-filament-panels::page>
+<x-filament-panels::page wire:poll.15s>
     {{--
         This panel has no custom Filament theme build, so the only CSS that
         reaches the browser is Filament's own bundle — it does NOT contain
@@ -114,6 +114,13 @@
     @endphp
 
     <div class="lqc-stack cq-freeze-queue">
+
+        @include('filament.tenant-admin.components.sitting-prompts', [
+            'prompts' => $this->sittingPrompts,
+            'canOperate' => auth()->user()?->canOperateQueueControls() ?? false,
+            'liveQueueUrl' => null,
+            'selectedSessionId' => $this->selectedSessionId,
+        ])
 
         @if ($canRecordNotes && $catchUpCount > 0)
             <div class="lqc-banner">
@@ -249,12 +256,12 @@
                                          a default slot is silently dropped. --}}
                                     <x-filament::callout color="warning" icon="heroicon-m-clock">
                                         <x-slot name="description">
-                                            Patients have been told the doctor is running {{ $liveSession->delay_minutes }} minutes late. Starting now clears that notice.
+                                            Patients have been told the doctor is running {{ $liveSession->delay_minutes }} minutes late. Starting now clears the yellow banner; the clock follows when you actually begin.
                                         </x-slot>
                                     </x-filament::callout>
                                 @endif
                                 <div class="lqc-actions">
-                                    <x-filament::button wire:click="startSession" color="success" icon="heroicon-m-play" size="lg">
+                                    <x-filament::button wire:click="mountStartSessionOrRun" color="success" icon="heroicon-m-play" size="lg">
                                         Start live session
                                     </x-filament::button>
                                 </div>

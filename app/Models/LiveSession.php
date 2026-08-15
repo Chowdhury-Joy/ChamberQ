@@ -76,12 +76,36 @@ class LiveSession extends Model
         return (int) round($diffInMinutes / $cap);
     }
 
+    /**
+     * When the queue clock effectively began for ETA purposes.
+     *
+     * - Not started + delayed: sitting start + announced delay (yellow still on).
+     * - Started: later of sitting start and started_at (+ pause) — yellow off.
+     * - Scheduled, not started: sitting start.
+     *
+     * `delay_minutes` is kept as "what we told patients" and is not zeroed on Start.
+     */
     public function effectiveStartTime(): \Carbon\Carbon
     {
-        $start = \Carbon\Carbon::parse($this->scheduleSession->start_time)
+        $sittingStart = \Carbon\Carbon::parse($this->scheduleSession->start_time)
             ->setDateFrom($this->session_date);
-            
-        return $start->addMinutes($this->delay_minutes);
+
+        if ($this->status === 'delayed' && ! $this->started_at) {
+            return $sittingStart->copy()->addMinutes((int) $this->delay_minutes);
+        }
+
+        $totalPause = (int) $this->total_pause_minutes;
+        if ($this->status === 'paused') {
+            $totalPause += (int) ($this->estimated_pause_minutes ?: 0);
+        }
+
+        if ($this->started_at) {
+            $effective = $sittingStart->max($this->started_at);
+
+            return $effective->copy()->addMinutes($totalPause);
+        }
+
+        return $sittingStart->copy()->addMinutes($totalPause);
     }
 
     public function callTimeoutSeconds(): int
