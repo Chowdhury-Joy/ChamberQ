@@ -1193,3 +1193,33 @@
  <root_cause>`exists:live_sessions,id` ignores the tenant global scope — the same trap `BookingService` already documents for `lab_tests`.</root_cause>
  <prevention_rule>Never use `exists:` / `unique:` on a tenant-scoped table. Validate the shape only, and resolve the id through the model so the scope decides.</prevention_rule>
 </bug>
+
+## 2026-08-15T21:12:17+0600
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>After tapping Confirm, the patient's screen sat spinning on a booking that had already succeeded — up to ten seconds, and on every booking of a slow evening. Some patients tapped Confirm again.</symptom>
+ <root_cause>`BookingService::createBookingForBookable()` called `SmsService::sendBookingConfirmation()` inline, after commit but still inside the patient's request, and `HttpSmsGateway` waits `config('sms.http.timeout')` (10s) for the aggregator.</root_cause>
+ <prevention_rule>No outbound network call belongs in a patient-facing request once the thing the patient asked for is committed. Hand it to a job dispatched with `->afterResponse()` — never `dispatch()` alone, because this application runs no queue worker and a queued patient notice is a notice nobody sends.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Code</category>
+ <symptom>`AuthDebugProvider` and `SessionProbe` — kept deliberately by decisions.md 2026-08-05 to capture the cause of the owner's repeated sign-outs — could never be switched on in production, the only place the symptom occurs.</symptom>
+ <root_cause>Both gated on `env('AUTH_DEBUG', false)` at the call site. A deployment runs `php artisan config:cache`, after which Laravel skips loading `.env` entirely and `env()` returns null outside config files.</root_cause>
+ <prevention_rule>`env()` is read in `config/` and nowhere else; call sites use `config()`. Enforced by `SourceHygieneTest::test_env_is_only_read_from_config_files`, which skips Blade and CSS because `env(safe-area-inset-bottom)` is an unrelated CSS function these views legitimately use.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Code</category>
+ <symptom>A failing SMS gateway's raw reply was copied verbatim into `sms_messages.error` and the log — up to 500 characters, unread by anyone.</symptom>
+ <root_cause>`HttpSmsGateway` interpolated `$response->body()` straight into the exception message. BD aggregators commonly echo the request back on an auth failure ("invalid api_key: …"), so the reply can carry the key that authenticates every message the clinic sends.</root_cause>
+ <prevention_rule>Redact known secrets out of any third-party response before it is stored or logged, by matching the configured value rather than guessing field names. Keep the rest — a gateway failure is undiagnosable without the message it returned.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Code</category>
+ <symptom>`FiveQueueHonestyTest` passed all morning and failed with "the clinic is closed on the date you chose" every evening — 3 errors and 1 failure on any run after 20:00 local, on unmodified code.</symptom>
+ <root_cause>The class books a 17:00–20:00 sitting *today* and never froze the clock, so `BookingService::sessionAlreadyEndedToday()` correctly refused the booking once the real time passed 20:00. The product was right; the test was time-dependent.</root_cause>
+ <prevention_rule>Any test that books, calls or completes against a sitting with a wall-clock window freezes time in `setUp()` (`Carbon::setTestNow()`), and clears it in `tearDown()`. A suite that goes red every evening trains everyone to ignore it, which is when a real regression lands.</prevention_rule>
+</bug>

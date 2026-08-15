@@ -592,3 +592,6 @@
 
 ## 2026-08-15T14:46:39+0600
 - Production audit: `PlatformPatientHistoryService` fails closed (an unfiltered `select * from bookings` was reachable); new `App\Support\PushEndpoint` gates both Web Push subscribe routes against SSRF; `InitializeTenancyForTenantHosts` limits its Referer fallback to same-host `livewire/*` and no longer escalates a DB fault to a 500; clinic body/bio sanitised at render as well as save; patient logout invalidates the session; OTP rows pruned per phone; `2026_08_15_160000_add_phone_lookup_indexes` adds phone-leading indexes on `bookings` and `patients` for the cross-tenant lookups; hardcoded-path debug writers removed from five files.
+
+## 2026-08-15T21:12:17+0600
+- Booking confirmation SMS moved off the patient's request into `SendBookingConfirmation` (`->afterResponse()`, skips a cancelled serial, swallows gateway failures); `HttpSmsGateway::redact()` strips the api_key/sender out of a gateway error before it reaches `sms_messages.error` and the log; sign-out diagnostics re-gated on new `config/diagnostics.php` because `env()` is null under `config:cache`; new `tests/Feature/SourceHygieneTest.php` fails CI on absolute developer paths and on `env()` outside `config/`; froze the clock in `FiveQueueHonestyTest`, which failed on unmodified code on any run after 20:00.

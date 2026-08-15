@@ -2426,3 +2426,19 @@
   <action>Deny-rule, not allowlist, and **no DNS resolution** at validation time.</action>
   <reason>An allowlist silently kills pocket buzz the day a browser ships a new push host, and this feature already degrades quietly (missing VAPID keys no-op through `NullWebPushSender`) so nobody would notice. Resolving DNS at subscribe time is a race, not a control — the connect-time address is what matters — and it would make subscribing fail whenever DNS is slow. The residual risk (a public hostname whose record points inside) is recorded in `PushEndpoint`'s docblock rather than papered over.</reason>
 </decision>
+
+## 2026-08-15T21:12:17+0600
+
+<decision>
+  <category>Code</category>
+  <context>Supersedes nothing in substance, corrects the mechanism: the 2026-08-05 entry above kept `AuthDebugProvider` installed, gated behind `AUTH_DEBUG`, to capture the real cause of the owner's repeated sign-outs after measurement disproved idle expiry. That gate was `env()` at the call site, and `config:cache` stops `.env` being loaded — so the instrumentation was permanently dark in production, the one environment the symptom has ever been reported in. The owner was offered deletion and chose to make it work instead.</context>
+  <action>Both diagnostics stay. The flag moves to `config/diagnostics.php` and both call sites read `config('diagnostics.auth')`. `.env.example` documents `AUTH_DEBUG=false` and says to turn it back off after use. `SourceHygieneTest` now fails any `env()` read outside `config/` so this cannot recur anywhere.</action>
+  <reason>The logged decision was right about needing evidence; the implementation quietly guaranteed there would be none. Deleting it would have left the next occurrence to be guessed at again, which is the exact fix/revert ping-pong that decision existed to stop. Note `.env` on the owner's machine currently has `AUTH_DEBUG=true`, so that box is logging every request — intended while chasing the report, not a standing state.</reason>
+</decision>
+
+<decision>
+  <category>Business_Logic</category>
+  <context>The booking confirmation SMS was sent inside the patient's own request, after the serial was committed. `HttpSmsGateway` waits ten seconds for the aggregator, so on a slow evening every patient watched a spinner on a booking that had already worked — and a second tap on Confirm is what that uncertainty produces.</context>
+  <action>`SendBookingConfirmation`, dispatched from `BookingService` with `->afterResponse()`. It re-reads the booking and skips one cancelled between the response and the job running, and swallows a throwing gateway into the log so an outage cannot surface as a 500 on a booking that succeeded. The wallet debit moves with the send.</action>
+  <reason>`->afterResponse()` rather than the queue, matching `SendDoctorLateNotices`: **no queue worker runs**, so a queued confirmation would never be delivered and no patient would learn their serial — a silent failure far worse than the spinner it replaced. `ShouldQueue` and the tenant id are carried so adding a worker later is deleting one call. The two HTTP booking tests are what prove the SMS still goes out; direct service calls in tests must `$this->app->terminate()`, as `NotifyChannelsTest` already does.</reason>
+</decision>

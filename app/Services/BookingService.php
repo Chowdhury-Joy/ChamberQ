@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Exceptions\BookingUnavailableException;
+use App\Jobs\SendBookingConfirmation;
 use App\Models\Booking;
 use App\Models\Doctor;
 use App\Models\LabCollectionSlot;
@@ -242,8 +243,15 @@ class BookingService
         });
 
         if ($sendSms) {
-            // After commit: never roll back a serial because SMS failed.
-            app(SmsService::class)->sendBookingConfirmation($booking);
+            // After commit, and after the response: never roll back a serial
+            // because SMS failed, and never make the patient watch a spinner
+            // while the aggregator is asked. `->afterResponse()` rather than the
+            // queue is deliberate — no worker runs, so a queued confirmation
+            // would never be sent. See App\Jobs\SendBookingConfirmation.
+            SendBookingConfirmation::dispatch(
+                (string) $booking->tenant_id,
+                (string) $booking->id,
+            )->afterResponse();
         }
 
         return $booking;

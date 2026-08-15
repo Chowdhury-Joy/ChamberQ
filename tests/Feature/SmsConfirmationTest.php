@@ -122,6 +122,13 @@ class SmsConfirmationTest extends TestCase
         );
         tenancy()->end();
 
+        // The confirmation is handed to SendBookingConfirmation and runs once
+        // the response has been sent, so the patient is not made to wait on the
+        // gateway. This test drives the service directly rather than over HTTP,
+        // so nothing has terminated the request — same as NotifyChannelsTest
+        // does for SendDoctorLateNotices.
+        $this->app->terminate();
+
         $this->assertSame(2, $this->tenant->fresh()->sms_balance);
 
         $message = SmsMessage::withoutGlobalScopes()->where('booking_id', $booking->id)->first();
