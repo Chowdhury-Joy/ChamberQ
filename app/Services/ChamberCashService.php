@@ -14,29 +14,53 @@ class ChamberCashService
 {
     public function suggestedAmountTaka(Booking $booking): int
     {
+        return $this->amountForFeeType($booking, Doctor::FEE_CONSULTATION);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function feeTypeOptions(Booking $booking): array
+    {
         $doctor = Doctor::resolveForBooking($booking);
-        $consult = (int) ($doctor?->default_fee_taka ?? 0);
+        $options = [];
+
+        foreach ($doctor?->feeTypes() ?? [] as $key => $row) {
+            $label = $key === Doctor::FEE_CONSULTATION ? __('Consultation') : $row['label'];
+            $options[$key] = $label.' — ৳'.number_format($row['amount']);
+        }
+
+        return $options;
+    }
+
+    public function amountForFeeType(Booking $booking, string $feeType): int
+    {
+        $doctor = Doctor::resolveForBooking($booking);
+        $types = $doctor?->feeTypes() ?? [];
+
+        if (! isset($types[$feeType])) {
+            throw new InvalidArgumentException('That fee is not on this doctor\'s list.');
+        }
+
         $labs = (int) round((float) $booking->labTests()->sum('booking_lab_test.price_at_booking'));
 
-        return $consult + $labs;
+        return $types[$feeType]['amount'] + $labs;
     }
 
     public function recordPatientIncome(
         Booking $booking,
         User $user,
-        int $amount,
         string $method,
         bool $waived = false,
         ?string $note = null,
         ?CarbonInterface $occurredOn = null,
+        string $feeType = Doctor::FEE_CONSULTATION,
     ): ChamberCashEntry {
         $this->assertMethod($method);
 
-        if ($waived) {
-            if ($amount < 1) {
-                $amount = $this->suggestedAmountTaka($booking);
-            }
-        } elseif ($amount < 1) {
+        $amount = $this->amountForFeeType($booking, $feeType);
+
+        if (! $waived && $amount < 1) {
             throw new InvalidArgumentException('Patient fee must be at least ৳1, or waived.');
         }
 
@@ -48,6 +72,7 @@ class ChamberCashService
         $values = [
             'direction' => ChamberCashEntry::DIRECTION_INCOME,
             'amount' => $amount,
+            'fee_type' => $feeType,
             'category' => $waived ? ChamberCashEntry::CATEGORY_WAIVED : ChamberCashEntry::CATEGORY_PATIENT,
             'method' => $method,
             'chamber_id' => $session?->chamber_id,

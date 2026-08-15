@@ -152,7 +152,7 @@ class BackupCsv
             'tenants' => ['feature_flags', 'data'],
             'conditions' => ['aliases'],
             'medicines' => ['aliases', 'practice_types'],
-            'doctors' => ['notify_channels', 'practice_types'],
+            'doctors' => ['notify_channels', 'practice_types', 'extra_fees'],
             'chambers' => ['hours'],
             'web_pages' => ['content'],
             default => [],

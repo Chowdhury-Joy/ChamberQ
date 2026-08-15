@@ -104,26 +104,87 @@ class ChamberCashTest extends TestCase
         $first = $service->recordPatientIncome(
             $booking,
             $staff,
-            800,
             ChamberCashEntry::METHOD_CASH,
             occurredOn: Carbon::parse('2026-08-13', OperationalReportService::TIMEZONE),
         );
         $second = $service->recordPatientIncome(
             $booking,
             $staff,
-            1000,
             ChamberCashEntry::METHOD_BKASH,
             occurredOn: Carbon::parse('2026-08-13', OperationalReportService::TIMEZONE),
         );
 
         $this->assertTrue($first->is($second));
         $this->assertSame(1, ChamberCashEntry::query()->count());
-        $this->assertSame(1000, $second->amount);
+        $this->assertSame(800, $second->amount);
+        $this->assertSame(Doctor::FEE_CONSULTATION, $second->fee_type);
         $this->assertSame(ChamberCashEntry::DIRECTION_INCOME, $second->direction);
         $this->assertSame(ChamberCashEntry::CATEGORY_PATIENT, $second->category);
         $this->assertSame(ChamberCashEntry::METHOD_BKASH, $second->method);
         $this->assertSame($this->chamber->id, $second->chamber_id);
         $this->assertSame($this->doctor->id, $second->doctor_id);
+    }
+
+    public function test_posted_amount_cannot_override_the_doctors_fee(): void
+    {
+        $staff = $this->makeUser(User::ROLE_STAFF);
+        $booking = $this->makeBooking();
+        Carbon::setTestNow(Carbon::parse('2026-08-13 10:00', OperationalReportService::TIMEZONE));
+
+        $this->actingAs($staff);
+        Filament::setCurrentPanel(Filament::getPanel('tenantAdmin'));
+
+        Livewire::test(DailyRoster::class)
+            ->callTableAction('collectFee', $booking, [
+                'amount' => 1,
+                'fee_type' => Doctor::FEE_CONSULTATION,
+                'method' => ChamberCashEntry::METHOD_CASH,
+                'waived' => false,
+                'note' => null,
+            ])
+            ->assertHasNoTableActionErrors();
+
+        $this->assertDatabaseHas('chamber_cash_entries', [
+            'booking_id' => $booking->id,
+            'amount' => 800,
+            'fee_type' => Doctor::FEE_CONSULTATION,
+        ]);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_optional_extra_fee_type_is_the_only_way_to_charge_a_different_price(): void
+    {
+        $this->doctor->update([
+            'extra_fees' => [
+                ['label' => 'Follow-up', 'amount' => 500],
+            ],
+        ]);
+        $staff = $this->makeUser(User::ROLE_STAFF);
+        $booking = $this->makeBooking();
+
+        $entry = app(ChamberCashService::class)->recordPatientIncome(
+            $booking,
+            $staff,
+            ChamberCashEntry::METHOD_CASH,
+            feeType: 'extra:follow-up',
+            occurredOn: Carbon::parse('2026-08-13', OperationalReportService::TIMEZONE),
+        );
+
+        $this->assertSame(500, $entry->amount);
+        $this->assertSame('extra:follow-up', $entry->fee_type);
+    }
+
+    public function test_unknown_fee_type_is_rejected(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        app(ChamberCashService::class)->recordPatientIncome(
+            $this->makeBooking(),
+            $this->makeUser(User::ROLE_STAFF),
+            ChamberCashEntry::METHOD_CASH,
+            feeType: 'extra:not-on-the-list',
+        );
     }
 
     public function test_waive_stores_zero_income_and_expense_is_separate(): void
@@ -136,7 +197,6 @@ class ChamberCashTest extends TestCase
         $service->recordPatientIncome(
             $booking,
             $admin,
-            0,
             ChamberCashEntry::METHOD_CASH,
             waived: true,
             occurredOn: $day,
@@ -176,7 +236,6 @@ class ChamberCashTest extends TestCase
         app(ChamberCashService::class)->recordPatientIncome(
             $booking,
             $staff,
-            800,
             ChamberCashEntry::METHOD_CASH,
             occurredOn: Carbon::parse('2026-08-13', OperationalReportService::TIMEZONE),
         );
@@ -245,7 +304,6 @@ class ChamberCashTest extends TestCase
         app(ChamberCashService::class)->recordPatientIncome(
             $booking,
             $admin,
-            0,
             ChamberCashEntry::METHOD_CASH,
             waived: true,
             occurredOn: $day,
@@ -274,7 +332,7 @@ class ChamberCashTest extends TestCase
 
         Livewire::test(DailyRoster::class)
             ->callTableAction('collectFee', $booking, [
-                'amount' => 800,
+                'fee_type' => Doctor::FEE_CONSULTATION,
                 'method' => ChamberCashEntry::METHOD_CASH,
                 'waived' => false,
                 'note' => null,

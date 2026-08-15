@@ -29,6 +29,7 @@ use Filament\Notifications\Notification;
 use App\Models\LabCollectionSlot;
 use App\Models\ScheduleSession;
 use Filament\Forms\Components\Checkbox;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -250,43 +251,78 @@ class DailyRoster extends Page implements HasTable, HasForms
                         && ! in_array($record->status, ['cancelled', 'no_show'], true))
                     ->fillForm(function (Booking $record): array {
                         $entry = $record->cashEntry;
+                        $doctor = Doctor::resolveForBooking($record);
+                        $feeType = $entry?->fee_type ?? Doctor::FEE_CONSULTATION;
+                        if ($doctor && ! array_key_exists($feeType, $doctor->feeTypes())) {
+                            $feeType = Doctor::FEE_CONSULTATION;
+                        }
 
                         return [
-                            'amount' => $entry?->amount ?? app(ChamberCashService::class)->suggestedAmountTaka($record),
+                            'fee_type' => $feeType,
                             'method' => $entry?->method ?? ChamberCashEntry::METHOD_CASH,
                             'waived' => $entry?->isWaived() ?? false,
                             'note' => $entry?->note,
                         ];
                     })
-                    ->form([
-                        TextInput::make('amount')
-                            ->label(__('Amount (৳)'))
-                            ->numeric()
-                            ->minValue(0)
-                            ->required(fn (Get $get): bool => ! $get('waived')),
-                        Select::make('method')
-                            ->label(__('Paid how'))
-                            ->options(ChamberCashEntry::methods())
-                            ->required()
-                            ->native(false),
-                        Checkbox::make('waived')
-                            ->label(__('Waive this fee'))
-                            ->live(),
-                        TextInput::make('note')
-                            ->label(__('Note')),
-                    ])
+                    ->form(function (Booking $record): array {
+                        $hasExtras = Doctor::resolveForBooking($record)?->hasExtraFeeTypes() ?? false;
+
+                        return [
+                            $hasExtras
+                                ? Select::make('fee_type')
+                                    ->label(__('Visit type'))
+                                    ->options(fn (): array => app(ChamberCashService::class)->feeTypeOptions($record))
+                                    ->required()
+                                    ->live()
+                                    ->native(false)
+                                : Hidden::make('fee_type')
+                                    ->default(Doctor::FEE_CONSULTATION),
+                            Placeholder::make('amount_due')
+                                ->label(__('Amount'))
+                                ->content(function (Get $get) use ($record): string {
+                                    $type = (string) ($get('fee_type') ?: Doctor::FEE_CONSULTATION);
+                                    try {
+                                        $taka = app(ChamberCashService::class)->amountForFeeType($record, $type);
+                                    } catch (\InvalidArgumentException) {
+                                        $taka = app(ChamberCashService::class)->suggestedAmountTaka($record);
+                                    }
+
+                                    return '৳'.number_format($taka);
+                                })
+                                ->helperText(__('Set on the doctor\'s fee list. Staff cannot type an amount.')),
+                            Select::make('method')
+                                ->label(__('Paid how'))
+                                ->options(ChamberCashEntry::methods())
+                                ->required()
+                                ->native(false),
+                            Checkbox::make('waived')
+                                ->label(__('Waive this fee'))
+                                ->live(),
+                            TextInput::make('note')
+                                ->label(__('Note')),
+                        ];
+                    })
                     ->action(function (Booking $record, array $data): void {
                         /** @var \App\Models\User $user */
                         $user = auth()->user();
 
-                        app(ChamberCashService::class)->recordPatientIncome(
-                            $record,
-                            $user,
-                            (int) ($data['amount'] ?? 0),
-                            $data['method'],
-                            waived: (bool) ($data['waived'] ?? false),
-                            note: filled($data['note'] ?? null) ? (string) $data['note'] : null,
-                        );
+                        try {
+                            app(ChamberCashService::class)->recordPatientIncome(
+                                $record,
+                                $user,
+                                $data['method'],
+                                waived: (bool) ($data['waived'] ?? false),
+                                note: filled($data['note'] ?? null) ? (string) $data['note'] : null,
+                                feeType: (string) ($data['fee_type'] ?? Doctor::FEE_CONSULTATION),
+                            );
+                        } catch (\InvalidArgumentException $e) {
+                            Notification::make()
+                                ->title($e->getMessage())
+                                ->danger()
+                                ->send();
+
+                            return;
+                        }
 
                         Notification::make()
                             ->title(($data['waived'] ?? false) ? __('Fee waived') : __('Fee collected'))

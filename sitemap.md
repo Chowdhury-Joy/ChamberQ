@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-15T22:37:54+0600
+Last Updated: 2026-08-16T01:50:11+0600
 
 ## Full Site Map
 
@@ -243,8 +243,8 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 
 ### Chamber cashbook (staff / doctor / admin — ops)
 - **Trigger:** A patient pays at the desk, or the chamber spends money (rent, tea, salary).
-- **Steps:** Set the doctor's **Default consultation fee** on Doctors. On **Daily Roster**, **Collect fee** (amount, cash/bKash/Nagad/card, or waive). On **Operations → Cashbook**, **Add expense** or **Add income**, then read day/week/month income, expense, net, and waived ৳ (not collected — not an expense).
-- **Data/systems touched:** `chamber_cash_entries`, `doctors.default_fee_taka`, `ChamberCashService`. Patients still pay at the chamber — no booking gateway.
+- **Steps:** On **Doctors**, set **Consultation fee**. Leave **Other visit fees** empty if every visit is the same price; add named rows (e.g. Follow-up ৳500) only if this doctor charges more than one price. On **Daily Roster**, **Collect fee** — staff pick how they paid (cash/bKash/Nagad/card) or waive; they cannot type an amount. If extra fees exist they pick the visit type first. On **Operations → Cashbook**, **Add expense** or **Add income**, then read day/week/month income, expense, net, and waived ৳ (not collected — not an expense).
+- **Data/systems touched:** `chamber_cash_entries` (`fee_type`), `doctors.default_fee_taka`, `doctors.extra_fees`, `ChamberCashService`. Patients still pay at the chamber — no booking gateway.
 - **Success:** End of day the khata shows what came in, what went out, and what is left.
 
 ### Earlier-date waiting list (staff — ops)

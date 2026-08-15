@@ -2469,3 +2469,12 @@
  <action>Sidebar group labels, page titles (`$navigationLabel` / `$title`), and action buttons stay hardcoded English. Filament vendor chrome (Save / Search / Sign out) stays English via `EnglishFilamentLoader` (when locale is `bn`, `filament*` namespaces load `en`). Reading copy still follows chamber language: Waiting / Seen / No-show, session badges, empty states, sitting-note text, dashboard widget headings, table column headers, form field labels, notification bodies. Traits `TranslatesStaffChrome` / `TranslatesResourceChrome` removed. `BanglaStaffPanelTest` asserts the Finish / End Session button stays English on a Bangla desk.</action>
  <reason>Like a Bangla recipe card next to a stove whose knobs still say Start / Off. Translating the knobs makes a trained operator hunt for a new name for a control they already know. Supersedes the 23:46 action that ran nav / title labels through `__()`.</reason>
 </decision>
+
+## 2026-08-16T01:50:11+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Collect fee let staff type any taka amount. That invited guessing and discounts the doctor never approved. Not every doctor charges different prices for new vs follow-up visits.</context>
+ <action>Patient fees are predefined only. `doctors.default_fee_taka` is the consultation price. Optional `doctors.extra_fees` (label + amount) is empty unless that doctor actually has more than one price. Daily Roster Collect fee shows a locked total (plus labs); Visit type appears only when extras exist. `ChamberCashService::recordPatientIncome()` ignores any posted amount and stores `fee_type`. Waive still uses the same list price. Cashbook Add income / Add expense (rent, tea) stay typed — those are not patient fees.</action>
+ <reason>Like a salon till: the prices are on the board; the assistant only records how it was paid. A single-price chamber never sees a type menu.</reason>
+</decision>

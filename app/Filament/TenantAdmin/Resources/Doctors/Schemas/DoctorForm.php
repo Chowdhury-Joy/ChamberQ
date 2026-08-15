@@ -5,6 +5,7 @@ namespace App\Filament\TenantAdmin\Resources\Doctors\Schemas;
 use App\Filament\TenantAdmin\Support\PublicMediaFields;
 use App\Models\Doctor;
 use App\Models\User;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -62,11 +63,33 @@ class DoctorForm
                     ->label(__('BM&DC registration number'))
                     ->maxLength(80),
                 TextInput::make('default_fee_taka')
-                    ->label(__('Default consultation fee (৳)'))
-                    ->helperText(__('Suggested when staff collect at the desk. They can change it per patient. Not an online payment.'))
+                    ->label(__('Consultation fee (৳)'))
+                    ->helperText(__('What staff collect for a normal visit. They cannot type a different amount. Not an online payment.'))
                     ->numeric()
                     ->minValue(0)
                     ->suffix('৳'),
+                Repeater::make('extra_fees')
+                    ->label(__('Other visit fees'))
+                    ->helperText(__('Optional. Leave empty if every visit costs the same. Add a row only if this doctor charges a different price for follow-up, dressing, or similar.'))
+                    ->schema([
+                        TextInput::make('label')
+                            ->label(__('Name'))
+                            ->placeholder(__('e.g. Follow-up'))
+                            ->required()
+                            ->distinct()
+                            ->maxLength(80),
+                        TextInput::make('amount')
+                            ->label(__('Amount (৳)'))
+                            ->numeric()
+                            ->minValue(1)
+                            ->required()
+                            ->suffix('৳'),
+                    ])
+                    ->columns(2)
+                    ->default([])
+                    ->addActionLabel(__('Add fee type'))
+                    ->reorderable(false)
+                    ->columnSpanFull(),
                 Fieldset::make(__('Website profile'))
                     ->visible(fn (): bool => ! tenant()?->isSoloDoctor())
                     ->columns(2)

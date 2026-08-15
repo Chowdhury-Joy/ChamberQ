@@ -47,6 +47,7 @@ class ChamberCashEntry extends Model
     protected $fillable = [
         'direction',
         'amount',
+        'fee_type',
         'category',
         'method',
         'booking_id',

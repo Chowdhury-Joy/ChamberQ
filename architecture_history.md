@@ -604,3 +604,6 @@
 
 ## 2026-08-16T00:01:07+0600
 - Removed `TranslatesStaffChrome` / `TranslatesResourceChrome`; added `EnglishFilamentLoader` so Filament vendor chrome stays English. Sidebar, titles, and buttons stay English; desk reading copy still uses `__()`.
+
+## 2026-08-16T01:50:11+0600
+- Patient Collect fee is predefined only: `doctors.extra_fees` plus `chamber_cash_entries.fee_type`; staff cannot type a patient amount.

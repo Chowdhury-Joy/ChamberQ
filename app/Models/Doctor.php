@@ -22,6 +22,7 @@ class Doctor extends Model
         'qualifications',
         'registration_number',
         'default_fee_taka',
+        'extra_fees',
         'public_slug',
         'public_title',
         'bio',
@@ -34,6 +35,7 @@ class Doctor extends Model
     protected $casts = [
         'staff_may_enter_prescriptions' => 'boolean',
         'default_fee_taka' => 'integer',
+        'extra_fees' => 'array',
         'show_on_website' => 'boolean',
         'website_sort_order' => 'integer',
         'notify_channels' => 'array',
@@ -62,6 +64,8 @@ class Doctor extends Model
             }
         });
     }
+
+    public const FEE_CONSULTATION = 'consultation';
 
     public const PRACTICE_GENERAL = 'general_physician';
 
@@ -117,6 +121,63 @@ class Doctor extends Model
         }
 
         return static::query()->orderBy('id')->first();
+    }
+
+    /**
+     * @return array<string, array{label: string, amount: int}>
+     */
+    public function feeTypes(): array
+    {
+        return [
+            self::FEE_CONSULTATION => [
+                'label' => 'Consultation',
+                'amount' => (int) ($this->default_fee_taka ?? 0),
+            ],
+            ...$this->normalizedExtraFees(),
+        ];
+    }
+
+    public function hasExtraFeeTypes(): bool
+    {
+        return $this->normalizedExtraFees() !== [];
+    }
+
+    /**
+     * @return array<string, array{label: string, amount: int}>
+     */
+    public function normalizedExtraFees(): array
+    {
+        $rows = $this->extra_fees;
+        if (! is_array($rows)) {
+            return [];
+        }
+
+        $out = [];
+
+        foreach ($rows as $row) {
+            if (! is_array($row)) {
+                continue;
+            }
+
+            $label = trim((string) ($row['label'] ?? ''));
+            $amount = (int) ($row['amount'] ?? 0);
+
+            if ($label === '' || $amount < 1) {
+                continue;
+            }
+
+            $slug = Str::slug($label);
+            if ($slug === '' || $slug === self::FEE_CONSULTATION) {
+                $slug = substr(hash('sha256', $label), 0, 12);
+            }
+
+            $out['extra:'.$slug] = [
+                'label' => $label,
+                'amount' => $amount,
+            ];
+        }
+
+        return $out;
     }
 
     /**
