@@ -1098,3 +1098,26 @@
  <root_cause>Pause only updated status and slid ETA; `callNextPatient()` and `callSpecificPatient()` did not check `paused`.</root_cause>
  <prevention_rule>Queue advance entry points must refuse while `live_sessions.status === 'paused'`; UI copy must say tickets wait and Call next is blocked.</prevention_rule>
 </bug>
+
+## 2026-08-15T14:26:41+0600
+
+<bug>
+ <category>Code</category>
+ <symptom>Clinic Departments and Blog posts are supposed to sit under the Filament **Website** sidebar group, but the shared trait redeclared Filament's inherited `$navigationGroup` with a different default (`'Website'` vs `null`).</symptom>
+ <root_cause>`ClinicWebsiteResource` set `protected static $navigationGroup = 'Website'` instead of overriding `getNavigationGroup()`.</root_cause>
+ <prevention_rule>Shared Filament resource traits must set navigation group/icon/sort with methods (`getNavigationGroup()`), never by redeclaring the parent's typed static properties.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Code</category>
+ <symptom>The ChamberQ sales homepage at `/` assembled prices, WhatsApp links, and partner referral codes inside Blade, reading `config()` and `session()` in every partial.</symptom>
+ <root_cause>The central route was a closure `return view('marketing.home')` with no sanitised payload.</root_cause>
+ <prevention_rule>Public marketing pages receive only a controller-prepared payload. WhatsApp numbers are digits-only; image paths must stay under `images/marketing/`; referral/discount suffixes are appended only when they match `[a-z0-9-]{1,50}`.</prevention_rule>
+</bug>
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>Unauthorized or missing URLs showed Laravel's grey Forbidden / Not Found stamp — no ChamberQ name and no way home.</symptom>
+ <root_cause>`resources/views/errors/` did not exist, so abort(403)/abort(404) used vendor `errors::minimal`.</root_cause>
+ <prevention_rule>Ship branded HTML error pages for 403, 404, 419, 429, 500, and 503. JSON clients must still receive JSON, not the HTML page.</prevention_rule>
+</bug>

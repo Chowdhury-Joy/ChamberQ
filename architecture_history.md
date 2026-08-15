@@ -586,3 +586,6 @@
 
 ## 2026-08-15
 - Offline TV last-known-good + self-hosted fonts + SW v8; offline Call next replay on this computer (`OfflineQueueBagService`, `chamberq-queue-offline.js`, `offline_queue_events`); Bangla tenant admin panel from chamber language (`ConfiguresTenantAdminPanel` locale, `BanglaStaffPanelTest`).
+
+## 2026-08-15T14:26:41+0600
+- Marketing `/` served by `MarketingController` (sanitised view payload); shared `LocaleController` for `/lang/{locale}`; clinic Website nav group via `getNavigationGroup()`; branded HTML error pages under `resources/views/errors/`.

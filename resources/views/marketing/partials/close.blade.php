@@ -9,8 +9,8 @@
             <a class="mk-btn mk-btn-primary" href="{{ $generalWa }}" target="_blank" rel="noopener noreferrer">
                 Chat on WhatsApp
             </a>
-            <a class="mk-btn mk-btn-outline" href="tel:{{ preg_replace('/\D+/', '', (string) config('marketing.phone')) }}">
-                Call {{ config('marketing.phone') }}
+            <a class="mk-btn mk-btn-outline" href="tel:{{ preg_replace('/\D+/', '', (string) $phone) }}">
+                Call {{ $phone }}
             </a>
         </div>
     </div>

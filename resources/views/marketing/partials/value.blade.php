@@ -8,14 +8,10 @@
             <p>Fewer interruptions at the desk. A sitting that finishes on time. A chamber people recommend.</p>
         </div>
         <ul class="mk-value-list">
-            @foreach(config('marketing.value_points') as $point)
-                @php
-                    $exists = file_exists(public_path($point['image']));
-                    $featured = !empty($point['featured']);
-                @endphp
-                <li class="mk-value-item {{ $featured ? 'is-main' : '' }}">
+            @foreach($valuePoints as $point)
+                <li class="mk-value-item {{ $point['featured'] ? 'is-main' : '' }}">
                     <div class="mk-value-thumb">
-                        @if($exists)
+                        @if($point['image'])
                             <img src="{{ asset($point['image']) }}" alt="{{ $point['title'] }}" width="640" height="400">
                         @else
                             <div class="mk-value-art" aria-hidden="true">

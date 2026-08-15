@@ -16,5 +16,8 @@ trait ClinicWebsiteResource
         return static::canViewAny();
     }
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Website';
+    public static function getNavigationGroup(): ?string
+    {
+        return 'Website';
+    }
 }

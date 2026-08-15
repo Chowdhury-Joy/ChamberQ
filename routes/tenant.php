@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\ClinicContentController;
 use App\Http\Controllers\ConditionController;
+use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\MedicineController;
 use App\Http\Controllers\NotifySmsController;
 use App\Http\Controllers\OfflineController;
@@ -22,7 +23,6 @@ use App\Http\Middleware\EnsureTenantAcceptsBookings;
 use App\Http\Middleware\Localization;
 use App\Http\Middleware\SetPathTenantUrlDefaults;
 use App\Support\TenancyUrl;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
 use Stancl\Tenancy\Middleware\InitializeTenancyByPath;
@@ -49,17 +49,7 @@ $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
     // `back()` is not used: it trusts the Referer header, so a page on another
     // origin linking here would bounce the visitor straight back off the
     // clinic's domain, which is exactly the shape a phishing link wants.
-    Route::get('/lang/{locale}', function (Request $request, $locale) {
-        if (in_array($locale, ['en', 'bn'], true)) {
-            session()->put('locale', $locale);
-        }
-
-        $referer = (string) $request->headers->get('referer');
-        $sameHost = $referer !== ''
-            && parse_url($referer, PHP_URL_HOST) === $request->getHost();
-
-        return redirect()->to($sameHost ? $referer : tenant_web_url('/'));
-    });
+    Route::get('/lang/{locale}', [LocaleController::class, 'switch']);
 
     Route::get('/book', [BookingController::class, 'create'])
         ->middleware(['tenant.module:front_door']);

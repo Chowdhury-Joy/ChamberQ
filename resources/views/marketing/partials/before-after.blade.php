@@ -1,6 +1,3 @@
-@php
-    $ba = config('marketing.before_after');
-@endphp
 <section class="mk-section mk-compare" id="before-after" aria-labelledby="compare-heading">
     <div class="mk-wrap">
         <div class="mk-section-head">
@@ -11,10 +8,10 @@
             <article class="mk-compare-card mk-compare-before">
                 <div class="mk-compare-top">
                     <span>Before using us</span>
-                    <strong>{{ $ba['before']['value'] }}</strong>
+                    <strong>{{ $beforeAfter['before']['value'] }}</strong>
                 </div>
                 <ul>
-                    @foreach($ba['before']['bullets'] as $bullet)
+                    @foreach($beforeAfter['before']['bullets'] as $bullet)
                         <li><span>×</span>{{ $bullet }}</li>
                     @endforeach
                 </ul>
@@ -22,10 +19,10 @@
             <article class="mk-compare-card mk-compare-after">
                 <div class="mk-compare-top">
                     <span>After using us</span>
-                    <strong>{{ $ba['after']['value'] }}</strong>
+                    <strong>{{ $beforeAfter['after']['value'] }}</strong>
                 </div>
                 <ul>
-                    @foreach($ba['after']['bullets'] as $bullet)
+                    @foreach($beforeAfter['after']['bullets'] as $bullet)
                         <li><span>✓</span>{{ $bullet }}</li>
                     @endforeach
                 </ul>

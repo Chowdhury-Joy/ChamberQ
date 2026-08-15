@@ -1,7 +1,3 @@
-@php
-    $heroPath = config('marketing.hero_image');
-    $heroExists = $heroPath && file_exists(public_path($heroPath));
-@endphp
 <section class="mk-hero" aria-label="Introduction" data-mk-hero>
     <div class="mk-wrap">
         <div class="mk-hero-grid">
@@ -23,8 +19,8 @@
             </div>
             <div class="mk-hero-visual mk-fade-up-delay">
                 <div class="mk-hero-frame">
-                    @if($heroExists)
-                        <img src="{{ asset($heroPath) }}" alt="ChamberQ serial ticket and day list" width="780" height="780">
+                    @if($heroImage)
+                        <img src="{{ asset($heroImage) }}" alt="ChamberQ serial ticket and day list" width="780" height="780">
                     @else
                         @include('marketing.partials.product-preview', ['preview' => 'ticket'])
                     @endif

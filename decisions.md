@@ -2401,3 +2401,12 @@
   <reason>One machine can honestly run the room without inventing a LAN product. Two machines still cannot share one offline queue — conflict means refresh. Bangla desk matches how solo chambers actually operate; patient homepage content stays the paid add-on.</reason>
 </decision>
 
+## 2026-08-15T14:26:41+0600
+
+<decision>
+ <category>Code</category>
+ <context>The sales homepage assembled prices, WhatsApp numbers, and partner referral codes inside the Blade template. Clinic Departments/Blog set the sidebar folder with a trait property that collides with Filament's inherited `$navigationGroup`. Blocked URLs showed Laravel's grey Forbidden/Not Found screens.</context>
+ <action>`MarketingController@home` prepares a sanitised payload (digits-only WhatsApp, allowlisted marketing images, referral/discount suffixes only when they match `[a-z0-9-]{1,50}`) and passes it to the existing marketing blades. `LocaleController` owns `/lang/{locale}` on central and tenant (same-host Referer only). `ClinicWebsiteResource` uses `getNavigationGroup()` instead of a trait property. Branded HTML pages live at `resources/views/errors/{403,404,419,429,500,503}.blade.php`; JSON 403/404 stay JSON.</action>
+ <reason>A shop window should not reach into the back office. Filament's documented trait pattern is a method, not a colliding static property. A locked door should still look like ChamberQ, not a framework stamp.</reason>
+</decision>
+

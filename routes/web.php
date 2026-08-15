@@ -1,11 +1,12 @@
 <?php
 
 use App\Http\Controllers\FindDoctorController;
+use App\Http\Controllers\LocaleController;
+use App\Http\Controllers\MarketingController;
 use App\Http\Controllers\PatientAccountController;
 use App\Http\Controllers\PatientAuthController;
 use App\Http\Middleware\CaptureReferralParams;
 use App\Http\Middleware\Localization;
-use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
 $centralDomains = config('tenancy.central_domains');
@@ -16,21 +17,9 @@ if (blank($centralDomains)) {
 
 foreach ($centralDomains as $domain) {
     Route::domain($domain)->middleware([CaptureReferralParams::class, Localization::class])->group(function () {
-        Route::get('/', function () {
-            return view('marketing.home');
-        });
+        Route::get('/', [MarketingController::class, 'home']);
 
-        Route::get('/lang/{locale}', function (Request $request, string $locale) {
-            if (in_array($locale, ['en', 'bn'], true)) {
-                session()->put('locale', $locale);
-            }
-
-            $referer = (string) $request->headers->get('referer');
-            $sameHost = $referer !== ''
-                && parse_url($referer, PHP_URL_HOST) === $request->getHost();
-
-            return redirect()->to($sameHost ? $referer : '/find');
-        });
+        Route::get('/lang/{locale}', [LocaleController::class, 'switch']);
 
         Route::get('/find', [FindDoctorController::class, 'index'])->name('patient.find');
 

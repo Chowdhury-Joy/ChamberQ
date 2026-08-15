@@ -1,31 +1,3 @@
-@php
-    $product = config('marketing.product_name');
-    $whatsapp = preg_replace('/\D+/', '', (string) config('marketing.whatsapp'));
-    $solo = config('marketing.plans.solo');
-    $clinic = config('marketing.plans.clinic');
-
-    $refCode = session('referral.code');
-    $discountCode = session('referral.discount_code');
-    $refSuffix = '';
-    if ($refCode) {
-        $refSuffix .= ' Ref: '.$refCode.'.';
-    }
-    if ($discountCode) {
-        $refSuffix .= ' Code: '.$discountCode.'.';
-    }
-
-    $wa = function (string $message) use ($whatsapp): string {
-        return 'https://wa.me/'.$whatsapp.'?text='.rawurlencode($message);
-    };
-
-    $taka = function (int $amount): string {
-        return '৳'.number_format($amount);
-    };
-
-    $soloWa = $wa('Hi — I\'m a solo doctor interested in ChamberQ (Maestro — full package).'.$refSuffix);
-    $clinicWa = $wa('Hi — I\'m interested in ChamberQ for our clinic (Clinic plan).'.$refSuffix);
-    $generalWa = $wa('Hi — I\'m a solo doctor and want to know how ChamberQ can help my chamber.'.$refSuffix);
-@endphp
 <!DOCTYPE html>
 <html lang="en">
 <head>

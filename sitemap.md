@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-15T14:16:09+0600
+Last Updated: 2026-08-15T14:26:41+0600
 
 ## Full Site Map
 
@@ -21,6 +21,8 @@ Hosts: values in `CENTRAL_DOMAINS` (e.g. `localhost`).
 | `/partner` | Marketer partner panel login | public login |
 | `/partner/*` | Marketer: referral link, owed/paid stats, referred doctors list, commission history | marketer only |
 | `/up` | Laravel health check | public |
+
+Branded HTML error pages (`resources/views/errors/{403,404,419,429,500,503}.blade.php`) replace Laravel’s grey Forbidden / Not Found screens. JSON API errors stay JSON.
 
 ### Platform tenant (central path tenancy)
 Same central host; tenant identified by URL slug (tenant `id`), e.g. `drkarim`.

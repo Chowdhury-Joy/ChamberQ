@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Http\Controllers\MarketingController;
+use Illuminate\Http\Request;
 use Tests\TestCase;
 
 class MarketingLandingPageTest extends TestCase
@@ -98,5 +100,27 @@ class MarketingLandingPageTest extends TestCase
         $this->assertMatchesRegularExpression('/\.mk-btn-primary\s*\{[^}]*background:\s*var\(--mk-blue\)/s', $css);
         $this->assertDoesNotMatchRegularExpression('/\.mk-btn-primary\s*\{[^}]*background:\s*var\(--mk-coral\)/s', $css);
         $this->assertDoesNotMatchRegularExpression('/\.mk-plan-featured\s+\.mk-btn-primary\s*\{[^}]*background:\s*var\(--mk-coral\)/s', $css);
+    }
+
+    public function test_central_root_is_served_by_marketing_controller(): void
+    {
+        $route = app('router')->getRoutes()->match(Request::create('http://localhost/', 'GET'));
+
+        $this->assertSame(MarketingController::class.'@home', $route->getActionName());
+    }
+
+    public function test_poisoned_referral_session_is_not_copied_into_whatsapp(): void
+    {
+        $this->withSession(['referral.code' => '<script>alert(1)</script>'])
+            ->get('http://localhost/')
+            ->assertOk()
+            ->assertDontSee('alert(1)', false)
+            ->assertDontSee(rawurlencode('Ref: <script>'), false);
+    }
+
+    public function test_central_lang_switch_ignores_offsite_referer(): void
+    {
+        $this->get('http://localhost/lang/bn', ['Referer' => 'https://evil.example/find'])
+            ->assertRedirect('http://localhost/find');
     }
 }

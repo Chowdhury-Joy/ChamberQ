@@ -7,14 +7,11 @@
             </div>
             <p>Six steps you actually run. We set it up with you. No app for you to learn.</p>
         </div>
-        <x-card-grid :count="count(config('marketing.steps'))">
-            @foreach(config('marketing.steps') as $index => $step)
-                @php
-                    $exists = file_exists(public_path($step['image']));
-                @endphp
+        <x-card-grid :count="count($steps)">
+            @foreach($steps as $index => $step)
                 <article class="mk-step-card">
                     <div class="mk-step-thumb">
-                        @if($exists)
+                        @if($step['image'])
                             <img src="{{ asset($step['image']) }}" alt="{{ $step['title'] }}" width="800" height="600">
                         @else
                             @include('marketing.partials.product-preview', ['preview' => $step['key']])

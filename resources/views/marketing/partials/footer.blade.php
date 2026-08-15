@@ -7,8 +7,8 @@
         </div>
         <div>
             <p><a href="{{ $generalWa }}" target="_blank" rel="noopener noreferrer">WhatsApp</a></p>
-            @if(config('marketing.phone'))
-                <p class="mk-footer-meta">{{ config('marketing.phone') }}</p>
+            @if($phone)
+                <p class="mk-footer-meta">{{ $phone }}</p>
             @endif
         </div>
     </div>

@@ -50,15 +50,6 @@
             </article>
         </x-card-grid>
 
-        @php
-            $modules = config('marketing.modules', []);
-            $frontDoor = $modules['front_door'] ?? ['setup' => 3000, 'monthly' => 1000];
-            $prescription = $modules['prescription'] ?? ['setup' => 2500, 'monthly' => 250];
-            $liveQueue = $modules['live_queue'] ?? ['setup' => 12000, 'monthly' => 2000];
-            $bundle = $modules['bundle_all'] ?? ['setup' => 15000, 'monthly' => 3000];
-            $modulesWa = $wa('Hi — I\'m a solo doctor. I want to pick ChamberQ modules (website / prescription / queue).'.$refSuffix);
-        @endphp
-
         <div class="mk-modules">
             <h3 class="mk-modules-title">Or pick modules (one doctor)</h3>
             <div class="mk-modules-table-wrap">
