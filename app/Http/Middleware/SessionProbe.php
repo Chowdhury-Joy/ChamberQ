@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Log;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * TEMPORARY diagnostic — remove with AuthDebugProvider.
+ * Sign-out diagnostics, off unless `AUTH_DEBUG=true` — see config/diagnostics.php.
  *
  * Runs after EncryptCookies + StartSession, so `$request->cookies` holds the
  * DECRYPTED session id the browser sent. Comparing that to the session the app
@@ -22,7 +22,10 @@ class SessionProbe
         // Never run under PHPUnit: tests that call `Log::spy()` swap the log
         // manager for a mock whose `channel()` returns null, and this probe
         // must not be able to break a test it has nothing to do with.
-        if (app()->runningUnitTests() || ! env('AUTH_DEBUG', false) || ! $request->hasSession()) {
+        // `config()`, not `env()` — see AuthDebugProvider and config/diagnostics.php:
+        // `config:cache` stops `.env` being loaded, so `env()` here was always
+        // null on a live server.
+        if (app()->runningUnitTests() || ! config('diagnostics.auth') || ! $request->hasSession()) {
             return $next($request);
         }
 

@@ -10,8 +10,8 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 
 /**
- * TEMPORARY diagnostic — remove once the "asked to sign in again" report is
- * closed. Records who is authenticated on each request and, crucially, what
+ * Sign-out diagnostics, off unless `AUTH_DEBUG=true` (config/diagnostics.php).
+ * Records who is authenticated on each request and, crucially, what
  * caused a logout, so the next occurrence explains itself instead of being
  * guessed at.
  */
@@ -20,7 +20,12 @@ class AuthDebugProvider extends ServiceProvider
     public function boot(): void
     {
         // Never run under PHPUnit — see SessionProbe for why (Log::spy()).
-        if ($this->app->runningUnitTests() || ! env('AUTH_DEBUG', false)) {
+        //
+        // `config()`, not `env()`: a deployment runs `config:cache`, after which
+        // Laravel does not load `.env` at all and `env()` here returns null — so
+        // this switch could never be turned on in production, which is the only
+        // place the sign-out it was built to explain has ever been reported.
+        if ($this->app->runningUnitTests() || ! config('diagnostics.auth')) {
             return;
         }
 

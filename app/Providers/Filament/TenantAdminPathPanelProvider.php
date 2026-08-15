@@ -51,7 +51,7 @@ class TenantAdminPathPanelProvider extends PanelProvider
                     // InitializeTenancyForTenantHosts on the global `web` group.
                     InitializeTenancyByPath::class,
                     SetPathTenantUrlDefaults::class,
-                    // TEMPORARY diagnostic, no-ops unless AUTH_DEBUG=true.
+                    // Sign-out diagnostics, off unless AUTH_DEBUG=true (config/diagnostics.php).
                     \App\Http\Middleware\SessionProbe::class,
                     DisableBladeIconComponents::class,
                     DispatchServingFilamentEvent::class,

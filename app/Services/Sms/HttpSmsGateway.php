@@ -36,8 +36,33 @@ class HttpSmsGateway implements SmsGateway
             throw new RuntimeException(sprintf(
                 'SMS gateway HTTP %s: %s',
                 $response->status(),
-                mb_substr($response->body(), 0, 500)
+                self::redact($response->body())
             ));
         }
+    }
+
+    /**
+     * A gateway's error body, safe to store and log.
+     *
+     * This string is written to `sms_messages.error` and to the log by
+     * `SmsService`, and neither is somewhere anyone looks routinely. Aggregators
+     * commonly echo the request back in an error ("invalid api_key: abc123"), so
+     * the reply can carry the account key that authenticates every message this
+     * clinic sends. The key is a known value, so redact it by match rather than
+     * guessing at field names, and keep the rest — a gateway failure is
+     * undiagnosable without the message it actually returned.
+     */
+    private static function redact(string $body): string
+    {
+        foreach (['sms.http.api_key', 'sms.http.sender'] as $secret) {
+            $value = (string) config($secret);
+
+            // Short values would match far too much of an ordinary sentence.
+            if (mb_strlen($value) >= 6) {
+                $body = str_replace($value, '[redacted]', $body);
+            }
+        }
+
+        return mb_substr($body, 0, 200);
     }
 }

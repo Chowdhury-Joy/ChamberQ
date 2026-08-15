@@ -16,7 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // read the request host) bake in localhost instead of the public domain.
         $middleware->trustProxies(at: '*');
         $middleware->prependToGroup('web', \App\Http\Middleware\InitializeTenancyForTenantHosts::class);
-        // TEMPORARY diagnostic, no-ops unless AUTH_DEBUG=true. Remove with AuthDebugProvider.
+        // Sign-out diagnostics, off unless AUTH_DEBUG=true (config/diagnostics.php).
         $middleware->appendToGroup('web', \App\Http\Middleware\SessionProbe::class);
         $middleware->alias([
             'tenant.module' => \App\Http\Middleware\EnsureTenantHasModule::class,

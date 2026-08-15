@@ -7,6 +7,6 @@ return [
     App\Providers\Filament\TenantAdminPanelProvider::class,
     App\Providers\Filament\TenantAdminPathPanelProvider::class,
     App\Providers\TenancyServiceProvider::class,
-    // TEMPORARY diagnostic, no-ops unless AUTH_DEBUG=true. Remove with the provider.
+    // Sign-out diagnostics, off unless AUTH_DEBUG=true (config/diagnostics.php).
     App\Providers\AuthDebugProvider::class,
 ];
