@@ -18,7 +18,7 @@
 
             @if(filled($department->body))
                 <div class="rich-content" data-reveal-block data-reveal-kind="fade">
-                    {!! $department->body !!}
+                    {!! \App\Support\HtmlSanitizer::clean($department->body) !!}
                 </div>
             @endif
 

@@ -66,7 +66,12 @@ class PatientAuthController extends Controller
     public function logout(Request $request): RedirectResponse
     {
         auth('patient')->logout();
-        $request->session()->forget(['patient_otp_phone', 'patient_otp_sent']);
+
+        // Invalidate, not just forget-and-rotate-the-token. Regenerating the
+        // CSRF token alone leaves the session id the browser arrived with still
+        // valid, so signing out on a shared phone — the normal case here — left
+        // the previous session usable by whoever held that id.
+        $request->session()->invalidate();
         $request->session()->regenerateToken();
 
         return redirect('/find');

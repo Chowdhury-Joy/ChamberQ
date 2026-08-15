@@ -19,7 +19,7 @@
 
             @if(filled($doctor->bio))
                 <div class="rich-content" data-reveal-block data-reveal-kind="fade">
-                    {!! $doctor->bio !!}
+                    {!! \App\Support\HtmlSanitizer::clean($doctor->bio) !!}
                 </div>
             @endif
 

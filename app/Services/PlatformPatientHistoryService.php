@@ -120,6 +120,18 @@ class PlatformPatientHistoryService
         $phones = $this->phoneVariants($account->normalizedPhone());
         $patientIds = $this->matchingPatientIds($account, $phones);
 
+        // Fail closed. Every query below runs `withoutGlobalScopes()`, so the
+        // tenant scope is not there to catch a mistake — and Laravel *drops* a
+        // nested `where()` whose closure added no constraints (see
+        // Builder::addNestedWhereQuery). With no phone and no patient id the
+        // filter below therefore compiled to `select * from bookings`: every
+        // serial, name and ticket URL of every chamber on the platform, handed
+        // to whoever was signed in. An account with nothing to match on has
+        // nothing to show.
+        if ($phones === [] && $patientIds === []) {
+            return collect();
+        }
+
         $query = Booking::withoutGlobalScopes()
             ->with([
                 'bookable' => fn ($q) => $q->withoutGlobalScopes(),

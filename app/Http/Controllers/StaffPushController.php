@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\StaffPushSubscription;
+use App\Support\PushEndpoint;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -11,7 +12,9 @@ class StaffPushController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'endpoint' => ['required', 'url', 'max:512'],
+            // Same gate as the patient ticket: the server POSTs to whatever is
+            // stored here. See App\Support\PushEndpoint.
+            'endpoint' => ['required', 'string', 'max:512', PushEndpoint::rule()],
             'keys.p256dh' => ['required', 'string', 'max:255'],
             'keys.auth' => ['required', 'string', 'max:255'],
         ]);

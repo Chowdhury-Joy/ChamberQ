@@ -72,7 +72,12 @@ class OfflineController extends Controller
             'items.*.type' => ['required', 'string', 'in:'.$allowedTypes],
             'items.*.booking_id' => ['nullable', 'string', 'max:40'],
             'items.*.schedule_session_id' => ['nullable'],
-            'items.*.live_session_id' => ['nullable', 'integer', 'exists:live_sessions,id'],
+            // Deliberately NOT `exists:live_sessions,id` — that rule ignores the
+            // tenant scope, so it answered "yes, that id exists" for another
+            // chamber's session and turned a validation message into an
+            // existence oracle. OfflineSyncService resolves the id through the
+            // scope and rejects anything that does not belong here.
+            'items.*.live_session_id' => ['nullable', 'integer', 'min:1'],
             'items.*.expected_current_booking_id' => ['nullable', 'string', 'max:40'],
             'items.*.patient_name' => ['nullable', 'string', 'max:120'],
             'items.*.patient_phone' => ['nullable', 'string', 'max:20'],

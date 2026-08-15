@@ -20,7 +20,7 @@
 
             @if(filled($post->body))
                 <div class="rich-content" data-reveal-block data-reveal-kind="fade">
-                    {!! $post->body !!}
+                    {!! \App\Support\HtmlSanitizer::clean($post->body) !!}
                 </div>
             @endif
         </div>
