@@ -24,9 +24,9 @@ class DatabaseSeeder extends Seeder
         // `creating` hook that assigns tenant_id, so every scoped insert would
         // fail its NOT NULL constraint.
 
-        User::withoutGlobalScope(\App\Scopes\TenantScope::class)->firstOrCreate(
+        User::withoutGlobalScope(\App\Scopes\TenantScope::class)->updateOrCreate(
             ['email' => 'super@demo.com'],
-            ['name' => 'Super Admin', 'password' => Hash::make('password'), 'role' => 'super_admin']
+            ['name' => 'Super Admin', 'password' => Hash::make('pass'), 'role' => 'super_admin']
         );
 
         $this->seedSoloTenant();
@@ -51,13 +51,13 @@ class DatabaseSeeder extends Seeder
 
         Domain::firstOrCreate(['domain' => 'solo.localhost'], ['tenant_id' => 'solo']);
 
-        User::withoutGlobalScope(\App\Scopes\TenantScope::class)->firstOrCreate(['email' => 'admin@solo.com'], [
-            'name' => 'Solo Admin', 'password' => Hash::make('password'),
+        User::withoutGlobalScope(\App\Scopes\TenantScope::class)->updateOrCreate(['email' => 'admin@solo.com'], [
+            'name' => 'Solo Admin', 'password' => Hash::make('pass'),
             'role' => User::ROLE_ADMIN, 'tenant_id' => 'solo',
         ]);
 
-        User::withoutGlobalScope(\App\Scopes\TenantScope::class)->firstOrCreate(['email' => 'doctor@solo.com'], [
-            'name' => 'Dr. Shamim Ahmed', 'password' => Hash::make('password'),
+        User::withoutGlobalScope(\App\Scopes\TenantScope::class)->updateOrCreate(['email' => 'doctor@solo.com'], [
+            'name' => 'Dr. Shamim Ahmed', 'password' => Hash::make('pass'),
             'role' => User::ROLE_DOCTOR, 'tenant_id' => 'solo',
         ]);
 
@@ -305,8 +305,8 @@ class DatabaseSeeder extends Seeder
 
         Domain::firstOrCreate(['domain' => 'demo.localhost'], ['tenant_id' => 'demo']);
 
-        User::withoutGlobalScope(\App\Scopes\TenantScope::class)->firstOrCreate(['email' => 'admin@demo.com'], [
-            'name' => 'Demo Admin', 'password' => Hash::make('password'),
+        User::withoutGlobalScope(\App\Scopes\TenantScope::class)->updateOrCreate(['email' => 'admin@demo.com'], [
+            'name' => 'Demo Admin', 'password' => Hash::make('pass'),
             'role' => User::ROLE_ADMIN, 'tenant_id' => 'demo',
         ]);
 

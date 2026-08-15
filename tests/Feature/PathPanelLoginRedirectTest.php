@@ -70,6 +70,7 @@ class PathPanelLoginRedirectTest extends TestCase
         $this->assertNotNull($target, 'Login did not redirect anywhere.');
         $this->assertStringNotContainsString('{tenant}', rawurldecode($target));
         $this->assertStringContainsString('/solo/admin', $target);
+        $this->assertStringNotContainsString('consult-screen', $target);
         $this->assertAuthenticated();
     }
 
@@ -84,6 +85,7 @@ class PathPanelLoginRedirectTest extends TestCase
 
         $this->assertStringNotContainsString('{tenant}', rawurldecode($home));
         $this->assertStringContainsString('/solo/admin', $home);
+        $this->assertStringNotContainsString('consult-screen', $home);
     }
 
     public function test_central_panels_still_resolve_their_own_paths(): void

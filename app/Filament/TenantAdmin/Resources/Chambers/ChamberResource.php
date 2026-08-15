@@ -26,12 +26,12 @@ class ChamberResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return auth()->user()?->canManageOps() ?? false;
+        return auth()->user()?->canManageSittingSetup() ?? false;
     }
 
     public static function shouldRegisterNavigation(): bool
     {
-        if (! (auth()->user()?->canManageOps() ?? false)) {
+        if (! (auth()->user()?->canManageSittingSetup() ?? false)) {
             return false;
         }
 

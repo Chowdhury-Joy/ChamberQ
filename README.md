@@ -34,8 +34,12 @@ Map tenant hosts in `/etc/hosts` if needed, e.g. `127.0.0.1 solo.localhost`.
 
 | Role | Email | Password |
 |------|-------|----------|
-| Super Admin | (see seeder) | `password` |
-| Solo admin | `admin@solo.com` | `password` |
+| Super Admin | `super@demo.com` | `pass` |
+| Solo admin | `admin@solo.com` | `pass` |
+| Solo doctor | `doctor@solo.com` | `pass` |
+| Clinic admin | `admin@demo.com` | `pass` |
+| Nusrat admin | `admin@nusraturmi.local` | `pass` |
+| Nusrat doctor | `doctor@nusraturmi.local` | `pass` |
 
 Change these before any shared or production environment.
 

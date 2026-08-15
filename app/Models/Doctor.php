@@ -19,6 +19,7 @@ class Doctor extends Model
         'user_id',
         'practice_type',
         'staff_may_enter_prescriptions',
+        'allows_repeat_serials',
         'qualifications',
         'registration_number',
         'default_fee_taka',
@@ -34,6 +35,7 @@ class Doctor extends Model
 
     protected $casts = [
         'staff_may_enter_prescriptions' => 'boolean',
+        'allows_repeat_serials' => 'boolean',
         'default_fee_taka' => 'integer',
         'extra_fees' => 'array',
         'show_on_website' => 'boolean',

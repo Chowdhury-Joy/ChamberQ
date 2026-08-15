@@ -43,7 +43,7 @@ class OperationalReports extends Page implements HasTable
         /** @var \App\Models\User|null $user */
         $user = auth()->user();
 
-        return $user?->canManageOps() ?? false;
+        return $user?->canViewOperationalReports() ?? false;
     }
 
     public function mount(): void

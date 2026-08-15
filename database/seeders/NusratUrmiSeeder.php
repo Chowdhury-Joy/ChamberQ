@@ -48,20 +48,20 @@ class NusratUrmiSeeder extends Seeder
         Domain::firstOrCreate(['domain' => 'nusraturmi.localhost'], ['tenant_id' => self::TENANT_ID]);
         Domain::firstOrCreate(['domain' => 'drurminusrat.com'], ['tenant_id' => self::TENANT_ID]);
 
-        User::withoutGlobalScope(TenantScope::class)->firstOrCreate(
+        User::withoutGlobalScope(TenantScope::class)->updateOrCreate(
             ['email' => 'admin@nusraturmi.local', 'tenant_id' => self::TENANT_ID],
             [
                 'name' => 'Dermavilla Admin',
-                'password' => Hash::make('password'),
+                'password' => Hash::make('pass'),
                 'role' => User::ROLE_ADMIN,
             ],
         );
 
-        $doctorUser = User::withoutGlobalScope(TenantScope::class)->firstOrCreate(
+        $doctorUser = User::withoutGlobalScope(TenantScope::class)->updateOrCreate(
             ['email' => 'doctor@nusraturmi.local', 'tenant_id' => self::TENANT_ID],
             [
                 'name' => 'Dr. Nusrat Sultana Urmi',
-                'password' => Hash::make('password'),
+                'password' => Hash::make('pass'),
                 'role' => User::ROLE_DOCTOR,
             ],
         );

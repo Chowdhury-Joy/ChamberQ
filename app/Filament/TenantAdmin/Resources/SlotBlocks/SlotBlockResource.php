@@ -28,7 +28,9 @@ class SlotBlockResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return (auth()->user()?->canManageOps() ?? false)
+        $user = auth()->user();
+
+        return (($user?->isAdmin() ?? false) || ($user?->canWorkDesk() ?? false))
             && (tenant()?->hasFrontDoor() ?? false);
     }
 

@@ -128,6 +128,7 @@ class BookingService
         ?string $nid = null,
         ?int $age = null,
         bool $allowOverflow = false,
+        ?string $repeatSeriesId = null,
     ): Booking {
         $patientPhone = $this->normalizeBdPhone($patientPhone);
         $whatsappPhone = filled($whatsappPhone) ? $this->normalizeBdPhone($whatsappPhone) : null;
@@ -135,7 +136,7 @@ class BookingService
             $whatsappPhone = null;
         }
 
-        $booking = DB::transaction(function () use ($bookable, $bookingDate, $patientName, $patientPhone, $labTestIds, $patientId, $wantsEarlierDate, $whatsappPhone, $shareClinicalHistory, $nid, $age, $allowOverflow) {
+        $booking = DB::transaction(function () use ($bookable, $bookingDate, $patientName, $patientPhone, $labTestIds, $patientId, $wantsEarlierDate, $whatsappPhone, $shareClinicalHistory, $nid, $age, $allowOverflow, $repeatSeriesId) {
             $tenant = tenant();
             $capMode = $tenant->slot_cap_mode ?? 'per_session';
             if ($capMode === 'per_day') {
@@ -233,6 +234,7 @@ class BookingService
                 'is_overflow' => $isOverflow,
                 'status' => 'waiting',
                 'wants_earlier_date' => $wantsEarlierDate,
+                'repeat_series_id' => $repeatSeriesId,
             ]);
 
             if ($labTestIds !== []) {

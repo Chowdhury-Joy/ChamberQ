@@ -2470,6 +2470,42 @@
  <reason>Like a Bangla recipe card next to a stove whose knobs still say Start / Off. Translating the knobs makes a trained operator hunt for a new name for a control they already know. Supersedes the 23:46 action that ran nav / title labels through `__()`.</reason>
 </decision>
 
+## 2026-08-16T00:13:24+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The doctor's job is the consult, but signing in landed on the stats dashboard — a screen staff use to see today's numbers. That is like walking into a clinic and putting the doctor at the reception desk first.</context>
+ <action>Consult Screen is the doctor's panel home when Prescription is on: login, the sidebar logo, and a visit to `/admin` all open it. `FilamentPanelUrl::home()` resolves `pages.consult-screen` for that login. The tenant Dashboard redirects those doctors there and drops Dashboard from their sidebar. Staff and the account owner still land on the dashboard. A doctor whose chamber has no Prescription module also stays on the dashboard, because Consult Screen is not available.</action>
+ <reason>The first screen after login should be the work they came to do. Staff still need the day list and cash numbers; the doctor needs the pad already open when the next patient walks in.</reason>
+</decision>
+
+## 2026-08-16T00:46:49+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>After Consult Screen became the doctor's home, four front-desk tools were still on the doctor's menu: Daily Roster, Slot Blocks, Waiting for earlier date, and Follow-up reminders. That is like handing the chef the reservation book, the closed-night list, and the reminder-call sheet.</context>
+ <action>Those four lists use `User::canWorkDesk()`: staff always; a doctor only when `Tenant::hasStaffLogin()` is false. Slot Blocks and Waiting for earlier date are now on the staff menu (they were doctor/admin before). The account owner still reaches Slot Blocks, Waiting for earlier date, and Follow-up reminders, but not Daily Roster. Doctor still keeps chambers / schedule / My medicines / Consult Screen / queue controls when they run the queue.</action>
+ <reason>Staff run the waiting room and the phone. The doctor runs the consult. A solo doctor with no staff login still needs the desk, same as the queue fallback.</reason>
+</decision>
+
+## 2026-08-16T01:21:54+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>After the four desk lists moved to staff, Chambers and Schedule Sessions were still on the doctor's menu, and Operational Reports was closed to staff. That is like leaving the restaurant's room list and opening hours with the chef, while the host cannot see how many covers the night did.</context>
+ <action>Chambers and sitting hours use `User::canManageSittingSetup()`: staff, the account owner, or a doctor only when `Tenant::hasStaffLogin()` is false. Operational Reports uses `User::canViewOperationalReports()` so admin, doctor, and staff can all open the day/week/month counts. The **Doctors** menu is unchanged: it is the practice's doctor cards (name, BM&DC, fee, SMS/WhatsApp, paper-prescription toggle, pairing a login), not the login itself, and stays admin/doctor (`canManageOps`). On Solo the list is already hidden from the sidebar.</action>
+ <reason>Staff already change closed dates and the day list; rooms and hours belong with that desk work. Counts of how the day went belong to everyone in the chamber. Doctor cards are clinical identity, not reception setup, so they stay with the doctor until the owner says otherwise.</reason>
+</decision>
+
+## 2026-08-16T01:39:02+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Operational Reports had just been opened to staff. The owner said staff do not need it — only the account owner and the doctor should see how the day went.</context>
+ <action>`User::canViewOperationalReports()` now matches `canManageOps()`: admin and doctor only. Staff lose the menu item and cannot open the page. Chambers and sitting hours stay with staff.</action>
+ <reason>The day-count sheet is for the people who own the practice, not the desk. Staff already have the live roster; they do not need the week/month totals. Supersedes the reports half of 2026-08-16T01:21:54+0600.</reason>
+</decision>
+
 ## 2026-08-16T01:50:11+0600
 
 <decision>
@@ -2477,4 +2513,13 @@
  <context>Collect fee let staff type any taka amount. That invited guessing and discounts the doctor never approved. Not every doctor charges different prices for new vs follow-up visits.</context>
  <action>Patient fees are predefined only. `doctors.default_fee_taka` is the consultation price. Optional `doctors.extra_fees` (label + amount) is empty unless that doctor actually has more than one price. Daily Roster Collect fee shows a locked total (plus labs); Visit type appears only when extras exist. `ChamberCashService::recordPatientIncome()` ignores any posted amount and stores `fee_type`. Waive still uses the same list price. Cashbook Add income / Add expense (rent, tea) stay typed — those are not patient fees.</action>
  <reason>Like a salon till: the prices are on the board; the assistant only records how it was paid. A single-price chamber never sees a type menu.</reason>
+</decision>
+
+## 2026-08-16T02:27:25+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Some doctors run a course (physio, dressings): the same person comes back on the same sitting for weeks. Most GPs do not. The public book form must stay one date.</context>
+ <action>Admin enables repeating serials per doctor (`doctors.allows_repeat_serials`, default off). Staff on Daily Roster use Repeat sitting to create ordinary future bookings on that schedule session (published cap, not overflow, no confirmation SMS). Rows share `repeat_series_id`. Cancel later sittings keeps this visit. Not on the patient wizard or the Rx pad. Live queue is still today-only.</action>
+ <reason>Same idea as staff-typed prescriptions: the account owner decides per doctor. A mixed clinic can have physio on and GP off. Seats stay fair because future weeks take a published serial, not a hidden extra stool.</reason>
 </decision>

@@ -111,7 +111,7 @@ class User extends Authenticatable implements FilamentUser, CanResetPasswordCont
         return $this->role === self::ROLE_STAFF;
     }
 
-    /** Schedule, chambers, doctors, slot blocks, labs — not website. */
+    /** Doctors, patients, labs — not website, not chambers/hours, not the front desk lists. */
     public function canManageOps(): bool
     {
         return in_array($this->role, [self::ROLE_ADMIN, self::ROLE_DOCTOR], true);
@@ -143,6 +143,42 @@ class User extends Authenticatable implements FilamentUser, CanResetPasswordCont
         }
 
         return in_array($this->role, [self::ROLE_DOCTOR, self::ROLE_STAFF], true);
+    }
+
+    /**
+     * Front-desk lists: today's roster, closed sitting dates, the earlier-date
+     * waiting list, follow-up WhatsApp. Staff own these. A doctor only gets
+     * them when this practice has no staff login — same idea as the queue
+     * fallback, so a solo doctor is not locked out of their own desk.
+     */
+    public function canWorkDesk(): bool
+    {
+        if ($this->isStaff()) {
+            return true;
+        }
+
+        if ($this->isDoctor()) {
+            return tenant() !== null && ! tenant()->hasStaffLogin();
+        }
+
+        return false;
+    }
+
+    /**
+     * Chambers and sitting hours. Staff own these; the account owner can
+     * still reach them; a doctor only when this practice has no staff login.
+     */
+    public function canManageSittingSetup(): bool
+    {
+        return $this->isAdmin() || $this->canWorkDesk();
+    }
+
+    /**
+     * Day / week / month booking counts — account owner and doctor, not staff.
+     */
+    public function canViewOperationalReports(): bool
+    {
+        return $this->canManageOps();
     }
 
     /**

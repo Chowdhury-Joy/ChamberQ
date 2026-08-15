@@ -26,7 +26,7 @@ class ScheduleSessionResource extends Resource
 
     public static function canViewAny(): bool
     {
-        return (auth()->user()?->canManageOps() ?? false)
+        return (auth()->user()?->canManageSittingSetup() ?? false)
             && (tenant()?->hasFrontDoor() ?? false);
     }
 

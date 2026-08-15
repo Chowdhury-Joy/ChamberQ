@@ -9,17 +9,17 @@ class ChamberPolicy
 {
     public function viewAny(User $user): bool
     {
-        return $user->canManageOps();
+        return $user->canManageSittingSetup();
     }
 
     public function view(User $user, Chamber $chamber): bool
     {
-        return $user->canManageOps();
+        return $user->canManageSittingSetup();
     }
 
     public function create(User $user): bool
     {
-        if (! $user->canManageOps()) {
+        if (! $user->canManageSittingSetup()) {
             return false;
         }
 
@@ -34,12 +34,12 @@ class ChamberPolicy
 
     public function update(User $user, Chamber $chamber): bool
     {
-        return $user->canManageOps();
+        return $user->canManageSittingSetup();
     }
 
     public function delete(User $user, Chamber $chamber): bool
     {
-        if (! $user->canManageOps()) {
+        if (! $user->canManageSittingSetup()) {
             return false;
         }
 

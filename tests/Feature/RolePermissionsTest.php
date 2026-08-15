@@ -68,6 +68,8 @@ class RolePermissionsTest extends TestCase
 
         $this->assertTrue($admin->isAdmin());
         $this->assertTrue($admin->canManageOps());
+        $this->assertTrue($admin->canManageSittingSetup());
+        $this->assertTrue($admin->canViewOperationalReports());
         $this->assertTrue($admin->canManageContent());
         $this->assertTrue($admin->canManagePageStructure());
         $this->assertTrue($admin->canManageUsers());
@@ -77,6 +79,8 @@ class RolePermissionsTest extends TestCase
         $this->assertTrue($doctor->isDoctor());
         $this->assertTrue($doctor->canManageOps());
         $this->assertTrue($doctor->canManageQueue());
+        $this->assertFalse($doctor->canManageSittingSetup());
+        $this->assertTrue($doctor->canViewOperationalReports());
         $this->assertFalse($doctor->canManageContent());
         $this->assertFalse($doctor->canManagePageStructure());
         $this->assertFalse($doctor->canManageUsers());
@@ -85,13 +89,15 @@ class RolePermissionsTest extends TestCase
         $this->assertTrue($staff->isStaff());
         $this->assertTrue($staff->canManageContent());
         $this->assertTrue($staff->canManageQueue());
+        $this->assertTrue($staff->canManageSittingSetup());
+        $this->assertFalse($staff->canViewOperationalReports());
         $this->assertFalse($staff->canManageOps());
         $this->assertFalse($staff->canManagePageStructure());
         $this->assertFalse($staff->canManageUsers());
         $this->assertFalse($staff->canManageBranding());
     }
 
-    public function test_staff_can_edit_content_and_queue_but_not_ops_or_structure(): void
+    public function test_staff_can_edit_content_queue_chambers_and_hours_but_not_doctors_or_users(): void
     {
         tenancy()->initialize($this->tenant);
 
@@ -115,9 +121,9 @@ class RolePermissionsTest extends TestCase
         $this->assertFalse(UserResource::canViewAny());
         $this->assertFalse(BrandingSettings::canAccess());
         $this->assertFalse(DoctorResource::canViewAny());
-        $this->assertFalse(ChamberResource::canViewAny());
-        $this->assertFalse(ScheduleSessionResource::canViewAny());
-        $this->assertFalse(SlotBlockResource::canViewAny());
+        $this->assertTrue(ChamberResource::canViewAny());
+        $this->assertTrue(ScheduleSessionResource::canViewAny());
+        $this->assertTrue(SlotBlockResource::canViewAny());
     }
 
     public function test_doctor_can_manage_ops_and_queue_but_not_website(): void
@@ -142,10 +148,10 @@ class RolePermissionsTest extends TestCase
         $this->actingAs($doctor);
 
         $this->assertTrue(DoctorResource::canViewAny());
-        $this->assertTrue(ChamberResource::canViewAny());
-        $this->assertTrue(ScheduleSessionResource::canViewAny());
-        $this->assertTrue(SlotBlockResource::canViewAny());
-        $this->assertTrue(DailyRoster::canAccess());
+        $this->assertFalse(ChamberResource::canViewAny());
+        $this->assertFalse(ScheduleSessionResource::canViewAny());
+        $this->assertFalse(SlotBlockResource::canViewAny());
+        $this->assertFalse(DailyRoster::canAccess());
         $this->assertFalse(LiveQueueControl::canAccess());
         $this->assertTrue(ConsultScreen::canAccess());
         $this->assertTrue(OperationalReports::canAccess());

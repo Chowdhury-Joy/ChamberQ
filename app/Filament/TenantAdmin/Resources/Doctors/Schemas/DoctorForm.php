@@ -55,6 +55,10 @@ class DoctorForm
                     ->label(__('Staff may type this doctor\'s prescriptions'))
                     ->helperText(__('For doctors who write on paper as usual and let staff key it in afterwards. Staff get the medicine list and follow-up only — never the diagnosis, voice notes or past visits. Off by default.'))
                     ->default(false),
+                Toggle::make('allows_repeat_serials')
+                    ->label(__('Staff may book repeating serials'))
+                    ->helperText(__('For courses such as physio or dressings. Staff can put this patient on this sitting for later weeks. Off by default. Not an online membership.'))
+                    ->default(false),
                 TextInput::make('qualifications')
                     ->label(__('Qualifications'))
                     ->placeholder(__('e.g. MBBS, FCPS (Medicine)'))

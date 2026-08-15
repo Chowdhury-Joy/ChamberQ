@@ -22,7 +22,7 @@ use App\Services\BookingService;
 use App\Services\ChamberCashService;
 use App\Services\LiveSessionService;
 use App\Services\MedicineService;
-use App\Services\PatientService;
+use App\Services\RepeatBookingService;
 use App\Services\SittingPrompt;
 use App\Services\VisitRecordService;
 use Filament\Notifications\Notification;
@@ -69,7 +69,8 @@ class DailyRoster extends Page implements HasTable, HasForms
         /** @var \App\Models\User|null $user */
         $user = auth()->user();
 
-        return $user?->canManageQueue() ?? false;
+        return ($user?->canWorkDesk() ?? false)
+            && (tenant()?->hasFrontDoor() ?? false);
     }
 
     public function table(Table $table): Table
@@ -326,6 +327,100 @@ class DailyRoster extends Page implements HasTable, HasForms
 
                         Notification::make()
                             ->title(($data['waived'] ?? false) ? __('Fee waived') : __('Fee collected'))
+                            ->success()
+                            ->send();
+                    }),
+
+                Action::make('repeatSerial')
+                    ->label('Repeat sitting')
+                    ->icon('heroicon-o-arrow-path')
+                    ->visible(fn (Booking $record): bool => ! in_array($record->status, ['cancelled', 'no_show'], true)
+                        && app(RepeatBookingService::class)->doctorAllowsRepeat($record))
+                    ->form(function (Booking $record): array {
+                        return [
+                            Select::make('weeks')
+                                ->label(__('How many more sittings?'))
+                                ->options(array_combine(
+                                    range(1, RepeatBookingService::MAX_WEEKS),
+                                    range(1, RepeatBookingService::MAX_WEEKS),
+                                ))
+                                ->default(4)
+                                ->required()
+                                ->live()
+                                ->native(false),
+                            Placeholder::make('dates_preview')
+                                ->label(__('Dates that will get a serial'))
+                                ->content(function (Get $get) use ($record): string {
+                                    $weeks = (int) ($get('weeks') ?: 4);
+                                    try {
+                                        $plan = app(RepeatBookingService::class)->planDates($record, $weeks);
+                                    } catch (\InvalidArgumentException $e) {
+                                        return $e->getMessage();
+                                    }
+
+                                    if ($plan['dates'] === []) {
+                                        return __('No open sittings in the next weeks.');
+                                    }
+
+                                    $lines = array_map(
+                                        fn (string $date): string => Carbon::parse($date)->toFormattedDateString(),
+                                        $plan['dates'],
+                                    );
+                                    $skipNote = $plan['skipped'] === []
+                                        ? ''
+                                        : ' '.__('(:count dates skipped — full or closed)', [
+                                            'count' => count($plan['skipped']),
+                                        ]);
+
+                                    return implode(', ', $lines).$skipNote;
+                                }),
+                        ];
+                    })
+                    ->action(function (Booking $record, array $data): void {
+                        try {
+                            $result = app(RepeatBookingService::class)->repeatFromBooking(
+                                $record,
+                                (int) $data['weeks'],
+                            );
+                        } catch (\InvalidArgumentException $e) {
+                            Notification::make()
+                                ->title($e->getMessage())
+                                ->danger()
+                                ->send();
+
+                            return;
+                        }
+
+                        Notification::make()
+                            ->title(__('Booked :count more sittings', ['count' => count($result['created'])]))
+                            ->body($result['skipped'] === []
+                                ? null
+                                : __('Skipped :count dates that were full or closed.', [
+                                    'count' => count($result['skipped']),
+                                ]))
+                            ->success()
+                            ->send();
+                    }),
+
+                Action::make('cancelRepeatRemainder')
+                    ->label('Cancel later sittings')
+                    ->icon('heroicon-o-x-mark')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->modalHeading('Cancel later sittings')
+                    ->modalDescription(__('This visit stays. Later dates in this repeating series will be cancelled.'))
+                    ->visible(fn (Booking $record): bool => filled($record->repeat_series_id)
+                        && Booking::query()
+                            ->where('repeat_series_id', $record->repeat_series_id)
+                            ->where('id', '!=', $record->id)
+                            ->where('booking_date', '>', $record->booking_date->toDateString())
+                            ->whereIn('status', ['waiting', 'called', 'skipped'])
+                            ->exists())
+                    ->action(function (Booking $record): void {
+                        $count = app(RepeatBookingService::class)->cancelRemainder($record);
+
+                        Notification::make()
+                            ->title(__('Cancelled :count later sittings', ['count' => $count]))
                             ->success()
                             ->send();
                     }),

@@ -329,14 +329,13 @@ class StaffPrescriptionEntryTest extends TestCase
             ->assertTableActionVisible('enterPrescription', $this->booking);
     }
 
-    public function test_roster_action_is_hidden_from_the_doctor(): void
+    public function test_doctor_with_staff_cannot_open_the_roster(): void
     {
         tenancy()->initialize($this->tenant);
         Filament::setCurrentPanel(Filament::getPanel('tenantAdmin'));
         $this->doctorProfile->update(['staff_may_enter_prescriptions' => true]);
         $this->actingAs($this->doctorUser);
 
-        Livewire::test(DailyRoster::class)
-            ->assertTableActionHidden('enterPrescription', $this->booking);
+        $this->assertFalse(DailyRoster::canAccess());
     }
 }

@@ -156,6 +156,11 @@ class Tenant extends BaseTenant
             ->exists();
     }
 
+    public function hasStaffLogin(): bool
+    {
+        return $this->hasUserInQueueRole(self::QUEUE_RUNNER_STAFF);
+    }
+
     public function isStaffRunQueue(): bool
     {
         return $this->queueRunner() === self::QUEUE_RUNNER_STAFF;

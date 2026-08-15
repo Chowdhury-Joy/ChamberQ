@@ -605,5 +605,20 @@
 ## 2026-08-16T00:01:07+0600
 - Removed `TranslatesStaffChrome` / `TranslatesResourceChrome`; added `EnglishFilamentLoader` so Filament vendor chrome stays English. Sidebar, titles, and buttons stay English; desk reading copy still uses `__()`.
 
+## 2026-08-16T00:13:24+0600
+- Doctor panel home is Consult Screen: `FilamentPanelUrl::home()` + tenant `Dashboard` redirect/hide-nav; new `app/Filament/TenantAdmin/Pages/Dashboard.php`. Staff and the account owner still land on the stats dashboard.
+
+## 2026-08-16T00:46:49+0600
+- Front-desk lists (Daily Roster, Slot Blocks, Waiting for earlier date, Follow-up reminders) gated by `User::canWorkDesk()` / `Tenant::hasStaffLogin()` so they sit on the staff menu, not the doctor's, unless the chamber has no staff login.
+
+## 2026-08-16T01:21:54+0600
+- Chambers and Schedule Sessions gated by `User::canManageSittingSetup()` (staff / admin / solo-doctor fallback). Operational Reports opened to every chamber login via `User::canViewOperationalReports()`. Doctors resource stays `canManageOps`.
+
+## 2026-08-16T01:39:02+0600
+- Operational Reports closed to staff: `User::canViewOperationalReports()` is admin and doctor only (`canManageOps`). Chambers and sitting hours stay on the staff menu.
+
 ## 2026-08-16T01:50:11+0600
 - Patient Collect fee is predefined only: `doctors.extra_fees` plus `chamber_cash_entries.fee_type`; staff cannot type a patient amount.
+
+## 2026-08-16T02:27:25+0600
+- Repeating serials: `RepeatBookingService`, `doctors.allows_repeat_serials`, `bookings.repeat_series_id`; Daily Roster Repeat sitting / Cancel later sittings.

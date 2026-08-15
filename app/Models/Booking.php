@@ -23,6 +23,7 @@ class Booking extends Model
         'bookable_id',
         'booking_date',
         'patient_id',
+        'repeat_series_id',
         'patient_name',
         'patient_phone',
         'whatsapp_phone',

@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-16T01:50:11+0600
+Last Updated: 2026-08-16T02:28:09+0600
 
 ## Full Site Map
 
@@ -42,9 +42,13 @@ Same central host; tenant identified by URL slug (tenant `id`), e.g. `drkarim`.
 | `/{slug}/blog/{slug}` | Single blog article | public |
 | `/{slug}/doctors` | Clinic doctor profiles listing (clinic tier only) | public |
 | `/{slug}/doctors/{slug}` | Single doctor public profile | public |
-| `/{slug}/admin` | Tenant staff Filament panel | staff login |
+| `/{slug}/admin` | Tenant staff Filament panel (staff/admin land on the dashboard; a doctor with **Prescription** is sent to Consult Screen) | staff / doctor / admin login |
+| `/{slug}/admin/consult-screen` | Doctor's working pad — auto-follows the patient in the chamber | doctor login (**Prescription**) |
 | `/{slug}/admin/cashbook` | Desk khata: income, expense, net, waived (day/week/month) | staff / doctor / admin |
-| `/{slug}/admin/waiting-for-earlier-date` | Staff list of patients who opted in for an earlier date (WhatsApp per row) | staff login (ops) |
+| `/{slug}/admin/operational-reports` | Day / week / month booking counts | admin / doctor |
+| `/{slug}/admin/chambers` | Rooms / locations (sidebar only when multiple chambers) | staff (or doctor if no staff login; admin) |
+| `/{slug}/admin/schedule-sessions` | Sitting days and hours | staff (or doctor if no staff login; admin) |
+| `/{slug}/admin/waiting-for-earlier-date` | Staff list of patients who opted in for an earlier date (WhatsApp per row) | staff (or doctor if no staff login; admin) |
 | `/{slug}/admin/data-backup` | Chamber disaster-recovery backup download + restore (Admin only) | admin only |
 | `/{slug}/manifest.webmanifest`, `/{slug}/sw.js`, … | PWA | public |
 
@@ -70,9 +74,13 @@ When a doctor connects their own domain (e.g. `drkarim.com`), routes live at the
 | `/screen/{session}/{date}` | Outdoor waiting-room display for a specific date (legacy) | public (throttled) |
 | `/lang/{locale}` | Switch session locale `en` / `bn`. Same-host Referer only (off-site Referer is ignored). Signed-in chamber staff with no Referer return to `/admin`; guests stay on the public site | public |
 | `/manifest.webmanifest`, `/sw.js`, `/pwa-icon-{192\|512}.svg` | PWA bits | public |
-| `/admin` | Tenant staff Filament panel | staff login |
+| `/admin` | Tenant staff Filament panel (staff/admin land on the dashboard; a doctor with **Prescription** is sent to Consult Screen) | staff / doctor / admin login |
+| `/admin/consult-screen` | Doctor's working pad — auto-follows the patient in the chamber | doctor login (**Prescription**) |
 | `/admin/cashbook` | Desk khata: income, expense, net, waived (day/week/month) | staff / doctor / admin |
-| `/admin/waiting-for-earlier-date` | Staff list of patients who opted in for an earlier date (WhatsApp per row) | staff login (ops) |
+| `/admin/operational-reports` | Day / week / month booking counts | admin / doctor |
+| `/admin/chambers` | Rooms / locations (sidebar only when multiple chambers) | staff (or doctor if no staff login; admin) |
+| `/admin/schedule-sessions` | Sitting days and hours | staff (or doctor if no staff login; admin) |
+| `/admin/waiting-for-earlier-date` | Staff list of patients who opted in for an earlier date (WhatsApp per row) | staff (or doctor if no staff login; admin) |
 | `/admin/visiting-day` | Pack bag / write prescriptions away from the chamber (bad internet, camps) | doctor login (**Prescription**) |
 | `/admin/data-backup` | Chamber disaster-recovery backup download + restore (Admin only) | admin only |
 
@@ -193,8 +201,8 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 - **Success:** Patients see/hear the delay; session is marked delayed until Start clears it; SMS wallet only charged when late SMS is enabled.
 
 ### Doctor consult (doctor role)
-- **Trigger:** Patient called into chamber (`live_sessions.current_booking_id` set).
-- **Steps:** Tenant admin → **Consult Screen** — screen updates automatically (poll). From **768px up** (tablet as well as desktop) while the patient is in the chamber, the page *is* the prescription pad — below 1024px its two columns stack, prescription first, with touch-sized chips: sticky bar pinned below the page content header (name · age · sex · serial, allergy, **Preview / My paper tick / Save & print**; **Complete visit** is on that same header), left column C/C mini-table · H/O toggles (More includes COPD / Allergy) · O/E compact vitals line (Wt / BP / P / SpO₂ / T °F on one wrapping row, finding chips into Other findings, **weight/BP trend charts** when past data exists) · Dx pill · Inv list · **Reports** (typed note + photos of papers the patient brought) (plus last-visit copy), right column medicine spreadsheet (search, **Why?** typeahead under the brand, dose/frequency/duration chips, timing, drag handle + ↑↓, shorthand line, **warn-only duplicate/allergy checks**), advice chips then the box, and follow-up underneath. How much of that is already filled when he arrives: H/O is seeded from the patient's stored conditions and medicines; C/C is a row list (~40 bilingual chips): each tap adds a complaint line with its own duration; a previous visit offers **Same medicines / Same Dx / Same Inv / Same advice / Repeat whole visit**; picking a diagnosis surfaces his own **packs** for it, **Add investigations**, and a starter-advice chip in the **Advice** box (the actual sentence; tap to copy; a save does not hide it) plus five common advice chips (Bangla lines) and ★ save-as-mine on this computer; and typing a brand brings its dose, frequency, duration and timing with it — his own saved default first, the catalogue's per-drug default otherwise, blank when neither knows. **Why?** under the brand suggests as he types. **Vitals are never pre-filled**; last visit's shows grey beside each box. **★** on a row saves that line to My medicines; **Packs** applies one the doctor built earlier on **My medicines** — packs cannot be created or renamed from here. **The pad saves itself** — a second after he stops typing and the instant he clicks anything outside it — and says so in the bar (Unsaved / Saving… / Saved), so Complete visit can no longer close a visit on an unwritten script. Follow-up offers 1 week / 2 weeks / 1 month / 3 months / As needed / Pick a date. Only on **phones (<768px)** does the older layout stay: review history, then **Write prescription** modal. The consult ends in **two steps**: **Complete visit** (summary when notes exist) closes the visit *without* advancing the queue; Print / Send via WhatsApp while the patient is still on screen; then **Call next patient**. Staff completing from the queue skip the modal. Catch-up for patients completed without notes lives on **Live Queue Control** (amber banner + **Fill in now**), not here.
+- **Trigger:** Doctor signs in, or staff call a patient into the chamber (`live_sessions.current_booking_id` set).
+- **Steps:** Login, the sidebar logo, and `/{slug}/admin` all open **Consult Screen** (that is the doctor's home when Prescription is on — not the stats dashboard). The screen updates automatically (poll). From **768px up** (tablet as well as desktop) while the patient is in the chamber, the page *is* the prescription pad — below 1024px its two columns stack, prescription first, with touch-sized chips: sticky bar pinned below the page content header (name · age · sex · serial, allergy, **Preview / My paper tick / Save & print**; **Complete visit** is on that same header), left column C/C mini-table · H/O toggles (More includes COPD / Allergy) · O/E compact vitals line (Wt / BP / P / SpO₂ / T °F on one wrapping row, finding chips into Other findings, **weight/BP trend charts** when past data exists) · Dx pill · Inv list · **Reports** (typed note + photos of papers the patient brought) (plus last-visit copy), right column medicine spreadsheet (search, **Why?** typeahead under the brand, dose/frequency/duration chips, timing, drag handle + ↑↓, shorthand line, **warn-only duplicate/allergy checks**), advice chips then the box, and follow-up underneath. How much of that is already filled when he arrives: H/O is seeded from the patient's stored conditions and medicines; C/C is a row list (~40 bilingual chips): each tap adds a complaint line with its own duration; a previous visit offers **Same medicines / Same Dx / Same Inv / Same advice / Repeat whole visit**; picking a diagnosis surfaces his own **packs** for it, **Add investigations**, and a starter-advice chip in the **Advice** box (the actual sentence; tap to copy; a save does not hide it) plus five common advice chips (Bangla lines) and ★ save-as-mine on this computer; and typing a brand brings its dose, frequency, duration and timing with it — his own saved default first, the catalogue's per-drug default otherwise, blank when neither knows. **Why?** under the brand suggests as he types. **Vitals are never pre-filled**; last visit's shows grey beside each box. **★** on a row saves that line to My medicines; **Packs** applies one the doctor built earlier on **My medicines** — packs cannot be created or renamed from here. **The pad saves itself** — a second after he stops typing and the instant he clicks outside it — and says so in the bar (Unsaved / Saving… / Saved), so Complete visit can no longer close a visit on an unwritten script. Follow-up offers 1 week / 2 weeks / 1 month / 3 months / As needed / Pick a date. Only on **phones (<768px)** does the older layout stay: review history, then **Write prescription** modal. The consult ends in **two steps**: **Complete visit** (summary when notes exist) closes the visit *without* advancing the queue; Print / Send via WhatsApp while the patient is still on screen; then **Call next patient**. Staff completing from the queue skip the modal. Catch-up for patients completed without notes lives on **Live Queue Control** (amber banner + **Fill in now**), not here.
 - **Data/systems touched:** `live_sessions`, `bookings`, `patients`, `visit_records` (including `chief_complaint` / `history` / `on_examination` / `temperature_f` / `report_photo_paths`), `prescriptions`, `prescription_items` (including `timing` / `indication` / `instructions`); reads `medicines` dosing defaults and `conditions` advice/investigation presets; writes `medicine_usages` (★); reads `prescription_templates` but never writes them (packs are built on My medicines).
 - **Key CTA:** Save (desk) or Write prescription (phone) → Complete visit → Print / Send via WhatsApp → Call next patient.
 - **Note:** Everything the pad fills is a proposal on a document the doctor signs — visible, editable, cleared in one keystroke, and never committed until Save. Nothing is learned from what he prescribes: packs and My medicines entries only ever come from an explicit tap. If the internet drops mid-consult, Save & print still work on this computer; Call next stays frozen until the line is back.
@@ -235,11 +243,17 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 - **Data/systems touched:** `departments`, `blog_posts`, `doctors` website columns; public routes `/departments`, `/blog`, `/doctors`.
 - **Success:** List + detail pages live; homepage teasers match without duplicating cards in the page builder.
 
-### Follow-up reminders (staff / doctor — ops)
+### Follow-up reminders (staff — desk)
 - **Trigger:** A visit has a follow-up date set and the prescribing doctor has follow-up notifications enabled.
-- **Steps:** **SMS (automatic):** daily job texts patients **3 days before** the follow-up date when the doctor's follow-up SMS toggle is on (1 credit; empty wallet skips). **WhatsApp (confirm first):** when the doctor's follow-up WhatsApp toggle is on, staff (or doctor if no staff) get a panel notification → **Operations → Follow-up reminders** → tap **Confirm WhatsApp** per row to open the prepared message.
+- **Steps:** **SMS (automatic):** daily job texts patients **3 days before** the follow-up date when the doctor's follow-up SMS toggle is on (1 credit; empty wallet skips). **WhatsApp (confirm first):** when the doctor's follow-up WhatsApp toggle is on, staff (or the doctor if this practice has no staff login) get a panel notification → **Operations → Follow-up reminders** → tap **Confirm WhatsApp** per row to open the prepared message.
 - **Data/systems touched:** `visit_records.follow_up_date`, reminder timestamp columns, `SmsMessage` (`purpose=follow_up`), doctor `notify_channels.follow_up`.
 - **Success:** Patient is reminded before the follow-up; WhatsApp never sends without a human tap.
+
+### Repeating serials (staff — desk, per doctor)
+- **Trigger:** Admin has ticked **Staff may book repeating serials** on that doctor (off by default). A patient needs the same sitting for later weeks (physio course, dressings).
+- **Steps:** Daily Roster row → **Repeat sitting** → how many more sittings (1–12) → confirm dates. **Cancel later sittings** keeps this visit and cancels later waiting dates in the series.
+- **Data/systems touched:** `doctors.allows_repeat_serials`, `bookings.repeat_series_id`, `RepeatBookingService` → `BookingService::createBookingForBookable` (published cap, no confirmation SMS).
+- **Success:** Future roster days already have her name as normal serials. Today’s live queue is unchanged.
 
 ### Chamber cashbook (staff / doctor / admin — ops)
 - **Trigger:** A patient pays at the desk, or the chamber spends money (rent, tea, salary).
@@ -253,9 +267,9 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 - **Data/systems touched:** `bookings.wants_earlier_date`, `bookings.booking_date`, patient name/phone on the booking row.
 - **Success:** Staff can reach patients who previously asked to move earlier without hunting through the full roster.
 
-### Block a date — vacation / holiday / doctor away (admin/doctor)
+### Block a date — vacation / holiday / doctor away (staff / admin)
 - **Trigger:** The clinic, a chamber, or one doctor will not sit on a given date.
-- **Steps:** Slot Blocks → New → pick date, optionally chamber and/or doctor → the form shows how many bookings this will cancel and requires the confirmation checkbox → Save. Saving cancels those bookings (waiting/called/in-chamber only — completed visits are left alone) and reports the count. Then **Notify patients** on that block row → tap each patient to open WhatsApp with a prepared message.
+- **Steps:** Staff (or the account owner; or the doctor only when there is no staff login) → Slot Blocks → New → pick date, optionally chamber and/or doctor → the form shows how many bookings this will cancel and requires the confirmation checkbox → Save. Saving cancels those bookings (waiting/called/in-chamber only — completed visits are left alone) and reports the count. Then **Notify patients** on that block row → tap each patient to open WhatsApp with a prepared message.
 - **Data/systems touched:** `slot_blocks`, `bookings` (`status`, `cancelled_at`, `cancellation_reason`, `slot_block_id`) via `SlotBlockService`.
 - **Success:** No patient still holds a serial for a closed date, and every cancelled patient appears in the notify list.
 
@@ -270,9 +284,15 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 - **Steps:** **Platform data backup** (`/admin/data-backup`) — download first; restore starts as **Check ZIP without writing** (dry-run on). Uncheck dry-run only when ready to write — the button turns red, a warning callout appears, and submitting asks a confirmation naming what gets wiped; replace still requires typing `REPLACE`. Per-chamber: Tenants → row **⋮** → **Download chamber backup**, or tenant edit → **Dangerous** → Restore / Delete.
 - **Success:** ZIP checked without writing unless Super Admin deliberately opts into a live restore; passwords reset via Forgot password.
 
-### Ops review (admin/doctor)
+### Ops review (admin / doctor)
 - **Trigger:** End of day/week.
 - **Steps:** Operational Reports → day/week/month KPIs.
+
+### Set sitting rooms and hours (staff)
+- **Trigger:** A new room, a changed evening time, or a second chamber opens.
+- **Steps:** Staff (or the account owner; or the doctor only when there is no staff login) → **Settings → Chambers** (address, map link; the list is in the sidebar only when the practice has more than one chamber) and **Settings → Schedule Sessions** (which doctor, which room, which days, start/end, how many serials).
+- **Data/systems touched:** `chambers`, `schedule_sessions`.
+- **Success:** Patients see the right rooms and hours on the booking wizard; the outdoor TV label matches the sitting.
 
 ### Patient records — lookup and corrections (admin/doctor)
 - **Trigger:** Staff need to see who has visited, fix a duplicate person, or move a visit to the right household member.

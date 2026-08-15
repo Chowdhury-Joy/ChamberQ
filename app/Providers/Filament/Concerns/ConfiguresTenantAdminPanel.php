@@ -4,6 +4,7 @@ namespace App\Providers\Filament\Concerns;
 
 use App\Filament\TenantAdmin\Widgets\TenantStatsOverview;
 use App\Filament\TenantAdmin\Widgets\TodayAppointmentsWidget;
+use App\Support\FilamentPanelUrl;
 use Filament\Actions\Action;
 use Filament\Navigation\NavigationGroup;
 use Filament\Panel;
@@ -21,6 +22,7 @@ trait ConfiguresTenantAdminPanel
         return $panel
             ->brandName(fn (): string => tenant()?->displayName() ?? 'ChamberQ')
             ->viteTheme('resources/css/filament/tenantAdmin/theme.css')
+            ->homeUrl(fn (): string => FilamentPanelUrl::home())
             ->login()
             ->passwordReset()
             ->topbar(false)
