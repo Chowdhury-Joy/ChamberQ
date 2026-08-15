@@ -43,6 +43,11 @@ class DailyRoster extends Page implements HasTable, HasForms
 
     protected static string|\UnitEnum|null $navigationGroup = 'Operations';
 
+    public static function getNavigationLabel(): string
+    {
+        return __('Daily Roster');
+    }
+
     protected string $view = 'filament.tenant-admin.pages.daily-roster';
 
     /**

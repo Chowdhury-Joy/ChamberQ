@@ -55,13 +55,23 @@
                                     {{ $prompt['kind'] === 'delay_expired' ? __('Add time') : __('Mark Late') }}
                                 </x-filament::button>
                             @endif
-                            <x-filament::button
-                                size="sm"
-                                color="success"
-                                wire:click="mountStartSessionOrRun"
-                            >
-                                {{ __('Start') }}
-                            </x-filament::button>
+                            @if ($prompt['kind'] === 'idle_after_start')
+                                <x-filament::button
+                                    size="sm"
+                                    color="gray"
+                                    wire:click="mountAction('pauseSession')"
+                                >
+                                    {{ __('Doctor stepped out') }}
+                                </x-filament::button>
+                            @else
+                                <x-filament::button
+                                    size="sm"
+                                    color="success"
+                                    wire:click="mountStartSessionOrRun"
+                                >
+                                    {{ __('Start') }}
+                                </x-filament::button>
+                            @endif
                         @endif
                     </div>
                 @elseif ($canOperate && $context === 'roster')
@@ -92,13 +102,23 @@
                                 {{ $prompt['kind'] === 'delay_expired' ? __('Add time') : __('Mark Late') }}
                             </x-filament::button>
                         @endif
-                        <x-filament::button
-                            size="sm"
-                            color="success"
-                            wire:click="startSessionFromPrompt({{ $prompt['schedule_session_id'] }})"
-                        >
-                            {{ __('Start') }}
-                        </x-filament::button>
+                        @if ($prompt['kind'] === 'idle_after_start')
+                            <x-filament::button
+                                size="sm"
+                                color="gray"
+                                wire:click="mountAction('doctorSteppedOut')"
+                            >
+                                {{ __('Doctor stepped out') }}
+                            </x-filament::button>
+                        @else
+                            <x-filament::button
+                                size="sm"
+                                color="success"
+                                wire:click="startSessionFromPrompt({{ $prompt['schedule_session_id'] }})"
+                            >
+                                {{ __('Start') }}
+                            </x-filament::button>
+                        @endif
                     </div>
                 @elseif ($liveQueueUrl)
                     <x-filament::button :href="$liveQueueUrl" tag="a" size="sm" color="warning">

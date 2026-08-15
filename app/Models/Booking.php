@@ -27,6 +27,7 @@ class Booking extends Model
         'patient_phone',
         'whatsapp_phone',
         'serial_number',
+        'is_overflow',
         'status',
         'wants_earlier_date',
         'cancelled_at',
@@ -42,6 +43,7 @@ class Booking extends Model
     protected $casts = [
         'booking_date' => DateOnly::class,
         'serial_number' => 'integer',
+        'is_overflow' => 'boolean',
         'wants_earlier_date' => 'boolean',
         'cancelled_at' => 'datetime',
         'patient_notified' => 'boolean',

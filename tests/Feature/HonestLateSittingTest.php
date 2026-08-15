@@ -330,7 +330,8 @@ class HonestLateSittingTest extends TestCase
         Carbon::setTestNow(Carbon::parse($this->today.' 17:18:00'));
 
         $prompts = app(SittingPrompt::class)->promptsForToday();
-        $this->assertEmpty($prompts);
+        $this->assertCount(1, $prompts);
+        $this->assertSame('idle_after_start', $prompts->first()['kind']);
     }
 
     public function test_in_delay_prompt_before_announced_time(): void

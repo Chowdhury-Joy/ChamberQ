@@ -45,11 +45,17 @@ class ConsultScreen extends Page implements HasActions
 
     protected static string|\UnitEnum|null $navigationGroup = 'Operations';
 
-    protected static ?string $navigationLabel = 'Consult Screen';
-
     protected static ?int $navigationSort = 0;
 
-    protected static ?string $title = 'Consult Screen';
+    public static function getNavigationLabel(): string
+    {
+        return __('Consult Screen');
+    }
+
+    public function getTitle(): string
+    {
+        return __('Consult Screen');
+    }
 
     protected string $view = 'filament.tenant-admin.pages.consult-screen';
 
@@ -381,6 +387,7 @@ class ConsultScreen extends Page implements HasActions
                 ->icon('heroicon-o-megaphone')
                 ->color('primary')
                 ->visible(fn (): bool => $this->runningLiveSession !== null
+                    && $this->runningLiveSession->status !== 'paused'
                     && (! $this->currentBooking || $this->currentBooking->status === 'completed'))
                 ->action(function (): void {
                     $session = $this->runningLiveSession;
@@ -396,6 +403,54 @@ class ConsultScreen extends Page implements HasActions
                     app(LiveSessionService::class)->callNextPatient($session);
                     $this->forgetQueueState();
                     Notification::make()->title(__('Called next patient'))->success()->send();
+                }),
+            Action::make('doctorSteppedOut')
+                ->label(__('Doctor stepped out'))
+                ->icon('heroicon-o-pause')
+                ->color('gray')
+                ->visible(fn (): bool => $this->runningLiveSession?->status === 'active')
+                ->form([
+                    \Filament\Forms\Components\TextInput::make('reason')
+                        ->label(__('Reason (e.g. Prayer break)'))
+                        ->required(),
+                    \Filament\Forms\Components\Select::make('estimated_minutes')
+                        ->label(__('Estimated duration'))
+                        ->options([
+                            10 => '10 minutes',
+                            15 => '15 minutes',
+                            20 => '20 minutes',
+                            30 => '30 minutes',
+                            45 => '45 minutes',
+                            60 => '1 hour',
+                        ])
+                        ->required(),
+                ])
+                ->action(function (array $data): void {
+                    $session = $this->runningLiveSession;
+                    if (! $session) {
+                        return;
+                    }
+                    app(LiveSessionService::class)->pauseSession(
+                        $session,
+                        $data['reason'],
+                        (int) $data['estimated_minutes'],
+                    );
+                    $this->forgetQueueState();
+                    Notification::make()->title(__('Doctor stepped out'))->warning()->send();
+                }),
+            Action::make('doctorBack')
+                ->label(__("He's back"))
+                ->icon('heroicon-o-play')
+                ->color('success')
+                ->visible(fn (): bool => $this->runningLiveSession?->status === 'paused')
+                ->action(function (): void {
+                    $session = $this->runningLiveSession;
+                    if (! $session) {
+                        return;
+                    }
+                    app(LiveSessionService::class)->resumeSession($session);
+                    $this->forgetQueueState();
+                    Notification::make()->title(__('Session resumed'))->success()->send();
                 }),
         ];
     }

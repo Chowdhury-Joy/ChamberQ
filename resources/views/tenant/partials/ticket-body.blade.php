@@ -322,7 +322,10 @@
 
                 const etaContainer = document.getElementById('etaContainer');
                 const shownTimeEl = document.getElementById('shownTime');
-                if (data.shown_time) {
+                if (data.overflow_phrase) {
+                    etaContainer.style.display = 'block';
+                    shownTimeEl.textContent = data.overflow_phrase;
+                } else if (data.shown_time) {
                     etaContainer.style.display = 'block';
                     const date = new Date(data.shown_time);
                     shownTimeEl.textContent = date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });

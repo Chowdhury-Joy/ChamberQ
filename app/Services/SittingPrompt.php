@@ -9,7 +9,7 @@ use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
 /**
- * One brain for overdue / in-delay / delay-expired sitting prompts.
+ * One brain for overdue / in-delay / delay-expired / idle-after-start sitting prompts.
  *
  * Used by Daily Roster, Live Queue Control, and Consult Screen so wording
  * cannot drift between pages.
@@ -66,7 +66,8 @@ class SittingPrompt
                 $now,
             ))
             ->filter()
-            ->values();
+            ->values()
+            ->tap(fn (Collection $prompts) => app(StaffSittingBuzzService::class)->dispatchForPrompts($prompts));
     }
 
     /**
@@ -93,7 +94,11 @@ class SittingPrompt
     ): ?array {
         $now ??= now();
 
-        if ($live && in_array($live->status, ['active', 'paused', 'completed', 'cancelled'], true)) {
+        if ($live && $live->status === 'active') {
+            return $this->idleAfterStartPrompt($session, $live, $now);
+        }
+
+        if ($live && in_array($live->status, ['paused', 'completed', 'cancelled'], true)) {
             return null;
         }
 
@@ -130,6 +135,74 @@ class SittingPrompt
             'message' => __(':session was due :minutes minutes ago. :count waiting. Mark Late or Start?', [
                 'session' => $session->session_name,
                 'minutes' => $minutesLate,
+                'count' => $waitingCount,
+            ]),
+        ];
+    }
+
+    /**
+     * @return array{
+     *     kind: string,
+     *     session_id: int,
+     *     session_name: string,
+     *     schedule_session_id: int,
+     *     live_session_id: int|null,
+     *     minutes_late: int,
+     *     waiting_count: int,
+     *     delay_minutes: int,
+     *     suggested_delay_minutes: int|null,
+     *     minutes_until_announced: int|null,
+     *     minutes_past_announced: int|null,
+     *     announced_at: Carbon|null,
+     *     message: string,
+     * }|null
+     */
+    private function idleAfterStartPrompt(
+        ScheduleSession $session,
+        LiveSession $live,
+        Carbon $now,
+    ): ?array {
+        if (! $live->started_at) {
+            return null;
+        }
+
+        $minutesSinceStart = (int) $live->started_at->diffInMinutes($now);
+        if ($minutesSinceStart < self::GRACE_MINUTES) {
+            return null;
+        }
+
+        $waitingCount = $this->waitingCount($session, $now);
+        if ($waitingCount < 1) {
+            return null;
+        }
+
+        $anyCalled = Booking::query()
+            ->where('bookable_type', ScheduleSession::class)
+            ->where('bookable_id', $session->id)
+            ->where('booking_date', $now->toDateString())
+            ->whereIn('status', ['called', 'in_chamber', 'completed'])
+            ->exists();
+
+        if ($anyCalled || $live->current_booking_id) {
+            return null;
+        }
+
+        return [
+            'kind' => 'idle_after_start',
+            'session_id' => $session->id,
+            'session_name' => $session->session_name,
+            'schedule_session_id' => $session->id,
+            'live_session_id' => $live->id,
+            'minutes_late' => $minutesSinceStart,
+            'waiting_count' => $waitingCount,
+            'delay_minutes' => 0,
+            'suggested_delay_minutes' => null,
+            'minutes_until_announced' => null,
+            'minutes_past_announced' => null,
+            'announced_at' => null,
+            'message' => __(':session started :minutes minutes ago. :count waiting. Nobody has been called. Is the doctor in the chair?', [
+                'session' => $session->session_name,
+                'minutes' => $minutesSinceStart,
                 'count' => $waitingCount,
             ]),
         ];

@@ -2381,6 +2381,23 @@
   <category>Business_Logic</category>
   <context>Evening sittings slip in real life. Staff still press Start — the ticket is the board. Patients should see the published sitting window unchanged, but Estimated Time and the yellow delayed banner must tell the truth once someone actually begins. Staff need one sticky note when a sitting is overdue, not a repeating alarm or patient SMS.</context>
   <action>Ticket follows the chair: humans Start (no auto-Start at sitting time). `LiveSession::effectiveStartTime()` — not started + delayed uses sitting + announced delay; started uses max(sitting, started_at) + pause; `delay_minutes` kept as “what we told them”. `SittingPrompt` (10-minute grace) drives sticky callouts on Daily Roster, Live Queue Control, and Consult Screen. Start after sitting time asks Mark Late / Just start / Cancel; inside an announced delay asks Start now / Wait. Mark Late on `delayed` sittings only with a larger total (Add time). No new DB columns; no staff push.</action>
-  <reason>Starting cleared the yellow banner but left Estimated Time on the old delay — patients were told one thing on the ticket and another by the clock. One brain for wording stops the three admin pages drifting. More late can update the ticket; less late cannot unsay what was already announced.</reason>
+</decision>
+
+## 2026-08-15T13:55:38+0600
+
+<decision>
+  <category>Business_Logic</category>
+  <context>Five queue gaps after honest late sitting: staff could not see when a schedule was unrealistically tight; booking SMS gave serial + date but not come-around; desk could not seat walk-ins after the published cap; Pause still let Call next run; sticky notes only helped when the panel was open.</context>
+  <action>Shipped in order: (1) `ScheduleSessionPace` + live “about X minutes each” on the sitting form (amber under 5 min). (2) `PublishedComeAround` on booking SMS, wizard confirm flash, and ticket before a live row — one SMS segment; overflow gets “After serial N”. (3) `walk_in_overflow_cap` on sittings (default 0) + `bookings.is_overflow`; online stays at published cap; staff walk-ins pass `allowOverflow`; Call next finishes published serials before stools; Call now can jump a stool. (4) Pause renamed **Doctor stepped out** / **He's back**; service blocks Call next/Call now while paused; Consult Screen gets the same taps; `idle_after_start` sticky after Start when nobody called (10-minute grace). (5) Staff pocket buzz: `staff_push_subscriptions`, `POST /api/staff/push`, `SendStaffSittingPromptPushes` + Filament bell when a sticky note appears or changes kind — card on Daily Roster and Live Queue Control. Honest late sitting and ticket-follows-chair unchanged.</action>
+  <reason>Each piece matches how a real Friday evening runs: Fatima needs come-around in her pocket before Start; the neighbour’s child needs serial 31 without breaking online “full”; prayer break must freeze the line; the runner’s phone should buzz when the laptop is closed. Staff push is a new surface — it does not replace the 13:06 decision that v1 honest late sitting had no staff push.</reason>
+</decision>
+
+## 2026-08-15T14:16:09+0600
+
+<decision>
+  <category>Business_Logic</category>
+  <context>Friday evening in Chattogram: the line drops while forty people watch the TV and reception still has the laptop open. The 2026-08-13 offline kit froze Call next entirely — correct for two unsynced machines, wrong when one desk laptop drives the TV over HDMI or the runner is signed in on the TV browser.</context>
+  <action>Outdoor screen keeps last-known-good state (localStorage + corner chip), self-hosted Inter/Hind Siliguri fonts, and SW precache of fonts/announce clips (`clinic-shell-v8`). Queue runner may Call next / arrived / skip / complete-without-advance offline on **this computer** via `chamberq-queue-offline.js` + `GET /api/offline/queue/{session}`; events replay through `POST /api/offline/sync` with `expected_current_booking_id` conflict stop (`offline_queue_events`). Walk-in, Mark Late, End session, and SMS stay frozen offline. Tenant admin follows `tenant.default_locale` (Filament `bn` + `lang/bn.json`, Hind Siliguri, user-menu language switch); Branding relabelled **Chamber language**.</action>
+  <reason>One machine can honestly run the room without inventing a LAN product. Two machines still cannot share one offline queue — conflict means refresh. Bangla desk matches how solo chambers actually operate; patient homepage content stays the paid add-on.</reason>
 </decision>
 

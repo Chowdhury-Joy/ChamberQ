@@ -41,8 +41,10 @@ class BackupTableMap
         // bookings first tripped it again on any chamber with a live queue.
         'bookings',
         'booking_push_subscriptions',
+        'staff_push_subscriptions',
         'chamber_cash_entries',
         'live_sessions',
+        'offline_queue_events',
         'booking_lab_test',
         'visit_records',
         'prescriptions',

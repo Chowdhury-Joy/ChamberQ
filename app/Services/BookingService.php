@@ -10,6 +10,7 @@ use App\Models\LabTest;
 use App\Models\ScheduleSession;
 use App\Models\SlotBlock;
 use App\Support\BdPhone;
+use App\Support\ScheduleSessionPace;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
@@ -22,7 +23,7 @@ class BookingService
      *
      * @return array{available: bool, blocked: bool, day_mismatch: bool, cap: int, booked: int, remaining: int}
      */
-    public function availabilityFor(Model $bookable, string $bookingDate): array
+    public function availabilityFor(Model $bookable, string $bookingDate, bool $allowOverflow = false): array
     {
         $capMode = tenant()->slot_cap_mode ?? 'per_session';
         // Legacy alias from early migration comment (`per_day`).
@@ -30,7 +31,7 @@ class BookingService
             $capMode = 'per_doctor_chamber';
         }
 
-        return $this->availabilitySnapshot($bookable, $bookingDate, $capMode);
+        return $this->availabilitySnapshot($bookable, $bookingDate, $capMode, $allowOverflow);
     }
 
     /**
@@ -125,6 +126,7 @@ class BookingService
         ?bool $shareClinicalHistory = null,
         ?string $nid = null,
         ?int $age = null,
+        bool $allowOverflow = false,
     ): Booking {
         $patientPhone = $this->normalizeBdPhone($patientPhone);
         $whatsappPhone = filled($whatsappPhone) ? $this->normalizeBdPhone($whatsappPhone) : null;
@@ -132,7 +134,7 @@ class BookingService
             $whatsappPhone = null;
         }
 
-        $booking = DB::transaction(function () use ($bookable, $bookingDate, $patientName, $patientPhone, $labTestIds, $patientId, $wantsEarlierDate, $whatsappPhone, $shareClinicalHistory, $nid, $age) {
+        $booking = DB::transaction(function () use ($bookable, $bookingDate, $patientName, $patientPhone, $labTestIds, $patientId, $wantsEarlierDate, $whatsappPhone, $shareClinicalHistory, $nid, $age, $allowOverflow) {
             $tenant = tenant();
             $capMode = $tenant->slot_cap_mode ?? 'per_session';
             if ($capMode === 'per_day') {
@@ -160,7 +162,7 @@ class BookingService
                 );
             }
 
-            $availability = $this->availabilitySnapshot($lockedBookable, $bookingDate, $capMode);
+            $availability = $this->availabilitySnapshot($lockedBookable, $bookingDate, $capMode, $allowOverflow);
 
             if ($availability['blocked']) {
                 throw BookingUnavailableException::dateBlocked();
@@ -209,6 +211,11 @@ class BookingService
 
             $nextSerial = ($maxSerial ?? 0) + 1;
 
+            $publishedCap = $lockedBookable instanceof ScheduleSession
+                ? ScheduleSessionPace::publishedCap($lockedBookable)
+                : PHP_INT_MAX;
+            $isOverflow = $lockedBookable instanceof ScheduleSession && $nextSerial > $publishedCap;
+
             $booking = Booking::create([
                 'bookable_type' => get_class($lockedBookable),
                 'bookable_id' => $lockedBookable->id,
@@ -222,6 +229,7 @@ class BookingService
                 'patient_phone' => $patientPhone,
                 'whatsapp_phone' => $whatsappPhone,
                 'serial_number' => $nextSerial,
+                'is_overflow' => $isOverflow,
                 'status' => 'waiting',
                 'wants_earlier_date' => $wantsEarlierDate,
             ]);
@@ -244,12 +252,14 @@ class BookingService
     /**
      * @return array{available: bool, blocked: bool, day_mismatch: bool, cap: int, booked: int, remaining: int}
      */
-    private function availabilitySnapshot(Model $bookable, string $bookingDate, string $capMode): array
+    private function availabilitySnapshot(Model $bookable, string $bookingDate, string $capMode, bool $allowOverflow = false): array
     {
         $date = Carbon::parse($bookingDate);
         $dayMismatch = $date->dayOfWeek !== (int) $bookable->day_of_week;
         $blocked = $this->isDateBlocked($bookable, $bookingDate);
-        $cap = max(0, (int) $bookable->slot_cap);
+        $cap = $bookable instanceof ScheduleSession
+            ? ($allowOverflow ? ScheduleSessionPace::staffCap($bookable) : ScheduleSessionPace::publishedCap($bookable))
+            : max(0, (int) $bookable->slot_cap);
         $booked = $this->bookedCount($bookable, $bookingDate, $capMode);
         $remaining = max(0, $cap - $booked);
 

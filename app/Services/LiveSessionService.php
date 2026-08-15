@@ -72,6 +72,10 @@ class LiveSessionService
         $called = DB::transaction(function () use ($liveSession) {
             $liveSession = $this->lockSession($liveSession);
 
+            if ($liveSession->status === 'paused') {
+                return null;
+            }
+
             return $this->advanceQueue($liveSession);
         });
 
@@ -105,6 +109,18 @@ class LiveSessionService
             // Normal queue: next waiting patient
             $nextBookingQuery = $liveSession->bookings()
                 ->where('status', 'waiting');
+
+            $scheduleSession = $liveSession->scheduleSession;
+            if ($scheduleSession) {
+                $publishedStillActive = $liveSession->bookings()
+                    ->where('is_overflow', false)
+                    ->whereIn('status', ['waiting', 'called', 'skipped', 'in_chamber'])
+                    ->exists();
+
+                if ($publishedStillActive) {
+                    $nextBookingQuery->where('is_overflow', false);
+                }
+            }
                 
             if ($currentBooking) {
                 $nextBookingQuery->where('serial_number', '>', $currentBooking->serial_number);
@@ -168,6 +184,11 @@ class LiveSessionService
     {
         return DB::transaction(function () use ($liveSession, $booking) {
             $liveSession = $this->lockSession($liveSession);
+
+            if ($liveSession->status === 'paused') {
+                return null;
+            }
+
             $booking = $booking->fresh();
 
             if (! $booking || ! in_array($booking->status, ['waiting', 'skipped'], true)) {
@@ -634,9 +655,13 @@ class LiveSessionService
 
     public function estimatedTimeForBooking(Booking $booking)
     {
+        if ($booking->is_overflow) {
+            return null;
+        }
+
         $liveSession = $booking->liveSession();
         if (! $liveSession) {
-            return null;
+            return app(PublishedComeAround::class)->estimateForBooking($booking);
         }
 
         $tenant = tenant();
@@ -689,6 +714,10 @@ class LiveSessionService
 
     private function scheduleGuessEstimate(Booking $booking, LiveSession $liveSession): ?Carbon
     {
+        if ($booking->is_overflow) {
+            return null;
+        }
+
         $session = $liveSession->scheduleSession;
         if (! $session) {
             return null;

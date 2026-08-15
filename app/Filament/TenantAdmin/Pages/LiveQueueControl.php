@@ -229,6 +229,8 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                             ? (bool) $data['share_clinical_history']
                             : true,
                         $data['nid'] ?? null,
+                        null,
+                        allowOverflow: true,
                     );
                 })
                 ->successNotificationTitle(__('Walk-in added directly to this session\'s live queue.')),
@@ -1057,9 +1059,10 @@ class LiveQueueControl extends Page implements HasActions, HasTable
     public function pauseSessionAction(): Action
     {
         return Action::make('pauseSession')
-            ->label('Pause Session')
+            ->label(__('Doctor stepped out'))
             ->color('gray')
             ->icon('heroicon-o-pause')
+            ->modalDescription(__('Tickets keep their place. Call next is blocked until the doctor is back.'))
             ->form([
                 TextInput::make('reason')
                     ->label('Reason (e.g. Prayer break)')
@@ -1083,7 +1086,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                     $data['reason'], 
                     $data['estimated_minutes']
                 );
-                Notification::make()->title('Session Paused')->warning()->send();
+                Notification::make()->title(__('Doctor stepped out'))->warning()->send();
             })
             ->visible(fn () => $this->activeLiveSession && $this->activeLiveSession->status === 'active');
     }
@@ -1091,13 +1094,13 @@ class LiveQueueControl extends Page implements HasActions, HasTable
     public function resumeSessionAction(): Action
     {
         return Action::make('resumeSession')
-            ->label('Resume Session')
+            ->label(__("He's back"))
             ->color('success')
             ->icon('heroicon-o-play')
             ->action(function () {
                 if (!$this->activeLiveSession) return;
                 app(LiveSessionService::class)->resumeSession($this->activeLiveSession);
-                Notification::make()->title('Session Resumed')->success()->send();
+                Notification::make()->title(__('Session resumed'))->success()->send();
             })
             ->visible(fn () => $this->activeLiveSession && $this->activeLiveSession->status === 'paused');
     }

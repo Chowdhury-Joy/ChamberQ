@@ -580,3 +580,9 @@
 
 ## 2026-08-15T13:40:39+0600
 - `LiveSessionService::markDelay()` refuses a delay total that is not larger than what was already announced, so the “Add time only” rule cannot be skipped at the service.
+
+## 2026-08-15T13:55:38+0600
+- Five queue honesty batch: `ScheduleSessionPace` + sitting-form minutes-each hint; `PublishedComeAround` on SMS/wizard/ticket; `walk_in_overflow_cap` / `is_overflow` with staff `allowOverflow`; pause blocks Call next (Doctor stepped out); `idle_after_start` sticky; staff pocket buzz (`staff_push_subscriptions`, `SendStaffSittingPromptPushes`).
+
+## 2026-08-15
+- Offline TV last-known-good + self-hosted fonts + SW v8; offline Call next replay on this computer (`OfflineQueueBagService`, `chamberq-queue-offline.js`, `offline_queue_events`); Bangla tenant admin panel from chamber language (`ConfiguresTenantAdminPanel` locale, `BanglaStaffPanelTest`).

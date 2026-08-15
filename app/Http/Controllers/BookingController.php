@@ -257,11 +257,28 @@ class BookingController extends Controller
             ], 422);
         }
 
+        $comeAround = null;
+        $overflowPhrase = null;
+        if (tenant()?->hasLiveQueue() && $bookable instanceof ScheduleSession) {
+            if ($booking->is_overflow) {
+                $overflowPhrase = app(\App\Services\PublishedComeAround::class)
+                    ->overflowSmsPhrase($bookable);
+            } else {
+                $estimate = app(\App\Services\PublishedComeAround::class)->estimateForBooking($booking);
+                if ($estimate) {
+                    $comeAround = app(\App\Services\PublishedComeAround::class)
+                        ->formatTimeForSms($estimate['shown_time']);
+                }
+            }
+        }
+
         return response()->json([
             'success' => true,
             'booking' => [
                 'id' => $booking->id,
                 'serial_number' => $booking->serial_number,
+                'come_around' => $comeAround,
+                'overflow_phrase' => $overflowPhrase,
                 // Relative on purpose: absolute URLs bake in whatever host Laravel
                 // thinks it has (often localhost behind a reverse proxy). The
                 // wizard already runs on the patient's real domain, so a path

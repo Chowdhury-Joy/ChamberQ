@@ -41,6 +41,12 @@ class QueueStatusController extends Controller
             ->count();
             
         $estimateData = $this->liveSessionService->estimatedTimeForBooking($booking);
+        $overflowPhrase = null;
+
+        if ($booking->is_overflow && $booking->bookable instanceof \App\Models\ScheduleSession) {
+            $overflowPhrase = app(\App\Services\PublishedComeAround::class)
+                ->overflowSmsPhrase($booking->bookable);
+        }
 
         return response()->json([
             'now_serving' => $nowServing,
@@ -53,6 +59,7 @@ class QueueStatusController extends Controller
             'pause_reason' => $liveSession ? $liveSession->pause_reason : null,
             'estimated_pause_minutes' => $liveSession ? $liveSession->estimated_pause_minutes : null,
             'shown_time' => $estimateData ? $estimateData['shown_time']->toIso8601String() : null,
+            'overflow_phrase' => $overflowPhrase,
             'is_called' => $booking->status === 'called',
         ]);
     }

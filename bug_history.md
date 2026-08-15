@@ -1075,3 +1075,26 @@
  <root_cause>The “only a larger total” rule lived on the form options and a validation closure. `LiveSessionService::markDelay()` wrote whatever minutes it was given.</root_cause>
  <prevention_rule>`markDelay()` must refuse a new total that is not larger than the current `delay_minutes` when the sitting is already `delayed`. Form options are a convenience; the service is the lock.</prevention_rule>
 </bug>
+
+## 2026-08-15T13:55:38+0600
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>Booking confirmation SMS gave serial, date, and ticket link but no come-around time, so patients still turned up at sitting start because nothing in their pocket said when to arrive.</symptom>
+ <root_cause>`estimatedTimeForBooking()` returned null without a live session row, and `SmsService::confirmationBody()` never called a published guess.</root_cause>
+ <prevention_rule>Live-queue booking SMS and the wizard confirm flash must include `PublishedComeAround` before Start; overflow stools say “After serial N”, not a clock. One segment enforced via `GsmText`.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>When all published seats were taken, staff could not add a walk-in at the desk even though the chamber would seat them on a stool after the list.</symptom>
+ <root_cause>`createBookingForBookable()` always capped at `slot_cap` with no staff-only overflow path.</root_cause>
+ <prevention_rule>Online and `availabilityFor()` use published cap only; staff walk-ins pass `allowOverflow: true` up to `walk_in_overflow_cap`, freezing `is_overflow` on the booking row.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>While the session was paused (doctor stepped out), Call next still advanced the queue.</symptom>
+ <root_cause>Pause only updated status and slid ETA; `callNextPatient()` and `callSpecificPatient()` did not check `paused`.</root_cause>
+ <prevention_rule>Queue advance entry points must refuse while `live_sessions.status === 'paused'`; UI copy must say tickets wait and Call next is blocked.</prevention_rule>
+</bug>

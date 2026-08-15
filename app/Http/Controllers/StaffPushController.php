@@ -1,0 +1,39 @@
+<?php
+
+namespace App\Http\Controllers;
+
+use App\Models\StaffPushSubscription;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
+
+class StaffPushController extends Controller
+{
+    public function store(Request $request): JsonResponse
+    {
+        $data = $request->validate([
+            'endpoint' => ['required', 'url', 'max:512'],
+            'keys.p256dh' => ['required', 'string', 'max:255'],
+            'keys.auth' => ['required', 'string', 'max:255'],
+        ]);
+
+        $user = $request->user();
+        if (! $user) {
+            abort(401);
+        }
+
+        StaffPushSubscription::query()->updateOrCreate(
+            [
+                'tenant_id' => tenant('id'),
+                'user_id' => $user->id,
+                'endpoint_hash' => hash('sha256', $data['endpoint']),
+            ],
+            [
+                'endpoint' => $data['endpoint'],
+                'p256dh' => $data['keys']['p256dh'],
+                'auth_token' => $data['keys']['auth'],
+            ],
+        );
+
+        return response()->json(['ok' => true]);
+    }
+}

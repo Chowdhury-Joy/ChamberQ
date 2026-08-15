@@ -209,12 +209,27 @@ class SmsService
         $clinic = Tenant::find($booking->tenant_id)?->displayName() ?? 'Clinic';
         $date = $booking->booking_date?->format('j M Y') ?? '';
         $session = '';
+        $comeAround = null;
+        $overflowPhrase = null;
 
         if ($booking->bookable instanceof ScheduleSession) {
             $booking->bookable->loadMissing(['doctor']);
             $doctor = $booking->bookable->doctor?->name;
             $sessionName = $booking->bookable->session_name;
             $session = trim(($doctor ? $doctor.' - ' : '').($sessionName ?? ''));
+
+            $tenant = Tenant::find($booking->tenant_id);
+            if ($tenant?->hasLiveQueue()) {
+                if ($booking->is_overflow) {
+                    $overflowPhrase = app(PublishedComeAround::class)->overflowSmsPhrase($booking->bookable);
+                } else {
+                    $estimate = app(PublishedComeAround::class)->estimateForBooking($booking);
+                    if ($estimate) {
+                        $time = app(PublishedComeAround::class)->formatTimeForSms($estimate['shown_time']);
+                        $comeAround = 'Come around '.$time;
+                    }
+                }
+            }
         }
 
         $ticket = $this->ticketUrl($booking);
@@ -225,11 +240,27 @@ class SmsService
             $clinic.':',
             $name.' - serial '.$booking->serial_number,
             $date !== '' ? 'on '.$date : null,
+            $comeAround,
+            $overflowPhrase,
             $session !== '' ? '('.$session.')' : null,
             'Ticket: '.$ticket,
         ]);
 
-        return implode(' ', $parts);
+        $body = implode(' ', $parts);
+
+        if (GsmText::segments($body) > 1 && $session !== '') {
+            $parts = array_filter([
+                $clinic.':',
+                $name.' - serial '.$booking->serial_number,
+                $date !== '' ? 'on '.$date : null,
+                $comeAround,
+                $overflowPhrase,
+                'Ticket: '.$ticket,
+            ]);
+            $body = implode(' ', $parts);
+        }
+
+        return GsmText::toSingleSegment($body);
     }
 
     public function doctorLateBody(Booking $booking, int $delayMinutes): string

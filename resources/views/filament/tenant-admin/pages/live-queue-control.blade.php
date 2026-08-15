@@ -115,6 +115,10 @@
 
     <div class="lqc-stack cq-freeze-queue">
 
+        @if (tenant()?->hasLiveQueue() && (auth()->user()?->canManageQueue() || auth()->user()?->canOperateQueueControls()))
+            @include('filament.tenant-admin.components.staff-buzz-card')
+        @endif
+
         @include('filament.tenant-admin.components.sitting-prompts', [
             'prompts' => $this->sittingPrompts,
             'canOperate' => auth()->user()?->canOperateQueueControls() ?? false,

@@ -17,10 +17,12 @@ class ScheduleSession extends Model
         'start_time',
         'end_time',
         'slot_cap',
+        'walk_in_overflow_cap',
     ];
 
     protected $casts = [
         'day_of_week' => 'integer',
+        'walk_in_overflow_cap' => 'integer',
     ];
     
     public function chamber()
@@ -40,5 +42,15 @@ class ScheduleSession extends Model
         $end = \Carbon\Carbon::parse($this->end_time)->format('g:i A');
 
         return trim($this->session_name).' · '.$start.' – '.$end;
+    }
+
+    public function minutesPerPatient(): ?int
+    {
+        return \App\Support\ScheduleSessionPace::minutesPerPatient($this);
+    }
+
+    public function publishedSlotCap(): int
+    {
+        return \App\Support\ScheduleSessionPace::publishedCap($this);
     }
 }
