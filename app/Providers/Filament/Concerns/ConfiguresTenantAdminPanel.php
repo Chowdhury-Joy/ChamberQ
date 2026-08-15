@@ -5,12 +5,14 @@ namespace App\Providers\Filament\Concerns;
 use App\Filament\TenantAdmin\Widgets\TenantStatsOverview;
 use App\Filament\TenantAdmin\Widgets\TodayAppointmentsWidget;
 use Filament\Actions\Action;
+use Filament\Navigation\NavigationGroup;
 use Filament\Panel;
 use Filament\Support\Colors\Color;
 use Filament\Support\Enums\Width;
 use Filament\Tables\Table;
 use Filament\View\PanelsRenderHook;
 use Filament\Widgets\AccountWidget;
+use Illuminate\Support\Facades\App;
 
 trait ConfiguresTenantAdminPanel
 {
@@ -29,9 +31,18 @@ trait ConfiguresTenantAdminPanel
                 'primary' => Color::Blue,
             ])
             ->navigationGroups([
-                'Operations',
-                'Website',
-                'Settings',
+                'Operations' => NavigationGroup::make()->label(__('Operations')),
+                'Website' => NavigationGroup::make()->label(__('Website')),
+                'Settings' => NavigationGroup::make()->label(__('Settings')),
+            ])
+            ->userMenuItems([
+                Action::make('displayLanguage')
+                    ->label(fn (): string => App::getLocale() === 'bn'
+                        ? __('Switch to English')
+                        : __('Switch to Bangla'))
+                    ->icon('heroicon-o-language')
+                    ->url(fn (): string => tenant_web_url('/lang/'.(App::getLocale() === 'bn' ? 'en' : 'bn')))
+                    ->visible(fn (): bool => tenancy()->initialized),
             ])
             ->discoverResources(in: app_path('Filament/TenantAdmin/Resources'), for: 'App\Filament\TenantAdmin\Resources')
             ->discoverPages(in: app_path('Filament/TenantAdmin/Pages'), for: 'App\Filament\TenantAdmin\Pages')
@@ -82,7 +93,14 @@ trait ConfiguresTenantAdminPanel
             )
             ->renderHook(
                 'panels::head.end',
-                fn (): string => '<style>
+                fn (): string => (App::getLocale() === 'bn'
+                    ? '<link rel="stylesheet" href="'.asset('css/chamberq-screen-fonts.css').'">'
+                    : '').'<style>
+                    '.(App::getLocale() === 'bn' ? "
+                    :root {
+                        --fi-font-sans: 'Hind Siliguri', 'Geist Sans', ui-sans-serif, system-ui, sans-serif;
+                    }
+                    " : '').'
                     /* Collapse All / Expand All: gray outline, not primary */
                     .fi-fo-builder-header-actions,
                     .fi-fo-builder-header-actions button,
@@ -146,6 +164,14 @@ trait ConfiguresTenantAdminPanel
                 </style>'
             )
             ->bootUsing(function (): void {
+                if (tenancy()->initialized) {
+                    if (session()->has('locale')) {
+                        App::setLocale((string) session()->get('locale'));
+                    } elseif (filled(tenant()->default_locale)) {
+                        App::setLocale((string) tenant()->default_locale);
+                    }
+                }
+
                 Table::configureUsing(function (Table $table): void {
                     $table->modifyUngroupedRecordActionsUsing(
                         fn (Action $action): Action => $action->button()->outlined(),

@@ -98,8 +98,12 @@ $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
         ->middleware(['auth', 'throttle:30,1', 'tenant.module:prescription'])
         ->name($routeName('offline.bag'));
 
+    Route::get('/api/offline/queue/{session}', [OfflineController::class, 'queue'])
+        ->middleware(['auth', 'throttle:60,1', 'tenant.module:live_queue'])
+        ->name($routeName('offline.queue'));
+
     Route::post('/api/offline/sync', [OfflineController::class, 'sync'])
-        ->middleware(['auth', 'throttle:30,1', 'tenant.module:prescription'])
+        ->middleware(['auth', 'throttle:30,1'])
         ->name($routeName('offline.sync'));
 
     Route::get('/prescriptions/{prescription}/print', [PrescriptionController::class, 'print'])

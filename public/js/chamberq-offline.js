@@ -64,6 +64,12 @@
         });
     }
 
+    async function setMeta(key, value) {
+        await withStore(META_STORE, 'readwrite', (store) => {
+            store.put({ key, value });
+        });
+    }
+
     async function getMeta(key) {
         const db = await openDb();
         return new Promise((resolve, reject) => {
@@ -71,12 +77,6 @@
             const req = tx.objectStore(META_STORE).get(key);
             req.onsuccess = () => resolve(req.result?.value ?? null);
             req.onerror = () => reject(req.error);
-        });
-    }
-
-    async function setMeta(key, value) {
-        await withStore(META_STORE, 'readwrite', (store) => {
-            store.put({ key, value });
         });
     }
 
@@ -134,8 +134,8 @@
             el.hidden = false;
             title.textContent = 'No internet. ';
             body.textContent = snapshot.pending
-                ? `${snapshot.pending} visit(s) saved on this computer. Do not tap Call next or take walk-ins here — shout the serial if you must.`
-                : 'You can still finish the prescription on this screen and print. Call next, walk-ins and SMS wait until the line is back.';
+                ? `${snapshot.pending} item(s) saved on this computer — Call next still works here. The TV updates if this screen is on the TV.`
+                : 'Call next still works on this computer. The TV updates if this screen is on the TV. Prescriptions and walk-ins wait until the line is back.';
             if (btn) btn.hidden = true;
             return;
         }
@@ -259,13 +259,17 @@
         }
         state.unreachable = false;
         const data = await res.json();
-        for (const result of (data.results || [])) {
+        const results = data.results || [];
+        for (const result of results) {
             if (result.ok) {
                 await deleteQueue(result.id);
             }
+            if (result.conflict && result.halt) {
+                break;
+            }
         }
         emit();
-        return data.results || [];
+        return results;
     }
 
     function escapeHtml(value) {
@@ -414,6 +418,8 @@ ${data.tests_advised ? `<h3>Inv</h3><p>${escapeHtml(data.tests_advised)}</p>` : 
         packBag,
         loadBag,
         getBag: () => state.bag,
+        getMeta,
+        setMeta,
         searchMedicines,
         rememberSearchResults,
         enqueue,

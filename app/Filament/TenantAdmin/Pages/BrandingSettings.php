@@ -131,8 +131,8 @@ class BrandingSettings extends Page implements HasForms
                             ->placeholder('8801XXXXXXXXX')
                             ->maxLength(20),
                         Select::make('default_locale')
-                            ->label(__('Default Language (Book / Ticket / Portal)'))
-                            ->helperText(__('Controls system UI strings. Homepage Bangla content is a separate paid add-on (bangla_homepage) enabled by Super Admin; staff then author that copy manually.'))
+                            ->label(__('Chamber language'))
+                            ->helperText(__('Book, ticket, waiting-room TV, and this admin panel. Homepage Bangla articles are still the paid bangla_homepage add-on.'))
                             ->options([
                                 'en' => 'English',
                                 'bn' => 'বাংলা (Bengali)',

@@ -2,7 +2,10 @@
 
 namespace App\Services;
 
+use App\Exceptions\OfflineQueueConflictException;
 use App\Models\Booking;
+use App\Models\LiveSession;
+use App\Models\OfflineQueueEvent;
 use App\Models\ScheduleSession;
 use App\Models\User;
 use App\Models\VisitRecord;
@@ -11,17 +14,26 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Applies work the doctor did on this computer while the line was down.
+ * Applies work staff did on this computer while the line was down.
  *
- * Allowed: save a prescription onto an existing booking, or record a visiting
- * / camp walk-in. Never Call next, Complete visit, walk-in onto the live
- * queue, or send SMS — those stay frozen until staff do them on a live screen.
+ * Allowed: save a prescription onto an existing booking; record a visiting /
+ * camp walk-in; replay Call next / arrived / skip / complete-without-advance
+ * from the machine that tapped (conflict stops the rest). Walk-in onto the
+ * live queue and SMS stay frozen until the line is back.
  */
 class OfflineSyncService
 {
     public const TYPE_RX_SAVE = 'rx_save';
 
     public const TYPE_VISITING_VISIT = 'visiting_visit';
+
+    public const TYPE_QUEUE_CALL_NEXT = 'queue_call_next';
+
+    public const TYPE_QUEUE_PATIENT_ARRIVED = 'queue_patient_arrived';
+
+    public const TYPE_QUEUE_SKIP = 'queue_skip';
+
+    public const TYPE_QUEUE_COMPLETE_WITHOUT_ADVANCE = 'queue_complete_without_advance';
 
     public const MAX_ITEMS = 40;
 
@@ -35,7 +47,7 @@ class OfflineSyncService
      * @param  list<array<string, mixed>>  $items
      * @return list<array{id: string, ok: bool, error?: string, booking_id?: string}>
      */
-    public function apply(User $doctor, array $items): array
+    public function apply(User $user, array $items): array
     {
         $results = [];
 
@@ -44,15 +56,42 @@ class OfflineSyncService
             $type = (string) ($item['type'] ?? '');
 
             try {
-                $bookingId = match ($type) {
-                    self::TYPE_RX_SAVE => $this->applyRxSave($doctor, $item),
-                    self::TYPE_VISITING_VISIT => $this->applyVisitingVisit($doctor, $item),
-                    default => throw ValidationException::withMessages([
-                        'type' => 'Unknown offline item.',
-                    ]),
-                };
+                if ($this->isQueueEvent($type)) {
+                    if (! $user->canOperateQueueControls() || ! $user->belongsToCurrentTenant()) {
+                        throw ValidationException::withMessages([
+                            'type' => 'You cannot replay queue actions for this chamber.',
+                        ]);
+                    }
 
-                $results[] = ['id' => $id, 'ok' => true, 'booking_id' => $bookingId];
+                    $this->applyQueueEvent($item);
+                    $results[] = ['id' => $id, 'ok' => true];
+                } else {
+                    if (! $user->canRecordVisitNotes() || ! $user->belongsToCurrentTenant()) {
+                        throw ValidationException::withMessages([
+                            'type' => 'You cannot upload offline visits for this chamber.',
+                        ]);
+                    }
+
+                    $bookingId = match ($type) {
+                        self::TYPE_RX_SAVE => $this->applyRxSave($user, $item),
+                        self::TYPE_VISITING_VISIT => $this->applyVisitingVisit($user, $item),
+                        default => throw ValidationException::withMessages([
+                            'type' => 'Unknown offline item.',
+                        ]),
+                    };
+
+                    $results[] = ['id' => $id, 'ok' => true, 'booking_id' => $bookingId];
+                }
+            } catch (OfflineQueueConflictException $e) {
+                $results[] = [
+                    'id' => $id,
+                    'ok' => false,
+                    'error' => $e->getMessage(),
+                    'conflict' => true,
+                    'halt' => true,
+                ];
+
+                break;
             } catch (ValidationException $e) {
                 $results[] = [
                     'id' => $id,
@@ -70,6 +109,73 @@ class OfflineSyncService
         }
 
         return $results;
+    }
+
+    private function isQueueEvent(string $type): bool
+    {
+        return in_array($type, [
+            self::TYPE_QUEUE_CALL_NEXT,
+            self::TYPE_QUEUE_PATIENT_ARRIVED,
+            self::TYPE_QUEUE_SKIP,
+            self::TYPE_QUEUE_COMPLETE_WITHOUT_ADVANCE,
+        ], true);
+    }
+
+    /**
+     * @param  array<string, mixed>  $item
+     */
+    private function applyQueueEvent(array $item): void
+    {
+        $syncId = (string) ($item['id'] ?? '');
+        $liveSessionId = (int) ($item['live_session_id'] ?? 0);
+
+        if ($syncId === '' || $liveSessionId < 1) {
+            throw ValidationException::withMessages([
+                'live_session_id' => 'Missing queue session.',
+            ]);
+        }
+
+        if (OfflineQueueEvent::query()->whereKey($syncId)->exists()) {
+            return;
+        }
+
+        $liveSession = LiveSession::query()->find($liveSessionId);
+
+        if (! $liveSession) {
+            throw ValidationException::withMessages([
+                'live_session_id' => 'That session is no longer live.',
+            ]);
+        }
+
+        $expected = filled($item['expected_current_booking_id'] ?? null)
+            ? (string) $item['expected_current_booking_id']
+            : null;
+
+        if ($liveSession->current_booking_id !== $expected) {
+            throw new OfflineQueueConflictException(
+                'Refresh — the line moved elsewhere.',
+            );
+        }
+
+        $type = (string) ($item['type'] ?? '');
+
+        match ($type) {
+            self::TYPE_QUEUE_CALL_NEXT => $this->liveSessionService->callNextPatient($liveSession),
+            self::TYPE_QUEUE_PATIENT_ARRIVED => $this->liveSessionService->patientArrived($liveSession),
+            self::TYPE_QUEUE_SKIP => $this->liveSessionService->skipPatient($liveSession),
+            self::TYPE_QUEUE_COMPLETE_WITHOUT_ADVANCE => $this->liveSessionService->completeCurrentPatientWithoutAdvancing($liveSession),
+            default => throw ValidationException::withMessages([
+                'type' => 'Unknown queue action.',
+            ]),
+        };
+
+        OfflineQueueEvent::query()->create([
+            'id' => $syncId,
+            'tenant_id' => (string) tenant('id'),
+            'live_session_id' => $liveSession->id,
+            'event_type' => $type,
+            'applied_at' => now(),
+        ]);
     }
 
     /**

@@ -1,17 +1,34 @@
 {{--
     Shared offline banner + JS config for every tenant-admin page.
-    The pad and Visiting / camp read ChamberQOffline; queue screens freeze
-    via body.cq-is-offline.
+    The pad and Visiting / camp read ChamberQOffline; queue screens allow
+    Call next offline on this computer via chamberq-queue-offline.js.
 --}}
 @php
     $user = auth()->user();
-    $enabled = $user?->canRecordVisitNotes() ?? false;
+    $canRx = $user?->canRecordVisitNotes() ?? false;
+    $canQueue = $user?->canOperateQueueControls() ?? false;
+    $enabled = $canRx || $canQueue;
     $visitingUrl = null;
+    $queueUrl = null;
     if ($enabled) {
         try {
             $visitingUrl = \App\Filament\TenantAdmin\Pages\VisitingDay::getUrl();
         } catch (\Throwable $e) {
             $visitingUrl = null;
+        }
+    }
+    if ($canQueue) {
+        $live = \App\Models\LiveSession::query()
+            ->where('session_date', now()->toDateString())
+            ->orderByDesc('started_at')
+            ->first();
+        $sessionId = $live?->schedule_session_id
+            ?? \App\Models\ScheduleSession::query()
+                ->where('day_of_week', now()->dayOfWeek)
+                ->orderBy('start_time')
+                ->value('id');
+        if ($sessionId) {
+            $queueUrl = tenant_web_url('/api/offline/queue/'.$sessionId);
         }
     }
 @endphp
@@ -34,14 +51,18 @@
     </div>
     <script>
         window.ChamberQOfflineConfig = {
-            bagUrl: @json(tenant_web_url('/api/offline/bag')),
+            bagUrl: @json($canRx ? tenant_web_url('/api/offline/bag') : null),
             syncUrl: @json(tenant_web_url('/api/offline/sync')),
+            queueUrl: @json($queueUrl),
             visitingUrl: @json($visitingUrl),
         };
     </script>
     <script src="{{ asset('js/chamberq-offline.js') }}"></script>
+    @if ($canQueue)
+        <script src="{{ asset('js/chamberq-queue-offline.js') }}"></script>
+    @endif
     <style>
-        body.cq-is-offline .cq-freeze-queue .fi-btn,
+        body.cq-is-offline .cq-freeze-queue .fi-btn:not(.cq-offline-queue-allowed),
         body.cq-is-offline .cq-needs-network {
             pointer-events: none !important;
             opacity: 0.45 !important;

@@ -240,7 +240,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
     public function endSessionAction(): Action
     {
         return Action::make('endSession')
-            ->label('Finish / End Session')
+            ->label(__('Finish / End Session'))
             ->color('danger')
             ->outlined()
             ->icon('heroicon-s-flag')

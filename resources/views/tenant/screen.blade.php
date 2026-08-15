@@ -13,22 +13,14 @@
         if ($isBn && ! in_array($fontFamily, ['Hind Siliguri'], true)) {
             $fontFamily = 'Hind Siliguri';
         }
+        $localFontCss = public_asset('css/chamberq-screen-fonts.css');
         $callAudioUrl = $tenant->callAudioUrl();
         $callAnnounceLocale = $tenant->call_announce_locale ?? 'en';
         $usesCallChime = $tenant->usesCallChime();
         $usesCallVoice = $tenant->usesCallVoice();
-        
-        $fontUrl = match($fontFamily) {
-            'Outfit' => 'https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700&display=swap',
-            'Roboto' => 'https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap',
-            'Hind Siliguri' => 'https://fonts.googleapis.com/css2?family=Hind+Siliguri:wght@400;500;600;700&display=swap',
-            default => 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap',
-        };
     @endphp
 
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link rel="stylesheet" href="{{ $fontUrl }}">
+    <link rel="stylesheet" href="{{ $localFontCss }}">
     
     <style>
         :root {
@@ -208,6 +200,24 @@
         .sound-toggle.hidden {
             display: none;
         }
+
+        .offline-chip {
+            position: fixed;
+            bottom: 1rem;
+            right: 1rem;
+            z-index: 45;
+            padding: 0.5rem 0.85rem;
+            border-radius: 999px;
+            background: rgba(0, 0, 0, 0.55);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: #e2e8f0;
+            font-size: 0.85rem;
+            display: none;
+        }
+
+        .offline-chip.visible {
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -251,6 +261,8 @@
     <div class="next-up" id="nextUpContainer" style="display: none;">
         {{ __('Next:') }} <span id="nextSerial"></span><span id="nextEta"></span>
     </div>
+
+    <div id="offlineChip" class="offline-chip" aria-live="polite"></div>
 
     @if($usesCallChime)
     <audio id="chimeAudio" src="{{ $callAudioUrl }}" preload="auto"></audio>
@@ -296,6 +308,12 @@
         let lastCalledTime = null;
         let soundUnlocked = false;
         let soundMuted = false;
+        let lastGoodPayload = null;
+        let lastGoodAt = null;
+        let pollOffline = false;
+        const cacheKey = 'cq-screen:' + statusUrl;
+        const offlineChip = document.getElementById('offlineChip');
+        const offlineChipTemplate = @json(__('Line dropped — last update :time'));
 
         const audio = document.getElementById('chimeAudio');
         const announceAudio = document.getElementById('announceAudio');
@@ -531,12 +549,47 @@
             updateToggleLabel();
         });
 
-        async function updateScreen() {
+        function loadCachedPayload() {
             try {
-                const res = await fetch(statusUrl);
-                if (!res.ok) return;
-                const data = await res.json();
+                const raw = localStorage.getItem(cacheKey);
+                if (!raw) return null;
+                const parsed = JSON.parse(raw);
+                return parsed?.data || null;
+            } catch (e) {
+                return null;
+            }
+        }
 
+        function saveCachedPayload(data) {
+            try {
+                localStorage.setItem(cacheKey, JSON.stringify({
+                    saved_at: new Date().toISOString(),
+                    data,
+                }));
+            } catch (e) {}
+        }
+
+        function formatChipTime(iso) {
+            try {
+                return new Date(iso).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+            } catch (e) {
+                return '';
+            }
+        }
+
+        function setOfflineChip(visible, atIso) {
+            if (!offlineChip) return;
+            if (!visible) {
+                offlineChip.classList.remove('visible');
+                offlineChip.textContent = '';
+                return;
+            }
+            const label = offlineChipTemplate.replace(':time', formatChipTime(atIso || new Date().toISOString()));
+            offlineChip.textContent = label;
+            offlineChip.classList.add('visible');
+        }
+
+        function renderPayload(data) {
                 // Stable TV bookmark: when the calendar day rolls over (APP_TIMEZONE
                 // on the server), reload so the header date and queue match today.
                 if (liveToday && data.session_date && data.session_date !== pageDate) {
@@ -629,10 +682,55 @@
                     box.className = 'now-serving-box';
                     document.getElementById('mainLabel').textContent = labels.nowServing;
                 }
+        }
 
+        async function updateScreen() {
+            try {
+                const res = await fetch(statusUrl);
+                if (!res.ok) throw new Error('bad status');
+                const data = await res.json();
+                lastGoodPayload = data;
+                lastGoodAt = new Date().toISOString();
+                saveCachedPayload(data);
+                pollOffline = false;
+                setOfflineChip(false);
+                renderPayload(data);
             } catch (e) {
-                console.error('Error fetching screen data:', e);
+                pollOffline = true;
+                const cached = lastGoodPayload || loadCachedPayload();
+                if (cached) {
+                    lastGoodPayload = cached;
+                    const raw = localStorage.getItem(cacheKey);
+                    let at = lastGoodAt;
+                    try {
+                        at = JSON.parse(raw || '{}').saved_at || at;
+                    } catch (err) {}
+                    setOfflineChip(true, at);
+                    renderPayload(cached);
+                } else {
+                    console.error('Error fetching screen data:', e);
+                }
             }
+        }
+
+        window.addEventListener('cq-queue-screen', function (event) {
+            const data = event.detail;
+            if (!data) return;
+            lastGoodPayload = data;
+            lastGoodAt = new Date().toISOString();
+            saveCachedPayload(data);
+            renderPayload(data);
+        });
+
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function () {
+                navigator.serviceWorker.register(@json(tenant_web_url('/sw.js'))).catch(function () {});
+            });
+        }
+
+        const initialCache = loadCachedPayload();
+        if (initialCache) {
+            lastGoodPayload = initialCache;
         }
 
         updateScreen();

@@ -83,9 +83,37 @@ class PWAController extends Controller
         $scopePrefixJs = json_encode(rtrim($scopePrefix, '/') ?: '');
 
         $sw = <<<JS
-const CACHE_NAME = 'clinic-shell-v7';
+const CACHE_NAME = 'clinic-shell-v8';
 const SCOPE_PREFIX = {$scopePrefixJs};
-const PRECACHE = ['/css/theme.css', '/js/chamberq-offline.js'];
+const PRECACHE = [
+    '/css/theme.css',
+    '/css/chamberq-screen-fonts.css',
+    '/js/chamberq-offline.js',
+    '/fonts/hind-siliguri/hind-siliguri-bengali-400-normal.woff2',
+    '/fonts/hind-siliguri/hind-siliguri-bengali-600-normal.woff2',
+    '/fonts/hind-siliguri/hind-siliguri-bengali-700-normal.woff2',
+    '/fonts/filament/filament/inter/inter-latin-wght-normal-NRMW37G5.woff2',
+    '/audio/announce/number-1.wav',
+    '/audio/announce/number-2.wav',
+    '/audio/announce/number-3.wav',
+    '/audio/announce/number-4.wav',
+    '/audio/announce/number-5.wav',
+    '/audio/announce/number-6.wav',
+    '/audio/announce/number-7.wav',
+    '/audio/announce/number-8.wav',
+    '/audio/announce/number-9.wav',
+    '/audio/announce/number-10.wav',
+    '/audio/announce/number-11.wav',
+    '/audio/announce/number-12.wav',
+    '/audio/announce/number-13.wav',
+    '/audio/announce/number-14.wav',
+    '/audio/announce/number-15.wav',
+    '/audio/announce/number-16.wav',
+    '/audio/announce/number-17.wav',
+    '/audio/announce/number-18.wav',
+    '/audio/announce/number-19.wav',
+    '/audio/announce/number-20.wav',
+];
 
 self.addEventListener('install', event => {
     event.waitUntil((async () => {

@@ -266,7 +266,7 @@
                                 @endif
                                 <div class="lqc-actions">
                                     <x-filament::button wire:click="mountStartSessionOrRun" color="success" icon="heroicon-m-play" size="lg">
-                                        Start live session
+                                        {{ __('Start live session') }}
                                     </x-filament::button>
                                 </div>
                                 <p class="lqc-muted">
@@ -378,13 +378,15 @@
 
                                         <div class="lqc-actions">
                                             @if($current->status === 'called')
-                                                <x-filament::button wire:click="patientArrived" color="success" icon="heroicon-m-check" size="lg">
-                                                    Patient arrived
+                                                <x-filament::button wire:click="patientArrived" color="success" icon="heroicon-m-check" size="lg" class="cq-offline-queue-allowed" data-cq-queue-action="patient_arrived">
+                                                    {{ __('Patient arrived') }}
                                                 </x-filament::button>
                                                 <x-filament::button
                                                     wire:click="skipPatient"
                                                     color="{{ $liveSession->isCallTimedOut() ? 'danger' : 'gray' }}"
                                                     icon="heroicon-m-forward"
+                                                    class="cq-offline-queue-allowed"
+                                                    data-cq-queue-action="skip"
                                                 >
                                                     @if($current->skip_count >= 2)
                                                         No response — mark no-show
@@ -407,12 +409,12 @@
                                                     'booking' => $current,
                                                     'prescription' => $current->visitRecord?->prescription,
                                                 ])
-                                                <x-filament::button wire:click="callNextPatientOnly" color="primary" icon="heroicon-m-megaphone" size="lg">
-                                                    Call next patient
+                                                <x-filament::button wire:click="callNextPatientOnly" color="primary" icon="heroicon-m-megaphone" size="lg" class="cq-offline-queue-allowed" data-cq-queue-action="call_next">
+                                                    {{ __('Call next patient') }}
                                                 </x-filament::button>
                                             @else
-                                                <x-filament::button class="cs-complete-visit-btn" wire:click="completeVisit" color="success" icon="heroicon-m-check-badge" size="lg">
-                                                    Complete visit
+                                                <x-filament::button class="cs-complete-visit-btn cq-offline-queue-allowed" wire:click="completeVisit" color="success" icon="heroicon-m-check-badge" size="lg" data-cq-queue-action="complete_without_advance">
+                                                    {{ __('Complete visit') }}
                                                 </x-filament::button>
                                             @endif
                                         </div>
@@ -422,8 +424,8 @@
                                             <div class="lqc-serial">#{{ $nextWaiting->serial_number }}</div>
                                             <div class="lqc-name">{{ $nextWaiting->patient_name }}</div>
                                             <div class="lqc-actions">
-                                                <x-filament::button wire:click="callNextPatientOnly" color="primary" icon="heroicon-m-megaphone" size="lg">
-                                                    Call #{{ $nextWaiting->serial_number }}
+                                                <x-filament::button wire:click="callNextPatientOnly" color="primary" icon="heroicon-m-megaphone" size="lg" class="cq-offline-queue-allowed" data-cq-queue-action="call_next">
+                                                    {{ __('Call #:serial', ['serial' => $nextWaiting->serial_number]) }}
                                                 </x-filament::button>
                                             </div>
                                         @else
