@@ -37,6 +37,18 @@ class FiveQueueHonestyTest extends TestCase
     {
         parent::setUp();
 
+        // Freeze the clock before the sitting opens.
+        //
+        // Every test below books the 17:00–20:00 sitting *today*, and
+        // `BookingService::sessionAlreadyEndedToday()` correctly refuses a
+        // session whose `end_time` has passed — so this class failed with "the
+        // clinic is closed on the date you chose" on any run after 20:00 local,
+        // and passed on any run before it. That is a real chamber's evening: a
+        // suite that goes red at 8pm teaches everyone to ignore it, which is
+        // exactly when a genuine regression slips through. `tearDown()` already
+        // clears this; tests that need a later moment set their own.
+        Carbon::setTestNow(Carbon::today()->setTime(9, 0));
+
         config(['sms.enabled' => true, 'sms.driver' => 'log']);
 
         $this->tenant = Tenant::create([
