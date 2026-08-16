@@ -18,6 +18,14 @@ class Booking extends Model
      */
     public const CALL_NEXT_NUDGE_SECONDS = 30;
 
+    public const PROCEDURE_LOGGED = 'logged';
+
+    public const PROCEDURE_PREPPED = 'prepped';
+
+    public const PROCEDURE_DOCTOR_CALLED = 'doctor_called';
+
+    public const PROCEDURE_DONE = 'done';
+
     protected $fillable = [
         'bookable_type',
         'bookable_id',
@@ -28,6 +36,9 @@ class Booking extends Model
         'patient_phone',
         'whatsapp_phone',
         'serial_number',
+        'voucher_number',
+        'related_booking_id',
+        'procedure_status',
         'is_overflow',
         'status',
         'wants_earlier_date',
@@ -44,6 +55,7 @@ class Booking extends Model
     protected $casts = [
         'booking_date' => DateOnly::class,
         'serial_number' => 'integer',
+        'voucher_number' => 'integer',
         'is_overflow' => 'boolean',
         'wants_earlier_date' => 'boolean',
         'cancelled_at' => 'datetime',
@@ -112,7 +124,35 @@ class Booking extends Model
     {
         return $this->hasOne(ChamberCashEntry::class);
     }
-    
+
+    public function relatedBooking()
+    {
+        return $this->belongsTo(Booking::class, 'related_booking_id');
+    }
+
+    public function procedureBookings()
+    {
+        return $this->hasMany(Booking::class, 'related_booking_id');
+    }
+
+    /** @return array<string, string> */
+    public static function procedureStatusOptions(): array
+    {
+        return [
+            self::PROCEDURE_LOGGED => __('Logged'),
+            self::PROCEDURE_PREPPED => __('Prepped'),
+            self::PROCEDURE_DOCTOR_CALLED => __('Doctor called'),
+            self::PROCEDURE_DONE => __('Done'),
+        ];
+    }
+
+    public function voucherLabel(): ?string
+    {
+        return $this->voucher_number !== null
+            ? (string) $this->voucher_number
+            : null;
+    }
+
     public function bookable()
     {
         return $this->morphTo();

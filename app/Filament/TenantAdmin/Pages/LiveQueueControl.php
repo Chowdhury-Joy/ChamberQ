@@ -221,15 +221,15 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                         $data['patient_name'],
                         $data['patient_phone'],
                         [],
-                        true,
-                        $patientId,
-                        false,
-                        null,
-                        array_key_exists('share_clinical_history', $data)
+                        sendSms: true,
+                        patientId: $patientId,
+                        wantsEarlierDate: false,
+                        whatsappPhone: null,
+                        shareClinicalHistory: array_key_exists('share_clinical_history', $data)
                             ? (bool) $data['share_clinical_history']
                             : true,
-                        $data['nid'] ?? null,
-                        null,
+                        nid: $data['nid'] ?? null,
+                        age: null,
                         allowOverflow: true,
                     );
                 })
@@ -406,7 +406,11 @@ class LiveQueueControl extends Page implements HasActions, HasTable
             ->get()
             ->mapWithKeys(function ($session) {
                 $chamber = $session->chamber?->name ?? 'Chamber';
-                $label = $chamber.' — '.$session->session_name.' ('.$session->start_time.'–'.$session->end_time.')';
+                $label = $chamber.' — '.$session->session_name;
+                if (tenant()?->hasStations() && filled($session->kind)) {
+                    $label .= ' · '.($session->kindLabel() ?? $session->kind);
+                }
+                $label .= ' ('.$session->start_time.'–'.$session->end_time.')';
 
                 return [$session->id => $label];
             });

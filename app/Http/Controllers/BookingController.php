@@ -236,15 +236,15 @@ class BookingController extends Controller
                 (string) ($validated['patient_name'] ?? ''),
                 $normalizedPhone,
                 $validated['lab_tests'] ?? [],
-                true,
-                $chosenPatient?->id,
-                (bool) ($validated['wants_earlier_date'] ?? false),
-                $validated['whatsapp_phone'] ?? null,
-                array_key_exists('share_clinical_history', $validated)
+                sendSms: true,
+                patientId: $chosenPatient?->id,
+                wantsEarlierDate: (bool) ($validated['wants_earlier_date'] ?? false),
+                whatsappPhone: $validated['whatsapp_phone'] ?? null,
+                shareClinicalHistory: array_key_exists('share_clinical_history', $validated)
                     ? filter_var($validated['share_clinical_history'], FILTER_VALIDATE_BOOLEAN)
                     : true,
-                $validated['nid'] ?? null,
-                isset($validated['age']) ? (int) $validated['age'] : null,
+                nid: $validated['nid'] ?? null,
+                age: isset($validated['age']) ? (int) $validated['age'] : null,
             );
         } catch (BookingUnavailableException $e) {
             // Only this exception type is safe to echo back to an anonymous

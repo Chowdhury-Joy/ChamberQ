@@ -26,12 +26,16 @@ class EditTenant extends EditRecord
         $data['product_modules'] = $tenant instanceof Tenant
             ? $tenant->enabledProductModules()
             : Tenant::productModules();
+        $data['module_stations'] = $tenant instanceof Tenant
+            ? $tenant->hasStations()
+            : false;
 
         // Module keys are edited via product_modules — keep KeyValue for add-ons only.
         $flags = is_array($data['feature_flags'] ?? null) ? $data['feature_flags'] : [];
         foreach (Tenant::productModules() as $module) {
             unset($flags[$module]);
         }
+        unset($flags[Tenant::MODULE_STATIONS]);
         $data['feature_flags'] = $flags;
 
         return $data;
@@ -44,12 +48,14 @@ class EditTenant extends EditRecord
         }
 
         $modules = $data['product_modules'] ?? $this->record->enabledProductModules();
-        unset($data['product_modules']);
+        $stations = (bool) ($data['module_stations'] ?? false);
+        unset($data['product_modules'], $data['module_stations']);
 
         $data['feature_flags'] = Tenant::featureFlagsWithModules(
             is_array($data['feature_flags'] ?? null) ? $data['feature_flags'] : [],
             is_array($modules) ? $modules : Tenant::productModules(),
         );
+        $data['feature_flags'] = Tenant::mergeStationsFlag($data['feature_flags'], $stations);
 
         return $data;
     }

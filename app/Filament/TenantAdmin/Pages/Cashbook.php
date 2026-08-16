@@ -155,8 +155,20 @@ class Cashbook extends Page implements HasTable
                         ? 'warning'
                         : ($record->direction === ChamberCashEntry::DIRECTION_INCOME ? 'success' : 'danger')),
                 TextColumn::make('amount')
-                    ->label(__('Amount'))
+                    ->label(__('Collected'))
                     ->formatStateUsing(fn (int $state): string => self::formatTaka($state)),
+                TextColumn::make('clinic_share_taka')
+                    ->label(__('Clinic'))
+                    ->formatStateUsing(fn (?int $state): string => $state !== null ? self::formatTaka($state) : '—')
+                    ->visible(fn (): bool => tenant()?->hasStations() ?? false),
+                TextColumn::make('doctor_share_taka')
+                    ->label(__('Doctor'))
+                    ->formatStateUsing(fn (?int $state): string => $state !== null ? self::formatTaka($state) : '—')
+                    ->visible(fn (): bool => tenant()?->hasStations() ?? false),
+                TextColumn::make('discount_taka')
+                    ->label(__('Discount'))
+                    ->formatStateUsing(fn (?int $state): string => $state !== null ? self::formatTaka($state) : '—')
+                    ->visible(fn (): bool => tenant()?->hasStations() ?? false),
                 TextColumn::make('category')
                     ->label(__('What'))
                     ->formatStateUsing(function (string $state, ChamberCashEntry $record): string {

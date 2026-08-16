@@ -2541,3 +2541,39 @@
  <action>Admin keeps practice setup and the day list: users, branding, website, chambers, hours, slot blocks, Daily Roster, reports, cashbook. Admin loses Consult Screen, visit notes / prescriptions / print / clinical media, Live Queue Control and queue call/complete, Follow-up reminders, and Waiting for earlier date. `canManageQueue`, `canOperateQueueControls`, `canViewConsultScreen`, `canViewVisitNotes`, and `canRecordVisitNotes` are doctor/staff as before. Daily Roster stays open via `isAdmin()` even though `canWorkDesk()` does not include admin.</action>
  <reason>Like a restaurant owner who can change the menu, the hours, and look at tonight’s bookings, but does not stand on the pass or take the reminder-call sheet. Supersedes the clinical/queue half of 2026-08-16T10:06:49+0600.</reason>
 </decision>
+
+## 2026-08-16T12:20:49+0600
+
+<decision>
+ <category>Code</category>
+ <context>`BookingService::createBookingForBookable()` takes 14 parameters whose optional tail alternates between mutually interchangeable types — positions 7/9/11/14 are all `?string` (patientId, whatsappPhone, nid, repeatSeriesId) and 6/8/10/13 are all boolean (sendSms, wantsEarlierDate, shareClinicalHistory, allowOverflow). Any transposition inside either group is invisible to PHP and to static analysis: the booking still saves. Two of those slots are not cosmetic — `patientId` decides which patient record the booking attaches to, and `shareClinicalHistory` is the consent flag that `CrossTenantClinicalHistoryService` reads to decide whether this patient's history is visible to other clinics. `RepeatBookingService` already used named arguments and was immune; the public patient booking path and both staff walk-in paths passed 11–12 arguments positionally, so inserting one parameter mid-signature would have shifted them silently while the named caller kept working.</context>
+ <action>Every call site of `createBookingForBookable()` now passes the first five arguments positionally and names the entire optional tail, matching the convention `RepeatBookingService` already used: `App\Http\Controllers\BookingController::store()`, `DailyRoster` `newWalkIn`, and `LiveQueueControl` `newWalkIn`. No value changed position — each line only gained its parameter label — so behaviour is identical. The signature itself is unchanged.</action>
+ <reason>Cheapest change that removes the silent-transposition class of failure on the paths that write a consent flag and a patient-record pointer. A parameter object would be stronger but would touch the signature and all 60+ call sites including tests, which is a larger change than the risk warrants today. Note this is a convention, not an enforced rule — nothing fails the build if a future author adds a positional call site.</reason>
+</decision>
+
+## 2026-08-16T12:46:58+0600
+
+<decision>
+ <category>CRO</category>
+ <context>High-touch WhatsApp onboarding had no single list of what to collect before Super Admin creates a tenant. Sales used a short qualification checklist; setup still stalled when sittings, login email, or a Maps link were missing.</context>
+ <action>Keep a send-ready intake in `docs/ChamberQ-Onboarding-Questionnaire.md`: WhatsApp paste (Bangla + English), then Part A (must-have for booking), Part B (website copy/photos can wait), Part C (queue/prescription only if bought). Marketing Playbook §11 points to it after they say yes.</action>
+ <reason>Like a shop that cannot print visiting cards without the address and hours: patients cannot book without sittings, and Create Tenant cannot finish without a doctor login email. One paste beats a 40-question Google Form they never finish.</reason>
+</decision>
+
+## 2026-08-16T12:51:00+0600
+
+<decision>
+ <category>CRO</category>
+ <context>A 16-question WhatsApp numbered list is homework in a chat window. Doctors skip the sitting table or send an incomplete voice note.</context>
+ <action>Keep WhatsApp as the envelope (homepage still has no self-signup). Send a 3-line cover plus a Google Form link; sittings stay one paragraph with an example. Long numbered paste is fallback only. Recipe lives in `docs/ChamberQ-Onboarding-Questionnaire.md`.</action>
+ <reason>Same as a restaurant sending a reservation link instead of asking 16 questions in Messenger. The public site stays WhatsApp-only so random visitors cannot create a chamber.</reason>
+</decision>
+
+## 2026-08-16T17:14:10+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Pain clinics run several rooms in one branch — free consult, paid visits, procedures — with a till that splits cash and mobile and tracks clinic vs doctor share from money actually collected. That workflow is not every ChamberQ client.</context>
+ <action>Ship **Stations** as an opt-in tenant module (`Tenant::MODULE_STATIONS`, Super Admin checkbox, default **off** — not in `productModules()`). When on: sitting `kind` (consult / visit / intervention), tenant fee catalogue, split Collect fee (`full − cash − mobile = discount`, clinic share = `min(house_share, collected)`), daily voucher numbers, visit→intervention handoff with procedure states, staff outdoor vitals, one-date sitting overrides, and a 09:05 morning queue-count ping. Consult sittings hide Collect fee. Tenants without the flag keep the legacy predefined `ChamberCashService` path unchanged.</action>
+ <reason>Like adding a hospital-floor mode to a product that today is a single counter — existing chambers must not wake up to new till rules. The first clinic client turns it on explicitly; everyone else stays on locked list-price Collect fee until they ask.</reason>
+</decision>

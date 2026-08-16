@@ -628,3 +628,12 @@
 
 ## 2026-08-16T10:31:09+0600
 - Chamber admin no longer opens Consult Screen, visit notes, Live Queue, follow-up reminders, or waiting-for-earlier-date; Daily Roster and practice setup stay.
+
+## 2026-08-16T13:08:30+0600
+- Daily Roster walk-in household picker imports `App\Services\PatientService` (bare `PatientService` in the Pages namespace 500s as a missing Filament page).
+
+## 2026-08-16T17:14:10+0600
+- Stations opt-in module: `schedule_sessions.kind`, `fee_catalog_items`, split till columns on `chamber_cash_entries`, voucher/procedure fields on `bookings`, `schedule_session_overrides`, `StationsTillService` / handoff / morning-count jobs, Fee catalogue + day-override Filament resources, Daily Roster Stations Collect fee and procedure workflow.
+
+## 2026-08-16T17:19:59+0600
+- First Stations client seed: `PainSolutionStationsSeeder` (Dr. Moin Uddin / Pain Solution Center, two branches, three room lines, fee catalogue); documented in `architecture.md` Getting Started.

@@ -44,9 +44,19 @@ class ChamberCashEntry extends Model
 
     public const METHOD_OTHER = 'other';
 
+    public const METHOD_MIXED = 'mixed';
+
     protected $fillable = [
         'direction',
         'amount',
+        'list_price_taka',
+        'cash_taka',
+        'mobile_taka',
+        'mobile_method',
+        'discount_taka',
+        'clinic_share_taka',
+        'doctor_share_taka',
+        'fee_catalog_item_id',
         'fee_type',
         'category',
         'method',
@@ -60,6 +70,12 @@ class ChamberCashEntry extends Model
 
     protected $casts = [
         'amount' => 'integer',
+        'list_price_taka' => 'integer',
+        'cash_taka' => 'integer',
+        'mobile_taka' => 'integer',
+        'discount_taka' => 'integer',
+        'clinic_share_taka' => 'integer',
+        'doctor_share_taka' => 'integer',
         'occurred_on' => DateOnly::class,
     ];
 
@@ -95,7 +111,18 @@ class ChamberCashEntry extends Model
             self::METHOD_NAGAD => __('Nagad'),
             self::METHOD_CARD => __('Card'),
             self::METHOD_OTHER => __('Other'),
+            self::METHOD_MIXED => __('Cash + mobile'),
         ];
+    }
+
+    public function feeCatalogItem(): BelongsTo
+    {
+        return $this->belongsTo(FeeCatalogItem::class);
+    }
+
+    public function usesStationsTill(): bool
+    {
+        return $this->fee_catalog_item_id !== null;
     }
 
     public function isIncome(): bool

@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-16T10:31:09+0600
+Last Updated: 2026-08-16T17:14:10+0600
 
 ## Full Site Map
 
@@ -257,9 +257,15 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 
 ### Chamber cashbook (staff / doctor / admin — ops)
 - **Trigger:** A patient pays at the desk, or the chamber spends money (rent, tea, salary).
-- **Steps:** On **Doctors**, set **Consultation fee**. Leave **Other visit fees** empty if every visit is the same price; add named rows (e.g. Follow-up ৳500) only if this doctor charges more than one price. On **Daily Roster**, **Collect fee** — staff pick how they paid (cash/bKash/Nagad/card) or waive; they cannot type an amount. If extra fees exist they pick the visit type first. On **Operations → Cashbook**, **Add expense** or **Add income**, then read day/week/month income, expense, net, and waived ৳ (not collected — not an expense).
-- **Data/systems touched:** `chamber_cash_entries` (`fee_type`), `doctors.default_fee_taka`, `doctors.extra_fees`, `ChamberCashService`. Patients still pay at the chamber — no booking gateway.
-- **Success:** End of day the khata shows what came in, what went out, and what is left.
+- **Steps:** **Without Stations:** On **Doctors**, set **Consultation fee**. Leave **Other visit fees** empty if every visit is the same price; add named rows (e.g. Follow-up ৳500) only if this doctor charges more than one price. On **Daily Roster**, **Collect fee** — staff pick how they paid (cash/bKash/Nagad/card) or waive; they cannot type an amount. If extra fees exist they pick the visit type first. **With Stations (Super Admin opt-in):** On **Operations → Fee catalogue**, set each visit/procedure board price and clinic house share. On **Daily Roster**, **Collect fee** — pick a catalogue chip, type cash ৳ and mobile ৳ (discount and clinic/doctor split compute automatically; overpay is rejected). Consult sittings hide Collect fee. On **Operations → Cashbook**, **Add expense** or **Add income**, then read day/week/month income, expense, net, waived ৳, and (Stations) clinic/doctor/discount columns.
+- **Data/systems touched:** `chamber_cash_entries` (`fee_type` legacy path; `fee_catalog_item_id`, split columns on Stations path), `doctors.default_fee_taka`, `doctors.extra_fees`, `fee_catalog_items`, `ChamberCashService` / `StationsTillService`. Patients still pay at the chamber — no booking gateway.
+- **Success:** End of day the khata shows what came in, what went out, clinic vs doctor share (Stations), and what is left.
+
+### Stations clinic floor (staff / doctor — when module on)
+- **Trigger:** A pain clinic runs consult / visit / intervention rooms, outdoor vitals, procedure handoffs, or one-off sitting hours.
+- **Steps:** Super Admin ticks **Stations** on the tenant. Staff set **Schedule Sessions** room type (consult / visit / intervention). **Daily Roster:** **Outdoor vitals** on waiting rows (BP + weight) → doctor consult pad prefills today's numbers. **Send to intervention** from a visit row creates a linked procedure serial. On intervention rows: **Mark prepped** → **Call doctor** → **Procedure done**. **Operations → Sitting day overrides** for tomorrow's hours without rewriting Saturday forever. Doctors receive a **Morning queue count** notification after 09:05 when visits or procedures are waiting.
+- **Data/systems touched:** `schedule_sessions.kind`, `bookings.voucher_number`, `bookings.related_booking_id`, `bookings.procedure_status`, `schedule_session_overrides`, `visit_records` vitals, `SendStationsMorningCountPushes`.
+- **Success:** Desk runs three lines, split till matches the paper Excel, and the doctor sees outdoor vitals before opening the pad.
 
 ### Earlier-date waiting list (staff — ops)
 - **Trigger:** Legacy bookings still flagged `wants_earlier_date` (the public wizard no longer offers the opt-in), or staff want to contact those patients when a seat frees up.

@@ -25,6 +25,12 @@ class ScheduleSessionsTable
                     ->sortable(),
                 TextColumn::make('session_name')
                     ->searchable(),
+                TextColumn::make('kind')
+                    ->label(__('Room type'))
+                    ->formatStateUsing(fn (?string $state): string => $state
+                        ? (\App\Models\ScheduleSession::kindOptions()[$state] ?? $state)
+                        : '—')
+                    ->visible(fn (): bool => tenant()?->hasStations() ?? false),
                 TextColumn::make('start_time')
                     ->time()
                     ->sortable(),

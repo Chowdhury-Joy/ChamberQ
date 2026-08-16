@@ -244,6 +244,8 @@ class BookingService
             return $booking;
         });
 
+        app(VoucherService::class)->assignIfNeeded($booking);
+
         if ($sendSms) {
             // After commit, and after the response: never roll back a serial
             // because SMS failed, and never make the patient watch a spinner
@@ -518,7 +520,14 @@ class BookingService
         );
     }
 
-    // Keep the old method for backwards compatibility
+    /**
+     * Four-argument convenience wrapper, used only by tests.
+     *
+     * Despite the old "backwards compatibility" note this replaced, nothing in
+     * app/ calls this — it exists so booking tests can create a plain session
+     * booking without restating the whole optional tail of
+     * createBookingForBookable(). Safe to change shape with the tests.
+     */
     public function createBookingForSession(
         ScheduleSession $session,
         string $bookingDate,

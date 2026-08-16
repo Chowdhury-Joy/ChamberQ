@@ -1250,3 +1250,12 @@
  <root_cause>That pass treated painted signs (nav, titles, buttons, Filament Save/Search) as the same as reading copy. Staff want the recipe card in Bangla and the stove knobs in English.</root_cause>
  <prevention_rule>Do not wrap sidebar labels, page titles, or action buttons in `__()`. Reading copy (stats, badges, empty states, sitting notes, column headers, field labels, notifications) still goes through `__()`. `EnglishFilamentLoader` remaps `filament*` namespaces to English when locale is `bn`. `BanglaStaffPanelTest` must see **Finish / End Session** and must not see `সেশন শেষ করুন` on the Bangla desk. The 23:46 traits are deleted — do not restore them.</prevention_rule>
 </bug>
+
+## 2026-08-16T13:08:30+0600
+
+<bug>
+ <category>Code</category>
+ <symptom>Opening Daily Roster **New Walk-In** and typing a phone crashed with `Target class [App\Filament\TenantAdmin\Pages\PatientService] does not exist`.</symptom>
+ <root_cause>`DailyRoster` lives in `App\Filament\TenantAdmin\Pages` and called `app(PatientService::class)` without `use App\Services\PatientService`, so PHP looked for a Filament page of that name.</root_cause>
+ <prevention_rule>Any Filament page under `Pages\` that calls a `*Service` class must import `App\Services\…`. A missing import is a 500, not a “class not used” warning. Pinned by `DailyRosterWalkInPickerTest`.</prevention_rule>
+</bug>

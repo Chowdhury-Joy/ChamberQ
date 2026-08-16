@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 
 Schedule::command('commissions:generate-monthly')->monthlyOn(7, '00:05');
 Schedule::command('follow-ups:send-reminders')->dailyAt('07:00');
+Schedule::command('stations:morning-count')->dailyAt('09:05');

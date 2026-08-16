@@ -134,6 +134,10 @@ class TenantForm
                             ->required()
                             ->live()
                             ->columnSpanFull(),
+                        Checkbox::make('module_stations')
+                            ->label(__('Stations — rooms + split till'))
+                            ->helperText(__('Opt-in clinic add-on: consult / visit / intervention rooms, catalogue fees, cash + mobile till with clinic vs doctor split. Not included in default modules.'))
+                            ->default(false),
                     ]),
 
                 Fieldset::make(__('Launch offers'))
@@ -220,7 +224,7 @@ class TenantForm
                     ->schema([
                         KeyValue::make('feature_flags')
                             ->label(__('Feature Flags'))
-                            ->helperText(__('Paid add-ons and size overrides only (not the modules above). Example: bangla_homepage = true. Other keys: lab_tests, multiple_doctors, multiple_chambers.'))
+                            ->helperText(__('Paid add-ons and size overrides only (not the modules above). Example: bangla_homepage = true. Other keys: lab_tests, multiple_doctors, multiple_chambers. Stations is toggled separately above.'))
                             ->keyLabel('Feature')
                             ->valueLabel('Enabled (true/false)')
                             ->keyPlaceholder('e.g. bangla_homepage')

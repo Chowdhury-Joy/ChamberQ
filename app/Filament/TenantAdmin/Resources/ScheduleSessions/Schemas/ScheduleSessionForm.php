@@ -34,6 +34,13 @@ class ScheduleSessionForm
                 TextInput::make('session_name')
                     ->required()
                     ->maxLength(255),
+                Select::make('kind')
+                    ->label(__('Room type'))
+                    ->options(ScheduleSession::kindOptions())
+                    ->native(false)
+                    ->visible(fn (): bool => tenant()?->hasStations() ?? false)
+                    ->required(fn (): bool => tenant()?->hasStations() ?? false)
+                    ->helperText(__('Consult rows are free — Collect fee stays hidden. Visit and intervention use the fee catalogue.')),
                 TimePicker::make('start_time')
                     ->required()
                     ->seconds(false)

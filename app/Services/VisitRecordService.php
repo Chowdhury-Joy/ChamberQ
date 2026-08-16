@@ -164,6 +164,47 @@ class VisitRecordService
         });
     }
 
+    /**
+     * Outdoor BP/weight before the doctor — staff only, waiting rows.
+     *
+     * @param  array{weight_kg?: mixed, bp_systolic?: mixed, bp_diastolic?: mixed}  $data
+     */
+    public function saveStaffVitals(Booking $booking, User $staff, array $data): ?VisitRecord
+    {
+        if (! tenant()?->hasStations()) {
+            abort(403);
+        }
+
+        if (! $staff->canWorkDesk()) {
+            abort(403);
+        }
+
+        $weight = isset($data['weight_kg']) && $data['weight_kg'] !== '' ? (float) $data['weight_kg'] : null;
+        $sys = isset($data['bp_systolic']) && $data['bp_systolic'] !== '' ? (int) $data['bp_systolic'] : null;
+        $dia = isset($data['bp_diastolic']) && $data['bp_diastolic'] !== '' ? (int) $data['bp_diastolic'] : null;
+
+        if ($weight === null && $sys === null && $dia === null) {
+            return null;
+        }
+
+        if (($sys === null) !== ($dia === null)) {
+            throw new \InvalidArgumentException(__('Enter both BP numbers, or leave both blank.'));
+        }
+
+        return VisitRecord::query()->updateOrCreate(
+            ['booking_id' => $booking->id],
+            [
+                'tenant_id' => tenant('id'),
+                'patient_id' => $booking->patient_id,
+                'recorded_by' => $staff->id,
+                'weight_kg' => $weight,
+                'bp_systolic' => $sys,
+                'bp_diastolic' => $dia,
+                'recorded_at' => now(),
+            ],
+        );
+    }
+
     public function lastRecordedVisitForPatient(Patient $patient, ?string $excludeBookingId = null): ?VisitRecord
     {
         return VisitRecord::query()

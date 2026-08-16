@@ -11,6 +11,7 @@ use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Actions\Action;
 use App\Filament\TenantAdmin\Support\CompleteBookingWithVisitNotes;
+use App\Filament\TenantAdmin\Support\StationsCollectFeeForm;
 use App\Filament\TenantAdmin\Support\VisitNotesFormSchema;
 use App\Models\Booking;
 use App\Models\ChamberCashEntry;
@@ -22,8 +23,10 @@ use App\Services\BookingService;
 use App\Services\ChamberCashService;
 use App\Services\LiveSessionService;
 use App\Services\MedicineService;
+use App\Services\PatientService;
 use App\Services\RepeatBookingService;
 use App\Services\SittingPrompt;
+use App\Services\StationsHandoffService;
 use App\Services\VisitRecordService;
 use Filament\Notifications\Notification;
 use App\Models\LabCollectionSlot;
@@ -79,12 +82,34 @@ class DailyRoster extends Page implements HasTable, HasForms
             ->query(
                 Booking::query()
                     ->where('booking_date', today()->toDateString())
-                    ->with(['visitRecord.prescription', 'cashEntry', 'labTests'])
+                    ->with(['visitRecord.prescription', 'cashEntry.feeCatalogItem', 'bookable', 'labTests'])
                     ->orderByRaw("CASE WHEN status = 'in_chamber' THEN 1 WHEN status = 'waiting' THEN 2 WHEN status = 'completed' THEN 3 WHEN status = 'cancelled' THEN 4 ELSE 5 END")
                     ->orderBy('serial_number')
             )
             ->columns([
                 TextColumn::make('serial_number')->label(__('Serial')),
+                TextColumn::make('voucher_number')
+                    ->label(__('Voucher'))
+                    ->visible(fn (): bool => tenant()?->hasStations() ?? false)
+                    ->placeholder('—'),
+                TextColumn::make('bookable.kind')
+                    ->label(__('Room'))
+                    ->visible(fn (): bool => tenant()?->hasStations() ?? false)
+                    ->formatStateUsing(function (?string $state, Booking $record): string {
+                        if ($record->bookable_type !== ScheduleSession::class) {
+                            return '—';
+                        }
+
+                        return $record->bookable?->kindLabel() ?? '—';
+                    }),
+                TextColumn::make('procedure_status')
+                    ->label(__('Procedure'))
+                    ->visible(fn (): bool => tenant()?->hasStations() ?? false)
+                    ->formatStateUsing(fn (?string $state): string => $state
+                        ? (Booking::procedureStatusOptions()[$state] ?? $state)
+                        : '—')
+                    ->badge()
+                    ->color('info'),
                 TextColumn::make('patient_name')->label(__('Name'))->searchable(),
                 TextColumn::make('patient_phone')->label(__('Phone'))->searchable(),
                 TextColumn::make('status')
@@ -242,6 +267,95 @@ class DailyRoster extends Page implements HasTable, HasForms
                             ->send();
                     }),
 
+                Action::make('recordVitals')
+                    ->label(__('Outdoor vitals'))
+                    ->icon('heroicon-o-heart')
+                    ->color('gray')
+                    ->visible(fn (Booking $record): bool => (tenant()?->hasStations() ?? false)
+                        && (auth()->user()?->canWorkDesk() ?? false)
+                        && $record->status === 'waiting')
+                    ->fillForm(fn (Booking $record): array => [
+                        'weight_kg' => $record->visitRecord?->weight_kg,
+                        'bp_systolic' => $record->visitRecord?->bp_systolic,
+                        'bp_diastolic' => $record->visitRecord?->bp_diastolic,
+                    ])
+                    ->schema([
+                        TextInput::make('weight_kg')
+                            ->label(__('Weight (kg)'))
+                            ->numeric()
+                            ->minValue(0),
+                        TextInput::make('bp_systolic')
+                            ->label(__('BP systolic'))
+                            ->numeric()
+                            ->minValue(0),
+                        TextInput::make('bp_diastolic')
+                            ->label(__('BP diastolic'))
+                            ->numeric()
+                            ->minValue(0),
+                    ])
+                    ->action(function (Booking $record, array $data, VisitRecordService $visitRecordService): void {
+                        /** @var \App\Models\User $user */
+                        $user = auth()->user();
+
+                        try {
+                            $visitRecordService->saveStaffVitals($record, $user, $data);
+                        } catch (\InvalidArgumentException $e) {
+                            Notification::make()
+                                ->title($e->getMessage())
+                                ->danger()
+                                ->send();
+
+                            return;
+                        }
+
+                        Notification::make()
+                            ->title(__('Vitals saved'))
+                            ->success()
+                            ->send();
+                    }),
+
+                Action::make('sendToIntervention')
+                    ->label(__('Send to intervention'))
+                    ->icon('heroicon-o-arrow-right-circle')
+                    ->color('warning')
+                    ->visible(fn (Booking $record): bool => static::canSendToIntervention($record))
+                    ->requiresConfirmation()
+                    ->action(function (Booking $record, StationsHandoffService $handoff): void {
+                        try {
+                            $procedure = $handoff->sendVisitToIntervention($record);
+                        } catch (\InvalidArgumentException $e) {
+                            Notification::make()
+                                ->title($e->getMessage())
+                                ->danger()
+                                ->send();
+
+                            return;
+                        }
+
+                        Notification::make()
+                            ->title(__('Procedure row added'))
+                            ->body(__('Serial :n on intervention list.', ['n' => $procedure->serial_number]))
+                            ->success()
+                            ->send();
+                    }),
+
+                Action::make('markPrepped')
+                    ->label(__('Mark prepped'))
+                    ->visible(fn (Booking $record): bool => static::canAdvanceProcedure($record, Booking::PROCEDURE_LOGGED))
+                    ->action(fn (Booking $record, StationsHandoffService $handoff) => static::advanceProcedure($record, $handoff, Booking::PROCEDURE_PREPPED)),
+
+                Action::make('callDoctorForProcedure')
+                    ->label(__('Call doctor'))
+                    ->color('warning')
+                    ->visible(fn (Booking $record): bool => static::canAdvanceProcedure($record, Booking::PROCEDURE_PREPPED))
+                    ->action(fn (Booking $record, StationsHandoffService $handoff) => static::advanceProcedure($record, $handoff, Booking::PROCEDURE_DOCTOR_CALLED)),
+
+                Action::make('procedureDone')
+                    ->label(__('Procedure done'))
+                    ->color('success')
+                    ->visible(fn (Booking $record): bool => static::canAdvanceProcedure($record, Booking::PROCEDURE_DOCTOR_CALLED))
+                    ->action(fn (Booking $record, StationsHandoffService $handoff) => static::advanceProcedure($record, $handoff, Booking::PROCEDURE_DONE)),
+
                 Action::make('collectFee')
                     ->label(fn (Booking $record): string => $record->cashEntry
                         ? 'Edit fee'
@@ -249,8 +363,13 @@ class DailyRoster extends Page implements HasTable, HasForms
                     ->icon('heroicon-o-banknotes')
                     ->color('success')
                     ->visible(fn (Booking $record): bool => (auth()->user()?->canManageCash() ?? false)
-                        && ! in_array($record->status, ['cancelled', 'no_show'], true))
+                        && ! in_array($record->status, ['cancelled', 'no_show'], true)
+                        && ! static::shouldHideCollectFee($record))
                     ->fillForm(function (Booking $record): array {
+                        if (tenant()?->hasStations()) {
+                            return StationsCollectFeeForm::fillFromEntry($record);
+                        }
+
                         $entry = $record->cashEntry;
                         $doctor = Doctor::resolveForBooking($record);
                         $feeType = $entry?->fee_type ?? Doctor::FEE_CONSULTATION;
@@ -266,6 +385,10 @@ class DailyRoster extends Page implements HasTable, HasForms
                         ];
                     })
                     ->form(function (Booking $record): array {
+                        if (tenant()?->hasStations()) {
+                            return StationsCollectFeeForm::components($record);
+                        }
+
                         $hasExtras = Doctor::resolveForBooking($record)?->hasExtraFeeTypes() ?? false;
 
                         return [
@@ -306,6 +429,26 @@ class DailyRoster extends Page implements HasTable, HasForms
                     ->action(function (Booking $record, array $data): void {
                         /** @var \App\Models\User $user */
                         $user = auth()->user();
+
+                        if (tenant()?->hasStations()) {
+                            try {
+                                StationsCollectFeeForm::save($record, $data, $user);
+                            } catch (\InvalidArgumentException $e) {
+                                Notification::make()
+                                    ->title($e->getMessage())
+                                    ->danger()
+                                    ->send();
+
+                                return;
+                            }
+
+                            Notification::make()
+                                ->title(($data['waived'] ?? false) ? __('Fee waived') : __('Fee collected'))
+                                ->success()
+                                ->send();
+
+                            return;
+                        }
 
                         try {
                             app(ChamberCashService::class)->recordPatientIncome(
@@ -653,14 +796,14 @@ class DailyRoster extends Page implements HasTable, HasForms
                             $data['patient_name'],
                             $data['patient_phone'],
                             [],
-                            true,
-                            $patientId,
-                            false,
-                            null,
-                            array_key_exists('share_clinical_history', $data)
+                            sendSms: true,
+                            patientId: $patientId,
+                            wantsEarlierDate: false,
+                            whatsappPhone: null,
+                            shareClinicalHistory: array_key_exists('share_clinical_history', $data)
                                 ? (bool) $data['share_clinical_history']
                                 : true,
-                            $data['nid'] ?? null,
+                            nid: $data['nid'] ?? null,
                         );
                     })
                     ->successNotificationTitle(__('Walk-in added to today\'s queue.'))
@@ -725,13 +868,18 @@ class DailyRoster extends Page implements HasTable, HasForms
             ->get();
 
         foreach ($sessions as $session) {
+            $kindSuffix = (tenant()?->hasStations() && filled($session->kind))
+                ? ' · '.($session->kindLabel() ?? $session->kind)
+                : '';
+
             $options['session:' . $session->id] = sprintf(
-                '%s — %s (%s, %s–%s)',
+                '%s — %s (%s, %s–%s)%s',
                 $session->doctor?->name ?? __('Unknown doctor'),
                 $session->chamber?->name ?? __('Unknown chamber'),
                 $session->session_name,
                 Carbon::parse($session->start_time)->format('g:i A'),
                 Carbon::parse($session->end_time)->format('g:i A'),
+                $kindSuffix,
             );
         }
 
@@ -878,5 +1026,85 @@ class DailyRoster extends Page implements HasTable, HasForms
             ->first();
 
         return $live?->status === 'delayed';
+    }
+
+    protected static function shouldHideCollectFee(Booking $booking): bool
+    {
+        if (! tenant()?->hasStations()) {
+            return false;
+        }
+
+        if ($booking->bookable_type !== ScheduleSession::class) {
+            return false;
+        }
+
+        $session = $booking->bookable;
+
+        return $session instanceof ScheduleSession && $session->isConsultKind();
+    }
+
+    protected static function canSendToIntervention(Booking $booking): bool
+    {
+        if (! tenant()?->hasStations()) {
+            return false;
+        }
+
+        if (! auth()->user()?->canWorkDesk()) {
+            return false;
+        }
+
+        if ($booking->bookable_type !== ScheduleSession::class) {
+            return false;
+        }
+
+        $session = $booking->bookable;
+
+        return $session instanceof ScheduleSession
+            && $session->kind === ScheduleSession::KIND_VISIT
+            && ! in_array($booking->status, ['cancelled', 'no_show'], true);
+    }
+
+    protected static function canAdvanceProcedure(Booking $booking, string $expectedStatus): bool
+    {
+        if (! tenant()?->hasStations()) {
+            return false;
+        }
+
+        if (! auth()->user()?->canWorkDesk()) {
+            return false;
+        }
+
+        if ($booking->bookable_type !== ScheduleSession::class) {
+            return false;
+        }
+
+        $session = $booking->bookable;
+
+        return $session instanceof ScheduleSession
+            && $session->isInterventionKind()
+            && ($booking->procedure_status ?? Booking::PROCEDURE_LOGGED) === $expectedStatus
+            && ! in_array($booking->status, ['cancelled', 'no_show', 'completed'], true);
+    }
+
+    protected static function advanceProcedure(
+        Booking $booking,
+        StationsHandoffService $handoff,
+        string $status,
+    ): void {
+        try {
+            $handoff->advanceProcedureStatus($booking, $status);
+        } catch (\InvalidArgumentException $e) {
+            Notification::make()
+                ->title($e->getMessage())
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        Notification::make()
+            ->title(Booking::procedureStatusOptions()[$status] ?? __('Updated'))
+            ->success()
+            ->send();
     }
 }

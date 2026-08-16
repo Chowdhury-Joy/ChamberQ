@@ -41,6 +41,9 @@ class Tenant extends BaseTenant
 
     public const MODULE_PRESCRIPTION = 'prescription';
 
+    /** Opt-in clinic module: rooms + split till. Absent flag = off (not default-on). */
+    public const MODULE_STATIONS = 'stations';
+
     /** @return list<string> */
     public static function productModules(): array
     {
@@ -311,6 +314,17 @@ class Tenant extends BaseTenant
 
     public function hasFeature(string $feature): bool
     {
+        // Stations is opt-in only — never inherit a tier default.
+        if ($feature === self::MODULE_STATIONS) {
+            $flags = $this->feature_flags ?? [];
+
+            if (! array_key_exists($feature, $flags)) {
+                return false;
+            }
+
+            return filter_var($flags[$feature], FILTER_VALIDATE_BOOLEAN);
+        }
+
         // Check feature_flags JSON column first
         $flags = $this->feature_flags ?? [];
         if (array_key_exists($feature, $flags)) {
@@ -357,6 +371,22 @@ class Tenant extends BaseTenant
     public function hasPrescription(): bool
     {
         return $this->hasFeature(self::MODULE_PRESCRIPTION);
+    }
+
+    public function hasStations(): bool
+    {
+        return $this->hasFeature(self::MODULE_STATIONS);
+    }
+
+    /**
+     * @param  array<string, mixed>  $flags
+     * @return array<string, mixed>
+     */
+    public static function mergeStationsFlag(array $flags, bool $enabled): array
+    {
+        $flags[self::MODULE_STATIONS] = $enabled;
+
+        return $flags;
     }
 
     /**
