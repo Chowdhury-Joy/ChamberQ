@@ -11,7 +11,7 @@ class Dashboard extends BaseDashboard
 
     public static function shouldRegisterNavigation(): bool
     {
-        return ! (auth()->user()?->canViewConsultScreen() ?? false);
+        return ! (auth()->user()?->landsOnConsultScreen() ?? false);
     }
 
     public function mount(): void

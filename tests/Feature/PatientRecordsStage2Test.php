@@ -75,7 +75,7 @@ class PatientRecordsStage2Test extends TestCase
         return compact('chamber', 'doctor', 'session');
     }
 
-    public function test_admin_cannot_manage_queue_or_access_live_queue_control(): void
+    public function test_admin_cannot_manage_queue_or_open_clinical_screens(): void
     {
         tenancy()->initialize($this->soloTenant);
         $admin = $this->makeUser($this->soloTenant, User::ROLE_ADMIN, 'owner@stage2.test');
@@ -83,10 +83,12 @@ class PatientRecordsStage2Test extends TestCase
         $this->assertFalse($admin->canManageQueue());
         $this->assertFalse($admin->canOperateQueueControls());
         $this->assertFalse($admin->canAccessLiveQueueControl());
+        $this->assertFalse($admin->canViewConsultScreen());
+        $this->assertFalse($admin->canRecordVisitNotes());
 
         $this->actingAs($admin);
         $this->assertFalse(LiveQueueControl::canAccess());
-        $this->assertFalse(DailyRoster::canAccess());
+        $this->assertTrue(DailyRoster::canAccess());
         $this->assertFalse(ConsultScreen::canAccess());
     }
 

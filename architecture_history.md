@@ -622,3 +622,9 @@
 
 ## 2026-08-16T02:27:25+0600
 - Repeating serials: `RepeatBookingService`, `doctors.allows_repeat_serials`, `bookings.repeat_series_id`; Daily Roster Repeat sitting / Cancel later sittings.
+
+## 2026-08-16T10:06:49+0600
+- Chamber admin (`User::ROLE_ADMIN`) can open desk lists, queue controls, Consult Screen, and visit notes; `User::landsOnConsultScreen()` keeps the doctor's login home on Consult Screen.
+
+## 2026-08-16T10:31:09+0600
+- Chamber admin no longer opens Consult Screen, visit notes, Live Queue, follow-up reminders, or waiting-for-earlier-date; Daily Roster and practice setup stay.

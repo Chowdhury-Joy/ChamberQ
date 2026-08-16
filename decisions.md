@@ -2523,3 +2523,21 @@
  <action>Admin enables repeating serials per doctor (`doctors.allows_repeat_serials`, default off). Staff on Daily Roster use Repeat sitting to create ordinary future bookings on that schedule session (published cap, not overflow, no confirmation SMS). Rows share `repeat_series_id`. Cancel later sittings keeps this visit. Not on the patient wizard or the Rx pad. Live queue is still today-only.</action>
  <reason>Same idea as staff-typed prescriptions: the account owner decides per doctor. A mixed clinic can have physio on and GP off. Seats stay fair because future weeks take a published serial, not a hidden extra stool.</reason>
 </decision>
+
+## 2026-08-16T10:06:49+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>The account owner (`admin`) had been locked out of Daily Roster, Live Queue Control, Consult Screen, and visit notes so the desk and the consult room stayed with staff and doctor. That left the owner unable to cover a sitting, look at a record, or fix a queue when staff were away — like a restaurant owner who cannot open the reservation book or the kitchen.</context>
+ <action>Chamber admin can see and change everything the practice's purchased modules allow. `canWorkDesk`, `canManageQueue`, `canOperateQueueControls`, `canViewConsultScreen`, `canViewVisitNotes`, and `canRecordVisitNotes` include admin. Staff vs doctor queue exclusivity is unchanged. Login home is unchanged: doctors with Prescription still land on Consult Screen (`User::landsOnConsultScreen()`); the owner still lands on the dashboard and can open Consult Screen from the menu. Plan gates still hide labs on Solo, etc. Staff still cannot read full notes unless a doctor opted them into paper prescription entry.</action>
+ <reason>The owner asked for full access. Covering a sitting or checking a prescription is account-owner work. Super Admin is still a different login and still cannot enter a chamber panel. Supersedes the admin-exclusion halves of 2026-08-06 queue/consult rules, 2026-08-16T00:46:49 desk lists, and the “owner never gains queue controls” fallback note.</reason>
+</decision>
+
+## 2026-08-16T10:31:09+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>The previous pass opened Consult Screen, visit notes, prescriptions, print, voice/photos, Live Queue, follow-up reminders, and waiting-for-earlier-date to the account owner. The owner said those are not needed on that login — they belong to the doctor and the desk, not the practice owner’s menu.</context>
+ <action>Admin keeps practice setup and the day list: users, branding, website, chambers, hours, slot blocks, Daily Roster, reports, cashbook. Admin loses Consult Screen, visit notes / prescriptions / print / clinical media, Live Queue Control and queue call/complete, Follow-up reminders, and Waiting for earlier date. `canManageQueue`, `canOperateQueueControls`, `canViewConsultScreen`, `canViewVisitNotes`, and `canRecordVisitNotes` are doctor/staff as before. Daily Roster stays open via `isAdmin()` even though `canWorkDesk()` does not include admin.</action>
+ <reason>Like a restaurant owner who can change the menu, the hours, and look at tonight’s bookings, but does not stand on the pass or take the reminder-call sheet. Supersedes the clinical/queue half of 2026-08-16T10:06:49+0600.</reason>
+</decision>

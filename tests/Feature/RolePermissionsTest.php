@@ -5,8 +5,10 @@ namespace Tests\Feature;
 use App\Filament\TenantAdmin\Pages\BrandingSettings;
 use App\Filament\TenantAdmin\Pages\ConsultScreen;
 use App\Filament\TenantAdmin\Pages\DailyRoster;
+use App\Filament\TenantAdmin\Pages\FollowUpReminders;
 use App\Filament\TenantAdmin\Pages\LiveQueueControl;
 use App\Filament\TenantAdmin\Pages\OperationalReports;
+use App\Filament\TenantAdmin\Pages\WaitingForEarlierDate;
 use App\Filament\TenantAdmin\Resources\Chambers\ChamberResource;
 use App\Filament\TenantAdmin\Resources\Doctors\DoctorResource;
 use App\Filament\TenantAdmin\Resources\ScheduleSessions\ScheduleSessionResource;
@@ -75,6 +77,11 @@ class RolePermissionsTest extends TestCase
         $this->assertTrue($admin->canManageUsers());
         $this->assertTrue($admin->canManageBranding());
         $this->assertFalse($admin->canManageQueue());
+        $this->assertFalse($admin->canWorkDesk());
+        $this->assertFalse($admin->canOperateQueueControls());
+        $this->assertFalse($admin->canViewConsultScreen());
+        $this->assertFalse($admin->canViewVisitNotes());
+        $this->assertFalse($admin->canRecordVisitNotes());
 
         $this->assertTrue($doctor->isDoctor());
         $this->assertTrue($doctor->canManageOps());
@@ -162,7 +169,7 @@ class RolePermissionsTest extends TestCase
         $this->assertFalse(BrandingSettings::canAccess());
     }
 
-    public function test_admin_has_full_access(): void
+    public function test_admin_has_practice_setup_and_day_list_not_clinical_or_queue(): void
     {
         tenancy()->initialize($this->tenant);
 
@@ -181,9 +188,14 @@ class RolePermissionsTest extends TestCase
         $this->assertTrue(UserResource::canViewAny());
         $this->assertTrue(BrandingSettings::canAccess());
         $this->assertTrue(DoctorResource::canViewAny());
-        $this->assertFalse(DailyRoster::canAccess());
+        $this->assertTrue(ChamberResource::canViewAny());
+        $this->assertTrue(ScheduleSessionResource::canViewAny());
+        $this->assertTrue(SlotBlockResource::canViewAny());
+        $this->assertTrue(DailyRoster::canAccess());
         $this->assertFalse(LiveQueueControl::canAccess());
         $this->assertFalse(ConsultScreen::canAccess());
+        $this->assertFalse(FollowUpReminders::canAccess());
+        $this->assertFalse(WaitingForEarlierDate::canAccess());
         $this->assertTrue(OperationalReports::canAccess());
     }
 }

@@ -150,6 +150,8 @@ class User extends Authenticatable implements FilamentUser, CanResetPasswordCont
      * waiting list, follow-up WhatsApp. Staff own these. A doctor only gets
      * them when this practice has no staff login — same idea as the queue
      * fallback, so a solo doctor is not locked out of their own desk.
+     * The account owner reaches Daily Roster separately; not follow-up or
+     * earlier-date lists.
      */
     public function canWorkDesk(): bool
     {
@@ -215,6 +217,16 @@ class User extends Authenticatable implements FilamentUser, CanResetPasswordCont
     public function canRecordVisitNotes(): bool
     {
         return $this->isDoctor() && (tenant()?->hasPrescription() ?? false);
+    }
+
+    /**
+     * After login, open Consult Screen instead of the stats dashboard.
+     * Doctors with Prescription land there; staff and the account owner stay
+     * on the dashboard.
+     */
+    public function landsOnConsultScreen(): bool
+    {
+        return $this->isDoctor() && $this->canViewConsultScreen();
     }
 
     /**

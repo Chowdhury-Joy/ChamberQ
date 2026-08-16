@@ -66,7 +66,7 @@ class FilamentPanelUrl
 
         $user = auth()->user();
 
-        return $user instanceof User && $user->canViewConsultScreen();
+        return $user instanceof User && $user->landsOnConsultScreen();
     }
 
     private static function pageUrl(Panel $panel, string $relativeName, ?string $tenant): ?string

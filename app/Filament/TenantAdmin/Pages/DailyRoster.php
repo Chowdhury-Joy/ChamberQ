@@ -69,7 +69,7 @@ class DailyRoster extends Page implements HasTable, HasForms
         /** @var \App\Models\User|null $user */
         $user = auth()->user();
 
-        return ($user?->canWorkDesk() ?? false)
+        return (($user?->isAdmin() ?? false) || ($user?->canWorkDesk() ?? false))
             && (tenant()?->hasFrontDoor() ?? false);
     }
 

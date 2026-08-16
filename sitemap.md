@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-16T02:28:09+0600
+Last Updated: 2026-08-16T10:31:09+0600
 
 ## Full Site Map
 
@@ -48,7 +48,7 @@ Same central host; tenant identified by URL slug (tenant `id`), e.g. `drkarim`.
 | `/{slug}/admin/operational-reports` | Day / week / month booking counts | admin / doctor |
 | `/{slug}/admin/chambers` | Rooms / locations (sidebar only when multiple chambers) | staff (or doctor if no staff login; admin) |
 | `/{slug}/admin/schedule-sessions` | Sitting days and hours | staff (or doctor if no staff login; admin) |
-| `/{slug}/admin/waiting-for-earlier-date` | Staff list of patients who opted in for an earlier date (WhatsApp per row) | staff (or doctor if no staff login; admin) |
+| `/{slug}/admin/waiting-for-earlier-date` | Staff list of patients who opted in for an earlier date (WhatsApp per row) | staff (or doctor if no staff login) |
 | `/{slug}/admin/data-backup` | Chamber disaster-recovery backup download + restore (Admin only) | admin only |
 | `/{slug}/manifest.webmanifest`, `/{slug}/sw.js`, … | PWA | public |
 
@@ -80,7 +80,7 @@ When a doctor connects their own domain (e.g. `drkarim.com`), routes live at the
 | `/admin/operational-reports` | Day / week / month booking counts | admin / doctor |
 | `/admin/chambers` | Rooms / locations (sidebar only when multiple chambers) | staff (or doctor if no staff login; admin) |
 | `/admin/schedule-sessions` | Sitting days and hours | staff (or doctor if no staff login; admin) |
-| `/admin/waiting-for-earlier-date` | Staff list of patients who opted in for an earlier date (WhatsApp per row) | staff (or doctor if no staff login; admin) |
+| `/admin/waiting-for-earlier-date` | Staff list of patients who opted in for an earlier date (WhatsApp per row) | staff (or doctor if no staff login) |
 | `/admin/visiting-day` | Pack bag / write prescriptions away from the chamber (bad internet, camps) | doctor login (**Prescription**) |
 | `/admin/data-backup` | Chamber disaster-recovery backup download + restore (Admin only) | admin only |
 

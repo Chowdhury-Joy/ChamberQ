@@ -64,6 +64,19 @@ class DeskToolsBelongToStaffTest extends TestCase
         $this->assertTrue(FollowUpReminders::canAccess());
     }
 
+    public function test_account_owner_can_open_the_day_list_not_follow_up_or_earlier_date(): void
+    {
+        tenancy()->initialize($this->tenant);
+        $this->makeUser(User::ROLE_STAFF, 'staff@desk.test');
+        $admin = $this->makeUser(User::ROLE_ADMIN, 'admin@desk.test');
+        $this->actingAs($admin);
+
+        $this->assertTrue(DailyRoster::canAccess());
+        $this->assertTrue(SlotBlockResource::canViewAny());
+        $this->assertFalse(WaitingForEarlierDate::canAccess());
+        $this->assertFalse(FollowUpReminders::canAccess());
+    }
+
     public function test_doctor_does_not_see_desk_lists_when_staff_exist(): void
     {
         tenancy()->initialize($this->tenant);

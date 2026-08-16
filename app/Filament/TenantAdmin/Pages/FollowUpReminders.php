@@ -34,7 +34,7 @@ class FollowUpReminders extends Page implements HasTable
         /** @var \App\Models\User|null $user */
         $user = auth()->user();
 
-        return ($user?->isAdmin() || $user?->canWorkDesk())
+        return ($user?->canWorkDesk() ?? false)
             && (tenant()?->hasPrescription() ?? false);
     }
 

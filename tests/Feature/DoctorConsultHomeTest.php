@@ -172,4 +172,21 @@ class DoctorConsultHomeTest extends TestCase
         Livewire::test(Dashboard::class)
             ->assertSuccessful();
     }
+
+    public function test_admin_keeps_the_dashboard_and_has_no_consult_screen(): void
+    {
+        $this->onPathPanel();
+        $admin = $this->makeUser(User::ROLE_ADMIN, 'admin-dash@solo.com');
+        $this->actingAs($admin);
+
+        $this->assertFalse($admin->canViewConsultScreen());
+        $this->assertTrue(Dashboard::shouldRegisterNavigation());
+
+        $home = FilamentPanelUrl::home(Filament::getPanel('tenantAdminPath'));
+        $this->assertStringContainsString('/solo/admin', $home);
+        $this->assertStringNotContainsString('consult-screen', $home);
+
+        Livewire::test(Dashboard::class)
+            ->assertSuccessful();
+    }
 }

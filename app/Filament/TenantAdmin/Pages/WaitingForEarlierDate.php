@@ -31,7 +31,7 @@ class WaitingForEarlierDate extends Page implements HasTable
         /** @var \App\Models\User|null $user */
         $user = auth()->user();
 
-        return (bool) ($user?->isAdmin() || $user?->canWorkDesk());
+        return (bool) ($user?->canWorkDesk());
     }
 
     public function table(Table $table): Table

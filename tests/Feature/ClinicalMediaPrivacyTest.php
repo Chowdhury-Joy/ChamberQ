@@ -236,6 +236,34 @@ class ClinicalMediaPrivacyTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_chamber_admin_cannot_read_clinical_media(): void
+    {
+        [$ownTenant, , $visitRecord] = $this->seedPracticeWithVisitRecord('admin-media');
+
+        tenancy()->initialize($ownTenant);
+        $admin = User::create([
+            'name' => 'Owner',
+            'email' => 'admin@admin-media.loc',
+            'password' => Hash::make('secret'),
+            'role' => User::ROLE_ADMIN,
+            'tenant_id' => 'admin-media',
+        ]);
+        $prescription = Prescription::create([
+            'visit_record_id' => $visitRecord->id,
+            'patient_id' => $visitRecord->patient_id,
+            'prescribed_by' => $visitRecord->recorded_by,
+        ]);
+        tenancy()->end();
+
+        $this->actingAs($admin)
+            ->get("http://admin-media.localhost/visit-records/{$visitRecord->id}/photo")
+            ->assertForbidden();
+
+        $this->actingAs($admin)
+            ->get("http://admin-media.localhost/prescriptions/{$prescription->id}/print")
+            ->assertForbidden();
+    }
+
     /**
      * @return array{0: Tenant, 1: User, 2: VisitRecord}
      */

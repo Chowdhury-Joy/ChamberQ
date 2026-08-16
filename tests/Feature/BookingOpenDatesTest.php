@@ -215,10 +215,10 @@ class BookingOpenDatesTest extends TestCase
         tenancy()->end();
 
         $user = \App\Models\User::create([
-            'name' => 'Admin',
-            'email' => 'admin@open-dates.loc',
+            'name' => 'Staff',
+            'email' => 'staff@open-dates.loc',
             'password' => Hash::make('secret'),
-            'role' => 'admin',
+            'role' => 'staff',
             'tenant_id' => 'open-dates',
         ]);
 

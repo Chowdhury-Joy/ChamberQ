@@ -12,10 +12,10 @@ use Tests\TestCase;
 /**
  * The seeded demo tenant has admin + doctor + staff, which hides the case that
  * matters most: a solo doctor working alone. `queue_runner` defaults to staff,
- * so without a fallback nobody in that practice could call patients — and only
- * an admin can change the setting, so the doctor could not fix it themselves.
+ * so without a fallback nobody in that practice could call patients.
  *
- * Every practice here is built deliberately incomplete.
+ * Every practice here is built deliberately incomplete. Staff vs doctor
+ * exclusivity is unchanged; the account owner never runs the queue.
  */
 class QueueRunnerFallbackTest extends TestCase
 {
@@ -81,28 +81,35 @@ class QueueRunnerFallbackTest extends TestCase
         $this->assertTrue($staff->canOperateQueueControls());
         $this->assertFalse($doctor->canOperateQueueControls());
 
-        // Doctor-run: the other way round, still exactly one party.
+        $admin = $this->makeUser($tenant, User::ROLE_ADMIN);
+        $this->assertFalse($admin->canOperateQueueControls());
+
+        // Doctor-run: the other way round, still exactly one desk party.
         tenant()->update(['queue_runner' => Tenant::QUEUE_RUNNER_DOCTOR]);
         tenancy()->end();
         tenancy()->initialize(Tenant::find('both-parties'));
 
         $doctor->refresh();
         $staff->refresh();
+        $admin->refresh();
 
         $this->assertSame(Tenant::QUEUE_RUNNER_DOCTOR, tenant()->effectiveQueueRunner());
         $this->assertTrue($doctor->canOperateQueueControls());
         $this->assertFalse($staff->canOperateQueueControls());
+        $this->assertFalse($admin->canOperateQueueControls());
     }
 
-    public function test_account_owner_never_gains_queue_controls_through_the_fallback(): void
+    public function test_account_owner_never_gains_queue_controls(): void
     {
         $tenant = Tenant::create(['id' => 'owner-only', 'plan_tier' => 'solo']);
         tenancy()->initialize($tenant);
 
         $admin = $this->makeUser($tenant, User::ROLE_ADMIN);
 
-        // No doctor and no staff exist; the owner still must not run the queue.
         $this->assertFalse($admin->canOperateQueueControls());
         $this->assertFalse($admin->canAccessLiveQueueControl());
+
+        $this->actingAs($admin);
+        $this->assertFalse(LiveQueueControl::canAccess());
     }
 }
