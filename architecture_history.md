@@ -637,3 +637,9 @@
 
 ## 2026-08-16T17:19:59+0600
 - First Stations client seed: `PainSolutionStationsSeeder` (Dr. Moin Uddin / Pain Solution Center, two branches, three room lines, fee catalogue); documented in `architecture.md` Getting Started.
+
+## 2026-08-16T17:36:48+0600
+- Cashbook Add income/expense: **Cash + online** split fields with online-method picker (bKash, Nagad, bank, Bangla QR, card, other); renamed mobile labels to online across Stations Collect fee.
+
+## 2026-08-16T18:14:03+0600
+- Referrals + HR opt-in modules: `referring_doctors`, `referral_commissions`, `bookings.referring_doctor_id`, HR tables (`employees`, attendance, leave, payroll); `ReferralCommissionService`, `HrPayrollService`, Filament resources, Pain Solution seeder enables both.

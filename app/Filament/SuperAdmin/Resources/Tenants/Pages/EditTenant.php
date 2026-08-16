@@ -29,13 +29,19 @@ class EditTenant extends EditRecord
         $data['module_stations'] = $tenant instanceof Tenant
             ? $tenant->hasStations()
             : false;
+        $data['module_referrals'] = $tenant instanceof Tenant
+            ? $tenant->hasReferrals()
+            : false;
+        $data['module_hr'] = $tenant instanceof Tenant
+            ? $tenant->hasHr()
+            : false;
 
         // Module keys are edited via product_modules — keep KeyValue for add-ons only.
         $flags = is_array($data['feature_flags'] ?? null) ? $data['feature_flags'] : [];
         foreach (Tenant::productModules() as $module) {
             unset($flags[$module]);
         }
-        unset($flags[Tenant::MODULE_STATIONS]);
+        unset($flags[Tenant::MODULE_STATIONS], $flags[Tenant::MODULE_REFERRALS], $flags[Tenant::MODULE_HR]);
         $data['feature_flags'] = $flags;
 
         return $data;
@@ -49,13 +55,17 @@ class EditTenant extends EditRecord
 
         $modules = $data['product_modules'] ?? $this->record->enabledProductModules();
         $stations = (bool) ($data['module_stations'] ?? false);
-        unset($data['product_modules'], $data['module_stations']);
+        $referrals = (bool) ($data['module_referrals'] ?? false);
+        $hr = (bool) ($data['module_hr'] ?? false);
+        unset($data['product_modules'], $data['module_stations'], $data['module_referrals'], $data['module_hr']);
 
         $data['feature_flags'] = Tenant::featureFlagsWithModules(
             is_array($data['feature_flags'] ?? null) ? $data['feature_flags'] : [],
             is_array($modules) ? $modules : Tenant::productModules(),
         );
         $data['feature_flags'] = Tenant::mergeStationsFlag($data['feature_flags'], $stations);
+        $data['feature_flags'] = Tenant::mergeOptInModuleFlag($data['feature_flags'], Tenant::MODULE_REFERRALS, $referrals);
+        $data['feature_flags'] = Tenant::mergeOptInModuleFlag($data['feature_flags'], Tenant::MODULE_HR, $hr);
 
         return $data;
     }

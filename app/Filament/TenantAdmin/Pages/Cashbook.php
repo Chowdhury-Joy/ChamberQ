@@ -9,12 +9,15 @@ use App\Services\ChamberCashService;
 use App\Services\OperationalReportService;
 use Carbon\Carbon;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Component;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Support\Enums\FontWeight;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
 use Filament\Tables\Contracts\HasTable;
@@ -139,6 +142,20 @@ class Cashbook extends Page implements HasTable
                 TextColumn::make('occurred_on')
                     ->label(__('Date'))
                     ->date(),
+                TextColumn::make('booking.patient_name')
+                    ->label(__('Patient'))
+                    ->searchable()
+                    ->placeholder('—')
+                    ->weight(FontWeight::Medium),
+                TextColumn::make('cashbook_subject')
+                    ->label(__('Procedure'))
+                    ->state(fn (ChamberCashEntry $record): string => $record->cashbookSubjectLabel())
+                    ->searchable(query: function (Builder $query, string $search): Builder {
+                        return $query->where(function (Builder $query) use ($search): void {
+                            $query->whereHas('booking', fn (Builder $q) => $q->where('patient_name', 'like', "%{$search}%"))
+                                ->orWhereHas('feeCatalogItem', fn (Builder $q) => $q->where('label', 'like', "%{$search}%"));
+                        });
+                    }),
                 TextColumn::make('direction')
                     ->label(__('In / out'))
                     ->badge()
@@ -155,7 +172,7 @@ class Cashbook extends Page implements HasTable
                         ? 'warning'
                         : ($record->direction === ChamberCashEntry::DIRECTION_INCOME ? 'success' : 'danger')),
                 TextColumn::make('amount')
-                    ->label(__('Collected'))
+                    ->label(__('Amount'))
                     ->formatStateUsing(fn (int $state): string => self::formatTaka($state)),
                 TextColumn::make('clinic_share_taka')
                     ->label(__('Clinic'))
@@ -169,21 +186,9 @@ class Cashbook extends Page implements HasTable
                     ->label(__('Discount'))
                     ->formatStateUsing(fn (?int $state): string => $state !== null ? self::formatTaka($state) : '—')
                     ->visible(fn (): bool => tenant()?->hasStations() ?? false),
-                TextColumn::make('category')
-                    ->label(__('What'))
-                    ->formatStateUsing(function (string $state, ChamberCashEntry $record): string {
-                        $labels = $record->isIncome()
-                            ? ChamberCashEntry::incomeCategories()
-                            : ChamberCashEntry::expenseCategories();
-
-                        return $labels[$state] ?? $state;
-                    }),
                 TextColumn::make('method')
                     ->label(__('How'))
-                    ->formatStateUsing(fn (?string $state): string => ChamberCashEntry::methods()[$state] ?? '—'),
-                TextColumn::make('booking.patient_name')
-                    ->label(__('Patient'))
-                    ->placeholder('—'),
+                    ->formatStateUsing(fn (ChamberCashEntry $record): string => $record->paymentMethodLabel()),
                 TextColumn::make('note')
                     ->label(__('Note'))
                     ->limit(40)
@@ -206,13 +211,27 @@ class Cashbook extends Page implements HasTable
                     /** @var User $user */
                     $user = auth()->user();
 
+                    try {
+                        $payment = $this->resolvePaymentFormData($data);
+                    } catch (\InvalidArgumentException $e) {
+                        Notification::make()
+                            ->title($e->getMessage())
+                            ->danger()
+                            ->send();
+
+                        return;
+                    }
+
                     app(ChamberCashService::class)->recordOtherIncome(
                         $user,
-                        (int) $data['amount'],
-                        $data['method'],
+                        $payment['amount'],
+                        $payment['method'],
                         Carbon::parse($data['occurred_on'], OperationalReportService::TIMEZONE),
                         filled($data['chamber_id']) ? (int) $data['chamber_id'] : null,
                         $data['note'] ?: null,
+                        $payment['cash_taka'],
+                        $payment['online_taka'],
+                        $payment['online_method'],
                     );
 
                     $this->summaryCache = null;
@@ -232,14 +251,28 @@ class Cashbook extends Page implements HasTable
                     /** @var User $user */
                     $user = auth()->user();
 
+                    try {
+                        $payment = $this->resolvePaymentFormData($data);
+                    } catch (\InvalidArgumentException $e) {
+                        Notification::make()
+                            ->title($e->getMessage())
+                            ->danger()
+                            ->send();
+
+                        return;
+                    }
+
                     app(ChamberCashService::class)->recordExpense(
                         $user,
-                        (int) $data['amount'],
+                        $payment['amount'],
                         $data['category'],
-                        $data['method'],
+                        $payment['method'],
                         Carbon::parse($data['occurred_on'], OperationalReportService::TIMEZONE),
                         filled($data['chamber_id']) ? (int) $data['chamber_id'] : null,
                         $data['note'] ?: null,
+                        $payment['cash_taka'],
+                        $payment['online_taka'],
+                        $payment['online_method'],
                     );
 
                     $this->summaryCache = null;
@@ -254,7 +287,7 @@ class Cashbook extends Page implements HasTable
     }
 
     /**
-     * @return list<\Filament\Forms\Components\Component>
+     * @return list<Component>
      */
     private function moneyForm(bool $expense): array
     {
@@ -263,7 +296,8 @@ class Cashbook extends Page implements HasTable
                 ->label(__('Amount (৳)'))
                 ->numeric()
                 ->minValue(1)
-                ->required(),
+                ->required(fn (Get $get): bool => $get('method') !== ChamberCashEntry::METHOD_MIXED)
+                ->visible(fn (Get $get): bool => $get('method') !== ChamberCashEntry::METHOD_MIXED),
         ];
 
         if ($expense) {
@@ -279,7 +313,28 @@ class Cashbook extends Page implements HasTable
             ->options(ChamberCashEntry::methods())
             ->default(ChamberCashEntry::METHOD_CASH)
             ->required()
+            ->live()
             ->native(false);
+        $fields[] = TextInput::make('cash_taka')
+            ->label(__('Cash (৳)'))
+            ->numeric()
+            ->minValue(0)
+            ->default(0)
+            ->live()
+            ->visible(fn (Get $get): bool => $get('method') === ChamberCashEntry::METHOD_MIXED);
+        $fields[] = TextInput::make('online_taka')
+            ->label(__('Online (৳)'))
+            ->numeric()
+            ->minValue(0)
+            ->default(0)
+            ->live()
+            ->visible(fn (Get $get): bool => $get('method') === ChamberCashEntry::METHOD_MIXED);
+        $fields[] = Select::make('online_method')
+            ->label(__('Online method'))
+            ->options(ChamberCashEntry::onlineMethods())
+            ->native(false)
+            ->visible(fn (Get $get): bool => $get('method') === ChamberCashEntry::METHOD_MIXED
+                && (int) ($get('online_taka') ?? 0) > 0);
         $fields[] = DatePicker::make('occurred_on')
             ->label(__('Date'))
             ->default(fn (): string => $this->getAnchor()->toDateString())
@@ -295,12 +350,63 @@ class Cashbook extends Page implements HasTable
         return $fields;
     }
 
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array{
+     *     amount: int,
+     *     method: string,
+     *     cash_taka: ?int,
+     *     online_taka: ?int,
+     *     online_method: ?string
+     * }
+     */
+    private function resolvePaymentFormData(array $data): array
+    {
+        $method = (string) $data['method'];
+
+        if ($method === ChamberCashEntry::METHOD_MIXED) {
+            $cash = max(0, (int) ($data['cash_taka'] ?? 0));
+            $online = max(0, (int) ($data['online_taka'] ?? 0));
+            $amount = $cash + $online;
+
+            if ($amount < 1) {
+                throw new \InvalidArgumentException(__('Enter cash and/or online amounts.'));
+            }
+
+            if ($online > 0 && blank($data['online_method'] ?? null)) {
+                throw new \InvalidArgumentException(__('Pick how the online part was paid.'));
+            }
+
+            return [
+                'amount' => $amount,
+                'method' => $method,
+                'cash_taka' => $cash,
+                'online_taka' => $online,
+                'online_method' => $online > 0 ? (string) $data['online_method'] : null,
+            ];
+        }
+
+        $amount = (int) ($data['amount'] ?? 0);
+
+        if ($amount < 1) {
+            throw new \InvalidArgumentException(__('Amount must be at least ৳1.'));
+        }
+
+        return [
+            'amount' => $amount,
+            'method' => $method,
+            'cash_taka' => null,
+            'online_taka' => null,
+            'online_method' => null,
+        ];
+    }
+
     private function entriesQuery(): Builder
     {
         [$from, $to] = $this->range();
 
         return ChamberCashEntry::query()
-            ->with(['booking'])
+            ->with(['booking', 'feeCatalogItem'])
             ->where('occurred_on', '>=', $from->toDateString())
             ->where('occurred_on', '<=', $to->toDateString())
             ->orderByDesc('occurred_on')

@@ -5,8 +5,11 @@ namespace App\Filament\TenantAdmin\Support;
 use App\Models\Booking;
 use App\Models\ChamberCashEntry;
 use App\Models\FeeCatalogItem;
+use App\Models\ReferringDoctor;
+use App\Models\User;
 use App\Services\StationsTillService;
 use Filament\Forms\Components\Checkbox;
+use Filament\Forms\Components\Component;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
@@ -17,7 +20,7 @@ use InvalidArgumentException;
 class StationsCollectFeeForm
 {
     /**
-     * @return list<\Filament\Forms\Components\Component>
+     * @return list<Component>
      */
     public static function components(Booking $record): array
     {
@@ -27,6 +30,18 @@ class StationsCollectFeeForm
                 ->content(fn (): string => $record->patient_name
                     .' · '.__('Serial :n', ['n' => $record->serial_number])
                     .($record->voucher_number ? ' · '.__('Voucher :v', ['v' => $record->voucher_number]) : '')),
+            Select::make('referring_doctor_id')
+                ->label(__('Referred by (outside GP)'))
+                ->options(fn (): array => ReferringDoctor::query()
+                    ->where('is_active', true)
+                    ->orderBy('name')
+                    ->get()
+                    ->mapWithKeys(fn (ReferringDoctor $doctor) => [$doctor->id => $doctor->displayLabel()])
+                    ->all())
+                ->placeholder(__('Walk-in / no referrer'))
+                ->searchable()
+                ->native(false)
+                ->visible(fn (): bool => tenant()?->hasReferrals() ?? false),
             Select::make('fee_catalog_item_id')
                 ->label(__('Procedure / visit'))
                 ->options(fn (): array => FeeCatalogItem::query()
@@ -55,19 +70,15 @@ class StationsCollectFeeForm
                 ->live()
                 ->disabled(fn (Get $get): bool => (bool) $get('waived')),
             TextInput::make('mobile_taka')
-                ->label(__('Mobile ৳'))
+                ->label(__('Online ৳'))
                 ->numeric()
                 ->minValue(0)
                 ->default(0)
                 ->live()
                 ->disabled(fn (Get $get): bool => (bool) $get('waived')),
             Select::make('mobile_method')
-                ->label(__('Mobile method'))
-                ->options([
-                    ChamberCashEntry::METHOD_BKASH => __('bKash'),
-                    ChamberCashEntry::METHOD_NAGAD => __('Nagad'),
-                    ChamberCashEntry::METHOD_OTHER => __('Other'),
-                ])
+                ->label(__('Online method'))
+                ->options(ChamberCashEntry::onlineMethods())
                 ->native(false)
                 ->visible(fn (Get $get): bool => ! (bool) $get('waived') && (int) ($get('mobile_taka') ?? 0) > 0),
             Placeholder::make('discount_tape')
@@ -98,6 +109,7 @@ class StationsCollectFeeForm
         $entry = $record->cashEntry;
 
         return [
+            'referring_doctor_id' => $record->referring_doctor_id,
             'fee_catalog_item_id' => $entry?->fee_catalog_item_id,
             'cash_taka' => $entry?->cash_taka ?? 0,
             'mobile_taka' => $entry?->mobile_taka ?? 0,
@@ -107,12 +119,20 @@ class StationsCollectFeeForm
         ];
     }
 
-    public static function save(Booking $record, array $data, \App\Models\User $user): void
+    public static function save(Booking $record, array $data, User $user): void
     {
         $item = self::catalogItem((int) ($data['fee_catalog_item_id'] ?? 0));
 
         if (! $item) {
             throw new InvalidArgumentException(__('Pick a fee from the catalogue.'));
+        }
+
+        $referringDoctorId = filled($data['referring_doctor_id'] ?? null)
+            ? (int) $data['referring_doctor_id']
+            : null;
+
+        if ($referringDoctorId !== $record->referring_doctor_id) {
+            $record->update(['referring_doctor_id' => $referringDoctorId]);
         }
 
         app(StationsTillService::class)->recordPatientIncome(

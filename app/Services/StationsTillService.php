@@ -7,6 +7,7 @@ use App\Models\ChamberCashEntry;
 use App\Models\FeeCatalogItem;
 use App\Models\ScheduleSession;
 use App\Models\User;
+use App\Services\ReferralCommissionService;
 use Carbon\CarbonInterface;
 use InvalidArgumentException;
 
@@ -114,14 +115,19 @@ class StationsTillService
 
         if ($existing) {
             $existing->fill($values)->save();
-
-            return $existing;
+            $entry = $existing;
+        } else {
+            $entry = ChamberCashEntry::create([
+                ...$values,
+                'booking_id' => $booking->id,
+            ]);
         }
 
-        return ChamberCashEntry::create([
-            ...$values,
-            'booking_id' => $booking->id,
-        ]);
+        if (tenant()?->hasReferrals() && $booking->referring_doctor_id) {
+            app(ReferralCommissionService::class)->syncForBookingIncome($booking, $entry, $catalogItem);
+        }
+
+        return $entry;
     }
 
     private function resolveMethod(int $cash, int $mobile, ?string $mobileMethod): string

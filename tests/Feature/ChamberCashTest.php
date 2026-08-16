@@ -348,4 +348,47 @@ class ChamberCashTest extends TestCase
 
         Carbon::setTestNow();
     }
+
+    public function test_mixed_cash_and_online_income_stores_split(): void
+    {
+        $admin = $this->makeUser(User::ROLE_ADMIN);
+        $day = Carbon::parse('2026-08-13', OperationalReportService::TIMEZONE);
+        $entry = app(ChamberCashService::class)->recordOtherIncome(
+            $admin,
+            1000,
+            ChamberCashEntry::METHOD_MIXED,
+            $day,
+            $this->chamber->id,
+            'Chair sale',
+            cashTaka: 400,
+            onlineTaka: 600,
+            onlineMethod: ChamberCashEntry::METHOD_BKASH,
+        );
+
+        $this->assertSame(1000, $entry->amount);
+        $this->assertSame(400, $entry->cash_taka);
+        $this->assertSame(600, $entry->mobile_taka);
+        $this->assertSame(ChamberCashEntry::METHOD_BKASH, $entry->mobile_method);
+        $this->assertSame(__('Cash + online (bKash)'), $entry->paymentMethodLabel());
+    }
+
+    public function test_mixed_expense_requires_online_method_when_online_amount_positive(): void
+    {
+        $admin = $this->makeUser(User::ROLE_ADMIN);
+        $day = Carbon::parse('2026-08-13', OperationalReportService::TIMEZONE);
+
+        $this->expectException(\InvalidArgumentException::class);
+
+        app(ChamberCashService::class)->recordExpense(
+            $admin,
+            500,
+            ChamberCashEntry::CATEGORY_SUPPLIES,
+            ChamberCashEntry::METHOD_MIXED,
+            $day,
+            $this->chamber->id,
+            cashTaka: 200,
+            onlineTaka: 300,
+            onlineMethod: null,
+        );
+    }
 }

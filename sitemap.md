@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-16T17:14:10+0600
+Last Updated: 2026-08-16T18:14:03+0600
 
 ## Full Site Map
 
@@ -77,6 +77,12 @@ When a doctor connects their own domain (e.g. `drkarim.com`), routes live at the
 | `/admin` | Tenant staff Filament panel (staff/admin land on the dashboard; a doctor with **Prescription** is sent to Consult Screen) | staff / doctor / admin login |
 | `/admin/consult-screen` | Doctor's working pad — auto-follows the patient in the chamber | doctor login (**Prescription**) |
 | `/admin/cashbook` | Desk khata: income, expense, net, waived (day/week/month) | staff / doctor / admin |
+| `/admin/referring-doctors` | Outside GP registry (Referrals module) | staff / doctor / admin |
+| `/admin/referral-commissions` | Referral commission ledger — pending/paid, bulk payout | staff / doctor / admin |
+| `/admin/employees` | Staff roster (HR module) | admin |
+| `/admin/attendance-records` | Daily attendance | admin |
+| `/admin/leave-requests` | Leave requests — approve/reject | admin |
+| `/admin/payroll-payments` | Monthly salary payments (posts to cashbook) | admin |
 | `/admin/operational-reports` | Day / week / month booking counts | admin / doctor |
 | `/admin/chambers` | Rooms / locations (sidebar only when multiple chambers) | staff (or doctor if no staff login; admin) |
 | `/admin/schedule-sessions` | Sitting days and hours | staff (or doctor if no staff login; admin) |
@@ -257,9 +263,23 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 
 ### Chamber cashbook (staff / doctor / admin — ops)
 - **Trigger:** A patient pays at the desk, or the chamber spends money (rent, tea, salary).
-- **Steps:** **Without Stations:** On **Doctors**, set **Consultation fee**. Leave **Other visit fees** empty if every visit is the same price; add named rows (e.g. Follow-up ৳500) only if this doctor charges more than one price. On **Daily Roster**, **Collect fee** — staff pick how they paid (cash/bKash/Nagad/card) or waive; they cannot type an amount. If extra fees exist they pick the visit type first. **With Stations (Super Admin opt-in):** On **Operations → Fee catalogue**, set each visit/procedure board price and clinic house share. On **Daily Roster**, **Collect fee** — pick a catalogue chip, type cash ৳ and mobile ৳ (discount and clinic/doctor split compute automatically; overpay is rejected). Consult sittings hide Collect fee. On **Operations → Cashbook**, **Add expense** or **Add income**, then read day/week/month income, expense, net, waived ৳, and (Stations) clinic/doctor/discount columns.
+- **Steps:** **Without Stations:** On **Doctors**, set **Consultation fee**. Leave **Other visit fees** empty if every visit is the same price; add named rows (e.g. Follow-up ৳500) only if this doctor charges more than one price. On **Daily Roster**, **Collect fee** — staff pick how they paid (cash/bKash/Nagad/card) or waive; they cannot type an amount. If extra fees exist they pick the visit type first. **With Stations (Super Admin opt-in):** On **Operations → Fee catalogue**, set each visit/procedure board price and clinic house share. On **Daily Roster**, **Collect fee** — pick a catalogue chip, type cash ৳ and mobile ৳ (discount and clinic/doctor split compute automatically; overpay is rejected). If **Referrals** is on, pick **Referred by (outside GP)** when a patient was sent by another doctor — visit ৳200 / intervention ৳1,000 commission is logged automatically. Consult sittings hide Collect fee. On **Operations → Cashbook**, **Add expense** or **Add income**, then read day/week/month income, expense, net, waived ৳, and (Stations) clinic/doctor/discount columns.
 - **Data/systems touched:** `chamber_cash_entries` (`fee_type` legacy path; `fee_catalog_item_id`, split columns on Stations path), `doctors.default_fee_taka`, `doctors.extra_fees`, `fee_catalog_items`, `ChamberCashService` / `StationsTillService`. Patients still pay at the chamber — no booking gateway.
 - **Success:** End of day the khata shows what came in, what went out, clinic vs doctor share (Stations), and what is left.
+
+### Outside GP referral payouts (when Referrals module on)
+
+- **Trigger:** A patient arrives with a letter or name from an outside GP who sent them to the clinic.
+- **Steps:** Super Admin turns on **Referrals** for the tenant. Owner adds GPs under **Operations → Referring doctors**. At **Collect fee**, desk staff pick **Referred by (outside GP)**. When the fee is collected, the system owes ৳200 (visit) or ৳1,000 (intervention). End of month → **Operations → Referral ledger** → select pending rows → **Mark selected as paid** (posts one cashbook payout).
+- **Data/systems touched:** `referring_doctors`, `bookings.referring_doctor_id`, `referral_commissions`, `ReferralCommissionService`, cashbook `referral_payout` expense.
+- **Success:** Owner can show Dr Karim exactly how many patients he sent and what is still owed vs paid.
+
+### Staff HR (when HR module on)
+
+- **Trigger:** Owner needs attendance, leave, and salary on the same system as the till.
+- **Steps:** Super Admin turns on **HR**. **HR → Employees** — add roster (link desk login if they have one). **Attendance** — mark present/late/absent per day. **Leave** — staff requests; owner approves or rejects on the list. **Payroll** — record monthly salary (auto-posts **Salary** expense to cashbook).
+- **Data/systems touched:** `employees`, `attendance_records`, `leave_requests`, `payroll_payments`, `HrPayrollService`.
+- **Success:** Salary and referral payouts both appear in Cashbook; no parallel Excel HR sheet required for day-to-day ops.
 
 ### Stations clinic floor (staff / doctor — when module on)
 - **Trigger:** A pain clinic runs consult / visit / intervention rooms, outdoor vitals, procedure handoffs, or one-off sitting hours.

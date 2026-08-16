@@ -11,7 +11,7 @@
 /*
  * Admin chrome follows Getwebfield's content-header shell (title left,
  * primary action right, no global topbar) while keeping ChamberQ's Filament
- * Blue and the icon-only collapsed sidebar.
+ * Blue and the collapsible sidebar (hamburger toggle, open by default on desktop).
  */
 
 :root {

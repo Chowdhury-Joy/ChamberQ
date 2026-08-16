@@ -138,6 +138,14 @@ class TenantForm
                             ->label(__('Stations — rooms + split till'))
                             ->helperText(__('Opt-in clinic add-on: consult / visit / intervention rooms, catalogue fees, cash + mobile till with clinic vs doctor split. Not included in default modules.'))
                             ->default(false),
+                        Checkbox::make('module_referrals')
+                            ->label(__('Referrals — outside GP commissions'))
+                            ->helperText(__('Track referring doctors and owe ৳200 per visit / ৳1,000 per intervention (defaults). Separate from ChamberQ marketer commissions.'))
+                            ->default(false),
+                        Checkbox::make('module_hr')
+                            ->label(__('HR — staff attendance, leave, payroll'))
+                            ->helperText(__('Employee roster, daily attendance, leave requests, salary payments linked to cashbook.'))
+                            ->default(false),
                     ]),
 
                 Fieldset::make(__('Launch offers'))

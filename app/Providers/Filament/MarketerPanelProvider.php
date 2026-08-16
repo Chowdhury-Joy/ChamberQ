@@ -2,6 +2,9 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Marketer\Widgets\MarketerStatsOverview;
+use App\Filament\Marketer\Widgets\ReferralLinkWidget;
+use App\Providers\Filament\Concerns\UsesHamburgerSidebarToggle;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -20,9 +23,11 @@ use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class MarketerPanelProvider extends PanelProvider
 {
+    use UsesHamburgerSidebarToggle;
+
     public function panel(Panel $panel): Panel
     {
-        return $panel
+        return $this->withHamburgerSidebarToggle($panel)
             ->id('marketer')
             ->path('partner')
             ->brandName('ChamberQ')
@@ -40,8 +45,8 @@ class MarketerPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Marketer/Widgets'), for: 'App\Filament\Marketer\Widgets')
             ->widgets([
                 AccountWidget::class,
-                \App\Filament\Marketer\Widgets\ReferralLinkWidget::class,
-                \App\Filament\Marketer\Widgets\MarketerStatsOverview::class,
+                ReferralLinkWidget::class,
+                MarketerStatsOverview::class,
             ])
             ->middleware([
                 EncryptCookies::class,

@@ -17,9 +17,11 @@ use Illuminate\Support\Facades\App;
 
 trait ConfiguresTenantAdminPanel
 {
+    use UsesHamburgerSidebarToggle;
+
     protected function configureTenantAdminPanel(Panel $panel): Panel
     {
-        return $panel
+        return $this->withHamburgerSidebarToggle($panel)
             ->brandName(fn (): string => tenant()?->displayName() ?? 'ChamberQ')
             ->viteTheme('resources/css/filament/tenantAdmin/theme.css')
             ->homeUrl(fn (): string => FilamentPanelUrl::home())
@@ -34,6 +36,7 @@ trait ConfiguresTenantAdminPanel
             ])
             ->navigationGroups([
                 'Operations' => NavigationGroup::make()->label('Operations'),
+                'HR' => NavigationGroup::make()->label('HR'),
                 'Website' => NavigationGroup::make()->label('Website'),
                 'Settings' => NavigationGroup::make()->label('Settings'),
             ])
@@ -54,18 +57,17 @@ trait ConfiguresTenantAdminPanel
                 TenantStatsOverview::class,
                 TodayAppointmentsWidget::class,
             ])
-            // Icon-only sidebar; item names appear as hover tooltips while collapsed.
-            // User menu lives in the sidebar because the global topbar is off.
+            // Sidebar open on desktop by default; staff can still collapse via the hamburger.
             ->renderHook(
                 PanelsRenderHook::HEAD_START,
                 fn (): string => <<<'HTML'
                     <script>
                         (() => {
                             try {
-                                localStorage.setItem('isOpen', JSON.stringify(false));
-                                localStorage.setItem('isOpenDesktop', JSON.stringify(false));
-                                localStorage.setItem('_x_isOpen', JSON.stringify(false));
-                                localStorage.setItem('_x_isOpenDesktop', JSON.stringify(false));
+                                localStorage.setItem('isOpen', JSON.stringify(true));
+                                localStorage.setItem('isOpenDesktop', JSON.stringify(true));
+                                localStorage.setItem('_x_isOpen', JSON.stringify(true));
+                                localStorage.setItem('_x_isOpenDesktop', JSON.stringify(true));
                             } catch (e) {}
                         })();
                     </script>
@@ -85,8 +87,8 @@ trait ConfiguresTenantAdminPanel
                                     return;
                                 }
                                 const sidebar = window.Alpine?.store?.('sidebar');
-                                if (sidebar?.isOpen) {
-                                    sidebar.close();
+                                if (sidebar && ! sidebar.isOpen) {
+                                    sidebar.open();
                                 }
                             } catch (e) {}
                         }, { once: true });

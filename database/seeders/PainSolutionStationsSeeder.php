@@ -5,7 +5,9 @@ namespace Database\Seeders;
 use App\Models\Chamber;
 use App\Models\Doctor;
 use App\Models\Domain;
+use App\Models\Employee;
 use App\Models\FeeCatalogItem;
+use App\Models\ReferringDoctor;
 use App\Models\ScheduleSession;
 use App\Models\Tenant;
 use App\Models\User;
@@ -41,12 +43,20 @@ class PainSolutionStationsSeeder extends Seeder
             'sms_balance' => 200,
             'billing_status' => 'active',
             'queue_runner' => Tenant::QUEUE_RUNNER_STAFF,
-            'feature_flags' => Tenant::mergeStationsFlag(
-                Tenant::featureFlagsWithModules([], [
-                    Tenant::MODULE_FRONT_DOOR,
-                    Tenant::MODULE_LIVE_QUEUE,
-                    Tenant::MODULE_PRESCRIPTION,
-                ]),
+            'feature_flags' => Tenant::mergeOptInModuleFlag(
+                Tenant::mergeOptInModuleFlag(
+                    Tenant::mergeStationsFlag(
+                        Tenant::featureFlagsWithModules([], [
+                            Tenant::MODULE_FRONT_DOOR,
+                            Tenant::MODULE_LIVE_QUEUE,
+                            Tenant::MODULE_PRESCRIPTION,
+                        ]),
+                        true,
+                    ),
+                    Tenant::MODULE_REFERRALS,
+                    true,
+                ),
+                Tenant::MODULE_HR,
                 true,
             ),
         ]);
@@ -59,7 +69,16 @@ class PainSolutionStationsSeeder extends Seeder
         User::withoutGlobalScope(TenantScope::class)->updateOrCreate(
             ['email' => 'admin@painsolution.local', 'tenant_id' => self::TENANT_ID],
             [
-                'name' => 'Pain Solution Admin',
+                'name' => 'ChamberQ Support',
+                'password' => Hash::make('pass'),
+                'role' => User::ROLE_ADMIN,
+            ],
+        );
+
+        User::withoutGlobalScope(TenantScope::class)->updateOrCreate(
+            ['email' => 'owner@painsolution.local', 'tenant_id' => self::TENANT_ID],
+            [
+                'name' => 'Dr. Moin Uddin (Owner)',
                 'password' => Hash::make('pass'),
                 'role' => User::ROLE_ADMIN,
             ],
@@ -115,8 +134,12 @@ class PainSolutionStationsSeeder extends Seeder
         $this->seedBranchWeek($halishahar, $doctor, [0, 2, 4]); // Sun, Tue, Thu
 
         $this->seedFeeCatalogue();
+        $this->seedReferringDoctors();
+        $this->seedHr();
 
         tenancy()->end();
+
+        $this->call(PainSolutionDemoSeeder::class);
     }
 
     /**
@@ -190,5 +213,48 @@ class PainSolutionStationsSeeder extends Seeder
         foreach ($rows as $row) {
             FeeCatalogItem::create($row);
         }
+    }
+
+    private function seedReferringDoctors(): void
+    {
+        ReferringDoctor::query()->delete();
+
+        ReferringDoctor::create([
+            'name' => 'Dr. Karim (Agrabad)',
+            'phone' => '01811000001',
+            'specialty' => 'General practice',
+        ]);
+
+        ReferringDoctor::create([
+            'name' => 'Dr. Sultana (Halishahar)',
+            'phone' => '01811000002',
+            'specialty' => 'Orthopaedic',
+        ]);
+    }
+
+    private function seedHr(): void
+    {
+        Employee::query()->delete();
+
+        $staff = User::withoutGlobalScope(TenantScope::class)
+            ->where('email', 'staff@painsolution.local')
+            ->first();
+
+        Employee::create([
+            'user_id' => $staff?->id,
+            'name' => 'Desk Staff',
+            'phone' => '01822000001',
+            'job_title' => 'Reception',
+            'monthly_salary_taka' => 18000,
+            'joined_on' => now()->subMonths(6)->toDateString(),
+        ]);
+
+        Employee::create([
+            'name' => 'Nurse Rina',
+            'phone' => '01822000002',
+            'job_title' => 'Procedure nurse',
+            'monthly_salary_taka' => 22000,
+            'joined_on' => now()->subYear()->toDateString(),
+        ]);
     }
 }

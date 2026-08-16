@@ -104,6 +104,9 @@ class ChamberCashService
         CarbonInterface $occurredOn,
         ?int $chamberId = null,
         ?string $note = null,
+        ?int $cashTaka = null,
+        ?int $onlineTaka = null,
+        ?string $onlineMethod = null,
     ): ChamberCashEntry {
         $this->assertMethod($method);
 
@@ -115,9 +118,14 @@ class ChamberCashService
             throw new InvalidArgumentException('Unknown expense category.');
         }
 
+        $split = $this->resolvePaymentSplit($method, $amount, $cashTaka, $onlineTaka, $onlineMethod);
+
         return ChamberCashEntry::create([
             'direction' => ChamberCashEntry::DIRECTION_EXPENSE,
             'amount' => $amount,
+            'cash_taka' => $split['cash_taka'],
+            'mobile_taka' => $split['online_taka'],
+            'mobile_method' => $split['online_method'],
             'category' => $category,
             'method' => $method,
             'chamber_id' => $chamberId,
@@ -134,6 +142,9 @@ class ChamberCashService
         CarbonInterface $occurredOn,
         ?int $chamberId = null,
         ?string $note = null,
+        ?int $cashTaka = null,
+        ?int $onlineTaka = null,
+        ?string $onlineMethod = null,
     ): ChamberCashEntry {
         $this->assertMethod($method);
 
@@ -141,9 +152,14 @@ class ChamberCashService
             throw new InvalidArgumentException('Income must be at least ৳1.');
         }
 
+        $split = $this->resolvePaymentSplit($method, $amount, $cashTaka, $onlineTaka, $onlineMethod);
+
         return ChamberCashEntry::create([
             'direction' => ChamberCashEntry::DIRECTION_INCOME,
             'amount' => $amount,
+            'cash_taka' => $split['cash_taka'],
+            'mobile_taka' => $split['online_taka'],
+            'mobile_method' => $split['online_method'],
             'category' => ChamberCashEntry::CATEGORY_OTHER_INCOME,
             'method' => $method,
             'chamber_id' => $chamberId,
@@ -202,5 +218,49 @@ class ChamberCashService
         if (! array_key_exists($method, ChamberCashEntry::methods())) {
             throw new InvalidArgumentException('Unknown payment method.');
         }
+    }
+
+    /**
+     * @return array{cash_taka: ?int, online_taka: ?int, online_method: ?string}
+     */
+    private function resolvePaymentSplit(
+        string $method,
+        int $amount,
+        ?int $cashTaka,
+        ?int $onlineTaka,
+        ?string $onlineMethod,
+    ): array {
+        if ($method === ChamberCashEntry::METHOD_MIXED) {
+            $cash = max(0, (int) $cashTaka);
+            $online = max(0, (int) $onlineTaka);
+
+            if ($cash + $online !== $amount) {
+                throw new InvalidArgumentException(__('Cash plus online must equal the total amount.'));
+            }
+
+            if ($online > 0 && ! array_key_exists((string) $onlineMethod, ChamberCashEntry::onlineMethods())) {
+                throw new InvalidArgumentException(__('Pick how the online part was paid.'));
+            }
+
+            return [
+                'cash_taka' => $cash,
+                'online_taka' => $online > 0 ? $online : null,
+                'online_method' => $online > 0 ? $onlineMethod : null,
+            ];
+        }
+
+        if (array_key_exists($method, ChamberCashEntry::onlineMethods())) {
+            return [
+                'cash_taka' => null,
+                'online_taka' => $amount,
+                'online_method' => $method,
+            ];
+        }
+
+        return [
+            'cash_taka' => $method === ChamberCashEntry::METHOD_CASH ? $amount : null,
+            'online_taka' => null,
+            'online_method' => null,
+        ];
     }
 }

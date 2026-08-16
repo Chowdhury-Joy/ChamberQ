@@ -124,13 +124,16 @@ class TenantAdminShellTest extends TestCase
         $this->assertFalse($delete->isHidden());
     }
 
-    public function test_chamber_admin_keeps_collapsed_sidebar_and_chamberq_blue(): void
+    public function test_chamber_admin_keeps_open_sidebar_hamburger_and_chamberq_blue(): void
     {
         $provider = file_get_contents(app_path('Providers/Filament/Concerns/ConfiguresTenantAdminPanel.php'));
 
         $this->assertStringContainsString('->topbar(false)', $provider);
         $this->assertStringContainsString('sidebarCollapsibleOnDesktop()', $provider);
-        $this->assertStringContainsString("localStorage.setItem('isOpenDesktop', JSON.stringify(false));", $provider);
+        $this->assertStringContainsString('UsesHamburgerSidebarToggle', $provider);
+        $this->assertStringContainsString('OutlinedBars3', file_get_contents(app_path('Providers/Filament/Concerns/UsesHamburgerSidebarToggle.php')));
+        $this->assertStringContainsString("localStorage.setItem('isOpenDesktop', JSON.stringify(true));", $provider);
+        $this->assertStringContainsString('sidebar.open()', $provider);
         $this->assertStringContainsString('Color::Blue', $provider);
         $this->assertStringNotContainsString('#2173BD', $provider);
     }

@@ -2577,3 +2577,19 @@
  <action>Ship **Stations** as an opt-in tenant module (`Tenant::MODULE_STATIONS`, Super Admin checkbox, default **off** — not in `productModules()`). When on: sitting `kind` (consult / visit / intervention), tenant fee catalogue, split Collect fee (`full − cash − mobile = discount`, clinic share = `min(house_share, collected)`), daily voucher numbers, visit→intervention handoff with procedure states, staff outdoor vitals, one-date sitting overrides, and a 09:05 morning queue-count ping. Consult sittings hide Collect fee. Tenants without the flag keep the legacy predefined `ChamberCashService` path unchanged.</action>
  <reason>Like adding a hospital-floor mode to a product that today is a single counter — existing chambers must not wake up to new till rules. The first clinic client turns it on explicitly; everyone else stays on locked list-price Collect fee until they ask.</reason>
 </decision>
+
+## 2026-08-16T18:14:03+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Pain Solution and similar clinics owe outside GPs a flat commission when those doctors send patients for visit or procedure — separate from the clinic vs treating-doctor split on the till, and separate from ChamberQ marketer commissions.</context>
+ <action>Ship **Referrals** as an opt-in module (`Tenant::MODULE_REFERRALS`, default off). Registry of `referring_doctors`; optional picker on Stations Collect fee; `referral_commissions` ledger at **৳200 visit / ৳1,000 intervention** when a fee is collected; bulk payout posts a cashbook expense. Not mixed with `CommissionService`.</action>
+ <reason>In Chattogram lab/clinic markets the referring-doctor network is the business — the desk must track who sent the patient and what is still owed without a second notebook.</reason>
+</decision>
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Clinics with several desk and nursing staff need attendance, leave, and salary recorded alongside chamber money — not a separate HR product on day one.</context>
+ <action>Ship **HR** as an opt-in module (`Tenant::MODULE_HR`, default off): employees, daily attendance, leave approve/reject, payroll payments that post **Salary** expenses to the existing cashbook. Admin-only Filament group **HR**.</action>
+ <reason>Owner opens HR once a month; tying salary to cashbook keeps one truth for "money out" without building hospital-grade RBAC on Solo doctors.</reason>
+</decision>

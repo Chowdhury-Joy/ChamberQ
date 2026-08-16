@@ -34,6 +34,8 @@ class ChamberCashEntry extends Model
 
     public const CATEGORY_OTHER_EXPENSE = 'other_expense';
 
+    public const CATEGORY_REFERRAL_PAYOUT = 'referral_payout';
+
     public const METHOD_CASH = 'cash';
 
     public const METHOD_BKASH = 'bkash';
@@ -41,6 +43,10 @@ class ChamberCashEntry extends Model
     public const METHOD_NAGAD = 'nagad';
 
     public const METHOD_CARD = 'card';
+
+    public const METHOD_BANK = 'bank';
+
+    public const METHOD_BANGLA_QR = 'bangla_qr';
 
     public const METHOD_OTHER = 'other';
 
@@ -98,7 +104,30 @@ class ChamberCashEntry extends Model
             self::CATEGORY_SUPPLIES => __('Supplies'),
             self::CATEGORY_SALARY => __('Salary'),
             self::CATEGORY_TRANSPORT => __('Transport'),
+            self::CATEGORY_REFERRAL_PAYOUT => __('Referral payout'),
             self::CATEGORY_OTHER_EXPENSE => __('Other expense'),
+        ];
+    }
+
+    /** @return array<string, string> */
+    public static function paymentMethods(): array
+    {
+        return [
+            self::METHOD_CASH => __('Cash'),
+            ...self::onlineMethods(),
+        ];
+    }
+
+    /** @return array<string, string> */
+    public static function onlineMethods(): array
+    {
+        return [
+            self::METHOD_BKASH => __('bKash'),
+            self::METHOD_NAGAD => __('Nagad'),
+            self::METHOD_BANK => __('Bank'),
+            self::METHOD_BANGLA_QR => __('Bangla QR'),
+            self::METHOD_CARD => __('Card'),
+            self::METHOD_OTHER => __('Other'),
         ];
     }
 
@@ -107,12 +136,51 @@ class ChamberCashEntry extends Model
     {
         return [
             self::METHOD_CASH => __('Cash'),
-            self::METHOD_BKASH => __('bKash'),
-            self::METHOD_NAGAD => __('Nagad'),
-            self::METHOD_CARD => __('Card'),
-            self::METHOD_OTHER => __('Other'),
-            self::METHOD_MIXED => __('Cash + mobile'),
+            ...self::onlineMethods(),
+            self::METHOD_MIXED => __('Cash + online'),
         ];
+    }
+
+    public function paymentMethodLabel(): string
+    {
+        if ($this->method === self::METHOD_MIXED) {
+            if ($this->mobile_taka > 0 && filled($this->mobile_method)) {
+                $online = self::onlineMethods()[$this->mobile_method] ?? $this->mobile_method;
+
+                return __('Cash + online (:method)', ['method' => $online]);
+            }
+
+            return __('Cash + online');
+        }
+
+        return self::methods()[$this->method] ?? $this->method;
+    }
+
+    /** Patient procedure, visit type, or expense/income category — for Cashbook rows. */
+    public function cashbookSubjectLabel(): string
+    {
+        if (! $this->isIncome()) {
+            return self::expenseCategories()[$this->category] ?? $this->category;
+        }
+
+        if ($this->category === self::CATEGORY_OTHER_INCOME) {
+            return self::incomeCategories()[self::CATEGORY_OTHER_INCOME];
+        }
+
+        if ($this->feeCatalogItem) {
+            return $this->feeCatalogItem->label;
+        }
+
+        if (filled($this->fee_type)) {
+            $doctor = $this->booking ? Doctor::resolveForBooking($this->booking) : null;
+            $types = $doctor?->feeTypes() ?? [];
+
+            if (isset($types[$this->fee_type])) {
+                return $types[$this->fee_type]['label'];
+            }
+        }
+
+        return self::incomeCategories()[self::CATEGORY_PATIENT] ?? __('Consultation');
     }
 
     public function feeCatalogItem(): BelongsTo

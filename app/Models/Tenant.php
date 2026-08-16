@@ -44,6 +44,12 @@ class Tenant extends BaseTenant
     /** Opt-in clinic module: rooms + split till. Absent flag = off (not default-on). */
     public const MODULE_STATIONS = 'stations';
 
+    /** Opt-in: external GP referral commissions. Absent flag = off. */
+    public const MODULE_REFERRALS = 'referrals';
+
+    /** Opt-in: staff HR (attendance, leave, payroll). Absent flag = off. */
+    public const MODULE_HR = 'hr';
+
     /** @return list<string> */
     public static function productModules(): array
     {
@@ -315,7 +321,7 @@ class Tenant extends BaseTenant
     public function hasFeature(string $feature): bool
     {
         // Stations is opt-in only — never inherit a tier default.
-        if ($feature === self::MODULE_STATIONS) {
+        if (in_array($feature, [self::MODULE_STATIONS, self::MODULE_REFERRALS, self::MODULE_HR], true)) {
             $flags = $this->feature_flags ?? [];
 
             if (! array_key_exists($feature, $flags)) {
@@ -378,15 +384,34 @@ class Tenant extends BaseTenant
         return $this->hasFeature(self::MODULE_STATIONS);
     }
 
+    public function hasReferrals(): bool
+    {
+        return $this->hasFeature(self::MODULE_REFERRALS);
+    }
+
+    public function hasHr(): bool
+    {
+        return $this->hasFeature(self::MODULE_HR);
+    }
+
+    /**
+     * @param  array<string, mixed>  $flags
+     * @return array<string, mixed>
+     */
+    public static function mergeOptInModuleFlag(array $flags, string $module, bool $enabled): array
+    {
+        $flags[$module] = $enabled;
+
+        return $flags;
+    }
+
     /**
      * @param  array<string, mixed>  $flags
      * @return array<string, mixed>
      */
     public static function mergeStationsFlag(array $flags, bool $enabled): array
     {
-        $flags[self::MODULE_STATIONS] = $enabled;
-
-        return $flags;
+        return self::mergeOptInModuleFlag($flags, self::MODULE_STATIONS, $enabled);
     }
 
     /**

@@ -39,6 +39,7 @@ class Booking extends Model
         'voucher_number',
         'related_booking_id',
         'procedure_status',
+        'referring_doctor_id',
         'is_overflow',
         'status',
         'wants_earlier_date',
@@ -128,6 +129,16 @@ class Booking extends Model
     public function relatedBooking()
     {
         return $this->belongsTo(Booking::class, 'related_booking_id');
+    }
+
+    public function referringDoctor()
+    {
+        return $this->belongsTo(ReferringDoctor::class);
+    }
+
+    public function referralCommission()
+    {
+        return $this->hasOne(ReferralCommission::class);
     }
 
     public function procedureBookings()

@@ -41,13 +41,17 @@ class CreateTenant extends CreateRecord
 
         $modules = $data['product_modules'] ?? Tenant::productModules();
         $stations = (bool) ($data['module_stations'] ?? false);
-        unset($data['product_modules'], $data['module_stations']);
+        $referrals = (bool) ($data['module_referrals'] ?? false);
+        $hr = (bool) ($data['module_hr'] ?? false);
+        unset($data['product_modules'], $data['module_stations'], $data['module_referrals'], $data['module_hr']);
 
         $data['feature_flags'] = Tenant::featureFlagsWithModules(
             is_array($data['feature_flags'] ?? null) ? $data['feature_flags'] : [],
             is_array($modules) ? $modules : Tenant::productModules(),
         );
         $data['feature_flags'] = Tenant::mergeStationsFlag($data['feature_flags'], $stations);
+        $data['feature_flags'] = Tenant::mergeOptInModuleFlag($data['feature_flags'], Tenant::MODULE_REFERRALS, $referrals);
+        $data['feature_flags'] = Tenant::mergeOptInModuleFlag($data['feature_flags'], Tenant::MODULE_HR, $hr);
 
         // Not tenant columns — handled in afterCreate.
         unset($data['initial_doctor_email'], $data['initial_doctor_name']);
