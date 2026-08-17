@@ -22,6 +22,9 @@ class PatientFacingBanglaTest extends TestCase
         'resources/views/tenant/portal/index.blade.php',
         'resources/views/tenant/solo/portal/index.blade.php',
         'resources/views/tenant/screen.blade.php',
+        // The combined chamber TV is patient-facing too. It shipped with
+        // untranslated strings because only the single-room screen was listed.
+        'resources/views/tenant/screen-chamber.blade.php',
         'resources/views/patient/find.blade.php',
         'resources/views/patient/login.blade.php',
         'resources/views/patient/serials.blade.php',

@@ -260,7 +260,18 @@ class BookingService
             return $booking;
         });
 
-        app(VoucherService::class)->assignIfNeeded($booking);
+        // Past the commit above, so the serial is already the patient's. A
+        // voucher is a desk convenience, not part of the booking: letting its
+        // failure escape here meant a 500 on a booking that had in fact been
+        // taken, and — because the throw lands before the block below — no
+        // confirmation SMS either. The patient would then be told to rebook and
+        // hit the duplicate guard. Assignment is idempotent, so leaving the
+        // number null is recoverable; losing the serial is not.
+        try {
+            app(VoucherService::class)->assignIfNeeded($booking);
+        } catch (\Throwable $e) {
+            report($e);
+        }
 
         if ($sendSms) {
             // After commit, and after the response: never roll back a serial

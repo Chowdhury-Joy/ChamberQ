@@ -1397,3 +1397,33 @@
  <root_cause>Report photos checked `isOwnedReportPhotoPath()`; voice and prescription photos did not. `deleteIfExists()` deleted any path.</root_cause>
  <prevention_rule>Every media path written or deleted must pass `isOwnedVoicePath` / `isOwnedPhotoPath` / `isOwnedReportPhotoPath`.</prevention_rule>
 </bug>
+
+## 2026-08-17T19:15:41+0600
+
+<bug>
+  <category>Code</category>
+  <symptom>**Send to counseling** appeared on every finished procedure, including on days the doctor has no counseling sitting. Staff tapped it, confirmed the modal, and only then got a red "No counseling sitting is scheduled for this doctor on that date" — a dead end reached after the confirmation step.</symptom>
+  <root_cause>`canSendToCounseling()` checked module, status, sitting kind, procedure-done and duplicate-counseling, but never that a counseling sitting actually existed; `resolveCounselingSession()` was only reached inside `sendToCounseling()`, where it throws. The intervention actions hide the same gap because their modal renders a placeholder instead of the picker — this action is a plain confirm, so there was nowhere to say why.</root_cause>
+  <prevention_rule>An action's `visible()` must assert every precondition its handler will throw on. When a handler resolves a dependency that may be absent, expose that lookup as a nullable finder the visibility check can call, rather than discovering it by catching.</prevention_rule>
+</bug>
+
+<bug>
+  <category>Code</category>
+  <symptom>A voucher-assignment failure took the whole booking down with it: the patient had a serial committed, but saw a 500 and never got the confirmation SMS, because the throw landed between the commit and the notify block. Rebooking then hit the duplicate guard.</symptom>
+  <root_cause>`VoucherService::assignIfNeeded()` throws a `RuntimeException` after three contended attempts, and `BookingService` called it unguarded after the booking transaction had already committed. A desk convenience was allowed to fail an operation that had already succeeded.</root_cause>
+  <prevention_rule>Work that runs after a transaction commits may not throw into the caller. Anything post-commit that is not part of the booking itself gets caught and reported, so a committed serial cannot be reported to the patient as a failure.</prevention_rule>
+</bug>
+
+<bug>
+  <category>Code</category>
+  <symptom>`/api/bookings/availability` and `/api/bookings/open-dates` — both unauthenticated, both accepting up to 50 caller-supplied sitting ids — reported remaining capacity and open dates for **intervention** sittings, which patients may not book. The wizard and the POST were gated; these two were not.</symptom>
+  <root_cause>The rule lived as an instance method (`isPubliclyBookable()`) applied at two of four entry points. The endpoints that resolve sittings by id had nothing to call it on before querying.</root_cause>
+  <prevention_rule>A rule enforced at more than one entry point belongs in the query layer where those points converge — here `scopePubliclyBookable()` over a shared `PUBLICLY_BOOKABLE_KINDS` constant, so a new endpoint cannot silently opt out.</prevention_rule>
+</bug>
+
+<bug>
+  <category>UI/UX</category>
+  <symptom>Desk and TV strings shipped untranslated under translated headings: three procedure statuses and the Counseling room label on the staff desk, and **Next** / **Running late** on the new combined chamber TV — all with the Bangla tests passing.</symptom>
+  <root_cause>Both Bangla tests scan hard-coded file lists. Labels defined in models and services (`Booking::procedureStatusOptions()`, `ScheduleSession::kindOptions()`, `StationsHandoffService` error toasts) were never scanned, and the patient-facing list named `screen.blade.php` but not the new `screen-chamber.blade.php`.</root_cause>
+  <prevention_rule>When a feature adds a view or a class that emits `__()` strings, add it to the matching Bangla scan list in the same task. A green translation test only proves the files it was told about.</prevention_rule>
+</bug>

@@ -317,7 +317,13 @@ class BookingController extends Controller
             ? ScheduleSession::class
             : LabCollectionSlot::class;
 
-        $bookables = $modelClass::whereIn('id', $validated['bookable_ids'])->get()->keyBy('id');
+        // Same gate as the wizard and POST /api/bookings. Unauthenticated, and
+        // the ids are caller-supplied, so an intervention or counseling id would
+        // otherwise report its capacity here even though it cannot be booked.
+        $bookables = $modelClass::whereIn('id', $validated['bookable_ids'])
+            ->when($validated['bookable_type'] === 'session', fn ($query) => $query->publiclyBookable())
+            ->get()
+            ->keyBy('id');
 
         $items = [];
         foreach ($validated['bookable_ids'] as $id) {
@@ -367,6 +373,7 @@ class BookingController extends Controller
 
         $bookables = $modelClass::with($with)
             ->whereIn('id', $validated['bookable_ids'])
+            ->when($validated['bookable_type'] === 'session', fn ($query) => $query->publiclyBookable())
             ->get();
 
         $open = $bookingService->openDatesFor($bookables);

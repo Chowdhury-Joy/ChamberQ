@@ -434,6 +434,134 @@ class StationsTillTest extends TestCase
         Carbon::setTestNow();
     }
 
+    /**
+     * The action is a plain confirm modal with no form, so there is nowhere to
+     * explain a missing counseling sitting. If visibility does not match
+     * capability, staff tap it, confirm, and only then get a red toast.
+     */
+    public function test_send_to_counseling_is_hidden_until_a_counseling_sitting_exists(): void
+    {
+        $intervention = ScheduleSession::create([
+            'chamber_id' => $this->chamber->id,
+            'doctor_id' => $this->doctor->id,
+            'day_of_week' => Carbon::today()->dayOfWeek,
+            'session_name' => 'OT',
+            'kind' => ScheduleSession::KIND_INTERVENTION,
+            'start_time' => '10:00',
+            'end_time' => '12:00',
+            'slot_cap' => 10,
+        ]);
+
+        $procedure = Booking::create([
+            'bookable_type' => ScheduleSession::class,
+            'bookable_id' => $intervention->id,
+            'booking_date' => Carbon::today()->toDateString(),
+            'patient_name' => 'Rahim',
+            'patient_phone' => '01712222222',
+            'serial_number' => 1,
+            'status' => 'completed',
+            'procedure_status' => Booking::PROCEDURE_DONE,
+        ]);
+
+        $handoff = app(StationsHandoffService::class);
+
+        $this->assertFalse(
+            $handoff->canSendToCounseling($procedure->fresh(['bookable'])),
+            'Send to counseling was offered with no counseling sitting to send them to.',
+        );
+
+        ScheduleSession::create([
+            'chamber_id' => $this->chamber->id,
+            'doctor_id' => $this->doctor->id,
+            'day_of_week' => Carbon::today()->dayOfWeek,
+            'session_name' => 'Counseling',
+            'kind' => ScheduleSession::KIND_COUNSELING,
+            'start_time' => '10:00',
+            'end_time' => '14:30',
+            'slot_cap' => 20,
+        ]);
+
+        $this->assertTrue(
+            $handoff->canSendToCounseling($procedure->fresh(['bookable'])),
+            'Send to counseling stayed hidden even though a counseling sitting exists.',
+        );
+    }
+
+    /**
+     * Both endpoints are unauthenticated and take up to 50 caller-supplied ids,
+     * so gating only the wizard and the POST left an intervention sitting's
+     * remaining capacity and open dates readable through them.
+     */
+    public function test_public_availability_and_open_dates_ignore_non_bookable_sittings(): void
+    {
+        $intervention = ScheduleSession::create([
+            'chamber_id' => $this->chamber->id,
+            'doctor_id' => $this->doctor->id,
+            'day_of_week' => Carbon::today()->dayOfWeek,
+            'session_name' => 'OT',
+            'kind' => ScheduleSession::KIND_INTERVENTION,
+            'start_time' => '10:00',
+            'end_time' => '12:00',
+            'slot_cap' => 10,
+        ]);
+
+        $availability = $this->getJson('http://stations-till.localhost/api/bookings/availability?'.http_build_query([
+            'bookable_type' => 'session',
+            'bookable_ids' => [$intervention->id, $this->session->id],
+            'booking_date' => Carbon::today()->toDateString(),
+        ]))->assertOk()->json();
+
+        $this->assertFalse(
+            $availability['items'][(string) $intervention->id]['available'] ?? true,
+            'An intervention sitting reported its availability on the public endpoint.',
+        );
+
+        $openDates = $this->getJson('http://stations-till.localhost/api/bookings/open-dates?'.http_build_query([
+            'bookable_type' => 'session',
+            'bookable_ids' => [$intervention->id],
+        ]))->assertOk()->json();
+
+        $this->assertSame(
+            [],
+            $openDates['options'] ?? [],
+            'The public open-dates endpoint offered dates on an intervention sitting.',
+        );
+    }
+
+    /**
+     * The voucher is assigned after the booking transaction has committed, so
+     * letting a failure escape 500s a booking the patient has in fact been
+     * given — and skips the confirmation SMS that follows.
+     */
+    public function test_a_voucher_failure_does_not_lose_the_booking(): void
+    {
+        // Inside the 12:00–14:00 visit sitting. Without this the booking is
+        // refused as an ended sitting whenever the suite runs after 2pm, which
+        // would make this test pass or fail on the wall clock.
+        Carbon::setTestNow(Carbon::today()->setTime(12, 30));
+
+        $this->app->bind(VoucherService::class, fn () => new class extends VoucherService
+        {
+            public function assignIfNeeded(Booking $booking): void
+            {
+                throw new \RuntimeException('voucher gateway down');
+            }
+        });
+
+        $booking = app(\App\Services\BookingService::class)->createBookingForBookable(
+            $this->session,
+            Carbon::today()->toDateString(),
+            'Fatima',
+            '01715555555',
+            sendSms: false,
+        );
+
+        $this->assertNotNull($booking->fresh(), 'The booking was rolled back by a voucher failure.');
+        $this->assertNull($booking->fresh()->voucher_number);
+
+        Carbon::setTestNow();
+    }
+
     public function test_online_booking_still_refuses_an_ended_sitting(): void
     {
         Carbon::setTestNow(Carbon::today()->setTime(17, 30));

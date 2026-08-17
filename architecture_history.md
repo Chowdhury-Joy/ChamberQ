@@ -721,3 +721,6 @@
 - Production-audit follow-up: chamber TV JSON dropped booking UUIDs (`announce_key` instead); ZIP extract rejects `..` paths; Move intervention clears the live pointer and respects staff cap; public store/availability use `PlatformSetting` horizon; counseling walk-ins blocked in `BookingService`; visit media writes check ownership; offline queue replay locks the session; seeders refuse production and do not reset passwords; follow-up reminders use a date-range + `visit_records_follow_up_index`.
 
 
+
+## 2026-08-17
+- Closed the gaps around the Stations pathway: counseling hand-off visibility now asserts a counseling sitting exists, a post-commit voucher failure can no longer fail a booking that was already taken, and the publicly-bookable rule moved into a `scopePubliclyBookable()` query scope so the availability and open-dates endpoints stop reporting on intervention sittings. Both Bangla scan lists widened to reach model/service labels and the combined chamber TV view.

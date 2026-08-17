@@ -15,6 +15,14 @@ class ScheduleSession extends Model
 
     public const KIND_INTERVENTION = 'intervention';
 
+    /**
+     * Kinds a patient may book themselves onto from the public website.
+     * Intervention and counseling are staff-pushed only.
+     *
+     * @var list<string>
+     */
+    public const PUBLICLY_BOOKABLE_KINDS = [self::KIND_VISIT, self::KIND_CONSULT];
+
     public const KIND_COUNSELING = 'counseling';
 
     protected $fillable = [
@@ -89,7 +97,28 @@ class ScheduleSession extends Model
             return true;
         }
 
-        return in_array($this->kind, [self::KIND_VISIT, self::KIND_CONSULT], true);
+        return in_array($this->kind, self::PUBLICLY_BOOKABLE_KINDS, true);
+    }
+
+    /**
+     * The same rule as a query constraint, for the endpoints that resolve
+     * sittings by id rather than checking one in hand.
+     *
+     * /api/bookings/availability and /api/bookings/open-dates each accept up to
+     * 50 caller-supplied ids and are unauthenticated, so filtering only in the
+     * wizard and on POST left the intervention sittings' open dates and
+     * remaining capacity readable through them. Scoping it here keeps the rule
+     * in one place instead of relying on the next endpoint remembering.
+     *
+     * @param  \Illuminate\Database\Eloquent\Builder<static>  $query
+     */
+    public function scopePubliclyBookable($query)
+    {
+        return $query->where(function ($q): void {
+            $q->whereNull('kind')
+                ->orWhere('kind', '')
+                ->orWhereIn('kind', self::PUBLICLY_BOOKABLE_KINDS);
+        });
     }
 
     /** Label for outdoor screen: session name + time window. */

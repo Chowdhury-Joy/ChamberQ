@@ -78,6 +78,18 @@ class StationsHandoffService
             return false;
         }
 
+        // Visibility has to match capability. sendToCounseling() resolves a
+        // counseling sitting for this chamber, doctor and weekday and throws
+        // when there is none, so without this the button was offered on every
+        // finished procedure and only failed after staff had confirmed the
+        // modal. The intervention actions get away without the check because
+        // their modal renders a placeholder instead of the picker; this one is
+        // a plain confirm, so there is nowhere to say why.
+        $date = $procedure->booking_date?->toDateString();
+        if ($date === null || $this->findCounselingSession($session, $date) === null) {
+            return false;
+        }
+
         return $this->openCounselingFor($procedure) === null;
     }
 
@@ -575,6 +587,25 @@ class StationsHandoffService
         }
 
         return $match;
+    }
+
+    /**
+     * The counseling sitting this procedure would hand off to, or null.
+     *
+     * Split out of resolveCounselingSession() so canSendToCounseling() can ask
+     * the same question without catching an exception to answer it.
+     */
+    private function findCounselingSession(ScheduleSession $procedureSession, string $bookingDate): ?ScheduleSession
+    {
+        $date = Carbon::parse($bookingDate);
+
+        return ScheduleSession::query()
+            ->where('chamber_id', $procedureSession->chamber_id)
+            ->where('doctor_id', $procedureSession->doctor_id)
+            ->where('kind', ScheduleSession::KIND_COUNSELING)
+            ->where('day_of_week', $date->dayOfWeek)
+            ->orderBy('start_time')
+            ->first();
     }
 
     private function resolveCounselingSession(ScheduleSession $procedureSession, string $bookingDate): ScheduleSession

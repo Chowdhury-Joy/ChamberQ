@@ -18,6 +18,13 @@ class StaffDeskBanglaTest extends TestCase
         'app/Filament/TenantAdmin/Pages/DailyRoster.php',
         'app/Filament/TenantAdmin/Pages/ConsultScreen.php',
         'app/Filament/TenantAdmin/Pages/MissedProcedures.php',
+        // Desk labels defined outside the page classes escaped this list
+        // entirely, which is how three procedure statuses and the Counseling
+        // room label shipped untranslated under a translated column heading.
+        'app/Filament/TenantAdmin/Support/StationsHandoffForm.php',
+        'app/Services/StationsHandoffService.php',
+        'app/Models/Booking.php',
+        'app/Models/ScheduleSession.php',
         'app/Filament/TenantAdmin/Widgets/TodayAppointmentsWidget.php',
         'app/Filament/TenantAdmin/Widgets/TenantStatsOverview.php',
         'app/Services/SittingPrompt.php',
