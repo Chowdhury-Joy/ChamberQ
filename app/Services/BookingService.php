@@ -135,6 +135,7 @@ class BookingService
         ?string $repeatSeriesId = null,
         bool $allowEndedToday = false,
         ?bool $seenBeforeSoftware = null,
+        bool $allowCounselingHandoff = false,
     ): Booking {
         $patientPhone = $this->normalizeBdPhone($patientPhone);
         $whatsappPhone = filled($whatsappPhone) ? $this->normalizeBdPhone($whatsappPhone) : null;
@@ -142,7 +143,7 @@ class BookingService
             $whatsappPhone = null;
         }
 
-        $booking = DB::transaction(function () use ($bookable, $bookingDate, $patientName, $patientPhone, $labTestIds, $patientId, $wantsEarlierDate, $whatsappPhone, $shareClinicalHistory, $nid, $age, $allowOverflow, $repeatSeriesId, $allowEndedToday, $seenBeforeSoftware) {
+        $booking = DB::transaction(function () use ($bookable, $bookingDate, $patientName, $patientPhone, $labTestIds, $patientId, $wantsEarlierDate, $whatsappPhone, $shareClinicalHistory, $nid, $age, $allowOverflow, $repeatSeriesId, $allowEndedToday, $seenBeforeSoftware, $allowCounselingHandoff) {
             $tenant = tenant();
             $capMode = $tenant->slot_cap_mode ?? 'per_session';
             if ($capMode === 'per_day') {
@@ -159,6 +160,14 @@ class BookingService
 
             if (! $lockedBookable) {
                 throw BookingUnavailableException::bookableUnavailable();
+            }
+
+            if (
+                $lockedBookable instanceof ScheduleSession
+                && $lockedBookable->kind === ScheduleSession::KIND_COUNSELING
+                && ! $allowCounselingHandoff
+            ) {
+                throw BookingUnavailableException::counselingWalkIn();
             }
 
             $date = Carbon::parse($bookingDate);

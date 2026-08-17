@@ -45,7 +45,7 @@ class FollowUpReminders extends Page implements HasTable
                 VisitRecord::query()
                     ->whereNotNull('follow_up_reminder_whatsapp_queued_at')
                     ->whereNull('follow_up_reminder_whatsapp_sent_at')
-                    ->whereDate('follow_up_date', '>=', now()->toDateString())
+                    ->where('follow_up_date', '>=', now()->toDateString())
                     ->with(['booking'])
                     ->orderBy('follow_up_date')
             )

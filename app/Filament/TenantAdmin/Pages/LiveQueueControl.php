@@ -513,7 +513,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                     }, function ($query) {
                         $query->whereRaw('1 = 0');
                     })
-                    ->with(['patient', 'visitRecord'])
+                    ->with(['patient', 'visitRecord', 'bookable', 'procedureBookings.bookable', 'relatedBooking.bookable'])
                     // The patient being called must sit at the top — an earlier
                     // version left 'called' out of this list, so the person the
                     // chamber was announcing sank below cancelled bookings.

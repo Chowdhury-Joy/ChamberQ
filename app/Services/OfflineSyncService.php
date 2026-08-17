@@ -135,66 +135,65 @@ class OfflineSyncService
             ]);
         }
 
-        if (OfflineQueueEvent::query()->whereKey($syncId)->exists()) {
-            return;
-        }
+        DB::transaction(function () use ($item, $syncId, $liveSessionId): void {
+            if (OfflineQueueEvent::query()->whereKey($syncId)->lockForUpdate()->exists()) {
+                return;
+            }
 
-        $liveSession = LiveSession::query()->find($liveSessionId);
+            $liveSession = LiveSession::query()->whereKey($liveSessionId)->lockForUpdate()->first();
 
-        if (! $liveSession) {
-            throw ValidationException::withMessages([
-                'live_session_id' => 'That session is no longer live.',
+            if (! $liveSession) {
+                throw ValidationException::withMessages([
+                    'live_session_id' => 'That session is no longer live.',
+                ]);
+            }
+
+            $expected = filled($item['expected_current_booking_id'] ?? null)
+                ? (string) $item['expected_current_booking_id']
+                : null;
+
+            if ($liveSession->current_booking_id !== $expected) {
+                throw new OfflineQueueConflictException(
+                    'Refresh — the line moved elsewhere.',
+                );
+            }
+
+            $type = (string) ($item['type'] ?? '');
+            $current = $liveSession->currentBooking;
+
+            if ($type === self::TYPE_QUEUE_PATIENT_ARRIVED
+                && (! $current || $current->status !== 'called')) {
+                throw new OfflineQueueConflictException(
+                    'Refresh — that visit is no longer waiting to arrive.',
+                );
+            }
+
+            if ($type === self::TYPE_QUEUE_SKIP
+                && $current
+                && in_array($current->status, ['in_chamber', 'completed', 'no_show'], true)) {
+                throw new OfflineQueueConflictException(
+                    'Refresh — that patient is already with the doctor or finished.',
+                );
+            }
+
+            match ($type) {
+                self::TYPE_QUEUE_CALL_NEXT => $this->liveSessionService->callNextPatient($liveSession),
+                self::TYPE_QUEUE_PATIENT_ARRIVED => $this->liveSessionService->patientArrived($liveSession),
+                self::TYPE_QUEUE_SKIP => $this->liveSessionService->skipPatient($liveSession),
+                self::TYPE_QUEUE_COMPLETE_WITHOUT_ADVANCE => $this->liveSessionService->completeCurrentPatientWithoutAdvancing($liveSession),
+                default => throw ValidationException::withMessages([
+                    'type' => 'Unknown queue action.',
+                ]),
+            };
+
+            OfflineQueueEvent::query()->create([
+                'id' => $syncId,
+                'tenant_id' => (string) tenant('id'),
+                'live_session_id' => $liveSession->id,
+                'event_type' => $type,
+                'applied_at' => now(),
             ]);
-        }
-
-        $expected = filled($item['expected_current_booking_id'] ?? null)
-            ? (string) $item['expected_current_booking_id']
-            : null;
-
-        if ($liveSession->current_booking_id !== $expected) {
-            throw new OfflineQueueConflictException(
-                'Refresh — the line moved elsewhere.',
-            );
-        }
-
-        $type = (string) ($item['type'] ?? '');
-        $current = $liveSession->currentBooking;
-
-        // The id check above only asks *which* booking is current. Arrived
-        // and skip also need *what state* it is in: a stale snapshot can name
-        // the right row after the consult has already ended or begun.
-        if ($type === self::TYPE_QUEUE_PATIENT_ARRIVED
-            && (! $current || $current->status !== 'called')) {
-            throw new OfflineQueueConflictException(
-                'Refresh — that visit is no longer waiting to arrive.',
-            );
-        }
-
-        if ($type === self::TYPE_QUEUE_SKIP
-            && $current
-            && in_array($current->status, ['in_chamber', 'completed', 'no_show'], true)) {
-            throw new OfflineQueueConflictException(
-                'Refresh — that patient is already with the doctor or finished.',
-            );
-        }
-
-        match ($type) {
-            self::TYPE_QUEUE_CALL_NEXT => $this->liveSessionService->callNextPatient($liveSession),
-            self::TYPE_QUEUE_PATIENT_ARRIVED => $this->liveSessionService->patientArrived($liveSession),
-            self::TYPE_QUEUE_SKIP => $this->liveSessionService->skipPatient($liveSession),
-            self::TYPE_QUEUE_COMPLETE_WITHOUT_ADVANCE => $this->liveSessionService->completeCurrentPatientWithoutAdvancing($liveSession),
-            default => throw ValidationException::withMessages([
-                'type' => 'Unknown queue action.',
-            ]),
-        };
-
-        OfflineQueueEvent::query()->create([
-            'id' => $syncId,
-            'tenant_id' => (string) tenant('id'),
-            'live_session_id' => $liveSession->id,
-            'event_type' => $type,
-            'applied_at' => now(),
-        ]);
+        });
     }
 
     /**

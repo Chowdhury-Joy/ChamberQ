@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Exceptions\BookingUnavailableException;
 use App\Models\Booking;
+use App\Models\LiveSession;
 use App\Models\PlatformSetting;
 use App\Models\ScheduleSession;
 use App\Models\ScheduleSessionOverride;
@@ -375,6 +376,7 @@ class StationsHandoffService
                     whatsappPhone: $procedure->whatsapp_phone,
                     allowOverflow: true,
                     allowEndedToday: true,
+                    allowCounselingHandoff: true,
                 );
             } catch (BookingUnavailableException $e) {
                 throw new InvalidArgumentException($e->getMessage(), 0, $e);
@@ -428,23 +430,52 @@ class StationsHandoffService
         }
 
         return DB::transaction(function () use ($procedure, $interventionSession, $bookingDate) {
+            $lockedSession = ScheduleSession::query()
+                ->whereKey($interventionSession->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $lockedProcedure = Booking::query()
+                ->whereKey($procedure->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            $availability = $this->bookingService->availabilityFor(
+                $lockedSession,
+                $bookingDate,
+                allowOverflow: true,
+            );
+
+            if ($availability['remaining'] <= 0 || $availability['blocked'] || $availability['day_mismatch']) {
+                throw new InvalidArgumentException(
+                    $availability['blocked']
+                        ? __('The clinic is closed on the date you chose. Please pick another date.')
+                        : __('That intervention sitting is full.')
+                );
+            }
+
+            LiveSession::query()
+                ->where('current_booking_id', $lockedProcedure->id)
+                ->get()
+                ->each(function (LiveSession $live): void {
+                    $live->update(['current_booking_id' => null]);
+                });
+
             $maxSerial = Booking::query()
                 ->where('bookable_type', ScheduleSession::class)
-                ->where('bookable_id', $interventionSession->id)
+                ->where('bookable_id', $lockedSession->id)
                 ->where('booking_date', $bookingDate)
-                ->where('id', '!=', $procedure->id)
+                ->where('id', '!=', $lockedProcedure->id)
                 ->max('serial_number');
             $nextSerial = ($maxSerial ?? 0) + 1;
-            $publishedCap = ScheduleSessionPace::publishedCap($interventionSession);
+            $publishedCap = ScheduleSessionPace::publishedCap($lockedSession);
 
-            $procedure->update([
-                'bookable_id' => $interventionSession->id,
+            $lockedProcedure->update([
+                'bookable_id' => $lockedSession->id,
                 'booking_date' => $bookingDate,
                 'serial_number' => $nextSerial,
                 'is_overflow' => $nextSerial > $publishedCap,
-                'status' => in_array($procedure->status, ['no_show', 'skipped'], true)
-                    ? 'waiting'
-                    : $procedure->status,
+                'status' => 'waiting',
                 'procedure_status' => Booking::PROCEDURE_LOGGED,
                 'called_at' => null,
                 'in_chamber_at' => null,
@@ -453,7 +484,7 @@ class StationsHandoffService
                 'retry_queue_position' => null,
             ]);
 
-            return $procedure->fresh(['bookable']);
+            return $lockedProcedure->fresh(['bookable']);
         });
     }
 

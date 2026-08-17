@@ -48,9 +48,17 @@ class VisitRecordService
             $diagnosis = $this->resolveDiagnosis($data);
 
             $existing = VisitRecord::query()->where('booking_id', $booking->id)->first();
-            $voicePath = $this->nullableString($data['voice_path'] ?? null);
+            $voicePath = $this->acceptOwnedPath(
+                $this->nullableString($data['voice_path'] ?? null),
+                $existing?->voice_path,
+                'voice',
+            );
             $photoPath = array_key_exists('prescription_photo', $data)
-                ? $this->normalizeUploadedPath($data['prescription_photo'] ?? null)
+                ? $this->acceptOwnedPath(
+                    $this->normalizeUploadedPath($data['prescription_photo'] ?? null),
+                    $existing?->photo_path,
+                    'photo',
+                )
                 : ($existing?->photo_path);
             $reportPhotos = array_key_exists('report_photos', $data)
                 ? $this->normalizeReportPhotoPaths($data['report_photos'])
@@ -133,7 +141,11 @@ class VisitRecordService
 
         return DB::transaction(function () use ($booking, $staff, $data) {
             $existing = VisitRecord::query()->where('booking_id', $booking->id)->first();
-            $photoPath = $this->normalizeUploadedPath($data['prescription_photo'] ?? null);
+            $photoPath = $this->acceptOwnedPath(
+                $this->normalizeUploadedPath($data['prescription_photo'] ?? null),
+                $existing?->photo_path,
+                'photo',
+            );
             $reportPhotos = array_key_exists('report_photos', $data)
                 ? $this->normalizeReportPhotoPaths($data['report_photos'])
                 : ($existing?->report_photo_paths);
@@ -229,7 +241,11 @@ class VisitRecordService
 
         return DB::transaction(function () use ($booking, $actor, $data) {
             $existing = VisitRecord::query()->where('booking_id', $booking->id)->first();
-            $photoPath = $this->normalizeUploadedPath($data['prescription_photo'] ?? null);
+            $photoPath = $this->acceptOwnedPath(
+                $this->normalizeUploadedPath($data['prescription_photo'] ?? null),
+                $existing?->photo_path,
+                'photo',
+            );
             $reportPhotos = array_key_exists('report_photos', $data)
                 ? $this->normalizeReportPhotoPaths($data['report_photos'])
                 : ($existing?->report_photo_paths);
@@ -447,6 +463,26 @@ class VisitRecordService
         }
 
         return $this->nullableString(is_string($value) ? $value : null);
+    }
+
+    /**
+     * Ignore a path that does not belong to this chamber. A hostile form
+     * must not point a visit at another tenant's file, and must not cause
+     * that file to be deleted on the next save.
+     */
+    private function acceptOwnedPath(?string $submitted, ?string $existing, string $kind): ?string
+    {
+        if ($submitted === null) {
+            return null;
+        }
+
+        $owned = match ($kind) {
+            'voice' => $this->visitMediaService->isOwnedVoicePath($submitted),
+            'photo' => $this->visitMediaService->isOwnedPhotoPath($submitted),
+            default => false,
+        };
+
+        return $owned ? $submitted : $existing;
     }
 
     /**

@@ -2830,3 +2830,12 @@
  <reason>Like printing one rota for two clinics instead of three letterheads. Patients book a visit; the OT list is desk-only; the TV is per building.</reason>
 </decision>
 
+## 2026-08-17T18:41:08+0600
+
+<decision>
+ <category>Code</category>
+ <context>Re-running a demo seeder on a live-shaped database reset `admin@mups.local` (and Super Admin) to password `pass`. Production seed is a known ops accident.</context>
+ <action>`SeedAccounts::refuseProduction()` at the start of Database / MUPS / Pain Solution / Nusrat Urmi seeders. `upsert()` updates name/role but never overwrites an existing password.</action>
+ <reason>Like reprinting a clinic's letterhead without also resetting the front-door lock. Demo logins stay `pass` only on first create.</reason>
+</decision>
+

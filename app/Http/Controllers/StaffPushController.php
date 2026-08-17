@@ -24,6 +24,10 @@ class StaffPushController extends Controller
             abort(401);
         }
 
+        if (! $user->belongsToCurrentTenant()) {
+            abort(403);
+        }
+
         StaffPushSubscription::query()->updateOrCreate(
             [
                 'tenant_id' => tenant('id'),

@@ -25,14 +25,32 @@ class DataImportService
             throw new \InvalidArgumentException('Backup ZIP is not readable.');
         }
 
-        $directory = storage_path('app/backup-import/'.Str::uuid());
-        File::ensureDirectoryExists($directory);
-
         $zip = new ZipArchive;
 
         if ($zip->open($zipPath) !== true) {
             throw new \InvalidArgumentException('Could not open backup ZIP.');
         }
+
+        for ($i = 0; $i < $zip->numFiles; $i++) {
+            $name = $zip->getNameIndex($i);
+            if ($name === false) {
+                continue;
+            }
+
+            $normalized = str_replace('\\', '/', $name);
+            if (
+                $normalized === ''
+                || str_starts_with($normalized, '/')
+                || str_contains($normalized, '..')
+            ) {
+                $zip->close();
+
+                throw new \InvalidArgumentException('Backup ZIP contains an unsafe path.');
+            }
+        }
+
+        $directory = storage_path('app/backup-import/'.Str::uuid());
+        File::ensureDirectoryExists($directory);
 
         $zip->extractTo($directory);
         $zip->close();

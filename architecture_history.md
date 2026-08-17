@@ -717,4 +717,7 @@
 ## 2026-08-17T15:55:12+0600
 - MUPS is a two-branch clinic (Panchlaish + Uttara; Epic Dhanmondi removed). Super Admin modules all on (Website, Queue, Rx, Stations, Referrals, HR) plus Bangla homepage and live-average / chime+Bangla-voice queue branding. Each branch-day seeds Intervention / Visit / Counseling. Developer handoff HTML in `docs/ChamberQ-Developer-Handoff-MUPS.html`.
 
+## 2026-08-17T18:41:08+0600
+- Production-audit follow-up: chamber TV JSON dropped booking UUIDs (`announce_key` instead); ZIP extract rejects `..` paths; Move intervention clears the live pointer and respects staff cap; public store/availability use `PlatformSetting` horizon; counseling walk-ins blocked in `BookingService`; visit media writes check ownership; offline queue replay locks the session; seeders refuse production and do not reset passwords; follow-up reminders use a date-range + `visit_records_follow_up_index`.
+
 

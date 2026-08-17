@@ -83,7 +83,15 @@ class ScreenController extends Controller
                 continue;
             }
 
+            if (! in_array($liveSession->status, ['active', 'paused', 'delayed'], true)) {
+                continue;
+            }
+
             $rooms[] = $this->roomTileState($session, $liveSession);
+
+            if (count($rooms) >= 4) {
+                break;
+            }
         }
 
         return response()->json([
@@ -147,13 +155,17 @@ class ScreenController extends Controller
         $currentBooking = $liveSession->currentBooking;
         $waiting = $this->nextWaitingBookings($liveSession, 3);
 
+        $calledAt = $currentBooking?->called_at;
+
         return [
             'session_id' => $session->id,
             'label' => $session->screenLabel(),
             'kind' => $session->kind,
             'now_serving' => $currentBooking ? $currentBooking->serial_number : null,
             'now_serving_name' => $currentBooking ? $currentBooking->patient_name : null,
-            'current_booking_id' => $currentBooking?->id,
+            'announce_key' => $currentBooking && $calledAt
+                ? $session->id.'|'.$currentBooking->serial_number.'|'.$calledAt->timestamp
+                : null,
             'is_called' => $currentBooking ? $currentBooking->status === 'called' : false,
             'next' => $waiting->map(fn (Booking $booking): array => [
                 'serial' => $booking->serial_number,

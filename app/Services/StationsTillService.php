@@ -9,6 +9,7 @@ use App\Models\ScheduleSession;
 use App\Models\User;
 use App\Services\ReferralCommissionService;
 use Carbon\CarbonInterface;
+use Illuminate\Database\UniqueConstraintViolationException;
 use InvalidArgumentException;
 
 class StationsTillService
@@ -117,10 +118,15 @@ class StationsTillService
             $existing->fill($values)->save();
             $entry = $existing;
         } else {
-            $entry = ChamberCashEntry::create([
-                ...$values,
-                'booking_id' => $booking->id,
-            ]);
+            try {
+                $entry = ChamberCashEntry::create([
+                    ...$values,
+                    'booking_id' => $booking->id,
+                ]);
+            } catch (UniqueConstraintViolationException) {
+                $entry = ChamberCashEntry::query()->where('booking_id', $booking->id)->firstOrFail();
+                $entry->fill($values)->save();
+            }
         }
 
         if (tenant()?->hasReferrals() && $booking->referring_doctor_id) {

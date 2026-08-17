@@ -9,6 +9,8 @@ use App\Models\Doctor;
 use App\Models\Domain;
 use App\Models\ScheduleSession;
 use App\Models\Tenant;
+use App\Exceptions\BookingUnavailableException;
+use App\Services\BookingService;
 use App\Services\StationsHandoffService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -113,6 +115,23 @@ class CounselingRoomTest extends TestCase
         $this->assertNull($row->voucher_number);
         $this->assertTrue($row->bookable->isFreeKind());
         $this->assertNull(ChamberCashEntry::query()->where('booking_id', $row->id)->first());
+    }
+
+    public function test_walk_in_cannot_take_a_counseling_seat(): void
+    {
+        Carbon::setTestNow(Carbon::today()->setTime(11, 0));
+
+        $this->expectException(BookingUnavailableException::class);
+
+        app(BookingService::class)->createBookingForBookable(
+            $this->counseling,
+            Carbon::today()->toDateString(),
+            'Walk-in',
+            '01716666666',
+            sendSms: false,
+            allowOverflow: true,
+            allowEndedToday: true,
+        );
     }
 
     public function test_the_same_patient_cannot_be_sent_to_counseling_twice_in_a_day(): void

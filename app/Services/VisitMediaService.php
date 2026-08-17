@@ -161,6 +161,14 @@ class VisitMediaService
             return;
         }
 
+        if (
+            ! $this->isOwnedVoicePath($path)
+            && ! $this->isOwnedPhotoPath($path)
+            && ! $this->isOwnedReportPhotoPath($path)
+        ) {
+            return;
+        }
+
         Storage::disk(self::DISK)->delete($path);
     }
 

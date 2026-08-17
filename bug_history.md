@@ -1360,3 +1360,40 @@
  <root_cause>`public/js/clinic-clireo.js` `splitWords()` read `textContent` then assigned `innerHTML` with the raw words, unescaped.</root_cause>
  <prevention_rule>If you must write `innerHTML`, escape every untrusted fragment first. Prefer `textContent` / `createElement`. Escaping in Blade does not survive a later `innerHTML` rebuild.</prevention_rule>
 </bug>
+
+## 2026-08-17T18:41:08+0600
+
+<bug>
+ <category>Code</category>
+ <symptom>Anyone who could guess `/api/screen/chamber/3` received the live patient's booking UUID, which opens the full unauthenticated ticket (name, serial, voucher, labs).</symptom>
+ <root_cause>The waiting-room JSON included `current_booking_id` so the TV could de-dupe voice announce. The UUID is the ticket's only secret.</root_cause>
+ <prevention_rule>Public screen APIs must never return a booking id. De-dupe on `announce_key` (`session|serial|called_at`) instead.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Code</category>
+ <symptom>A hostile backup ZIP with `../../.env` entries could write outside `storage/app/backup-import/` on restore.</symptom>
+ <root_cause>`ZipArchive::extractTo()` was called with no entry-name check.</root_cause>
+ <prevention_rule>Before extract, reject any ZIP name that is absolute or contains `..`.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>Staff tapped **Move intervention** on a called patient; Call next kept returning her and the TV still showed her as now serving.</symptom>
+ <root_cause>Move kept `called`/`in_chamber` and left `live_sessions.current_booking_id` pointing at the moved row. It also skipped the staff overflow cap.</root_cause>
+ <prevention_rule>Moving a procedure always resets status to waiting, clears any live-session pointer at that booking, and refuses when the target sitting is at `staffCap`.</prevention_rule>
+</bug>
+
+<bug>
+ <category>CRO</category>
+ <symptom>Super Admin set the booking window to 30 or 90 days; Confirm still used a hardcoded 60. Horizon 30 still accepted day 45; horizon 90 showed day 75 then 422.</symptom>
+ <root_cause>`BookingController::store` and availability used `now()->addDays(60)` while open-dates used `PlatformSetting`.</root_cause>
+ <prevention_rule>Every public booking date gate — open-dates, availability, and POST — must use `PlatformSetting::onlineBookingMaxDate()`.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Code</category>
+ <symptom>A doctor could save another chamber's `visit-audio/…` path on a visit record, then a later save would delete that file.</symptom>
+ <root_cause>Report photos checked `isOwnedReportPhotoPath()`; voice and prescription photos did not. `deleteIfExists()` deleted any path.</root_cause>
+ <prevention_rule>Every media path written or deleted must pass `isOwnedVoicePath` / `isOwnedPhotoPath` / `isOwnedReportPhotoPath`.</prevention_rule>
+</bug>

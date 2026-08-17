@@ -59,5 +59,7 @@ class VoucherService
                 }
             }
         }
+
+        throw new \RuntimeException('Could not assign a voucher number. Try again.');
     }
 }

@@ -8,6 +8,7 @@ use App\Models\ChamberCashEntry;
 use App\Models\Doctor;
 use App\Models\Domain;
 use App\Models\FeeCatalogItem;
+use App\Models\LiveSession;
 use App\Models\ScheduleSession;
 use App\Models\Tenant;
 use App\Models\User;
@@ -340,6 +341,95 @@ class StationsTillTest extends TestCase
         $this->assertSame('waiting', $moved->status);
         $this->assertSame(Booking::PROCEDURE_LOGGED, $moved->procedure_status);
         $this->assertSame($visitBooking->id, $moved->related_booking_id);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_moving_a_called_procedure_clears_todays_live_pointer(): void
+    {
+        Carbon::setTestNow(Carbon::today()->setTime(11, 0));
+
+        $intervention = ScheduleSession::create([
+            'chamber_id' => $this->chamber->id,
+            'doctor_id' => $this->doctor->id,
+            'day_of_week' => Carbon::today()->dayOfWeek,
+            'session_name' => 'OT',
+            'kind' => ScheduleSession::KIND_INTERVENTION,
+            'start_time' => '10:00',
+            'end_time' => '13:00',
+            'slot_cap' => 10,
+        ]);
+
+        $procedure = app(StationsHandoffService::class)->sendVisitToIntervention(
+            $this->booking(),
+            Carbon::today()->toDateString(),
+        );
+        $procedure->update(['status' => 'called', 'called_at' => now()]);
+
+        $live = LiveSession::create([
+            'schedule_session_id' => $intervention->id,
+            'session_date' => Carbon::today()->toDateString(),
+            'status' => 'active',
+            'started_at' => now(),
+            'current_booking_id' => $procedure->id,
+        ]);
+
+        $moved = app(StationsHandoffService::class)->moveProcedure(
+            $procedure,
+            Carbon::today()->addWeek()->toDateString(),
+        );
+
+        $this->assertSame('waiting', $moved->status);
+        $this->assertNull($moved->called_at);
+        $this->assertNull($live->fresh()->current_booking_id);
+        $this->assertSame(Carbon::today()->addWeek()->toDateString(), $moved->booking_date->toDateString());
+
+        Carbon::setTestNow();
+    }
+
+    public function test_move_refuses_when_the_target_sitting_is_past_staff_cap(): void
+    {
+        Carbon::setTestNow(Carbon::today()->setTime(11, 0));
+
+        $intervention = ScheduleSession::create([
+            'chamber_id' => $this->chamber->id,
+            'doctor_id' => $this->doctor->id,
+            'day_of_week' => Carbon::today()->dayOfWeek,
+            'session_name' => 'Tiny OT',
+            'kind' => ScheduleSession::KIND_INTERVENTION,
+            'start_time' => '10:00',
+            'end_time' => '13:00',
+            'slot_cap' => 1,
+            'walk_in_overflow_cap' => 0,
+        ]);
+
+        $firstVisit = $this->booking();
+        app(StationsHandoffService::class)->sendVisitToIntervention(
+            $firstVisit,
+            Carbon::today()->addWeek()->toDateString(),
+        );
+
+        $secondVisit = Booking::create([
+            'bookable_type' => ScheduleSession::class,
+            'bookable_id' => $this->session->id,
+            'booking_date' => Carbon::today()->toDateString(),
+            'patient_name' => 'Rahim',
+            'patient_phone' => '01713333333',
+            'serial_number' => 2,
+            'status' => 'waiting',
+        ]);
+        $secondProcedure = app(StationsHandoffService::class)->sendVisitToIntervention(
+            $secondVisit,
+            Carbon::today()->addWeeks(2)->toDateString(),
+        );
+
+        $this->expectException(\InvalidArgumentException::class);
+
+        app(StationsHandoffService::class)->moveProcedure(
+            $secondProcedure,
+            Carbon::today()->addWeek()->toDateString(),
+            $intervention->id,
+        );
 
         Carbon::setTestNow();
     }

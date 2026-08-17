@@ -7,6 +7,7 @@ use App\Models\Booking;
 use App\Models\Chamber;
 use App\Models\Doctor;
 use App\Models\Domain;
+use App\Models\PlatformSetting;
 use App\Models\ScheduleSession;
 use App\Models\SlotBlock;
 use App\Models\Tenant;
@@ -244,5 +245,36 @@ class BookingOpenDatesTest extends TestCase
         Livewire::test(WaitingForEarlierDate::class)
             ->assertSee('Waiting Patient')
             ->assertSee('1');
+    }
+
+    public function test_public_store_and_availability_honour_the_platform_booking_window(): void
+    {
+        PlatformSetting::current()->update(['patient_booking_horizon_days' => 30]);
+
+        $tooFar = Carbon::parse($this->firstMonday)->addWeeks(5)->toDateString();
+
+        $this->postJson('http://open-dates.localhost/api/bookings', [
+            'bookable_type' => 'session',
+            'bookable_id' => $this->session->id,
+            'booking_date' => $tooFar,
+            'patient_name' => 'Horizon',
+            'patient_phone' => '01712345678',
+        ])->assertStatus(422);
+
+        $this->getJson('http://open-dates.localhost/api/bookings/availability?'.http_build_query([
+            'bookable_type' => 'session',
+            'bookable_ids' => [$this->session->id],
+            'booking_date' => $tooFar,
+        ]))->assertStatus(422);
+
+        PlatformSetting::current()->update(['patient_booking_horizon_days' => 90]);
+
+        $this->postJson('http://open-dates.localhost/api/bookings', [
+            'bookable_type' => 'session',
+            'bookable_id' => $this->session->id,
+            'booking_date' => $tooFar,
+            'patient_name' => 'Horizon',
+            'patient_phone' => '01712345678',
+        ])->assertOk();
     }
 }

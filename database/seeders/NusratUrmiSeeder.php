@@ -9,9 +9,8 @@ use App\Models\ScheduleSession;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Models\WebPage;
-use App\Scopes\TenantScope;
+use App\Support\SeedAccounts;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 
 /**
  * Solo tenant for Dr. Nusrat Sultana Urmi (Dermavilla, Chattogram).
@@ -26,6 +25,8 @@ class NusratUrmiSeeder extends Seeder
 
     public function run(): void
     {
+        SeedAccounts::refuseProduction();
+
         $tenant = Tenant::updateOrCreate(['id' => self::TENANT_ID], [
             'name' => 'Nusrat Urmi',
             'plan_tier' => 'solo',
@@ -48,22 +49,22 @@ class NusratUrmiSeeder extends Seeder
         Domain::firstOrCreate(['domain' => 'nusraturmi.localhost'], ['tenant_id' => self::TENANT_ID]);
         Domain::firstOrCreate(['domain' => 'drurminusrat.com'], ['tenant_id' => self::TENANT_ID]);
 
-        User::withoutGlobalScope(TenantScope::class)->updateOrCreate(
+        SeedAccounts::upsert(
             ['email' => 'admin@nusraturmi.local', 'tenant_id' => self::TENANT_ID],
             [
                 'name' => 'Dermavilla Admin',
-                'password' => Hash::make('pass'),
                 'role' => User::ROLE_ADMIN,
             ],
+            'pass',
         );
 
-        $doctorUser = User::withoutGlobalScope(TenantScope::class)->updateOrCreate(
+        $doctorUser = SeedAccounts::upsert(
             ['email' => 'doctor@nusraturmi.local', 'tenant_id' => self::TENANT_ID],
             [
                 'name' => 'Dr. Nusrat Sultana Urmi',
-                'password' => Hash::make('pass'),
                 'role' => User::ROLE_DOCTOR,
             ],
+            'pass',
         );
 
         tenancy()->initialize($tenant);

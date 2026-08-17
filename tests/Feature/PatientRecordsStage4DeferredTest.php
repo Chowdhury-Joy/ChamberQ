@@ -313,4 +313,37 @@ class PatientRecordsStage4DeferredTest extends TestCase
         $this->assertStringStartsWith('visit-audio/stage4-deferred/', $path);
         Storage::disk('local')->assertExists($path);
     }
+
+    public function test_saving_notes_rejects_another_chambers_media_path_and_does_not_delete_it(): void
+    {
+        tenancy()->initialize($this->tenant);
+
+        $foreign = 'visit-audio/other-chamber/secret.webm';
+        Storage::disk('local')->put($foreign, 'do-not-delete');
+
+        $own = 'visit-audio/stage4-deferred/keep.webm';
+        Storage::disk('local')->put($own, 'ours');
+
+        $existing = VisitRecord::create([
+            'booking_id' => $this->completedBooking->id,
+            'patient_id' => $this->patient->id,
+            'recorded_by' => $this->doctor->id,
+            'voice_path' => $own,
+            'recorded_at' => now(),
+        ]);
+
+        $record = app(VisitRecordService::class)->saveForCompletedBooking(
+            $this->completedBooking->fresh(),
+            $this->doctor,
+            [
+                'voice_path' => $foreign,
+                'advice' => 'Keep the old note',
+            ],
+        );
+
+        $this->assertSame($own, $record->voice_path);
+        Storage::disk('local')->assertExists($foreign);
+        Storage::disk('local')->assertExists($own);
+        $this->assertSame($existing->id, $record->id);
+    }
 }

@@ -8,6 +8,7 @@ use App\Models\Doctor;
 use App\Models\ScheduleSession;
 use App\Models\User;
 use Carbon\CarbonInterface;
+use Illuminate\Database\UniqueConstraintViolationException;
 use InvalidArgumentException;
 
 class ChamberCashService
@@ -100,10 +101,17 @@ class ChamberCashService
             return $existing;
         }
 
-        return ChamberCashEntry::create([
-            ...$values,
-            'booking_id' => $booking->id,
-        ]);
+        try {
+            return ChamberCashEntry::create([
+                ...$values,
+                'booking_id' => $booking->id,
+            ]);
+        } catch (UniqueConstraintViolationException) {
+            $race = ChamberCashEntry::query()->where('booking_id', $booking->id)->firstOrFail();
+            $race->fill($values)->save();
+
+            return $race;
+        }
     }
 
     public function recordExpense(

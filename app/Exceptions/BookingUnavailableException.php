@@ -51,6 +51,14 @@ class BookingUnavailableException extends Exception
         );
     }
 
+    public static function counselingWalkIn(): self
+    {
+        return self::make(
+            __('Counseling seats are assigned after a procedure, not as a walk-in.'),
+            'counseling_handoff'
+        );
+    }
+
     public static function bookableUnavailable(): self
     {
         return self::make(

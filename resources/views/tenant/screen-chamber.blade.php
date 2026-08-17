@@ -417,9 +417,9 @@
         }
 
         function enqueueCall(room) {
-            if (!room.is_called || !room.current_booking_id || !room.now_serving) return;
-            if (lastAnnouncedByRoom[room.session_id] === room.current_booking_id) return;
-            lastAnnouncedByRoom[room.session_id] = room.current_booking_id;
+            if (!room.is_called || !room.announce_key || !room.now_serving) return;
+            if (lastAnnouncedByRoom[room.session_id] === room.announce_key) return;
+            lastAnnouncedByRoom[room.session_id] = room.announce_key;
             if (announceQueue.length >= MAX_ANNOUNCE_QUEUE) return;
             announceQueue.push({
                 roomLabel: room.label,

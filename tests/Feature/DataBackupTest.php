@@ -69,6 +69,7 @@ class DataBackupTest extends TestCase
         return array_merge(
             glob(storage_path('app/backup-temp/*')) ?: [],
             glob(storage_path('app/backup-test/*')) ?: [],
+            glob(storage_path('app/backup-import/*')) ?: [],
         );
     }
 
@@ -559,6 +560,37 @@ class DataBackupTest extends TestCase
             DB::table('prescription_items')->where('prescription_id', $foreignPrescriptionId)->count(),
             'No line item may be grafted onto another chamber\'s prescription',
         );
+    }
+
+    public function test_extract_refuses_zip_entries_that_escape_the_target_directory(): void
+    {
+        $directory = storage_path('app/backup-test/'.uniqid('zipslip-', true));
+        mkdir($directory, 0777, true);
+        $zipPath = $directory.'/slip.zip';
+
+        $zip = new ZipArchive;
+        $zip->open($zipPath, ZipArchive::CREATE | ZipArchive::OVERWRITE);
+        $zip->addFromString('../../zipslip-pwned.txt', 'pwned');
+        $zip->addFromString('manifest.json', json_encode([
+            'version' => BackupTableMap::MANIFEST_VERSION,
+            'scope' => ImportOptions::SCOPE_TENANT,
+            'tenant_id' => $this->tenantA->id,
+        ]));
+        $zip->close();
+
+        $outside = storage_path('app/zipslip-pwned.txt');
+        if (is_file($outside)) {
+            unlink($outside);
+        }
+
+        try {
+            app(DataImportService::class)->extractZip($zipPath);
+            $this->fail('Zip-slip entries must be refused.');
+        } catch (\InvalidArgumentException $e) {
+            $this->assertStringContainsString('unsafe path', $e->getMessage());
+        }
+
+        $this->assertFileDoesNotExist($outside);
     }
 
     /**

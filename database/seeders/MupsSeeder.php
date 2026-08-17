@@ -19,8 +19,8 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Models\WebPage;
 use App\Scopes\TenantScope;
+use App\Support\SeedAccounts;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 
 /**
  * Clinic Front door + full floor for MUPS (Dr. Moin Uddin Pain Solution).
@@ -39,6 +39,8 @@ class MupsSeeder extends Seeder
 
     public function run(): void
     {
+        SeedAccounts::refuseProduction();
+
         $tenant = Tenant::updateOrCreate(['id' => self::TENANT_ID], [
             'name' => 'MUPS — Dr. Moin Uddin Pain Solution',
             'plan_tier' => 'clinic',
@@ -92,31 +94,31 @@ class MupsSeeder extends Seeder
         Domain::firstOrCreate(['domain' => 'drmups.com'], ['tenant_id' => self::TENANT_ID]);
         Domain::firstOrCreate(['domain' => 'www.drmups.com'], ['tenant_id' => self::TENANT_ID]);
 
-        User::withoutGlobalScope(TenantScope::class)->updateOrCreate(
+        SeedAccounts::upsert(
             ['email' => 'admin@mups.local', 'tenant_id' => self::TENANT_ID],
             [
                 'name' => 'MUPS Admin',
-                'password' => Hash::make('pass'),
                 'role' => User::ROLE_ADMIN,
             ],
+            'pass',
         );
 
-        $doctorUser = User::withoutGlobalScope(TenantScope::class)->updateOrCreate(
+        $doctorUser = SeedAccounts::upsert(
             ['email' => 'doctor@mups.local', 'tenant_id' => self::TENANT_ID],
             [
                 'name' => 'Dr. Mohammad Moin Uddin',
-                'password' => Hash::make('pass'),
                 'role' => User::ROLE_DOCTOR,
             ],
+            'pass',
         );
 
-        User::withoutGlobalScope(TenantScope::class)->updateOrCreate(
+        SeedAccounts::upsert(
             ['email' => 'staff@mups.local', 'tenant_id' => self::TENANT_ID],
             [
                 'name' => 'MUPS Desk',
-                'password' => Hash::make('pass'),
                 'role' => User::ROLE_STAFF,
             ],
+            'pass',
         );
 
         tenancy()->initialize($tenant);

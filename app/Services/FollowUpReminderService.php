@@ -25,12 +25,14 @@ class FollowUpReminderService
     public function processTenant(): array
     {
         $targetDate = now()->addDays(self::DAYS_BEFORE)->toDateString();
+        $dayAfter = now()->addDays(self::DAYS_BEFORE + 1)->toDateString();
         $smsSent = 0;
         $whatsappQueued = 0;
         $failed = 0;
 
         $visits = VisitRecord::query()
-            ->whereDate('follow_up_date', $targetDate)
+            ->where('follow_up_date', '>=', $targetDate)
+            ->where('follow_up_date', '<', $dayAfter)
             ->with(['booking.bookable.doctor'])
             ->get();
 

@@ -13,8 +13,8 @@ use App\Models\ScheduleSession;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Models\WebPage;
+use App\Support\SeedAccounts;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 
 class DatabaseSeeder extends Seeder
 {
@@ -24,9 +24,12 @@ class DatabaseSeeder extends Seeder
         // `creating` hook that assigns tenant_id, so every scoped insert would
         // fail its NOT NULL constraint.
 
-        User::withoutGlobalScope(\App\Scopes\TenantScope::class)->updateOrCreate(
+        SeedAccounts::refuseProduction();
+
+        SeedAccounts::upsert(
             ['email' => 'super@demo.com'],
-            ['name' => 'Super Admin', 'password' => Hash::make('pass'), 'role' => 'super_admin']
+            ['name' => 'Super Admin', 'role' => 'super_admin'],
+            'pass',
         );
 
         $this->seedSoloTenant();
@@ -51,15 +54,17 @@ class DatabaseSeeder extends Seeder
 
         Domain::firstOrCreate(['domain' => 'solo.localhost'], ['tenant_id' => 'solo']);
 
-        User::withoutGlobalScope(\App\Scopes\TenantScope::class)->updateOrCreate(['email' => 'admin@solo.com'], [
-            'name' => 'Solo Admin', 'password' => Hash::make('pass'),
-            'role' => User::ROLE_ADMIN, 'tenant_id' => 'solo',
-        ]);
+        SeedAccounts::upsert(
+            ['email' => 'admin@solo.com'],
+            ['name' => 'Solo Admin', 'role' => User::ROLE_ADMIN, 'tenant_id' => 'solo'],
+            'pass',
+        );
 
-        User::withoutGlobalScope(\App\Scopes\TenantScope::class)->updateOrCreate(['email' => 'doctor@solo.com'], [
-            'name' => 'Dr. Shamim Ahmed', 'password' => Hash::make('pass'),
-            'role' => User::ROLE_DOCTOR, 'tenant_id' => 'solo',
-        ]);
+        SeedAccounts::upsert(
+            ['email' => 'doctor@solo.com'],
+            ['name' => 'Dr. Shamim Ahmed', 'role' => User::ROLE_DOCTOR, 'tenant_id' => 'solo'],
+            'pass',
+        );
 
         // Solo demo = doctor working alone. Keep queue_runner at the default
         // (staff-run); with no staff user, effectiveQueueRunner() falls back to
@@ -305,10 +310,11 @@ class DatabaseSeeder extends Seeder
 
         Domain::firstOrCreate(['domain' => 'demo.localhost'], ['tenant_id' => 'demo']);
 
-        User::withoutGlobalScope(\App\Scopes\TenantScope::class)->updateOrCreate(['email' => 'admin@demo.com'], [
-            'name' => 'Demo Admin', 'password' => Hash::make('pass'),
-            'role' => User::ROLE_ADMIN, 'tenant_id' => 'demo',
-        ]);
+        SeedAccounts::upsert(
+            ['email' => 'admin@demo.com'],
+            ['name' => 'Demo Admin', 'role' => User::ROLE_ADMIN, 'tenant_id' => 'demo'],
+            'pass',
+        );
 
         tenancy()->initialize($tenant);
 

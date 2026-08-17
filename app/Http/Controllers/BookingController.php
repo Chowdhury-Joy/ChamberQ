@@ -9,6 +9,7 @@ use App\Models\Doctor;
 use App\Models\LabCollectionSlot;
 use App\Models\LabTest;
 use App\Models\Patient;
+use App\Models\PlatformSetting;
 use App\Models\Prescription;
 use App\Models\ScheduleSession;
 use App\Services\BookingService;
@@ -160,7 +161,8 @@ class BookingController extends Controller
 
     public function store(Request $request, BookingService $bookingService)
     {
-        $maxDate = now()->addDays(60)->toDateString();
+        $horizonDays = PlatformSetting::patientBookingHorizonDays();
+        $maxDate = PlatformSetting::onlineBookingMaxDate();
 
         $validated = $request->validate([
             'bookable_type' => 'required|in:session,lab',
@@ -195,7 +197,7 @@ class BookingController extends Controller
             'age' => ['nullable', 'integer', 'min:0', 'max:120'],
         ], [
             'booking_date.after_or_equal' => __('Please choose today or a future date.'),
-            'booking_date.before_or_equal' => __('Please choose a date within the next 60 days.'),
+            'booking_date.before_or_equal' => __('Please choose a date within the next :days days.', ['days' => $horizonDays]),
             'patient_phone.regex' => __('Please enter a valid Bangladeshi mobile number, for example 01712345678.'),
             'whatsapp_phone.regex' => __('Please enter a valid Bangladeshi WhatsApp number, for example 01712345678.'),
         ]);
@@ -302,7 +304,7 @@ class BookingController extends Controller
      */
     public function availability(Request $request, BookingService $bookingService)
     {
-        $maxDate = now()->addDays(60)->toDateString();
+        $maxDate = PlatformSetting::onlineBookingMaxDate();
 
         $validated = $request->validate([
             'bookable_type' => 'required|in:session,lab',

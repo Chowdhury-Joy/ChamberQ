@@ -184,6 +184,11 @@ class ChamberScreenTodayTest extends TestCase
         $this->assertSame('Called one', $visitRoom['now_serving_name']);
         $this->assertCount(3, $visitRoom['next']);
         $this->assertSame([2, 3, 4], array_column($visitRoom['next'], 'serial'));
+        $this->assertArrayNotHasKey('current_booking_id', $visitRoom);
+        $this->assertSame(
+            $this->visit->id.'|1|'.$called->called_at->timestamp,
+            $visitRoom['announce_key']
+        );
     }
 
     public function test_chamber_screen_is_live_queue_gated_and_tenant_isolated(): void

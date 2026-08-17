@@ -12,8 +12,8 @@ use App\Models\ScheduleSession;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Scopes\TenantScope;
+use App\Support\SeedAccounts;
 use Illuminate\Database\Seeder;
-use Illuminate\Support\Facades\Hash;
 
 /**
  * Dr. Moin Uddin — Pain Solution (Chittagong), first Stations client.
@@ -29,6 +29,8 @@ class PainSolutionStationsSeeder extends Seeder
 
     public function run(): void
     {
+        SeedAccounts::refuseProduction();
+
         $tenant = Tenant::updateOrCreate(['id' => self::TENANT_ID], [
             'name' => 'Pain Solution Center',
             'plan_tier' => 'clinic',
@@ -66,40 +68,40 @@ class PainSolutionStationsSeeder extends Seeder
             ['tenant_id' => self::TENANT_ID],
         );
 
-        User::withoutGlobalScope(TenantScope::class)->updateOrCreate(
+        SeedAccounts::upsert(
             ['email' => 'admin@painsolution.local', 'tenant_id' => self::TENANT_ID],
             [
                 'name' => 'ChamberQ Support',
-                'password' => Hash::make('pass'),
                 'role' => User::ROLE_ADMIN,
             ],
+            'pass',
         );
 
-        User::withoutGlobalScope(TenantScope::class)->updateOrCreate(
+        SeedAccounts::upsert(
             ['email' => 'owner@painsolution.local', 'tenant_id' => self::TENANT_ID],
             [
                 'name' => 'Dr. Moin Uddin (Owner)',
-                'password' => Hash::make('pass'),
                 'role' => User::ROLE_ADMIN,
             ],
+            'pass',
         );
 
-        $doctorUser = User::withoutGlobalScope(TenantScope::class)->updateOrCreate(
+        $doctorUser = SeedAccounts::upsert(
             ['email' => 'doctor@painsolution.local', 'tenant_id' => self::TENANT_ID],
             [
                 'name' => 'Dr. Moin Uddin',
-                'password' => Hash::make('pass'),
                 'role' => User::ROLE_DOCTOR,
             ],
+            'pass',
         );
 
-        User::withoutGlobalScope(TenantScope::class)->updateOrCreate(
+        SeedAccounts::upsert(
             ['email' => 'staff@painsolution.local', 'tenant_id' => self::TENANT_ID],
             [
                 'name' => 'Desk Staff',
-                'password' => Hash::make('pass'),
                 'role' => User::ROLE_STAFF,
             ],
+            'pass',
         );
 
         tenancy()->initialize($tenant);
