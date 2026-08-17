@@ -46,7 +46,20 @@ class TenancyUrl
      */
     public static function screenBookmarkUrl(string $tenantId, int $sessionId): string
     {
-        $path = '/screen/'.$sessionId;
+        return static::tvBookmarkUrl($tenantId, '/screen/'.$sessionId);
+    }
+
+    /**
+     * Combined waiting-room TV for every live sitting in one chamber today.
+     */
+    public static function chamberScreenBookmarkUrl(string $tenantId, int $chamberId): string
+    {
+        return static::tvBookmarkUrl($tenantId, '/screen/chamber/'.$chamberId);
+    }
+
+    private static function tvBookmarkUrl(string $tenantId, string $path): string
+    {
+        $path = '/'.ltrim($path, '/');
 
         if (static::usesPathPrefix()) {
             return url(static::url($path));

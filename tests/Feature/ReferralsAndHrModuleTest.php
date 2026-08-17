@@ -9,6 +9,7 @@ use App\Models\Doctor;
 use App\Models\Domain;
 use App\Models\Employee;
 use App\Models\FeeCatalogItem;
+use App\Models\PayrollPayment;
 use App\Models\ReferralCommission;
 use App\Models\ReferringDoctor;
 use App\Models\ScheduleSession;
@@ -18,8 +19,10 @@ use App\Services\HrPayrollService;
 use App\Services\ReferralCommissionService;
 use App\Services\StationsTillService;
 use Carbon\Carbon;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use InvalidArgumentException;
 use Tests\TestCase;
 
 class ReferralsAndHrModuleTest extends TestCase
@@ -229,6 +232,97 @@ class ReferralsAndHrModuleTest extends TestCase
             'category' => ChamberCashEntry::CATEGORY_SALARY,
             'amount' => 22000,
         ]);
+    }
+
+    /**
+     * Two staff (or one double-click) paying out the same commission.
+     *
+     * The Filament bulk action hands the service a snapshot of what the table
+     * showed, so each request carries its own copy of the row — the second
+     * request's copy still says "pending" even after the first has paid. The
+     * status must therefore be re-read at payout time, not trusted from the
+     * selection.
+     */
+    public function test_a_second_payout_on_a_stale_selection_does_not_pay_the_doctor_twice(): void
+    {
+        $booking = $this->booking($this->visitSession, ['referring_doctor_id' => $this->referrer->id]);
+        app(StationsTillService::class)->recordPatientIncome($booking, $this->staff, $this->visitFee, 1000, 0);
+        $commissionId = ReferralCommission::query()->where('booking_id', $booking->id)->firstOrFail()->id;
+
+        // Two independent snapshots — this is what two concurrent requests hold.
+        $selectionA = ReferralCommission::query()->whereKey($commissionId)->get();
+        $selectionB = ReferralCommission::query()->whereKey($commissionId)->get();
+
+        app(ReferralCommissionService::class)->markPaid($selectionA, $this->staff, ChamberCashEntry::METHOD_CASH);
+
+        try {
+            app(ReferralCommissionService::class)->markPaid($selectionB, $this->staff, ChamberCashEntry::METHOD_CASH);
+            $this->fail('The second payout should have been rejected as already paid.');
+        } catch (InvalidArgumentException) {
+            // Expected: nothing left pending to pay.
+        }
+
+        $this->assertSame(
+            1,
+            ChamberCashEntry::query()->where('category', ChamberCashEntry::CATEGORY_REFERRAL_PAYOUT)->count(),
+            'The referring doctor was paid twice.',
+        );
+    }
+
+    /**
+     * A salary expense must never outlive the payroll row that explains it.
+     *
+     * The duplicate read in recordSalaryPayment() is a friendly early message,
+     * not a guard — two submissions can both pass it. Here the conflicting
+     * payroll row lands in exactly that window (injected on cash-entry
+     * creation), so the payroll insert hits the unique index. The cashbook must
+     * not keep the expense.
+     */
+    public function test_a_rejected_payroll_row_leaves_no_salary_expense_behind(): void
+    {
+        $employee = Employee::create([
+            'name' => 'Nurse Rina',
+            'monthly_salary_taka' => 22000,
+        ]);
+
+        $period = now()->format('Y-m');
+        $injected = false;
+
+        ChamberCashEntry::created(function () use ($employee, $period, &$injected): void {
+            if ($injected) {
+                return;
+            }
+            $injected = true;
+
+            // A concurrent request that committed its payroll row first.
+            PayrollPayment::create([
+                'employee_id' => $employee->id,
+                'pay_period' => $period,
+                'amount_taka' => 22000,
+                'paid_on' => now()->toDateString(),
+                'method' => ChamberCashEntry::METHOD_CASH,
+                'recorded_by' => $this->staff->id,
+            ]);
+        });
+
+        try {
+            app(HrPayrollService::class)->recordSalaryPayment(
+                $employee,
+                $this->staff,
+                $period,
+                22000,
+                ChamberCashEntry::METHOD_CASH,
+            );
+            $this->fail('The duplicate salary should have been rejected.');
+        } catch (InvalidArgumentException|UniqueConstraintViolationException) {
+            // Expected: the pay period is already recorded.
+        }
+
+        $this->assertSame(
+            0,
+            ChamberCashEntry::query()->where('category', ChamberCashEntry::CATEGORY_SALARY)->count(),
+            'A salary expense was left in the cashbook with no payroll row to explain it.',
+        );
     }
 
     /**

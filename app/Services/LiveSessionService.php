@@ -10,6 +10,7 @@ use App\Models\LiveSession;
 use App\Models\ScheduleSession;
 use App\Models\Tenant;
 use Carbon\Carbon;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 
 class LiveSessionService
@@ -34,14 +35,33 @@ class LiveSessionService
             // lookup misses and the insert trips the unique index.
             $today = Carbon::today()->toDateString();
 
-            $liveSession = LiveSession::firstOrCreate([
+            $lookup = [
                 'tenant_id' => tenant('id'),
                 'schedule_session_id' => $scheduleSession->id,
                 'session_date' => $today,
-            ], [
+            ];
+
+            $create = fn (): LiveSession => LiveSession::firstOrCreate($lookup, [
                 'status' => 'active',
                 'started_at' => now(),
             ]);
+
+            try {
+                // Nested transaction = savepoint. A unique-key miss on SQLite
+                // aborts the whole outer transaction unless the INSERT sits in
+                // its own savepoint. MySQL continues after the error either way.
+                $liveSession = DB::transaction($create);
+            } catch (UniqueConstraintViolationException) {
+                // Two staff pressed Start together: the SELECT missed, then
+                // the other request inserted, then our INSERT hit the unique
+                // on (tenant_id, schedule_session_id, session_date). Re-read
+                // the winner's row instead of exploding.
+                try {
+                    $liveSession = LiveSession::where($lookup)->first() ?? $create();
+                } catch (UniqueConstraintViolationException) {
+                    $liveSession = LiveSession::where($lookup)->firstOrFail();
+                }
+            }
 
             $liveSession = $this->lockSession($liveSession);
 
@@ -104,6 +124,13 @@ class LiveSessionService
                 
             if ($retryBooking) {
                 return $this->setAsCurrent($liveSession, $retryBooking);
+            }
+
+            // Room is not free: someone is being called or is with the doctor.
+            // Skipped-patient retry above still runs first so a due retry is
+            // not starved; waiting serials below must not step over them.
+            if ($currentBooking && in_array($currentBooking->status, ['called', 'in_chamber'], true)) {
+                return $currentBooking;
             }
 
             // Normal queue: next waiting patient
@@ -191,7 +218,7 @@ class LiveSessionService
 
             $booking = $booking->fresh();
 
-            if (! $booking || ! in_array($booking->status, ['waiting', 'skipped'], true)) {
+            if (! $booking || ! in_array($booking->status, ['waiting', 'skipped', 'called'], true)) {
                 return null;
             }
 
@@ -221,7 +248,7 @@ class LiveSessionService
             $liveSession = $this->lockSession($liveSession);
             $booking = $liveSession->currentBooking;
 
-            if ($booking) {
+            if ($booking && $booking->status === 'called') {
                 $booking->update([
                     'status' => 'in_chamber',
                     'in_chamber_at' => now(),
@@ -397,6 +424,10 @@ class LiveSessionService
         return DB::transaction(function () use ($liveSession) {
             $liveSession = $this->lockSession($liveSession);
             $booking = $liveSession->currentBooking;
+            if ($booking && in_array($booking->status, ['in_chamber', 'completed', 'no_show'], true)) {
+                return $booking;
+            }
+
             if ($booking) {
                 $skipCount = $booking->skip_count + 1;
 

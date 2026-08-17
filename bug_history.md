@@ -1259,3 +1259,104 @@
  <root_cause>`DailyRoster` lives in `App\Filament\TenantAdmin\Pages` and called `app(PatientService::class)` without `use App\Services\PatientService`, so PHP looked for a Filament page of that name.</root_cause>
  <prevention_rule>Any Filament page under `Pages\` that calls a `*Service` class must import `App\Services\…`. A missing import is a 500, not a “class not used” warning. Pinned by `DailyRosterWalkInPickerTest`.</prevention_rule>
 </bug>
+
+## 2026-08-16T22:00:09+0600
+
+<bug>
+  <category>Business_Logic</category>
+  <symptom>A referring doctor could be paid twice for the same commissions. Two staff on the Referral ledger — or one double-click on **Mark selected as paid** — each posted a full `referral_payout` expense to the cashbook and each marked the rows paid, so the money went out twice and the second write overwrote `payout_cash_entry_id`, leaving the first expense orphaned and unreconcilable. A failure partway through the loop was the mirror image: the expense was posted for the full total while some rows stayed `pending`, to be paid again on the next payout.</symptom>
+  <root_cause>`ReferralCommissionService::markPaid()` filtered the passed collection in memory with `isPending()` and then updated each row unconditionally, with no transaction and no lock. That collection is a Filament bulk selection — a snapshot of what the table showed when it rendered, held separately per request — so both requests saw "pending" even after one had paid.</root_cause>
+  <prevention_rule>A money-moving bulk action never trusts the selection it is handed. Re-read the rows inside the transaction under `lockForUpdate()`, filter on the status column there, and keep the status condition on the write itself.</prevention_rule>
+</bug>
+
+<bug>
+  <category>Business_Logic</category>
+  <symptom>A salary could be recorded in the cashbook twice. On a double-submit the second request slipped past the "already recorded?" read, wrote a second `salary` expense — which succeeded — and only then hit the `(tenant_id, employee_id, pay_period)` unique index on the payroll row. The payroll ledger stayed correct with one row while the cashbook kept an expense nothing explained, and the desk saw a raw database error and retried, which could add more.</symptom>
+  <root_cause>`HrPayrollService::recordSalaryPayment()` wrote the `ChamberCashEntry` before the `PayrollPayment` and outside any transaction, so the guarded write was the second one and the unguarded money write had already committed. The pre-read was treated as the guard, but two submissions can both pass it.</root_cause>
+  <prevention_rule>When a unique index is the real guard, the write it guards and every money row written alongside it belong in the same transaction — and the constraint violation is translated into the same message the pre-check gives, so staff do not retry into more orphans.</prevention_rule>
+</bug>
+
+## 2026-08-16T23:47:15+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>Clinic nav hover slid the label away and left a blank; extra pages in the bar 404’d on path-tenant URLs like /mups/.</symptom>
+ <root_cause>`.fx-btn-track` was one line tall with overflow:hidden, so the duplicate hover label was clipped inside the track before the slide. Extra WebPage hrefs used the raw slug `/centres` instead of `tenant_safe_href()`, which does not add `/{tenant}`.</root_cause>
+ <prevention_rule>Dual-label hover clips on the outer button only — never on the sliding track. Clinic nav (and any page-builder path CTA) must use `tenant_safe_href()` / `clinic_nav_items()`, not a bare `/slug`.</prevention_rule>
+</bug>
+
+## 2026-08-17T11:32:16+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>On the sitting hours form, the live minutes-each helper showed a heading **Minutes each hint** and the sentence “At this window that is about 10 minutes each.” Staff could not tell what the number meant.</symptom>
+ <root_cause>`Placeholder::make('minutes_each_hint')->label('')` — an empty string is falsy, so Filament falls back to a humanised field name. The English string was also broken.</root_cause>
+ <prevention_rule>Give instructional Placeholders a real `->label()`, or `->hiddenLabel()`. Never `->label('')`. Assert the rendered HTML does not contain the raw field name.</prevention_rule>
+</bug>
+
+## 2026-08-17T15:30:27+0600
+
+<bug>
+ <category>Code</category>
+ <symptom>`startSession()` threw `ModelNotFoundException` when two staff pressed Start together: the unique index caught the second insert, but SQLite had already aborted the outer transaction, so the follow-up `firstOrFail()` found nothing.</symptom>
+ <root_cause>The unique-constraint catch lived inside one SQLite transaction. A failed INSERT poisons that transaction; a later SELECT in the same txn cannot see the winner's row.</root_cause>
+ <prevention_rule>On SQLite, put the INSERT that may trip a unique index in a nested savepoint (`DB::transaction` inside the outer txn), then re-read. Do not `firstOrFail()` after a unique miss in the same aborted transaction.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Code</category>
+ <symptom>Offline replay of Patient arrived or Skip recorded `ok: true` even when the booking was in the wrong status, so the desk thought the tap landed.</symptom>
+ <root_cause>`patientArrived()` / `skipPatient()` no-op'd wrong statuses in the service, but `OfflineSyncService::applyQueueEvent()` still marked the replay successful.</root_cause>
+ <prevention_rule>An offline queue replay that cannot apply must throw `OfflineQueueConflictException`. A silent service no-op is not an acknowledgement.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>`sendVisitToIntervention()` could leave an orphan procedure booking with no `related_booking_id` if the follow-up `update()` failed after create.</symptom>
+ <root_cause>Create and the link/`procedure_status` writes were separate, not one transaction.</root_cause>
+ <prevention_rule>A handoff that creates a booking and then stamps the link on it belongs in one `DB::transaction` — including **Send to counseling**.</prevention_rule>
+</bug>
+
+<bug>
+ <category>CRO</category>
+ <symptom>A patient could self-book onto the intervention (OT) list from the public website by posting that sitting's `bookable_id`.</symptom>
+ <root_cause>`BookingController::create()` loaded every `ScheduleSession`; `store()` trusted `bookable_id` with no kind check.</root_cause>
+ <prevention_rule>Public wizard lists and `POST /api/bookings` must both require `ScheduleSession::isPubliclyBookable()`. A view filter is not a control.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Code</category>
+ <symptom>Two bookings on the same day could receive the same voucher number. The desk then opened the wrong patient's row once that number was shown on the ticket.</symptom>
+ <root_cause>`nextNumberForDate()` committed (releasing `lockForUpdate`) before the caller wrote `voucher_number`. The index was not unique.</root_cause>
+ <prevention_rule>Hold the lock across read and write (`assignIfNeeded()`), and enforce uniqueness with `bookings_voucher_unique`. Never return a number that is not yet reserved.</prevention_rule>
+</bug>
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>On the existing single-room waiting-room TV, the calling tile uses `background: var(--color-primary); color: #fff`. A pale brand colour is white-on-white; a dark navy hides the serial.</symptom>
+ <root_cause>`theme_color` is an unconstrained ColorPicker (`BrandingSettings`), yet it was asked to carry calling-state contrast.</root_cause>
+ <prevention_rule>Calling-state colour on a waiting-room TV must be a fixed high-contrast pair (white numerals; inverted off-white tile). Confine `theme_color` to chrome such as a header rule. Do not use brand colour for digits that must be read at distance.</prevention_rule>
+</bug>
+
+## 2026-08-17T15:48:27+0600
+
+<bug>
+ <category>Code</category>
+ <symptom>Every public clinic page (MUPS homepage, departments, extra WebPages) returned a 500: `Call to undefined function clinic_nav_items()`.</symptom>
+ <root_cause>The header/footer were switched to `clinic_nav_items()` and `architecture.md` described the helper, but it was never added to `app/helpers.php`.</root_cause>
+ <prevention_rule>A helper named in a Blade layout must exist in `app/helpers.php` (autoloaded) before the layout ships. A documented function that is not in the repo is a production crash, not a TODO.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>Daily Roster **Collect fee** with **Cash + online** stored the whole fee as one method (or rejected with no split fields). Cashbook already collected ৳300 cash + ৳500 bKash correctly; the roster path did not.</symptom>
+ <root_cause>`ChamberCashService::recordPatientIncome()` already accepted `cashTaka` / `onlineTaka` / `onlineMethod`, but the Daily Roster form never showed those fields and never passed them in.</root_cause>
+ <prevention_rule>When two screens write the same money service, the desk form on both must collect the same split. A service that accepts mixed payment is not mixed until the Filament action passes the split.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Code</category>
+ <symptom>A clinic homepage heading containing `&lt;img onerror=…&gt;` could execute as HTML after the word-split animation ran. Blade had escaped the heading; JS put it back as markup.</symptom>
+ <root_cause>`public/js/clinic-clireo.js` `splitWords()` read `textContent` then assigned `innerHTML` with the raw words, unescaped.</root_cause>
+ <prevention_rule>If you must write `innerHTML`, escape every untrusted fragment first. Prefer `textContent` / `createElement`. Escaping in Blade does not survive a later `innerHTML` rebuild.</prevention_rule>
+</bug>

@@ -173,6 +173,17 @@ $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
         ->middleware(['auth', 'throttle:20,1', 'tenant.module:live_queue'])
         ->name($routeName('staff.push'));
 
+    // Combined waiting-room TV for every live sitting in one chamber today.
+    Route::get('/screen/chamber/{chamber}', [ScreenController::class, 'showChamberToday'])
+        ->middleware(['throttle:60,1', 'tenant.module:live_queue'])
+        ->whereNumber('chamber')
+        ->name($routeName('tenant.screen.chamber.today'));
+
+    Route::get('/api/screen/chamber/{chamber}', [ScreenController::class, 'apiChamberToday'])
+        ->middleware(['throttle:120,1', 'tenant.module:live_queue'])
+        ->whereNumber('chamber')
+        ->name($routeName('api.tenant.screen.chamber.today'));
+
     // Stable "always today" outdoor TV links — bookmark once per schedule session.
     Route::get('/screen/{session}', [ScreenController::class, 'showToday'])
         ->middleware(['throttle:60,1', 'tenant.module:live_queue'])
@@ -198,6 +209,7 @@ $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
         ->name($routeName('api.tenant.screen'));
 
     Route::get('/bookings/{booking}', [BookingController::class, 'show'])
+        ->middleware(['throttle:60,1'])
         ->name($routeName('bookings.show'));
 
     Route::get('/portal', [BookingController::class, 'portal'])

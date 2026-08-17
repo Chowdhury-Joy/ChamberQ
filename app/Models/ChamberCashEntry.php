@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Casts\DateOnly;
 use App\Models\Concerns\BelongsToTenant;
+use App\Services\CashCategoryService;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -160,27 +161,25 @@ class ChamberCashEntry extends Model
     public function cashbookSubjectLabel(): string
     {
         if (! $this->isIncome()) {
-            return self::expenseCategories()[$this->category] ?? $this->category;
+            return app(CashCategoryService::class)->labelFor($this->category);
         }
 
-        if ($this->category === self::CATEGORY_OTHER_INCOME) {
-            return self::incomeCategories()[self::CATEGORY_OTHER_INCOME];
-        }
+        if ($this->category === self::CATEGORY_PATIENT) {
+            if ($this->feeCatalogItem) {
+                return $this->feeCatalogItem->label;
+            }
 
-        if ($this->feeCatalogItem) {
-            return $this->feeCatalogItem->label;
-        }
+            if (filled($this->fee_type)) {
+                $doctor = $this->booking ? Doctor::resolveForBooking($this->booking) : null;
+                $types = $doctor?->feeTypes() ?? [];
 
-        if (filled($this->fee_type)) {
-            $doctor = $this->booking ? Doctor::resolveForBooking($this->booking) : null;
-            $types = $doctor?->feeTypes() ?? [];
-
-            if (isset($types[$this->fee_type])) {
-                return $types[$this->fee_type]['label'];
+                if (isset($types[$this->fee_type])) {
+                    return $types[$this->fee_type]['label'];
+                }
             }
         }
 
-        return self::incomeCategories()[self::CATEGORY_PATIENT] ?? __('Consultation');
+        return app(CashCategoryService::class)->labelFor($this->category);
     }
 
     public function feeCatalogItem(): BelongsTo

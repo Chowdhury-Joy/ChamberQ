@@ -3,11 +3,28 @@
  * Ported from public/previews/clireo-homepage.html on 2026-08-07.
  *
  * Section-by-section reveal, Framer-like word blur on headings, mobile drawer,
- * treatments carousel and stat counters. Every effect is skipped under
+ * treatments carousel, Voices of relief auto-scroll, and stat counters. Every effect is skipped under
  * prefers-reduced-motion; the page must be fully readable with JS off, so
  * nothing here may be the only thing that makes content visible.
  */
 (function () {
+
+  function syncClinicNavHeight() {
+    var nav = document.querySelector('.nav');
+    if (!nav) return;
+    document.documentElement.style.setProperty(
+      '--clinic-nav-height',
+      Math.ceil(nav.getBoundingClientRect().height) + 'px'
+    );
+  }
+  syncClinicNavHeight();
+  window.addEventListener('resize', syncClinicNavHeight);
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (ch) {
+      return ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch];
+    });
+  }
 
   // Framer-like word blur reveal
   function splitWords(el, emWords) {
@@ -21,7 +38,7 @@
       var clean = w.replace(/[^a-zA-Z0-9+]/g, '');
       var isEm = emWords.some(function (e) { return e.toLowerCase() === clean.toLowerCase(); });
       var cls = 'fx-word' + (isEm ? ' fx-em' : '');
-      return '<span class="' + cls + '">' + w + '</span>' + (i < parts.length - 1 ? ' ' : '');
+      return '<span class="' + cls + '">' + escapeHtml(w) + '</span>' + (i < parts.length - 1 ? ' ' : '');
     }).join('');
     el.dataset.fxSplit = '1';
   }
@@ -428,6 +445,118 @@
     }
     updateTreatDim();
   }
+
+  /*
+   * Voices of relief (`testimonials`). The strip already swipes with no JS.
+   * This adds a slow auto-advance that loops, pauses while the reader hovers
+   * or focuses a card, and never runs under prefers-reduced-motion.
+   */
+  (function initReviewScroller() {
+    var scroller = document.querySelector('[data-review-scroll]');
+    if (!scroller) return;
+
+    var originals = Array.prototype.slice.call(
+      scroller.querySelectorAll('.review-card:not([data-review-clone])')
+    );
+    if (originals.length < 3) return;
+
+    var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var paused = false;
+    var jumping = false;
+    var timer = null;
+    var resumeTimer = null;
+
+    function step() {
+      var card = scroller.querySelector('.review-card');
+      if (!card) return 320;
+      var gap = parseFloat(getComputedStyle(scroller).columnGap || getComputedStyle(scroller).gap) || 24;
+      return card.getBoundingClientRect().width + gap;
+    }
+
+    function originalBlock() {
+      return originals.length * step();
+    }
+
+    function overflows() {
+      return originalBlock() > scroller.clientWidth + 8;
+    }
+
+    function ensureClones() {
+      if (scroller.dataset.reviewLooped === '1' || !overflows()) return;
+      originals.forEach(function (card) {
+        var clone = card.cloneNode(true);
+        clone.setAttribute('data-review-clone', '1');
+        clone.setAttribute('aria-hidden', 'true');
+        scroller.appendChild(clone);
+      });
+      scroller.dataset.reviewLooped = '1';
+    }
+
+    function wrapIfNeeded() {
+      if (jumping || scroller.dataset.reviewLooped !== '1') return;
+      var block = originalBlock();
+      if (block < 2) return;
+      if (scroller.scrollLeft >= block - 2) {
+        jumping = true;
+        scroller.scrollLeft = scroller.scrollLeft - block;
+        requestAnimationFrame(function () { jumping = false; });
+      }
+    }
+
+    function tick() {
+      if (paused || document.hidden || !overflows()) return;
+      scroller.scrollBy({ left: step(), behavior: 'smooth' });
+    }
+
+    function start() {
+      if (reduceMotion || timer || !overflows()) return;
+      timer = setInterval(tick, 4200);
+    }
+
+    function stop() {
+      if (timer) {
+        clearInterval(timer);
+        timer = null;
+      }
+    }
+
+    function pauseForReader() {
+      paused = true;
+      clearTimeout(resumeTimer);
+    }
+
+    function resumeSoon() {
+      clearTimeout(resumeTimer);
+      resumeTimer = setTimeout(function () { paused = false; }, 1800);
+    }
+
+    ensureClones();
+
+    scroller.addEventListener('scroll', function () {
+      if (jumping) return;
+      wrapIfNeeded();
+    }, { passive: true });
+    scroller.addEventListener('scrollend', wrapIfNeeded);
+
+    scroller.addEventListener('pointerenter', pauseForReader);
+    scroller.addEventListener('pointerleave', function () { paused = false; });
+    scroller.addEventListener('focusin', pauseForReader);
+    scroller.addEventListener('focusout', resumeSoon);
+    scroller.addEventListener('touchstart', pauseForReader, { passive: true });
+    scroller.addEventListener('touchend', resumeSoon, { passive: true });
+    scroller.addEventListener('wheel', function () {
+      pauseForReader();
+      resumeSoon();
+    }, { passive: true });
+
+    window.addEventListener('resize', function () {
+      ensureClones();
+      if (!overflows()) stop();
+      else start();
+    });
+
+    start();
+  })();
 
   /*
    * Image slider (`image_carousel`). Progressive enhancement only: the track

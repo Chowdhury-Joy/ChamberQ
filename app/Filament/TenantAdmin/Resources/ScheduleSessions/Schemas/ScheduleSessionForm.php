@@ -5,7 +5,6 @@ namespace App\Filament\TenantAdmin\Resources\ScheduleSessions\Schemas;
 use App\Models\ScheduleSession;
 use App\Support\DayOfWeek;
 use App\Support\ScheduleSessionPace;
-use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\TimePicker;
@@ -40,7 +39,7 @@ class ScheduleSessionForm
                     ->native(false)
                     ->visible(fn (): bool => tenant()?->hasStations() ?? false)
                     ->required(fn (): bool => tenant()?->hasStations() ?? false)
-                    ->helperText(__('Consult rows are free — Collect fee stays hidden. Visit and intervention use the fee catalogue.')),
+                    ->helperText(__('Counseling and leftover Consult rows are free — Collect fee stays hidden. Visit and intervention use the fee catalogue.')),
                 TimePicker::make('start_time')
                     ->required()
                     ->seconds(false)
@@ -65,24 +64,23 @@ class ScheduleSessionForm
                     ->numeric()
                     ->minValue(1)
                     ->live()
-                    ->helperText(__('At least 1 patient per session.')),
-                Placeholder::make('minutes_each_hint')
-                    ->label('')
-                    ->content(function (Get $get): string {
+                    ->helperText(function (Get $get): string {
                         $minutes = self::minutesEachFromState($get);
 
                         if ($minutes === null) {
-                            return '';
+                            return __('At least 1 patient per session.');
                         }
 
-                        return __('At this window that is about :minutes minutes each. Does that match a real consult?', [
+                        if ($minutes < ScheduleSessionPace::TIGHT_MINUTES_WARNING) {
+                            return __('Only :minutes min each — too short.', [
+                                'minutes' => $minutes,
+                            ]);
+                        }
+
+                        return __('About :minutes min each — real consult?', [
                             'minutes' => $minutes,
                         ]);
-                    })
-                    ->visible(fn (Get $get): bool => self::minutesEachFromState($get) !== null)
-                    ->extraAttributes(fn (Get $get): array => ScheduleSessionPace::TIGHT_MINUTES_WARNING > (self::minutesEachFromState($get) ?? 99)
-                        ? ['class' => 'text-warning-600 dark:text-warning-400 font-medium']
-                        : ['class' => 'text-gray-600 dark:text-gray-400']),
+                    }),
                 TextInput::make('walk_in_overflow_cap')
                     ->label(__('Extra walk-in seats'))
                     ->numeric()

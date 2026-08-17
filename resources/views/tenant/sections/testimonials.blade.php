@@ -18,7 +18,7 @@
             <h2 class="fx-heading" data-fx-words data-reveal-block data-reveal-kind="heading">{{ $heading }}</h2>
         </div>
 
-        <div class="review-scroller" data-reveal-block data-reveal-kind="fade">
+        <div class="review-scroller" data-review-scroll data-reveal-block data-reveal-kind="fade">
             @foreach($items as $item)
                 <article class="review-card">
                     <p>{{ $item['quote'] ?? '' }}</p>

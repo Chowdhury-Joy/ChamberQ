@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="94.9mm" height="56.8mm" viewBox="0 0 94.9 56.8"
+     role="img" aria-label="ChamberQ card — back">
+  <title>ChamberQ card — back</title>
+  
+  <g id="Back">
+    <rect width="94.9" height="56.8" fill="#ecf6f5"/>
+    
+    <image href="chamberq-logomark.png" xlink:href="chamberq-logomark.png"
+           x="24.556" y="23.600"
+           width="6.337" height="7.200"/>
+    <image href="chamberq-wordmark.png" xlink:href="chamberq-wordmark.png"
+           x="33.094" y="24.000"
+           width="37.250" height="6.400"/>
+    <text x="9.0" y="44.599999999999994" text-anchor="start"
+          font-family="Helvetica Neue, Helvetica, Arial, sans-serif"
+          font-size="2.35" fill="#0f766e">01818-614349</text>
+    <text x="9.0" y="47.8" text-anchor="start"
+          font-family="Helvetica Neue, Helvetica, Arial, sans-serif"
+          font-size="2.35" fill="#0f766e">owner@chamberq.com</text>
+    <text x="85.9" y="44.599999999999994" text-anchor="end"
+          font-family="Helvetica Neue, Helvetica, Arial, sans-serif"
+          font-size="2.35" fill="#0f766e">Abu Raihan Villa, House 33, Lane-C</text>
+    <text x="85.9" y="47.8" text-anchor="end"
+          font-family="Helvetica Neue, Helvetica, Arial, sans-serif"
+          font-size="2.35" fill="#0f766e">Road-1, South Khulshi, Chattogram</text>
+  </g>
+</svg>

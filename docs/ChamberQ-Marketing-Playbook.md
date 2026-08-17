@@ -249,7 +249,8 @@ Use this order on calls or in video:
 
 ## 11. Qualification checklist (before promising go-live)
 
-Ask / confirm:
+Quick filter on the sales call (do not promise go-live until these are clear):
+
 - [ ] Solo (1 doctor) or Clinic (multi-doctor / labs)?
 - [ ] How many chamber locations? (Solo max 5)
 - [ ] Typical session times / seats per session
@@ -257,6 +258,8 @@ Ask / confirm:
 - [ ] Do they want SMS confirmations? (explain prepaid packs)
 - [ ] Prefer platform URL (`chamberq.com/name`) or later custom domain?
 - [ ] Any partner referral / discount code?
+
+**After they pay / say yes:** send the WhatsApp cover in `docs/ChamberQ-Onboarding-Questionnaire.md` plus this form: https://docs.google.com/forms/d/e/1FAIpQLSdMi6Mt7xZrnBz9JBF6TTjKS4Y5SOSB8TsZhKzO6-cgvl_GDQ/viewform — not a 16-question chat. Part A (name, email, address, sitting table) is enough to turn booking on. Website copy and photos can follow.
 
 Hand off to Super Admin / onboarding with those notes.
 

@@ -95,7 +95,6 @@ class ClinicContentController extends Controller
             'themeColor' => $tenant?->theme_color ?: '#1B2978',
             'locale' => app()->getLocale(),
             'banglaHomepage' => $tenant?->hasFeature('bangla_homepage') ?? false,
-            'customPages' => \App\Models\WebPage::where('is_published', true)->where('slug', '!=', '/')->get(),
         ];
     }
 }

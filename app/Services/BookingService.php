@@ -8,6 +8,7 @@ use App\Models\Booking;
 use App\Models\Doctor;
 use App\Models\LabCollectionSlot;
 use App\Models\LabTest;
+use App\Models\PlatformSetting;
 use App\Models\ScheduleSession;
 use App\Models\SlotBlock;
 use App\Support\BdPhone;
@@ -36,7 +37,7 @@ class BookingService
     }
 
     /**
-     * Open bookable+date pairs within the booking window, soonest first.
+     * Open bookable+date pairs within the platform booking window, soonest first.
      *
      * Uses three queries (bookings grouped, slot blocks, bookables already loaded)
      * rather than one availability check per candidate date.
@@ -44,12 +45,15 @@ class BookingService
      * @param  iterable<ScheduleSession|LabCollectionSlot>  $bookables
      * @return list<array{bookable_id: int|string, date: string, remaining: int, cap: int, booked: int}>
      */
-    public function openDatesFor(iterable $bookables, int $withinDays = 60, int $limit = 20): array
+    public function openDatesFor(iterable $bookables, ?int $withinDays = null, int $limit = 20): array
     {
         $bookables = collect($bookables)->filter();
         if ($bookables->isEmpty()) {
             return [];
         }
+
+        $withinDays ??= PlatformSetting::patientBookingHorizonDays();
+        $withinDays = max(PlatformSetting::MIN_HORIZON_DAYS, min(PlatformSetting::MAX_HORIZON_DAYS, $withinDays));
 
         $capMode = tenant()->slot_cap_mode ?? 'per_session';
         if ($capMode === 'per_day') {
@@ -129,6 +133,8 @@ class BookingService
         ?int $age = null,
         bool $allowOverflow = false,
         ?string $repeatSeriesId = null,
+        bool $allowEndedToday = false,
+        ?bool $seenBeforeSoftware = null,
     ): Booking {
         $patientPhone = $this->normalizeBdPhone($patientPhone);
         $whatsappPhone = filled($whatsappPhone) ? $this->normalizeBdPhone($whatsappPhone) : null;
@@ -136,7 +142,7 @@ class BookingService
             $whatsappPhone = null;
         }
 
-        $booking = DB::transaction(function () use ($bookable, $bookingDate, $patientName, $patientPhone, $labTestIds, $patientId, $wantsEarlierDate, $whatsappPhone, $shareClinicalHistory, $nid, $age, $allowOverflow, $repeatSeriesId) {
+        $booking = DB::transaction(function () use ($bookable, $bookingDate, $patientName, $patientPhone, $labTestIds, $patientId, $wantsEarlierDate, $whatsappPhone, $shareClinicalHistory, $nid, $age, $allowOverflow, $repeatSeriesId, $allowEndedToday, $seenBeforeSoftware) {
             $tenant = tenant();
             $capMode = $tenant->slot_cap_mode ?? 'per_session';
             if ($capMode === 'per_day') {
@@ -164,7 +170,7 @@ class BookingService
                 );
             }
 
-            $availability = $this->availabilitySnapshot($lockedBookable, $bookingDate, $capMode, $allowOverflow);
+            $availability = $this->availabilitySnapshot($lockedBookable, $bookingDate, $capMode, $allowOverflow, $allowEndedToday);
 
             if ($availability['blocked']) {
                 throw BookingUnavailableException::dateBlocked();
@@ -181,6 +187,7 @@ class BookingService
                 $shareClinicalHistory,
                 $nid,
                 $age,
+                $seenBeforeSoftware,
             );
 
             $duplicateQuery = Booking::where('bookable_type', get_class($lockedBookable))
@@ -264,11 +271,11 @@ class BookingService
     /**
      * @return array{available: bool, blocked: bool, day_mismatch: bool, cap: int, booked: int, remaining: int}
      */
-    private function availabilitySnapshot(Model $bookable, string $bookingDate, string $capMode, bool $allowOverflow = false): array
+    private function availabilitySnapshot(Model $bookable, string $bookingDate, string $capMode, bool $allowOverflow = false, bool $allowEndedToday = false): array
     {
         $date = Carbon::parse($bookingDate);
         $dayMismatch = $date->dayOfWeek !== (int) $bookable->day_of_week;
-        $blocked = $this->isDateBlocked($bookable, $bookingDate);
+        $blocked = $this->isDateBlocked($bookable, $bookingDate, $allowEndedToday);
         $cap = $bookable instanceof ScheduleSession
             ? ($allowOverflow ? ScheduleSessionPace::staffCap($bookable) : ScheduleSessionPace::publishedCap($bookable))
             : max(0, (int) $bookable->slot_cap);
@@ -285,9 +292,9 @@ class BookingService
         ];
     }
 
-    private function isDateBlocked(Model $bookable, string $bookingDate): bool
+    private function isDateBlocked(Model $bookable, string $bookingDate, bool $allowEndedToday = false): bool
     {
-        if ($this->sessionAlreadyEndedToday($bookable, $bookingDate)) {
+        if (! $allowEndedToday && $this->sessionAlreadyEndedToday($bookable, $bookingDate)) {
             return true;
         }
 

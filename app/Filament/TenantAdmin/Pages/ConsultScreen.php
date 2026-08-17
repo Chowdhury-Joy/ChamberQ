@@ -11,6 +11,7 @@ use App\Models\Patient;
 use App\Models\VisitRecord;
 use App\Filament\TenantAdmin\Concerns\AppliesVisitNotesDrafts;
 use App\Filament\TenantAdmin\Support\CompleteBookingWithVisitNotes;
+use App\Filament\TenantAdmin\Support\StationsHandoffForm;
 use App\Filament\TenantAdmin\Support\VisitNotesFormSchema;
 use App\Services\CrossTenantClinicalHistoryService;
 use App\Services\LiveSessionService;
@@ -103,6 +104,9 @@ class ConsultScreen extends Page implements HasActions
             ->with([
                 'currentBooking.patient',
                 'currentBooking.visitRecord.prescription.items',
+                'currentBooking.bookable',
+                'currentBooking.procedureBookings.bookable',
+                'currentBooking.relatedBooking.bookable',
                 'scheduleSession.doctor',
                 'scheduleSession.chamber',
             ])
@@ -292,11 +296,26 @@ class ConsultScreen extends Page implements HasActions
 
     protected function getHeaderActions(): array
     {
+        $handoff = [];
+        if (tenant()?->hasStations()) {
+            $handoff = [
+                StationsHandoffForm::bookAction(
+                    Action::make('bookIntervention'),
+                    fn (): ?Booking => $this->currentBooking,
+                ),
+                StationsHandoffForm::moveAction(
+                    Action::make('moveIntervention'),
+                    fn (): ?Booking => $this->currentBooking,
+                ),
+            ];
+        }
+
         if (! auth()->user()?->canOperateQueueControls()) {
-            return [];
+            return $handoff;
         }
 
         return [
+            ...$handoff,
             Action::make('patientArrived')
                 ->label('Patient arrived')
                 ->icon('heroicon-o-check')
@@ -501,6 +520,10 @@ class ConsultScreen extends Page implements HasActions
 
         if (! $booking || $booking->status !== 'in_chamber' || ! $user?->canRecordVisitNotes()) {
             return null;
+        }
+
+        if (! $user->attachesVisitPaperOnConsult()) {
+            unset($data['report_photos'], $data['prescription_photo']);
         }
 
         $record = $visitRecordService->saveForCompletedBooking($booking, $user, $data);

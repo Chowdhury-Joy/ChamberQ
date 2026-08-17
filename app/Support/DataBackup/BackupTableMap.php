@@ -42,6 +42,7 @@ class BackupTableMap
         'bookings',
         'booking_push_subscriptions',
         'staff_push_subscriptions',
+        'cash_categories',
         'chamber_cash_entries',
         'live_sessions',
         'offline_queue_events',
@@ -72,6 +73,7 @@ class BackupTableMap
         'domains',
         'billing_payments',
         'commissions',
+        'platform_settings',
     ];
 
     /** @return list<string> */

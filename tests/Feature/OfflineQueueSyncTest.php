@@ -154,10 +154,41 @@ class OfflineQueueSyncTest extends TestCase
 
         $syncId2 = '44444444-4444-4444-8444-444444444444';
 
+        // #1 is still being called. Call next must not step over them — the
+        // same room-free rule as QueueAdvanceGuardTest, including on replay.
         $this->actingAs($this->doctor)
             ->postJson($this->host.'/api/offline/sync', [
                 'items' => [[
                     'id' => $syncId2,
+                    'type' => OfflineSyncService::TYPE_QUEUE_CALL_NEXT,
+                    'live_session_id' => $this->liveSession->id,
+                    'expected_current_booking_id' => $b1->id,
+                ]],
+            ])
+            ->assertOk()
+            ->assertJsonPath('results.0.ok', true);
+
+        $b2->refresh();
+        $this->liveSession->refresh();
+        $this->assertSame('waiting', $b2->status);
+        $this->assertSame($b1->id, $this->liveSession->current_booking_id);
+
+        $this->actingAs($this->doctor)
+            ->postJson($this->host.'/api/offline/sync', [
+                'items' => [[
+                    'id' => '45454545-4545-4545-8545-454545454545',
+                    'type' => OfflineSyncService::TYPE_QUEUE_COMPLETE_WITHOUT_ADVANCE,
+                    'live_session_id' => $this->liveSession->id,
+                    'expected_current_booking_id' => $b1->id,
+                ]],
+            ])
+            ->assertOk()
+            ->assertJsonPath('results.0.ok', true);
+
+        $this->actingAs($this->doctor)
+            ->postJson($this->host.'/api/offline/sync', [
+                'items' => [[
+                    'id' => '46464646-4646-4646-8646-464646464646',
                     'type' => OfflineSyncService::TYPE_QUEUE_CALL_NEXT,
                     'live_session_id' => $this->liveSession->id,
                     'expected_current_booking_id' => $b1->id,

@@ -33,6 +33,13 @@ class PatientsTable
                     ->counts('bookings')
                     ->label(__('Visits'))
                     ->sortable(),
+                TextColumn::make('seen_before_software')
+                    ->label(__('Paper file'))
+                    ->badge()
+                    ->formatStateUsing(fn (mixed $state): string => $state
+                        ? __('Before ChamberQ')
+                        : '—')
+                    ->color(fn (mixed $state): string => $state ? 'info' : 'gray'),
                 TextColumn::make('display_age')
                     ->label(__('Age'))
                     ->state(fn (Patient $record): string => (string) ($record->displayAge() ?? '—')),

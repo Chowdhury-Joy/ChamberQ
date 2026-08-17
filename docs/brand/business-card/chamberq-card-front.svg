@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink"
+     width="94.9mm" height="56.8mm" viewBox="0 0 94.9 56.8"
+     role="img" aria-label="ChamberQ card — front">
+  <title>ChamberQ card — front</title>
+  
+  <g id="Front">
+    <rect width="94.9" height="56.8" fill="#0f766e"/>
+    <image href="chamberq-logomark-white.png" xlink:href="chamberq-logomark-white.png"
+           x="37.768" y="17.400"
+           width="19.364" height="22.000" preserveAspectRatio="xMidYMid meet"/>
+  </g>
+</svg>

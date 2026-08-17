@@ -34,6 +34,11 @@ class BookingOpenDatesTest extends TestCase
     {
         parent::setUp();
 
+        // Freeze on a Monday morning so "today" is a sitting day that has not
+        // ended. Carbon::now()->next(MONDAY) skips today when today is Monday,
+        // and the API still offers today — the test then asserts the wrong week.
+        Carbon::setTestNow(Carbon::parse('2026-08-10 10:00:00'));
+
         $this->tenant = Tenant::create(['id' => 'open-dates', 'slot_cap_mode' => 'per_session']);
         Domain::create(['domain' => 'open-dates.localhost', 'tenant_id' => 'open-dates']);
 
@@ -51,10 +56,21 @@ class BookingOpenDatesTest extends TestCase
             'slot_cap' => 1,
         ]);
 
-        $this->firstMonday = Carbon::now()->next(Carbon::MONDAY)->format('Y-m-d');
-        $this->secondMonday = Carbon::parse($this->firstMonday)->addWeek()->format('Y-m-d');
+        $monday = Carbon::now()->startOfDay();
+        if (! $monday->isMonday()) {
+            $monday = $monday->next(Carbon::MONDAY);
+        }
+        $this->firstMonday = $monday->toDateString();
+        $this->secondMonday = $monday->copy()->addWeek()->toDateString();
 
         tenancy()->end();
+    }
+
+    protected function tearDown(): void
+    {
+        Carbon::setTestNow();
+
+        parent::tearDown();
     }
 
     public function test_open_dates_skips_full_next_sitting_and_returns_later_one(): void

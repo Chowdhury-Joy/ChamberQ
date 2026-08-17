@@ -54,7 +54,10 @@ class BookingController extends Controller
     {
         $chambers = Chamber::all();
         $doctors = Doctor::all();
-        $sessions = ScheduleSession::with(['chamber', 'doctor'])->get();
+        $sessions = ScheduleSession::with(['chamber', 'doctor'])
+            ->get()
+            ->filter(fn (ScheduleSession $session): bool => $session->isPubliclyBookable())
+            ->values();
         $labSlots = LabCollectionSlot::with('chamber')->get();
         $hasLabTests = tenant()->hasFeature('lab_tests');
 
@@ -208,6 +211,12 @@ class BookingController extends Controller
         $bookable = $validated['bookable_type'] === 'session'
             ? ScheduleSession::findOrFail($validated['bookable_id'])
             : LabCollectionSlot::findOrFail($validated['bookable_id']);
+
+        if ($bookable instanceof ScheduleSession && ! $bookable->isPubliclyBookable()) {
+            throw ValidationException::withMessages([
+                'bookable_id' => __('That sitting cannot be booked online. Please choose a visit sitting.'),
+            ]);
+        }
 
         $normalizedPhone = $this->normalizeBdPhone($validated['patient_phone']);
 

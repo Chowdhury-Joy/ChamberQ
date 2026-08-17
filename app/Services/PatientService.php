@@ -57,6 +57,9 @@ class PatientService
      *                                           updates the patient row. Null leaves
      *                                           an existing flag alone; new rows default true.
      * @param  string|null  $nid  Optional BD NID (10 or 13 digits). Blank is fine.
+     * @param  bool|null  $seenBeforeSoftware  Staff-only: this person was treated
+     *                                         here before ChamberQ. Null leaves
+     *                                         an existing flag alone.
      */
     public function resolveForBooking(
         string $phone,
@@ -65,6 +68,7 @@ class PatientService
         ?bool $shareClinicalHistory = null,
         ?string $nid = null,
         ?int $age = null,
+        ?bool $seenBeforeSoftware = null,
     ): Patient {
         $phone = $this->normalizePhone($phone);
         $name = trim($name);
@@ -79,7 +83,7 @@ class PatientService
                 // so a submitted name is not that person's real name — writing
                 // it back would overwrite "Fatima Rahman" with "F. R.". Staff
                 // correct spellings in the Patients resource instead.
-                $this->applyBookingUpdates($patient, $phone, $name, $nid, $shareClinicalHistory, $age, rename: false);
+                $this->applyBookingUpdates($patient, $phone, $name, $nid, $shareClinicalHistory, $age, rename: false, seenBeforeSoftware: $seenBeforeSoftware);
 
                 return $patient->fresh() ?? $patient;
             }
@@ -89,7 +93,7 @@ class PatientService
             $byNid = Patient::query()->where('nid', $nid)->first();
 
             if ($byNid) {
-                $this->applyBookingUpdates($byNid, $phone, $name, $nid, $shareClinicalHistory, $age, rename: true);
+                $this->applyBookingUpdates($byNid, $phone, $name, $nid, $shareClinicalHistory, $age, rename: true, seenBeforeSoftware: $seenBeforeSoftware);
 
                 return $byNid->fresh() ?? $byNid;
             }
@@ -103,7 +107,7 @@ class PatientService
             ->first(fn (Patient $patient) => $this->normalizeName($patient->name) === $normalizedName);
 
         if ($existing) {
-            $this->applyBookingUpdates($existing, $phone, $name, $nid, $shareClinicalHistory, $age, rename: true);
+            $this->applyBookingUpdates($existing, $phone, $name, $nid, $shareClinicalHistory, $age, rename: true, seenBeforeSoftware: $seenBeforeSoftware);
 
             return $existing->fresh() ?? $existing;
         }
@@ -113,6 +117,7 @@ class PatientService
             'phone' => $phone,
             'nid' => $nid,
             'share_clinical_history' => $shareClinicalHistory ?? true,
+            'seen_before_software' => $seenBeforeSoftware ?? false,
             'age' => $age,
             // Stamped so `displayAge()` can carry a stated age forward; a bare
             // number with no date drifts wrong the moment a year passes.
@@ -131,6 +136,7 @@ class PatientService
         ?bool $shareClinicalHistory,
         ?int $age,
         bool $rename,
+        ?bool $seenBeforeSoftware = null,
     ): void {
         $updates = [];
 
@@ -160,9 +166,25 @@ class PatientService
             $updates['age_recorded_at'] = today();
         }
 
+        if ($seenBeforeSoftware !== null
+            && (bool) $patient->seen_before_software !== $seenBeforeSoftware) {
+            $updates['seen_before_software'] = $seenBeforeSoftware;
+        }
+
         if ($updates !== []) {
             $patient->update($updates);
         }
+    }
+
+    /**
+     * Staff override: this person was (or was not) treated here on paper
+     * before ChamberQ. Does not invent visit notes.
+     */
+    public function setSeenBeforeSoftware(Patient $patient, bool $seen): Patient
+    {
+        $patient->update(['seen_before_software' => $seen]);
+
+        return $patient->fresh() ?? $patient;
     }
 
     /**
@@ -183,6 +205,10 @@ class PatientService
         }
 
         return DB::transaction(function () use ($keep, $remove) {
+            if ($remove->seen_before_software && ! $keep->seen_before_software) {
+                $keep->update(['seen_before_software' => true]);
+            }
+
             $this->repointPatientOwnedRows($remove->id, $keep->id);
 
             $remove->delete();

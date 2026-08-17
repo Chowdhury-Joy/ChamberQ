@@ -8,6 +8,8 @@ use App\Models\LeaveRequest;
 use App\Models\PayrollPayment;
 use App\Models\User;
 use Carbon\CarbonInterface;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 class HrPayrollService
@@ -44,33 +46,51 @@ class HrPayrollService
         }
 
         $paidOn ??= now(OperationalReportService::TIMEZONE);
-        $cashEntry = null;
 
-        if ($postToCashbook) {
-            $cashEntry = ChamberCashEntry::create([
-                'direction' => ChamberCashEntry::DIRECTION_EXPENSE,
-                'amount' => $amountTaka,
-                'category' => ChamberCashEntry::CATEGORY_SALARY,
-                'method' => $method,
-                'recorded_by' => $user->id,
-                'occurred_on' => $paidOn->toDateString(),
-                'note' => __('Salary :period — :name', [
-                    'period' => $payPeriod,
-                    'name' => $employee->name,
-                ]).(filled($note) ? ' — '.$note : ''),
-            ]);
+        // One transaction. The duplicate read above is a friendly early
+        // message, not the guard — two submissions can both pass it, and the
+        // cash entry used to be written first and committed on its own. The
+        // second submission therefore posted a salary expense, then hit the
+        // (tenant_id, employee_id, pay_period) unique index on the payroll row:
+        // the ledger stayed correct while the cashbook kept an expense with
+        // nothing to explain it, and staff saw a raw database error and retried.
+        try {
+            return DB::transaction(function () use ($employee, $user, $payPeriod, $amountTaka, $method, $paidOn, $note, $postToCashbook): PayrollPayment {
+                $cashEntry = null;
+
+                if ($postToCashbook) {
+                    $cashEntry = ChamberCashEntry::create([
+                        'direction' => ChamberCashEntry::DIRECTION_EXPENSE,
+                        'amount' => $amountTaka,
+                        'category' => ChamberCashEntry::CATEGORY_SALARY,
+                        'method' => $method,
+                        'recorded_by' => $user->id,
+                        'occurred_on' => $paidOn->toDateString(),
+                        'note' => __('Salary :period — :name', [
+                            'period' => $payPeriod,
+                            'name' => $employee->name,
+                        ]).(filled($note) ? ' — '.$note : ''),
+                    ]);
+                }
+
+                return PayrollPayment::create([
+                    'employee_id' => $employee->id,
+                    'pay_period' => $payPeriod,
+                    'amount_taka' => $amountTaka,
+                    'paid_on' => $paidOn->toDateString(),
+                    'method' => $method,
+                    'cash_entry_id' => $cashEntry?->id,
+                    'note' => $note,
+                    'recorded_by' => $user->id,
+                ]);
+            });
+        } catch (UniqueConstraintViolationException) {
+            // Same message the early read gives, so the race and the ordinary
+            // case read identically at the desk instead of as a database error.
+            throw new InvalidArgumentException(__('Salary for :period is already recorded for this employee.', [
+                'period' => $payPeriod,
+            ]));
         }
-
-        return PayrollPayment::create([
-            'employee_id' => $employee->id,
-            'pay_period' => $payPeriod,
-            'amount_taka' => $amountTaka,
-            'paid_on' => $paidOn->toDateString(),
-            'method' => $method,
-            'cash_entry_id' => $cashEntry?->id,
-            'note' => $note,
-            'recorded_by' => $user->id,
-        ]);
     }
 
     public function reviewLeave(LeaveRequest $request, User $reviewer, bool $approve, ?string $reviewNote = null): LeaveRequest

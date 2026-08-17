@@ -12,6 +12,7 @@
     use App\Support\InvestigationChips;
     use App\Support\PrescriptionTiming;
 
+    $canAttachVisitPaper = auth()->user()?->attachesVisitPaperOnConsult() ?? false;
     $written = $this->currentVisitRecord;
     $lastVisitRecord = $this->lastVisitRecord;
     $patient = $this->currentPatient;
@@ -147,6 +148,7 @@
         reportPhotos: {{ \Illuminate\Support\Js::from($reportPhotoPaths) }},
         reportPhotoPreviews: {{ \Illuminate\Support\Js::from($reportPhotoPreviews) }},
         reportPhotoUploadUrl: {{ \Illuminate\Support\Js::from(tenant_web_url('/api/visit-media/upload-report-photo')) }},
+        canAttachVisitPaper: {{ \Illuminate\Support\Js::from($canAttachVisitPaper) }},
         followUpRelative: {{ \Illuminate\Support\Js::from($state['follow_up_relative'] ?? '') }},
         followUpDate: {{ \Illuminate\Support\Js::from($state['follow_up_date'] ?? '') }},
         followUpNote: {{ \Illuminate\Support\Js::from($state['follow_up_note'] ?? '') }},
@@ -487,6 +489,7 @@
                             <button
                                 type="button"
                                 class="cs-rx-desk__remove"
+                                x-show="canAttachVisitPaper"
                                 x-on:click="removeReportPhoto(index)"
                                 title="{{ __('Remove') }}"
                             >×</button>
@@ -494,10 +497,10 @@
                     </template>
                     <label
                         class="cs-rx-desk__report-add"
-                        x-show="reportPhotos.length < 8"
+                        x-show="canAttachVisitPaper && reportPhotos.length < 8"
                         x-cloak
                     >
-                        <span>{{ __('Add photos') }}</span>
+                        <span>{{ __('Scan') }}</span>
                         <input
                             type="file"
                             accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
@@ -505,7 +508,27 @@
                             x-on:change="uploadReportPhoto($event)"
                         >
                     </label>
+                    <label
+                        class="cs-rx-desk__report-add cs-rx-desk__report-add--photo"
+                        x-show="canAttachVisitPaper && reportPhotos.length < 8"
+                        x-cloak
+                    >
+                        <span>{{ __('Take photo') }}</span>
+                        <input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+                            capture="environment"
+                            multiple
+                            x-on:change="uploadReportPhoto($event)"
+                        >
+                    </label>
                 </div>
+                <p class="cs-rx-desk__hint" x-show="canAttachVisitPaper" x-cloak>
+                    {{ __('Use the desk scanner first. Take a photo only if there is no scanner.') }}
+                </p>
+                <p class="cs-rx-desk__hint" x-show="!canAttachVisitPaper" x-cloak>
+                    {{ __('Staff scan papers at the desk.') }}
+                </p>
                 <p class="cs-rx-desk__hint" x-show="reportPhotoError" x-text="reportPhotoError" x-cloak></p>
             </section>
 
@@ -955,6 +978,7 @@
             reportPhotos: Array.isArray(config.reportPhotos) ? config.reportPhotos : [],
             reportPhotoPreviews: Array.isArray(config.reportPhotoPreviews) ? config.reportPhotoPreviews : [],
             reportPhotoUploadUrl: config.reportPhotoUploadUrl || '',
+            canAttachVisitPaper: Boolean(config.canAttachVisitPaper),
             reportPhotoError: '',
             followUpRelative: config.followUpRelative || '',
             followUpDate: config.followUpDate || '',
@@ -1391,7 +1415,7 @@
             },
 
             async sendReportPhoto(file) {
-                if (!this.reportPhotoUploadUrl) {
+                if (!this.canAttachVisitPaper || !this.reportPhotoUploadUrl) {
                     return;
                 }
 

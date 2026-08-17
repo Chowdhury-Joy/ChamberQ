@@ -15,6 +15,8 @@ class ScheduleSession extends Model
 
     public const KIND_INTERVENTION = 'intervention';
 
+    public const KIND_COUNSELING = 'counseling';
+
     protected $fillable = [
         'chamber_id',
         'doctor_id',
@@ -49,6 +51,7 @@ class ScheduleSession extends Model
             self::KIND_CONSULT => __('Consult (free)'),
             self::KIND_VISIT => __('Visit'),
             self::KIND_INTERVENTION => __('Intervention'),
+            self::KIND_COUNSELING => __('Counseling (free)'),
         ];
     }
 
@@ -69,6 +72,24 @@ class ScheduleSession extends Model
     public function isInterventionKind(): bool
     {
         return $this->kind === self::KIND_INTERVENTION;
+    }
+
+    public function isFreeKind(): bool
+    {
+        return in_array($this->kind, [self::KIND_CONSULT, self::KIND_COUNSELING], true);
+    }
+
+    /**
+     * Public wizard + POST /api/bookings. Intervention and counseling are
+     * staff-pushed only. Legacy rows with no kind stay bookable.
+     */
+    public function isPubliclyBookable(): bool
+    {
+        if (! filled($this->kind)) {
+            return true;
+        }
+
+        return in_array($this->kind, [self::KIND_VISIT, self::KIND_CONSULT], true);
     }
 
     /** Label for outdoor screen: session name + time window. */

@@ -11,6 +11,8 @@
 :root {
   /* Overridden per tenant by the page shell. */
   --brand: #1B2978;
+  /* Fallback until JS measures the real bar (logo + padding + 1px border). */
+  --clinic-nav-height: calc(clamp(3.5rem, 5vw, 4rem) + (var(--space-md) * 2) + 1px);
 
   --ink: var(--brand);
   --ink-deep: color-mix(in srgb, var(--brand) 72%, #000000);
@@ -75,7 +77,15 @@ button { cursor: pointer; border: 0; background: none; }
   height: 3.5rem;
   width: auto;
 }
-.nav-links { display: none; gap: 1.5rem; align-items: center; }
+.nav-links {
+  display: none;
+  flex: 1 1 auto;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 0.45rem 1rem;
+  align-items: center;
+  min-width: 0;
+}
 .nav-links a { color: var(--muted); font-size: 0.95rem; font-weight: 500; }
 .nav-links a:hover { color: var(--ink); }
 .btn-contact {
@@ -132,9 +142,11 @@ button { cursor: pointer; border: 0; background: none; }
 .nav-lang a.is-active { color: var(--ink); }
 .drawer-panel .nav-lang { padding-left: 0; border-left: 0; margin-top: 0.75rem; }
 
-/* Hero */
+/* Hero — remaining viewport under the nav, so nav + hero are one screen */
 .hero {
-  position: relative; min-height: 100vh; min-height: 100dvh;
+  position: relative;
+  min-height: calc(100vh - var(--clinic-nav-height));
+  min-height: calc(100dvh - var(--clinic-nav-height));
   color: var(--white); display: flex; align-items: center;
   padding-top: var(--space-section-y);
   padding-bottom: var(--space-section-y);
@@ -583,7 +595,7 @@ h2.fx-heading,
 .center .section-lead, .center h2 { margin-left: auto; margin-right: auto; }
 
 /* About — centered statement + 3 equal cards (Clireo layout) */
-.about-head { max-width: 45rem; margin: 0 auto; text-align: center; }
+.about-head { max-width: 62rem; margin: 0 auto; text-align: center; }
 .about-head h2,
 .about-head h2.fx-heading {
   font-size: clamp(1.5rem, 1rem + 1.5vw, 2.5rem); /* → 40px */
@@ -1095,7 +1107,9 @@ html.has-js [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"
   margin-top: var(--space-xxl);
   padding-bottom: 0.5rem;
   -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
 }
+.review-scroller::-webkit-scrollbar { display: none; }
 @media (min-width: 640px) and (max-width: 1199.98px) {
   .review-scroller {
     /* Tablet: ~1.8 cards */
@@ -1104,11 +1118,11 @@ html.has-js [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"
 }
 @media (min-width: 1200px) {
   .review-scroller {
-    /* Desktop: 4 cards in view */
-    grid-auto-columns: calc((100% - 3 * var(--space-lg)) / 4);
-    overflow-x: visible;
-    scroll-snap-type: none;
-    padding-bottom: 0;
+    /* Desktop: ~3 cards in view, rest scroll */
+    grid-auto-columns: calc((100% - 2 * var(--space-lg)) / 3);
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 0.5rem;
   }
 }
 .review-card {
@@ -1117,12 +1131,16 @@ html.has-js [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"
   border-radius: 18px;
   padding: 1.35rem;
   text-align: left;
+  display: flex;
+  flex-direction: column;
+  min-height: 100%;
 }
 .review-card p {
   margin: 0 0 1.25rem;
   font-size: 0.98rem;
   color: var(--ink-deep);
   text-align: left;
+  flex: 1;
 }
 .review-person {
   display: flex;
@@ -1143,6 +1161,22 @@ html.has-js [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"
 
 /* Doctors — uses .grid-cards; swipe peeks on small screens */
 .doc-grid { margin-top: var(--space-xxl); }
+@media (min-width: 1200px) {
+  #doctors .docs-split:has(.doc-grid[data-card-count="1"]) {
+    display: grid;
+    grid-template-columns: minmax(16rem, 0.95fr) minmax(16rem, 1.05fr);
+    gap: var(--space-xxl);
+    align-items: center;
+  }
+  #doctors .docs-split:has(.doc-grid[data-card-count="1"]) .treat-head {
+    flex-direction: column;
+    align-items: flex-start;
+    margin-bottom: 0;
+  }
+  #doctors .docs-split:has(.doc-grid[data-card-count="1"]) .doc-grid {
+    margin-top: 0;
+  }
+}
 @media (max-width: 1199.98px) {
   .doc-grid.grid-cards {
     display: grid;
@@ -1166,7 +1200,23 @@ html.has-js [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"
     grid-auto-columns: calc((100% - var(--space-lg)) / 1.8);
   }
 }
+/*
+ * One doctor (MUPS “The Founder”): keep the portrait stacked — photo on top,
+ * name under it. A one-card swipe row is pointless, so turn that off from
+ * 640px up. Multi-doctor grids still use the usual card row.
+ */
+@media (min-width: 640px) {
+  .doc-grid.grid-cards[data-card-count="1"] {
+    display: grid;
+    grid-auto-flow: row;
+    grid-template-columns: 1fr;
+    grid-auto-columns: unset;
+    overflow: visible;
+    scroll-snap-type: none;
+  }
+}
 .doc-card { border-radius: 18px; overflow: hidden; background: var(--white); }
+.doc-grid[data-card-count="1"] .doc-card { background: transparent; }
 .doc-card img {
   width: 100%; aspect-ratio: 3/4; object-fit: cover; object-position: center center;
 }
@@ -1274,9 +1324,22 @@ html.has-js [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"
 }
 
 /* Locations */
-.loc-facts { margin: 1.1rem 0 0; display: grid; grid-template-columns: auto 1fr; gap: 0.35rem 0.9rem; }
-.loc-facts dt { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); align-self: center; }
+.loc-facts {
+  margin: 1.1rem 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.85rem;
+}
+.loc-facts dt { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
 .loc-facts dd { margin: 0; font-size: 0.92rem; color: var(--ink); }
+.loc-hours,
+.loc-phone { display: flex; flex-direction: column; align-items: flex-start; gap: 0.3rem; }
+.loc-hours dd {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  line-height: 1.35;
+}
 .loc-card .btn-outline { margin-top: 1.35rem; }
 .loc-single {
   margin-top: var(--space-xxl);
@@ -1355,9 +1418,10 @@ html.has-js [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"
 
 /* Stats */
 .stats-band {
-  margin-top: var(--space-xxl); background: var(--ink); color: var(--white);
+  margin-top: 0; background: var(--ink); color: var(--white);
   border-radius: 22px; text-align: center;
 }
+#doctors .stats-band { margin-top: var(--space-xxl); }
 .stats-band h3 { margin: 0 0 1.5rem; font-size: clamp(1.5rem, 1rem + 1.5vw, 2.5rem); font-weight: 400; letter-spacing: -0.045em; line-height: 1.1; }
 .stat .num { font-size: clamp(2rem, 4vw, 2.75rem); font-weight: 500; line-height: 1; }
 .stat .lbl { margin-top: 0.35rem; font-size: 0.88rem; color: rgba(255,255,255,0.7); }
@@ -1584,7 +1648,9 @@ html.has-js .fx-word.is-in {
 .hero-title .fx-line:nth-child(2) .fx-word:nth-child(1) { animation-delay: 0.11s; }
 .hero-title .fx-line:nth-child(2) .fx-word:nth-child(2) { animation-delay: 0.15s; }
 
-/* Dual-text hover — Framer pattern: clip to one line, stack two labels */
+/* Dual-text hover — Framer pattern: the *button* clips to one line; the track
+ * is two stacked labels and slides up. Do not give the track its own height +
+ * overflow:hidden — that clips the second label so hover slides to a blank. */
 .fx-btn {
   --fx-line: 1.15em;
   position: relative;
@@ -1598,8 +1664,6 @@ html.has-js .fx-word.is-in {
 .fx-btn-track {
   display: flex;
   flex-direction: column;
-  height: var(--fx-line);
-  overflow: hidden;
   transition: transform 0.45s var(--ease);
   line-height: var(--fx-line);
 }

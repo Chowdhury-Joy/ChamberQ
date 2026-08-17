@@ -67,6 +67,7 @@ class StationsTillTest extends TestCase
 
     protected function tearDown(): void
     {
+        Carbon::setTestNow();
         tenancy()->end();
 
         parent::tearDown();
@@ -206,11 +207,167 @@ class StationsTillTest extends TestCase
         ]);
 
         $visitBooking = $this->booking();
-        $procedure = app(StationsHandoffService::class)->sendVisitToIntervention($visitBooking);
+        $procedure = app(StationsHandoffService::class)->sendVisitToIntervention(
+            $visitBooking,
+            Carbon::today()->toDateString(),
+        );
 
         $this->assertSame($visitBooking->id, $procedure->related_booking_id);
         $this->assertSame(Booking::PROCEDURE_LOGGED, $procedure->procedure_status);
         $this->assertSame($intervention->id, $procedure->bookable_id);
+        $this->assertTrue($procedure->booking_date->isToday());
+
+        Carbon::setTestNow();
+    }
+
+    public function test_same_day_handoff_works_after_morning_intervention_hours(): void
+    {
+        Carbon::setTestNow(Carbon::today()->setTime(17, 30));
+
+        $intervention = ScheduleSession::create([
+            'chamber_id' => $this->chamber->id,
+            'doctor_id' => $this->doctor->id,
+            'day_of_week' => Carbon::today()->dayOfWeek,
+            'session_name' => 'Morning OT',
+            'kind' => ScheduleSession::KIND_INTERVENTION,
+            'start_time' => '08:00',
+            'end_time' => '10:00',
+            'slot_cap' => 10,
+        ]);
+
+        $visitBooking = $this->booking();
+        $procedure = app(StationsHandoffService::class)->sendVisitToIntervention(
+            $visitBooking,
+            Carbon::today()->toDateString(),
+        );
+
+        $this->assertSame($intervention->id, $procedure->bookable_id);
+        $this->assertTrue($procedure->booking_date->isToday());
+        $this->assertSame($visitBooking->id, $procedure->related_booking_id);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_handoff_can_book_the_next_intervention_sitting(): void
+    {
+        Carbon::setTestNow(Carbon::today()->setTime(17, 30));
+
+        $intervention = ScheduleSession::create([
+            'chamber_id' => $this->chamber->id,
+            'doctor_id' => $this->doctor->id,
+            'day_of_week' => Carbon::today()->dayOfWeek,
+            'session_name' => 'Morning OT',
+            'kind' => ScheduleSession::KIND_INTERVENTION,
+            'start_time' => '08:00',
+            'end_time' => '10:00',
+            'slot_cap' => 10,
+        ]);
+
+        $nextWeek = Carbon::today()->addWeek()->toDateString();
+        $visitBooking = $this->booking();
+        $procedure = app(StationsHandoffService::class)->sendVisitToIntervention(
+            $visitBooking,
+            $nextWeek,
+        );
+
+        $this->assertSame($intervention->id, $procedure->bookable_id);
+        $this->assertSame($nextWeek, $procedure->booking_date->toDateString());
+
+        Carbon::setTestNow();
+    }
+
+    public function test_sitting_options_keep_same_day_but_default_to_next_open_ot(): void
+    {
+        Carbon::setTestNow(Carbon::today()->setTime(17, 30));
+
+        ScheduleSession::create([
+            'chamber_id' => $this->chamber->id,
+            'doctor_id' => $this->doctor->id,
+            'day_of_week' => Carbon::today()->dayOfWeek,
+            'session_name' => 'Morning OT',
+            'kind' => ScheduleSession::KIND_INTERVENTION,
+            'start_time' => '08:00',
+            'end_time' => '10:00',
+            'slot_cap' => 10,
+        ]);
+
+        $options = app(StationsHandoffService::class)->sittingOptions($this->booking());
+
+        $this->assertNotEmpty($options);
+        $this->assertTrue($options[0]['is_same_day']);
+        $this->assertTrue($options[0]['sitting_ended']);
+        $this->assertSame($options[0]['date'], Carbon::today()->toDateString());
+
+        $default = collect($options)->first(fn (array $option): bool => $option['is_default']);
+        $this->assertNotNull($default);
+        $this->assertFalse($default['is_same_day']);
+        $this->assertFalse($default['sitting_ended']);
+        $this->assertSame(Carbon::today()->addWeek()->toDateString(), $default['date']);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_move_procedure_to_another_sitting(): void
+    {
+        Carbon::setTestNow(Carbon::today()->setTime(17, 30));
+
+        $intervention = ScheduleSession::create([
+            'chamber_id' => $this->chamber->id,
+            'doctor_id' => $this->doctor->id,
+            'day_of_week' => Carbon::today()->dayOfWeek,
+            'session_name' => 'Morning OT',
+            'kind' => ScheduleSession::KIND_INTERVENTION,
+            'start_time' => '08:00',
+            'end_time' => '10:00',
+            'slot_cap' => 10,
+        ]);
+
+        $visitBooking = $this->booking();
+        $procedure = app(StationsHandoffService::class)->sendVisitToIntervention(
+            $visitBooking,
+            Carbon::today()->addWeek()->toDateString(),
+        );
+
+        $procedure->update(['status' => 'no_show']);
+
+        $moved = app(StationsHandoffService::class)->moveProcedure(
+            $procedure,
+            Carbon::today()->addWeeks(2)->toDateString(),
+        );
+
+        $this->assertSame($intervention->id, $moved->bookable_id);
+        $this->assertSame(Carbon::today()->addWeeks(2)->toDateString(), $moved->booking_date->toDateString());
+        $this->assertSame('waiting', $moved->status);
+        $this->assertSame(Booking::PROCEDURE_LOGGED, $moved->procedure_status);
+        $this->assertSame($visitBooking->id, $moved->related_booking_id);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_online_booking_still_refuses_an_ended_sitting(): void
+    {
+        Carbon::setTestNow(Carbon::today()->setTime(17, 30));
+
+        $intervention = ScheduleSession::create([
+            'chamber_id' => $this->chamber->id,
+            'doctor_id' => $this->doctor->id,
+            'day_of_week' => Carbon::today()->dayOfWeek,
+            'session_name' => 'Morning OT',
+            'kind' => ScheduleSession::KIND_INTERVENTION,
+            'start_time' => '08:00',
+            'end_time' => '10:00',
+            'slot_cap' => 10,
+        ]);
+
+        $this->expectException(\App\Exceptions\BookingUnavailableException::class);
+
+        app(\App\Services\BookingService::class)->createBookingForBookable(
+            $intervention,
+            Carbon::today()->toDateString(),
+            'Walk-in',
+            '01714444444',
+            sendSms: false,
+        );
 
         Carbon::setTestNow();
     }

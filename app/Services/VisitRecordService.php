@@ -49,7 +49,9 @@ class VisitRecordService
 
             $existing = VisitRecord::query()->where('booking_id', $booking->id)->first();
             $voicePath = $this->nullableString($data['voice_path'] ?? null);
-            $photoPath = $this->normalizeUploadedPath($data['prescription_photo'] ?? null);
+            $photoPath = array_key_exists('prescription_photo', $data)
+                ? $this->normalizeUploadedPath($data['prescription_photo'] ?? null)
+                : ($existing?->photo_path);
             $reportPhotos = array_key_exists('report_photos', $data)
                 ? $this->normalizeReportPhotoPaths($data['report_photos'])
                 : ($existing?->report_photo_paths);
@@ -203,6 +205,62 @@ class VisitRecordService
                 'recorded_at' => now(),
             ],
         );
+    }
+
+    /**
+     * Staff (or a solo doctor covering the desk) attach scans of paper.
+     *
+     * Does not write diagnosis, medicines, or voice. Leaves `recorded_by`
+     * alone when the doctor already started the visit record.
+     *
+     * @param  array<string, mixed>  $data
+     */
+    public function saveStaffVisitPaper(Booking $booking, User $actor, array $data): ?VisitRecord
+    {
+        if (! $actor->attachesVisitPaperAtDesk()) {
+            abort(403);
+        }
+
+        if (in_array($booking->status, ['cancelled', 'no_show'], true)) {
+            abort(403);
+        }
+
+        $data = VisitNotesFormSchema::normalizeSubmission($data);
+
+        return DB::transaction(function () use ($booking, $actor, $data) {
+            $existing = VisitRecord::query()->where('booking_id', $booking->id)->first();
+            $photoPath = $this->normalizeUploadedPath($data['prescription_photo'] ?? null);
+            $reportPhotos = array_key_exists('report_photos', $data)
+                ? $this->normalizeReportPhotoPaths($data['report_photos'])
+                : ($existing?->report_photo_paths);
+
+            if ($existing && filled($existing->photo_path) && $photoPath !== $existing->photo_path) {
+                $this->visitMediaService->deleteIfExists($existing->photo_path);
+            }
+
+            $this->syncReportPhotos($existing?->report_photo_paths, $reportPhotos);
+
+            if ($photoPath === null && $reportPhotos === null && ! $existing) {
+                return null;
+            }
+
+            $attributes = [
+                'tenant_id' => tenant('id'),
+                'patient_id' => $booking->patient_id,
+                'photo_path' => $photoPath,
+                'report_photo_paths' => $reportPhotos,
+                'recorded_at' => $existing?->recorded_at ?? now(),
+            ];
+
+            if ($existing === null) {
+                $attributes['recorded_by'] = $actor->id;
+            }
+
+            return VisitRecord::query()->updateOrCreate(
+                ['booking_id' => $booking->id],
+                $attributes,
+            )->fresh();
+        });
     }
 
     public function lastRecordedVisitForPatient(Patient $patient, ?string $excludeBookingId = null): ?VisitRecord

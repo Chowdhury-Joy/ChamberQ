@@ -213,6 +213,7 @@ class ChamberCashTest extends TestCase
         $service->recordOtherIncome(
             $admin,
             500,
+            ChamberCashEntry::CATEGORY_OTHER_INCOME,
             ChamberCashEntry::METHOD_NAGAD,
             $day,
             $this->chamber->id,
@@ -269,6 +270,7 @@ class ChamberCashTest extends TestCase
         $service->recordOtherIncome(
             $admin,
             800,
+            ChamberCashEntry::CATEGORY_OTHER_INCOME,
             ChamberCashEntry::METHOD_CASH,
             $day,
             $this->chamber->id,
@@ -356,6 +358,7 @@ class ChamberCashTest extends TestCase
         $entry = app(ChamberCashService::class)->recordOtherIncome(
             $admin,
             1000,
+            ChamberCashEntry::CATEGORY_OTHER_INCOME,
             ChamberCashEntry::METHOD_MIXED,
             $day,
             $this->chamber->id,
@@ -389,6 +392,79 @@ class ChamberCashTest extends TestCase
             cashTaka: 200,
             onlineTaka: 300,
             onlineMethod: null,
+        );
+    }
+
+    public function test_collect_fee_mixed_stores_cash_and_online_split(): void
+    {
+        $staff = $this->makeUser(User::ROLE_STAFF);
+        $booking = $this->makeBooking();
+        Carbon::setTestNow(Carbon::parse('2026-08-13 10:00', OperationalReportService::TIMEZONE));
+
+        $this->actingAs($staff);
+        Filament::setCurrentPanel(Filament::getPanel('tenantAdmin'));
+
+        Livewire::test(DailyRoster::class)
+            ->callTableAction('collectFee', $booking, [
+                'fee_type' => Doctor::FEE_CONSULTATION,
+                'method' => ChamberCashEntry::METHOD_MIXED,
+                'cash_taka' => 300,
+                'online_taka' => 500,
+                'online_method' => ChamberCashEntry::METHOD_BKASH,
+                'waived' => false,
+                'note' => null,
+            ])
+            ->assertHasNoTableActionErrors();
+
+        $this->assertDatabaseHas('chamber_cash_entries', [
+            'booking_id' => $booking->id,
+            'amount' => 800,
+            'method' => ChamberCashEntry::METHOD_MIXED,
+            'cash_taka' => 300,
+            'mobile_taka' => 500,
+            'mobile_method' => ChamberCashEntry::METHOD_BKASH,
+        ]);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_collect_fee_mixed_rejects_split_that_does_not_match_fee(): void
+    {
+        $staff = $this->makeUser(User::ROLE_STAFF);
+        $booking = $this->makeBooking();
+        Carbon::setTestNow(Carbon::parse('2026-08-13 10:00', OperationalReportService::TIMEZONE));
+
+        $this->actingAs($staff);
+        Filament::setCurrentPanel(Filament::getPanel('tenantAdmin'));
+
+        Livewire::test(DailyRoster::class)
+            ->callTableAction('collectFee', $booking, [
+                'fee_type' => Doctor::FEE_CONSULTATION,
+                'method' => ChamberCashEntry::METHOD_MIXED,
+                'cash_taka' => 100,
+                'online_taka' => 100,
+                'online_method' => ChamberCashEntry::METHOD_BKASH,
+                'waived' => false,
+                'note' => null,
+            ])
+            ->assertHasTableActionErrors();
+
+        $this->assertDatabaseMissing('chamber_cash_entries', [
+            'booking_id' => $booking->id,
+        ]);
+
+        Carbon::setTestNow();
+    }
+
+    public function test_record_patient_income_mixed_requires_split_to_equal_fee(): void
+    {
+        $this->expectException(\InvalidArgumentException::class);
+
+        app(ChamberCashService::class)->recordPatientIncome(
+            $this->makeBooking(),
+            $this->makeUser(User::ROLE_STAFF),
+            ChamberCashEntry::METHOD_MIXED,
+            occurredOn: Carbon::parse('2026-08-13', OperationalReportService::TIMEZONE),
         );
     }
 }

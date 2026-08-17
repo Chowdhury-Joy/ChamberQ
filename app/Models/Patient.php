@@ -24,6 +24,7 @@ class Patient extends Model
         'conditions',
         'medicines',
         'share_clinical_history',
+        'seen_before_software',
     ];
 
     protected $casts = [
@@ -31,6 +32,7 @@ class Patient extends Model
         'age_recorded_at' => 'date',
         'age' => 'integer',
         'share_clinical_history' => 'boolean',
+        'seen_before_software' => 'boolean',
     ];
 
     public function bookings(): HasMany
@@ -129,14 +131,14 @@ class Patient extends Model
     }
 
     /**
-     * @return 'first_time'|'visits_no_notes'|'visits_with_notes'
+     * @return 'first_time'|'paper_file'|'visits_no_notes'|'visits_with_notes'
      */
     public function consultHistoryState(): string
     {
         $completed = $this->completedVisitCount();
 
         if ($completed === 0) {
-            return 'first_time';
+            return $this->seen_before_software ? 'paper_file' : 'first_time';
         }
 
         if (app(\App\Services\VisitRecordService::class)->patientHasRecordedNotes($this)) {
@@ -150,6 +152,7 @@ class Patient extends Model
     {
         return match ($this->consultHistoryState()) {
             'first_time' => __('First visit — no history'),
+            'paper_file' => __('Seen here before ChamberQ · paper file'),
             'visits_no_notes' => __(':count previous visits · no notes recorded', [
                 'count' => $this->completedVisitCount(),
             ]),

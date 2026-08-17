@@ -15,6 +15,7 @@
   <style>
     :root {
       --navy: #1B2978;
+      --clinic-nav-height: calc(clamp(3.5rem, 5vw, 4rem) + (var(--space-md) * 2) + 1px);
       --navy-deep: #0E1954;
       --pink: #FA84E0;
       --pink-2: #FF6BCB;
@@ -93,7 +94,9 @@
 
     /* Hero */
     .hero {
-      position: relative; min-height: 100vh; min-height: 100dvh;
+      position: relative;
+      min-height: calc(100vh - var(--clinic-nav-height, 5.5rem));
+      min-height: calc(100dvh - var(--clinic-nav-height, 5.5rem));
       color: var(--white); display: flex; align-items: center;
       padding-top: var(--space-section-y);
       padding-bottom: var(--space-section-y);

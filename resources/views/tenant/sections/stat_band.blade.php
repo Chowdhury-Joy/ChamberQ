@@ -32,11 +32,15 @@
             'label' => $stat['label'] ?? '',
         ];
     });
+    $heading = $data['heading'] ?? null;
 @endphp
 
 <section class="space-section" data-reveal-section>
     <div class="layout-container">
         <div class="stats-band space-card" data-reveal-block data-reveal-kind="fade">
+            @if(filled($heading))
+                <h3>{{ $heading }}</h3>
+            @endif
             <div class="grid-stats">
                 @foreach($stats as $stat)
                     <div class="stat">

@@ -6,6 +6,7 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Schema;
 
 class PatientForm
@@ -63,6 +64,10 @@ class PatientForm
             Textarea::make('medicines')
                 ->label(__('Current medicines'))
                 ->rows(2)
+                ->columnSpanFull(),
+            Toggle::make('seen_before_software')
+                ->label(__('Seen here before ChamberQ'))
+                ->helperText(__('Tick if they were treated on paper before this software. The consult screen will show them as a returning patient, not a first visit. Staff can also set this from today’s list.'))
                 ->columnSpanFull(),
         ]);
     }

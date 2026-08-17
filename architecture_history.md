@@ -643,3 +643,78 @@
 
 ## 2026-08-16T18:14:03+0600
 - Referrals + HR opt-in modules: `referring_doctors`, `referral_commissions`, `bookings.referring_doctor_id`, HR tables (`employees`, attendance, leave, payroll); `ReferralCommissionService`, `HrPayrollService`, Filament resources, Pain Solution seeder enables both.
+
+## 2026-08-16
+- Made the two cashbook-writing money paths atomic: `ReferralCommissionService::markPaid()` now re-reads the selected commissions under a row lock inside one transaction and pays only those still pending (a stale Filament bulk selection could pay a referring doctor twice), and `HrPayrollService::recordSalaryPayment()` now writes its cash entry and payroll row in one transaction so a duplicate pay period rejected by the unique index cannot leave an orphan salary expense.
+
+## 2026-08-16T23:47:15+0600
+- Clinic public nav: `clinic_nav_items()` + `tenant.partials.clinic-header` (real `/departments` `/doctors` `/blog` + extra WebPages with path-tenant prefix; inner clinic pages get the same drawer). `.fx-btn-track` no longer self-clips, so nav hover can slide the second label.
+
+## 2026-08-16T23:51:37+0600
+- Added `public/images/mups/mups-hero-surgery.jpg` (landscape OT / ultrasound-guided procedure) and pointed the MUPS homepage hero at it.
+
+## 2026-08-16T23:54:25+0600
+- Correction: the 23:49 clinic `doctor_grid` one-card side-by-side layout (from 640px up) was omitted from this log when the hero photo line was added; that CSS still stands in `public/css/clinic-clireo.css`.
+- MUPS tab icon is now `public/images/mups/favicon.svg` (navy rounded tile, nerve mark, green EKG) instead of the wide wordmark logo.
+
+## 2026-08-16T23:56:06+0600
+- Clinic About mission heading (`.about-head`) widened from 45rem to 62rem; MUPS `mission_statement` shortened to two sentences.
+
+## 2026-08-17T00:01:19+0600
+- Added `platform_settings` (singleton) plus Super Admin **Booking window** (`/admin/booking-window`) so one `patient_booking_horizon_days` value (default 60) caps online booking on every Front door; included in platform backup.
+
+## 2026-08-17T00:04:00+0600
+- Clinic homepage `.hero` is no longer a full 100vh under the nav; it fills `100dvh` minus `--clinic-nav-height` so the nav and hero share one viewport.
+
+## 2026-08-17T06:47:18+0600
+- MUPS homepage CMS copy rewritten for conversion (hero, about, treatments strip, promise cards, bottom CTA); facts still from the practice, slogan dropped.
+
+## 2026-08-17T06:56:24+0600
+- Clinic Find us (`location_hours`) stacks each sitting’s hours in a column instead of one dotted line beside HOURS.
+
+## 2026-08-17T07:06:10+0600
+- Clinic Voices of relief (`testimonials`) is a looping auto-scroller (`data-review-scroll`); MUPS homepage now has eight review cards.
+
+## 2026-08-17T07:17:40+0600
+- One-doctor clinic `doc-card` name panel (`.meta`) no longer has a white fill.
+
+## 2026-08-17T07:18:54+0600
+- Reverted the one-doctor clinic `doc-grid` side-by-side layout; the Founder card is stacked again (photo, then name).
+
+## 2026-08-17T07:20:49+0600
+- MUPS homepage `stat_band` sits under the hero; clinic `doctor_grid` `.docs-split` is heading | portrait from 1200px when there is one doctor; `stat_band` has an optional heading in Filament.
+
+## 2026-08-17T11:32:16+0600
+- Sitting form minutes-each hint now uses a real **Time per patient** label and plain English copy (tight sittings get a stronger warning).
+
+## 2026-08-17T11:37:35+0600
+- Slot-cap pace copy moved under the Slot cap input as short helper text; the separate **Time per patient** Placeholder is gone.
+
+## 2026-08-17T11:40:47+0600
+- Daily Roster Collect fee (Stations off) shows cash ৳ / online ৳ / online method when Paid how is Cash + online; `ChamberCashService::recordPatientIncome()` stores that split.
+
+## 2026-08-17T11:43:41+0600
+- Added `MupsDemoSeeder` (called from `MupsSeeder`) so the MUPS clinic admin has patients, today's live queue, visit notes/Rx, cashbook, labs, slot blocks, and sitting overrides.
+
+## 2026-08-17T11:58:59+0600
+- Added tenant `cash_categories` table, `CashCategoryService`, and admin **Operations → Cash categories** so owners can add/hide income and expense labels; Cashbook **Add income** / **Add expense** now pick from active categories.
+
+## 2026-08-17T14:01:45+0600
+- Staff can mark a person as treated here before ChamberQ (`patients.seen_before_software`): walk-in checkbox and Daily Roster / Live Queue row toggle (`PatientContinuityActions`); Consult Screen shows “paper file” instead of first visit until a real completed visit exists.
+
+## 2026-08-17T15:30:27+0600
+- Queue: `startSession()` nested savepoint for unique-index races; offline arrived/skip wrong-status is a conflict; replayed Call next while the room is occupied is a no-op (room-free spec).
+- E: Public wizard and `POST /api/bookings` only accept publicly bookable sittings (`visit` / leftover `consult`).
+- A: Added `KIND_COUNSELING`; counseling sitting per branch day; **Send to counseling** from a done procedure (transactional, free, no voucher); `sendVisitToIntervention()` now transactional.
+- B: **Operations → Missed procedures** worklist (WhatsApp + Move; no auto-cancel).
+- C: Voucher assignment holds the lock across write; unique `(tenant_id, booking_date, voucher_number)`.
+- D: Voucher on the patient ticket; Daily Roster voucher column searchable.
+- F: Combined chamber TV `/screen/chamber/{chamber}` (omit idle rooms; queued audio; contrast rules outrank `theme_color`).
+
+## 2026-08-17T15:48:27+0600
+- Correction: `clinic_nav_items()` was documented on 2026-08-16 but was never in `app/helpers.php` — added now (Home / Services / Doctors / extra WebPages / Health tips, path-prefixed). Daily Roster **Collect fee** mixed cash+online fields were described as live but not passed into `recordPatientIncome()`; wired to match Cashbook. Clinic heading word-split now HTML-escapes each word. `apiChamberToday` loads live sessions in one `whereIn`. `GET /bookings/{booking}` throttled 60/min. Unused `customPages` WebPage query dropped from clinic layout/homepage (nav helper already loads extras).
+
+## 2026-08-17T15:55:12+0600
+- MUPS is a two-branch clinic (Panchlaish + Uttara; Epic Dhanmondi removed). Super Admin modules all on (Website, Queue, Rx, Stations, Referrals, HR) plus Bangla homepage and live-average / chime+Bangla-voice queue branding. Each branch-day seeds Intervention / Visit / Counseling. Developer handoff HTML in `docs/ChamberQ-Developer-Handoff-MUPS.html`.
+
+

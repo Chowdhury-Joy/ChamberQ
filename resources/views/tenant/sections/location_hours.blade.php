@@ -8,6 +8,11 @@
     $heading = $data['heading'] ?? __('Visit Our Clinic');
     $mapsUrl = \App\Support\SafeUrl::href($data['google_maps_url'] ?? '', '');
     $locations = $data['locations'] ?? [];
+    $hourLines = static function (?string $hours): array {
+        $parts = preg_split('/\s*·\s*/u', trim((string) $hours)) ?: [];
+
+        return array_values(array_filter($parts, fn (string $line): bool => $line !== ''));
+    };
 @endphp
 
 <section id="locations" class="space-section" data-reveal-section>
@@ -22,19 +27,28 @@
                 @foreach($locations as $location)
                     @php $locMaps = \App\Support\SafeUrl::href($location['google_maps_url'] ?? '', ''); @endphp
                     <article class="why-card loc-card">
+                        @php $lines = $hourLines($location['operating_hours'] ?? null); @endphp
                         <h3>{{ $location['name'] ?? __('Branch') }}</h3>
                         @if(!empty($location['address']))
                             <p>{{ $location['address'] }}</p>
                         @endif
 
                         <dl class="loc-facts">
-                            @if(!empty($location['operating_hours']))
-                                <dt>{{ __('Hours') }}</dt>
-                                <dd>{{ $location['operating_hours'] }}</dd>
+                            @if($lines !== [])
+                                <div class="loc-hours">
+                                    <dt>{{ __('Hours') }}</dt>
+                                    <dd>
+                                        @foreach($lines as $line)
+                                            <span>{{ $line }}</span>
+                                        @endforeach
+                                    </dd>
+                                </div>
                             @endif
                             @if(!empty($location['phone']))
-                                <dt>{{ __('Phone') }}</dt>
-                                <dd><a href="tel:{{ preg_replace('/[^0-9+]/', '', $location['phone']) }}">{{ $location['phone'] }}</a></dd>
+                                <div class="loc-phone">
+                                    <dt>{{ __('Phone') }}</dt>
+                                    <dd><a href="tel:{{ preg_replace('/[^0-9+]/', '', $location['phone']) }}">{{ $location['phone'] }}</a></dd>
+                                </div>
                             @endif
                         </dl>
 
@@ -46,18 +60,29 @@
             </div>
         @else
             <div class="loc-single" data-reveal-block data-reveal-kind="fade">
+                @php $lines = $hourLines($data['operating_hours'] ?? null); @endphp
                 <dl class="loc-facts">
                     @if(!empty($data['address']))
-                        <dt>{{ __('Address') }}</dt>
-                        <dd>{{ $data['address'] }}</dd>
+                        <div class="loc-phone">
+                            <dt>{{ __('Address') }}</dt>
+                            <dd>{{ $data['address'] }}</dd>
+                        </div>
                     @endif
-                    @if(!empty($data['operating_hours']))
-                        <dt>{{ __('Operating Hours') }}</dt>
-                        <dd>{{ $data['operating_hours'] }}</dd>
+                    @if($lines !== [])
+                        <div class="loc-hours">
+                            <dt>{{ __('Operating Hours') }}</dt>
+                            <dd>
+                                @foreach($lines as $line)
+                                    <span>{{ $line }}</span>
+                                @endforeach
+                            </dd>
+                        </div>
                     @endif
                     @if(!empty($data['phone']))
-                        <dt>{{ __('Phone') }}</dt>
-                        <dd><a href="tel:{{ preg_replace('/[^0-9+]/', '', $data['phone']) }}">{{ $data['phone'] }}</a></dd>
+                        <div class="loc-phone">
+                            <dt>{{ __('Phone') }}</dt>
+                            <dd><a href="tel:{{ preg_replace('/[^0-9+]/', '', $data['phone']) }}">{{ $data['phone'] }}</a></dd>
+                        </div>
                     @endif
                 </dl>
 

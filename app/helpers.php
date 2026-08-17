@@ -55,6 +55,49 @@ if (! function_exists('tenant_web_route')) {
     }
 }
 
+if (! function_exists('clinic_nav_items')) {
+    /**
+     * Clinic public header / footer / drawer: Home, Services, Doctors, extra
+     * published WebPages (path-prefixed), then Health tips. Skips slugs that
+     * already have a dedicated item so /departments is not listed twice.
+     *
+     * @return list<array{label: string, href: string}>
+     */
+    function clinic_nav_items(): array
+    {
+        $items = [
+            ['label' => __('Home'), 'href' => tenant_safe_href('/')],
+            ['label' => __('Services'), 'href' => tenant_safe_href('/departments')],
+            ['label' => __('Doctors'), 'href' => tenant_safe_href('/doctors')],
+        ];
+
+        $reserved = ['departments', 'doctors', 'blog', 'book', 'portal'];
+
+        if (function_exists('tenant') && tenant()) {
+            $pages = \App\Models\WebPage::query()
+                ->where('is_published', true)
+                ->orderBy('title')
+                ->get(['title', 'slug']);
+
+            foreach ($pages as $page) {
+                $slug = trim((string) $page->slug, '/');
+                if ($slug === '' || in_array(strtolower($slug), $reserved, true)) {
+                    continue;
+                }
+
+                $items[] = [
+                    'label' => (string) $page->title,
+                    'href' => tenant_safe_href('/'.$slug),
+                ];
+            }
+        }
+
+        $items[] = ['label' => __('Health tips'), 'href' => tenant_safe_href('/blog')];
+
+        return $items;
+    }
+}
+
 if (! function_exists('bilingual')) {
     /**
      * A fixed label in Bangla (lead) and English (quiet), for prescription

@@ -220,6 +220,37 @@ class User extends Authenticatable implements FilamentUser, CanResetPasswordCont
     }
 
     /**
+     * Attach scans of paper (reports, handwritten Rx) at the desk.
+     *
+     * Staff always do this when the practice has a staff login. A doctor only
+     * does it when there is nobody at reception — otherwise they stay on the
+     * consult pad and do not collect papers themselves.
+     */
+    public function attachesVisitPaperAtDesk(): bool
+    {
+        if (! tenant()?->hasPrescription()) {
+            return false;
+        }
+
+        if ($this->isStaff()) {
+            return true;
+        }
+
+        return $this->isDoctor() && ! tenant()->hasStaffLogin();
+    }
+
+    /**
+     * Upload scans from Consult Screen / the Rx pad.
+     *
+     * Off when staff exist, so the doctor is not photographing papers in the
+     * room. Solo doctors keep the pad controls.
+     */
+    public function attachesVisitPaperOnConsult(): bool
+    {
+        return $this->canRecordVisitNotes() && ! tenant()->hasStaffLogin();
+    }
+
+    /**
      * After login, open Consult Screen instead of the stats dashboard.
      * Doctors with Prescription land there; staff and the account owner stay
      * on the dashboard.

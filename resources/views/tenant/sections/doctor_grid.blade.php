@@ -17,7 +17,7 @@
 @endphp
 
 <section class="space-section" id="doctors" data-reveal-section>
-    <div class="layout-container">
+    <div class="layout-container docs-split">
         <div class="treat-head">
             <div class="stack-header">
                 <div class="eyebrow" data-reveal-block data-reveal-kind="fade">{{ $eyebrow }}</div>

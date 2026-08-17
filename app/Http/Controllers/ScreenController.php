@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Booking;
+use App\Models\Chamber;
 use App\Models\LiveSession;
 use App\Models\ScheduleSession;
 use App\Services\LiveSessionService;
@@ -34,7 +35,7 @@ class ScreenController extends Controller
 
     public function apiToday(ScheduleSession $session): JsonResponse
     {
-        return $this->screenPayload($session, $this->today());
+        return response()->json($this->sessionScreenState($session, $this->today()));
     }
 
     /**
@@ -47,7 +48,48 @@ class ScreenController extends Controller
 
     public function api(ScheduleSession $session, string $date): JsonResponse
     {
-        return $this->screenPayload($session, $this->normalizeDate($date));
+        return response()->json($this->sessionScreenState($session, $this->normalizeDate($date)));
+    }
+
+    public function showChamberToday(Chamber $chamber): View
+    {
+        return view('tenant.screen-chamber', [
+            'chamber' => $chamber,
+            'sessionDate' => $this->today(),
+        ]);
+    }
+
+    public function apiChamberToday(Chamber $chamber): JsonResponse
+    {
+        $date = $this->today();
+        $sessions = ScheduleSession::with(['chamber', 'doctor'])
+            ->where('chamber_id', $chamber->id)
+            ->where('day_of_week', Carbon::today()->dayOfWeek)
+            ->orderBy('start_time')
+            ->get();
+
+        $liveBySession = LiveSession::query()
+            ->with('currentBooking')
+            ->where('session_date', $date)
+            ->whereIn('schedule_session_id', $sessions->pluck('id'))
+            ->get()
+            ->keyBy('schedule_session_id');
+
+        $rooms = [];
+        foreach ($sessions as $session) {
+            $liveSession = $liveBySession->get($session->id);
+
+            if (! $liveSession) {
+                continue;
+            }
+
+            $rooms[] = $this->roomTileState($session, $liveSession);
+        }
+
+        return response()->json([
+            'session_date' => $date,
+            'rooms' => $rooms,
+        ]);
     }
 
     private function renderScreen(ScheduleSession $session, string $date, bool $liveToday): View
@@ -64,23 +106,26 @@ class ScreenController extends Controller
         ]);
     }
 
-    private function screenPayload(ScheduleSession $session, string $date): JsonResponse
+    /**
+     * @return array<string, mixed>
+     */
+    private function sessionScreenState(ScheduleSession $session, string $date): array
     {
         $liveSession = LiveSession::where('schedule_session_id', $session->id)
             ->where('session_date', $date)
             ->first();
 
         if (! $liveSession) {
-            return response()->json([
+            return [
                 'status' => 'scheduled',
                 'session_date' => $date,
-            ]);
+            ];
         }
 
         $currentBooking = $liveSession->currentBooking;
         $next = $this->nextWaitingBooking($liveSession);
 
-        return response()->json([
+        return [
             'status' => $liveSession->status,
             'session_date' => $date,
             'now_serving' => $currentBooking ? $currentBooking->serial_number : null,
@@ -88,12 +133,44 @@ class ScreenController extends Controller
             'is_called' => $currentBooking ? $currentBooking->status === 'called' : false,
             'called_at' => $currentBooking ? $currentBooking->called_at : null,
             'pause_reason' => $liveSession->pause_reason,
-            'estimated_resume_time' => $liveSession->paused_at
-                ? $liveSession->paused_at->copy()->addMinutes($liveSession->estimated_pause_minutes)->format('h:i A')
-                : null,
+            'estimated_resume_time' => $this->estimatedResumeLabel($liveSession),
             'next_booking' => $next?->serial_number,
             'next_estimated_time' => $this->tvEstimatedTime($next),
-        ]);
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function roomTileState(ScheduleSession $session, LiveSession $liveSession): array
+    {
+        $currentBooking = $liveSession->currentBooking;
+        $waiting = $this->nextWaitingBookings($liveSession, 3);
+
+        return [
+            'session_id' => $session->id,
+            'label' => $session->screenLabel(),
+            'kind' => $session->kind,
+            'now_serving' => $currentBooking ? $currentBooking->serial_number : null,
+            'now_serving_name' => $currentBooking ? $currentBooking->patient_name : null,
+            'current_booking_id' => $currentBooking?->id,
+            'is_called' => $currentBooking ? $currentBooking->status === 'called' : false,
+            'next' => $waiting->map(fn (Booking $booking): array => [
+                'serial' => $booking->serial_number,
+                'name' => $booking->patient_name,
+            ])->values()->all(),
+            'status' => $liveSession->status,
+            'pause_reason' => $liveSession->pause_reason,
+            'estimated_resume_time' => $this->estimatedResumeLabel($liveSession),
+            'delay_minutes' => (int) ($liveSession->delay_minutes ?: 0),
+        ];
+    }
+
+    private function estimatedResumeLabel(LiveSession $liveSession): ?string
+    {
+        $ends = $liveSession->pauseEndsAt();
+
+        return $ends?->format('h:i A');
     }
 
     private function today(): string
@@ -108,13 +185,22 @@ class ScreenController extends Controller
 
     private function nextWaitingBooking(LiveSession $liveSession): ?Booking
     {
+        return $this->nextWaitingBookings($liveSession, 1)->first();
+    }
+
+    /**
+     * @return \Illuminate\Support\Collection<int, Booking>
+     */
+    private function nextWaitingBookings(LiveSession $liveSession, int $limit)
+    {
         $current = $liveSession->currentBooking;
 
         return $liveSession->bookings()
             ->where('status', 'waiting')
             ->when($current, fn ($q) => $q->where('serial_number', '>', $current->serial_number))
             ->orderBy('serial_number')
-            ->first();
+            ->limit($limit)
+            ->get();
     }
 
     /**

@@ -377,6 +377,15 @@
                                         @endif
 
                                         <div class="lqc-actions">
+                                            @php
+                                                $handoff = app(\App\Services\StationsHandoffService::class);
+                                                $canBookIntervention = $handoff->actorMaySend(auth()->user())
+                                                    && $handoff->canSendVisit($current);
+                                                $canMoveIntervention = $handoff->actorMaySend(auth()->user())
+                                                    && $handoff->canMove($current);
+                                                $canSendToCounseling = $handoff->actorMaySend(auth()->user())
+                                                    && $handoff->canSendToCounseling($current);
+                                            @endphp
                                             @if($current->status === 'called')
                                                 <x-filament::button wire:click="patientArrived" color="success" icon="heroicon-m-check" size="lg" class="cq-offline-queue-allowed" data-cq-queue-action="patient_arrived">
                                                     {{ 'Patient arrived' }}
@@ -412,10 +421,38 @@
                                                 <x-filament::button wire:click="callNextPatientOnly" color="primary" icon="heroicon-m-megaphone" size="lg" class="cq-offline-queue-allowed" data-cq-queue-action="call_next">
                                                     {{ 'Call next patient' }}
                                                 </x-filament::button>
+                                                @if($canBookIntervention)
+                                                    <x-filament::button wire:click="mountAction('bookCurrentIntervention')" color="warning" icon="heroicon-m-arrow-right-circle">
+                                                        {{ __('Book intervention') }}
+                                                    </x-filament::button>
+                                                @elseif($canMoveIntervention)
+                                                    <x-filament::button wire:click="mountAction('moveCurrentIntervention')" color="gray" icon="heroicon-m-calendar-days">
+                                                        {{ __('Move intervention') }}
+                                                    </x-filament::button>
+                                                @endif
+                                                @if($canSendToCounseling)
+                                                    <x-filament::button wire:click="mountAction('sendCurrentToCounseling')" color="success" icon="heroicon-m-chat-bubble-left-right">
+                                                        {{ __('Send to counseling') }}
+                                                    </x-filament::button>
+                                                @endif
                                             @else
                                                 <x-filament::button class="cs-complete-visit-btn cq-offline-queue-allowed" wire:click="completeVisit" color="success" icon="heroicon-m-check-badge" size="lg" data-cq-queue-action="complete_without_advance">
                                                     {{ 'Complete visit' }}
                                                 </x-filament::button>
+                                                @if($canBookIntervention)
+                                                    <x-filament::button wire:click="mountAction('bookCurrentIntervention')" color="warning" icon="heroicon-m-arrow-right-circle">
+                                                        {{ __('Book intervention') }}
+                                                    </x-filament::button>
+                                                @elseif($canMoveIntervention)
+                                                    <x-filament::button wire:click="mountAction('moveCurrentIntervention')" color="gray" icon="heroicon-m-calendar-days">
+                                                        {{ __('Move intervention') }}
+                                                    </x-filament::button>
+                                                @endif
+                                                @if($canSendToCounseling)
+                                                    <x-filament::button wire:click="mountAction('sendCurrentToCounseling')" color="success" icon="heroicon-m-chat-bubble-left-right">
+                                                        {{ __('Send to counseling') }}
+                                                    </x-filament::button>
+                                                @endif
                                             @endif
                                         </div>
                                     @else
@@ -450,6 +487,13 @@
                             (string) tenant('id'),
                             (int) $this->selectedSessionId,
                         );
+                        $chamberId = \App\Models\ScheduleSession::find($this->selectedSessionId)?->chamber_id;
+                        $chamberScreenUrl = $chamberId && (tenant()?->hasStations() ?? false)
+                            ? \App\Support\TenancyUrl::chamberScreenBookmarkUrl(
+                                (string) tenant('id'),
+                                (int) $chamberId,
+                            )
+                            : null;
                     @endphp
                     <x-filament::section>
                         <div class="lqc-stack-sm" x-data="{ copied: false, copy() { navigator.clipboard.writeText(@js($screenUrl)).then(() => { this.copied = true; setTimeout(() => this.copied = false, 2000) }) } }">
@@ -457,10 +501,20 @@
                             <p class="lqc-muted">
                                 {{ __('Bookmark this link on the TV once — it always shows today\'s queue for this session. No need to paste a new link each morning.') }}
                             </p>
+                            @if ($chamberScreenUrl)
+                                <p class="lqc-muted">
+                                    {{ __('For every room in this chamber, bookmark the all-rooms TV instead.') }}
+                                </p>
+                            @endif
                             <div class="lqc-btn-row">
                                 <x-filament::button :href="$screenUrl" tag="a" target="_blank" color="gray" icon="heroicon-m-arrow-top-right-on-square" size="sm">
                                     {{ 'Open screen' }}
                                 </x-filament::button>
+                                @if ($chamberScreenUrl)
+                                    <x-filament::button :href="$chamberScreenUrl" tag="a" target="_blank" color="gray" icon="heroicon-m-squares-2x2" size="sm">
+                                        {{ 'All rooms TV' }}
+                                    </x-filament::button>
+                                @endif
                                 <x-filament::button x-on:click="copy()" color="gray" icon="heroicon-m-clipboard" size="sm">
                                     <span x-text="copied ? @js('Link copied') : @js('Copy link')">Copy link</span>
                                 </x-filament::button>

@@ -34,7 +34,7 @@ class VisitNotesFormSchema
     /** Browser event announcing that "Add medicine" has appended a row. */
     public const MEDICINE_ADDED_EVENT = 'prescription-medicine-added';
 
-    private const STAFF_ENTRY_HINT = 'Type only what the doctor wrote on paper. Photograph the slip, and any lab reports the patient brought.';
+    private const STAFF_ENTRY_HINT = 'Type only what the doctor wrote on paper. Scan the slip on the desk scanner (or take a photo if there is no scanner), and any lab reports the patient brought.';
 
     /**
      * Fields staff may write when typing up a paper prescription.
@@ -529,7 +529,8 @@ class VisitNotesFormSchema
                 ->helperText(__('Blood tests, X-rays, or other reports you looked at today.'))
                 ->rows(2)
                 ->columnSpanFull(),
-            self::reportPhotoSection(),
+            self::reportPhotoSection()
+                ->visible(fn (): bool => auth()->user()?->attachesVisitPaperOnConsult() ?? false),
             self::followUpSection(),
             Section::make(__('Voice note'))
                 ->schema([
@@ -543,7 +544,8 @@ class VisitNotesFormSchema
                         ->rows(3)
                         ->columnSpanFull(),
                 ]),
-            self::paperPhotoSection(),
+            self::paperPhotoSection()
+                ->visible(fn (): bool => auth()->user()?->attachesVisitPaperOnConsult() ?? false),
         ];
     }
 
@@ -798,13 +800,44 @@ class VisitNotesFormSchema
             ->columns(1);
     }
 
+    /**
+     * Scan / photo fields for the desk **Scan papers** action.
+     *
+     * @return list<\Filament\Schemas\Components\Component>
+     */
+    public static function paperScanComponents(): array
+    {
+        return [
+            self::paperPhotoSection(),
+            self::reportPhotoSection(),
+        ];
+    }
+
     private static function paperPhotoSection(): Section
     {
-        return Section::make(__('Paper prescription photo'))
+        return Section::make(__('Paper prescription'))
             ->schema([
+                ToggleButtons::make('_prescription_capture')
+                    ->label(__('How to attach'))
+                    ->options([
+                        'scan' => __('Scan (desk scanner)'),
+                        'photo' => __('Take a photo'),
+                    ])
+                    ->default('scan')
+                    ->inline()
+                    ->live()
+                    ->dehydrated(false)
+                    ->columnSpanFull(),
                 FileUpload::make('prescription_photo')
-                    ->label(__('Photo of handwritten prescription'))
-                    ->helperText(__('Take a photo on your phone or upload a scan. No handwriting recognition.'))
+                    ->label(fn (Get $get): string => $get('_prescription_capture') === 'photo'
+                        ? __('Photo of handwritten prescription')
+                        : __('Scan of handwritten prescription'))
+                    ->helperText(fn (Get $get): string => $get('_prescription_capture') === 'photo'
+                        ? __('Use the phone camera if there is no scanner. No handwriting recognition.')
+                        : __('Use the desk scanner, then choose the file it saved. No handwriting recognition.'))
+                    ->extraInputAttributes(fn (Get $get): array => $get('_prescription_capture') === 'photo'
+                        ? ['capture' => 'environment']
+                        : [])
                     ->image()
                     ->acceptedFileTypes(VisitMediaService::allowedPhotoMimeTypes())
                     ->maxSize(5120)
@@ -817,11 +850,29 @@ class VisitNotesFormSchema
 
     private static function reportPhotoSection(): Section
     {
-        return Section::make(__('Report photos'))
+        return Section::make(__('Reports the patient brought'))
             ->schema([
+                ToggleButtons::make('_report_capture')
+                    ->label(__('How to attach'))
+                    ->options([
+                        'scan' => __('Scan (desk scanner)'),
+                        'photo' => __('Take a photo'),
+                    ])
+                    ->default('scan')
+                    ->inline()
+                    ->live()
+                    ->dehydrated(false)
+                    ->columnSpanFull(),
                 FileUpload::make('report_photos')
-                    ->label(__('Photos of reports the patient brought'))
-                    ->helperText(__('Lab printouts, X-rays, or other papers. Not the handwritten prescription.'))
+                    ->label(fn (Get $get): string => $get('_report_capture') === 'photo'
+                        ? __('Photos of reports the patient brought')
+                        : __('Scans of reports the patient brought'))
+                    ->helperText(fn (Get $get): string => $get('_report_capture') === 'photo'
+                        ? __('Lab printouts, X-rays, or other papers. Not the handwritten prescription.')
+                        : __('Use the desk scanner, then choose the files it saved. Lab printouts, X-rays, or other papers — not the handwritten prescription.'))
+                    ->extraInputAttributes(fn (Get $get): array => $get('_report_capture') === 'photo'
+                        ? ['capture' => 'environment']
+                        : [])
                     ->image()
                     ->multiple()
                     ->maxFiles(VisitMediaService::REPORT_PHOTO_MAX_FILES)

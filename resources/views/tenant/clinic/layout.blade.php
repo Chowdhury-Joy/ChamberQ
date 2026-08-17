@@ -4,7 +4,6 @@
     $brand = $brand ?? $tenant->displayName();
     $locale = $locale ?? app()->getLocale();
     $banglaHomepage = $banglaHomepage ?? $tenant->hasFeature('bangla_homepage');
-    $customPages = $customPages ?? \App\Models\WebPage::where('is_published', true)->where('slug', '!=', '/')->get();
 @endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', $locale) }}" style="color-scheme: light;">
@@ -26,30 +25,7 @@
     <script defer src="{{ public_asset('js/clinic-clireo.js') }}"></script>
 </head>
 <body>
-    <header class="nav">
-        <div class="nav-inner">
-            <a class="logo" href="{{ tenant_web_url('/') }}" aria-label="{{ $brand }}">
-                @if($tenant->logo_url)
-                    <img class="logo-img" src="{{ $tenant->logo_url }}" alt="{{ $brand }}">
-                @else
-                    {{ $brand }}
-                @endif
-            </a>
-
-            <nav class="nav-links" aria-label="{{ __('Primary') }}">
-                <a class="fx-btn" href="{{ tenant_web_url('/') }}"><span class="fx-btn-track"><span>{{ __('Home') }}</span><span aria-hidden="true">{{ __('Home') }}</span></span></a>
-                <a class="fx-btn" href="{{ tenant_web_url('/departments') }}"><span class="fx-btn-track"><span>{{ __('Services') }}</span><span aria-hidden="true">{{ __('Services') }}</span></span></a>
-                <a class="fx-btn" href="{{ tenant_web_url('/doctors') }}"><span class="fx-btn-track"><span>{{ __('Doctors') }}</span><span aria-hidden="true">{{ __('Doctors') }}</span></span></a>
-                <a class="fx-btn" href="{{ tenant_web_url('/blog') }}"><span class="fx-btn-track"><span>{{ __('Health tips') }}</span><span aria-hidden="true">{{ __('Health tips') }}</span></span></a>
-                @foreach($customPages as $customPage)
-                    <a class="fx-btn" href="{{ $customPage->slug }}"><span class="fx-btn-track"><span>{{ $customPage->title }}</span><span aria-hidden="true">{{ $customPage->title }}</span></span></a>
-                @endforeach
-            </nav>
-
-            <a class="btn-contact" href="{{ tenant_safe_href(null, '/book') }}"><span>{{ __('Book appointment') }}</span></a>
-            <button class="nav-burger" type="button" data-open-menu aria-label="{{ __('Menu') }}">☰</button>
-        </div>
-    </header>
+    @include('tenant.partials.clinic-header')
 
     <main>
         @yield('content')
@@ -59,8 +35,8 @@
         <div class="layout-container footer-top space-section-y">
             <div>
                 <a class="logo" href="{{ tenant_web_url('/') }}" aria-label="{{ $brand }}">
-                    @if($tenant->logo_url)
-                        <img class="logo-img logo-img--footer" src="{{ $tenant->logo_url }}" alt="{{ $brand }}">
+                    @if($logoSrc = \App\Support\SafeUrl::href($tenant->logo_url, ''))
+                        <img class="logo-img logo-img--footer" src="{{ $logoSrc }}" alt="{{ $brand }}">
                     @else
                         {{ $brand }}
                     @endif
@@ -69,9 +45,9 @@
             </div>
             <div>
                 <h3>{{ __('Explore') }}</h3>
-                <a href="{{ tenant_web_url('/departments') }}">{{ __('Departments') }}</a>
-                <a href="{{ tenant_web_url('/doctors') }}">{{ __('Doctors') }}</a>
-                <a href="{{ tenant_web_url('/blog') }}">{{ __('Health tips') }}</a>
+                @foreach(clinic_nav_items() as $item)
+                    <a href="{{ $item['href'] }}">{{ $item['label'] }}</a>
+                @endforeach
                 <a href="{{ tenant_safe_href(null, '/book') }}">{{ __('Book appointment') }}</a>
             </div>
         </div>

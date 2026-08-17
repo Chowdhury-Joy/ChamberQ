@@ -19,7 +19,7 @@
     $sessionList = ($sessions ?? collect())->values();
     $showHeroForm = ($bookingAvailable ?? false) && $doctorList->isNotEmpty() && $sessionList->isNotEmpty();
     $today = now()->toDateString();
-    $maxDate = now()->addDays(60)->toDateString();
+    $maxDate = \App\Models\PlatformSetting::onlineBookingMaxDate();
 
     /*
      * Avatars are opt-in, not defaulted.

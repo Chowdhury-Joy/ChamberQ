@@ -17,6 +17,7 @@ class StaffDeskBanglaTest extends TestCase
         'app/Filament/TenantAdmin/Pages/LiveQueueControl.php',
         'app/Filament/TenantAdmin/Pages/DailyRoster.php',
         'app/Filament/TenantAdmin/Pages/ConsultScreen.php',
+        'app/Filament/TenantAdmin/Pages/MissedProcedures.php',
         'app/Filament/TenantAdmin/Widgets/TodayAppointmentsWidget.php',
         'app/Filament/TenantAdmin/Widgets/TenantStatsOverview.php',
         'app/Services/SittingPrompt.php',

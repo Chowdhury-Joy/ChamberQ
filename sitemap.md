@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-16T18:14:03+0600
+Last Updated: 2026-08-17T15:48:27+0600
 
 ## Full Site Map
 
@@ -17,7 +17,7 @@ Hosts: values in `CENTRAL_DOMAINS` (e.g. `localhost`).
 | `/me/history` | Past visits and prescriptions for this phone (own records; no share-flag gate; no voice/photo) | patient login |
 | `/me/prescriptions/{id}` | Full patient pad for one prescription belonging to this phone | patient login |
 | `/admin` | Super Admin Filament login | public login |
-| `/admin/*` | Super Admin: Tenants under **Platform** (incl. **Product modules** checkboxes: Front door / Live queue / Prescription; **Maestro**/Clinic label; launch-offer ticks; live list/due + partner commission preview), Marketers, Discount Codes, Commissions; finance dashboard then platform totals then latest 8 tenants; **Client Health** seller overview (`/admin/seller-overview`, names link to tenant edit); **Research data** aggregate view (`/admin/research`); **Platform data backup** (`/admin/data-backup`, restore defaults to dry-run and confirms before a live replace); Tenants list row actions (Edit / Download chamber backup) sit in a **⋮** menu with finance columns behind the column manager; per-tenant chamber backup download plus Restore/Delete behind **Dangerous** on tenant edit; confirm doctor setup/monthly/**12 months prepaid** on tenant edit | super_admin only |
+| `/admin/*` | Super Admin: Tenants under **Platform** (incl. **Product modules** checkboxes: Front door / Live queue / Prescription; **Maestro**/Clinic label; launch-offer ticks; live list/due + partner commission preview), Marketers, Discount Codes, Commissions; finance dashboard then platform totals then latest 8 tenants; **Client Health** seller overview (`/admin/seller-overview`, names link to tenant edit); **Research data** aggregate view (`/admin/research`); **Booking window** (`/admin/booking-window`, how many days ahead patients can book on every Front door); **Platform data backup** (`/admin/data-backup`, restore defaults to dry-run and confirms before a live replace); Tenants list row actions (Edit / Download chamber backup) sit in a **⋮** menu with finance columns behind the column manager; per-tenant chamber backup download plus Restore/Delete behind **Dangerous** on tenant edit; confirm doctor setup/monthly/**12 months prepaid** on tenant edit | super_admin only |
 | `/partner` | Marketer partner panel login | public login |
 | `/partner/*` | Marketer: referral link, owed/paid stats, referred doctors list, commission history | marketer only |
 | `/up` | Laravel health check | public |
@@ -31,9 +31,10 @@ Same central host; tenant identified by URL slug (tenant `id`), e.g. `drkarim`.
 |-------|---------|--------|
 | `/{slug}/` | Branded website home | public (**Front door** module) |
 | `/{slug}/book` | Booking wizard | public (**Front door**) |
-| `/{slug}/bookings/{booking}` | Patient ticket (sitting window always; live queue / come-around only with **Live queue**) | public (UUID) |
+| `/{slug}/bookings/{booking}` | Patient ticket (sitting window always; live queue / come-around only with **Live queue**) | public (UUID, 60/min throttle) |
 | `/{slug}/portal` | Phone lookup — bookings + every prescription with medicines (Rx list needs **Prescription**) | public (throttled, **Front door**) |
 | `/{slug}/screen/{session}` | Outdoor TV (always today for that schedule session — bookmark once) | public (**Live queue**) |
+| `/{slug}/screen/chamber/{chamber}` | Combined waiting-room TV for every live sitting in that chamber today | public (**Live queue**) |
 | `/{slug}/screen/{session}/{date}` | Outdoor display for a specific date (legacy / deep link) | public (**Live queue**) |
 | `/{slug}/lang/{locale}` | Switch session locale `en` / `bn` (same-host Referer; signed-in staff without Referer return to `/{slug}/admin`) | public |
 | `/{slug}/departments` | Clinic departments listing (clinic tier only) | public |
@@ -45,6 +46,8 @@ Same central host; tenant identified by URL slug (tenant `id`), e.g. `drkarim`.
 | `/{slug}/admin` | Tenant staff Filament panel (staff/admin land on the dashboard; a doctor with **Prescription** is sent to Consult Screen) | staff / doctor / admin login |
 | `/{slug}/admin/consult-screen` | Doctor's working pad — auto-follows the patient in the chamber | doctor login (**Prescription**) |
 | `/{slug}/admin/cashbook` | Desk khata: income, expense, net, waived (day/week/month) | staff / doctor / admin |
+| `/{slug}/admin/missed-procedures` | Unfinished past-dated intervention rows (WhatsApp + Move; Stations only) | staff / doctor (`canWorkDesk`, **Stations**) |
+| `/{slug}/admin/cash-categories` | Income/expense category labels for the cashbook (add, hide, rename custom) | admin only |
 | `/{slug}/admin/operational-reports` | Day / week / month booking counts | admin / doctor |
 | `/{slug}/admin/chambers` | Rooms / locations (sidebar only when multiple chambers) | staff (or doctor if no staff login; admin) |
 | `/{slug}/admin/schedule-sessions` | Sitting days and hours | staff (or doctor if no staff login; admin) |
@@ -68,15 +71,18 @@ When a doctor connects their own domain (e.g. `drkarim.com`), routes live at the
 | `/doctors/{slug}` | Single doctor public profile | public |
 | `/book` | Online serial booking wizard | public |
 | `POST /book` | Homepage hero form target — flashes name/phone to session, redirects to the wizard so patient details never enter the URL | public (throttled) |
-| `/bookings/{booking}` | Patient ticket (UUID) | public |
+| `/bookings/{booking}` | Patient ticket (UUID) | public (60/min throttle) |
 | `/portal` | Phone lookup — bookings + every prescription with medicines | public (throttled) |
 | `/screen/{session}` | Outdoor waiting-room TV (always today — bookmark once per schedule session) | public (throttled) |
+| `/screen/chamber/{chamber}` | Combined waiting-room TV for every live sitting in that chamber today | public (throttled) |
 | `/screen/{session}/{date}` | Outdoor waiting-room display for a specific date (legacy) | public (throttled) |
 | `/lang/{locale}` | Switch session locale `en` / `bn`. Same-host Referer only (off-site Referer is ignored). Signed-in chamber staff with no Referer return to `/admin`; guests stay on the public site | public |
 | `/manifest.webmanifest`, `/sw.js`, `/pwa-icon-{192\|512}.svg` | PWA bits | public |
 | `/admin` | Tenant staff Filament panel (staff/admin land on the dashboard; a doctor with **Prescription** is sent to Consult Screen) | staff / doctor / admin login |
 | `/admin/consult-screen` | Doctor's working pad — auto-follows the patient in the chamber | doctor login (**Prescription**) |
 | `/admin/cashbook` | Desk khata: income, expense, net, waived (day/week/month) | staff / doctor / admin |
+| `/admin/missed-procedures` | Unfinished past-dated intervention rows (WhatsApp + Move; Stations only) | staff / doctor (`canWorkDesk`, **Stations**) |
+| `/admin/cash-categories` | Income/expense category labels for the cashbook (add, hide, rename custom) | admin only |
 | `/admin/referring-doctors` | Outside GP registry (Referrals module) | staff / doctor / admin |
 | `/admin/referral-commissions` | Referral commission ledger — pending/paid, bulk payout | staff / doctor / admin |
 | `/admin/employees` | Staff roster (HR module) | admin |
@@ -104,6 +110,7 @@ Available under both platform path (`/{slug}/api/…`) and custom domain (`/api/
 | `POST /api/queue/{booking}/push` | Store a Web Push subscription for pocket buzz on this ticket (live queue only; no SMS) | public (throttled) |
 | `POST /api/staff/push` | Store staff Web Push subscription for sitting sticky-note buzz (live queue only; auth) | staff login (throttled) |
 | `GET /api/screen/{session}` | Outdoor TV poll (always today) | public (throttled) |
+| `GET /api/screen/chamber/{chamber}` | Combined chamber TV poll (always today) | public (throttled) |
 | `GET /api/screen/{session}/{date}` | Screen poll for a specific date (legacy) | public (throttled) |
 | `POST /api/bookings/{booking}/sms/cancellation` | Staff-tapped cancellation SMS (prepaid; gated by doctor `cancellation` SMS pref) | auth, same tenant (ops/queue/visit-notes), throttled |
 | `POST /api/prescriptions/{prescription}/sms` | Staff-tapped prescription-link SMS (prepaid; gated by doctor `prescription` SMS pref) | auth, same tenant (ops/queue/visit-notes), throttled |
@@ -166,7 +173,7 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 3. Tap **View prescription** → full pad (phone must still match, or the logged-in account owns it). Goal: get medicines/diagnosis even if staff forgot the SMS/WhatsApp link.
 
 ### Patient → waiting room
-1. Watch the outdoor TV (staff bookmark `/screen/{session}` once — always shows today for that Morning/Evening slot).
+1. Watch the outdoor TV (staff bookmark `/screen/{session}` once for one sitting, or `/screen/chamber/{chamber}` for every live room in that chamber today).
 2. Hear call chime when serial is called.
 
 ## Admin/Staff Journeys
@@ -177,6 +184,12 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 - **URLs:** Platform `/{slug}/…`; after custom domain DNS, also `drkarim.com/…` at root.
 - **Modules:** Front door alone = website + book + day list (no outdoor TV / Call next / come-around). Live queue adds TV + live ticket. Prescription adds consult/Rx. Booking confirmation SMS is optional (credits + doctor toggle).
 - **Success:** Enabled module routes work; disabled ones 404. Admin at `/{slug}/admin` (or `/admin` on custom domain).
+
+### Set how far ahead patients can book (Super Admin)
+- **Trigger:** Owner wants a shorter or longer online booking window for every Front door (Maestro and Clinic).
+- **Steps:** Super Admin → **Platform → Booking window** (`/admin/booking-window`) → enter days (1–365) → Save. Default is 60.
+- **Data/systems touched:** `platform_settings.patient_booking_horizon_days`. Public book APIs and the clinic hero date picker read it; desk walk-ins do not.
+- **Success:** The date step on every chamber website only offers sittings inside that many days from today.
 
 ### Confirm doctor payment & pay marketer (Super Admin)
 - **Trigger:** bKash/bank payment received from doctor.
@@ -197,7 +210,7 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 
 ### Open clinic day → run queue
 - **Trigger:** Session day starts.
-- **Steps:** Queue runner (staff or doctor per Branding **Who runs the queue**) → Live Queue Control → optional **Buzz this phone** (staff pocket alert when a sticky note appears) → session auto-selected when today has only one, else pick from the dropdown/session cards → **Open screen / Copy link** once onto the waiting-room TV (stable URL, no date — bookmark and reuse every day for that session) → Start → Call → Patient arrived → Complete. If the line drops, the TV keeps the last number on screen and Call next still works **on this computer** (HDMI laptop or signed-in browser on the TV); replay uploads when the line returns. **After 10 minutes past sitting time**, if patients are waiting and nobody has Started, Daily Roster, Live Queue Control, and Consult Screen show a sticky amber note counting minutes late and waiting patients — Mark Late or Start (no patient SMS from this note). **After Start**, if nobody has been called for 10+ minutes, the same surfaces show an idle-after-start note (“Is the doctor in the chair?”) — clears on Call next, in chamber, **Doctor stepped out**, or End. **Start** after sitting time asks Mark Late / Just start / Cancel; if they already marked late and arrive before the announced time, Start now / Wait until that time / Cancel. **Doctor stepped out** blocks Call next and Call now until **He's back**. A no-response patient is skipped from the current-call card (twice, then no-show); any waiting or skipped patient can be called out of turn via **Call now** on their row (including overflow stools before the published line finishes). Desk walk-ins after the published cap use **Extra walk-in seats** on the sitting (staff only; online stays “full”). Booking SMS and the wizard confirm flash include a published **come around** time when live queue is on (unavailable while someone is in the chamber). Mark Late, Pause, Resume, Cancel session and Finish/End session all live behind the header's **Session actions** menu; **New Walk-In** is the standalone header action. **Mark Late** is also on **Daily Roster** (table header) so staff can warn waiting patients before opening Live Queue Control or pressing Start — same delay SMS / WhatsApp hand-off; on a `delayed` sitting it becomes **Add time** and only accepts a **larger** total delay. **Cancel session (doctor absent)** and **Finish/End session** behave identically toward patients: both name the count and the patients in their confirmation, both leave a patient already in the chamber as *completed* rather than cancelled, and both surface **Tell cancelled patients** afterwards for a per-patient WhatsApp/SMS hand-off. Amber **patients today without notes** banner at the top when completed patients lack notes (**Fill in now** opens the catch-up list). Doctor opens **Consult Screen** for auto-updating patient context (no search). After the visit, **Daily Roster → Collect fee** records cash/bKash/Nagad/card (or waive); **Operations → Cashbook** is where rent/tea/salary go out.
+- **Steps:** Queue runner (staff or doctor per Branding **Who runs the queue**) → Live Queue Control → optional **Buzz this phone** (staff pocket alert when a sticky note appears) → session auto-selected when today has only one, else pick from the dropdown/session cards → **Open screen / Copy link** once onto the waiting-room TV (stable URL, no date — bookmark and reuse every day for that session). Stations clinics also get **All rooms TV** (`/screen/chamber/{chamber}`) → Start → Call → Patient arrived → Complete. If the line drops, the TV keeps the last number on screen and Call next still works **on this computer** (HDMI laptop or signed-in browser on the TV); replay uploads when the line returns. **After 10 minutes past sitting time**, if patients are waiting and nobody has Started, Daily Roster, Live Queue Control, and Consult Screen show a sticky amber note counting minutes late and waiting patients — Mark Late or Start (no patient SMS from this note). **After Start**, if nobody has been called for 10+ minutes, the same surfaces show an idle-after-start note (“Is the doctor in the chair?”) — clears on Call next, in chamber, **Doctor stepped out**, or End. **Start** after sitting time asks Mark Late / Just start / Cancel; if they already marked late and arrive before the announced time, Start now / Wait until that time / Cancel. **Doctor stepped out** blocks Call next and Call now until **He's back**. A no-response patient is skipped from the current-call card (twice, then no-show); any waiting or skipped patient can be called out of turn via **Call now** on their row (including overflow stools before the published line finishes). Desk walk-ins after the published cap use **Extra walk-in seats** on the sitting (staff only; online stays “full”). Booking SMS and the wizard confirm flash include a published **come around** time when live queue is on (unavailable while someone is in the chamber). Mark Late, Pause, Resume, Cancel session and Finish/End session all live behind the header's **Session actions** menu; **New Walk-In** is the standalone header action. **Mark Late** is also on **Daily Roster** (table header) so staff can warn waiting patients before opening Live Queue Control or pressing Start — same delay SMS / WhatsApp hand-off; on a `delayed` sitting it becomes **Add time** and only accepts a **larger** total delay. **Cancel session (doctor absent)** and **Finish/End session** behave identically toward patients: both name the count and the patients in their confirmation, both leave a patient already in the chamber as *completed* rather than cancelled, and both surface **Tell cancelled patients** afterwards for a per-patient WhatsApp/SMS hand-off. Amber **patients today without notes** banner at the top when completed patients lack notes (**Fill in now** opens the catch-up list). Doctor opens **Consult Screen** for auto-updating patient context (no search). After the visit, **Daily Roster → Collect fee** records cash/bKash/Nagad/card (or waive); **Operations → Cashbook** is where rent/tea/salary go out.
 - **Success:** Outdoor screen matches control panel; consult screen shows the patient in chamber; the summary strip's waiting count and projected finish time match the table. Patients who tapped **জানাতে দিন** get a Bangla pocket buzz at two away / next / called without staff sending SMS or WhatsApp.
 
 ### Tell waiting patients the doctor is late
@@ -263,8 +276,8 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 
 ### Chamber cashbook (staff / doctor / admin — ops)
 - **Trigger:** A patient pays at the desk, or the chamber spends money (rent, tea, salary).
-- **Steps:** **Without Stations:** On **Doctors**, set **Consultation fee**. Leave **Other visit fees** empty if every visit is the same price; add named rows (e.g. Follow-up ৳500) only if this doctor charges more than one price. On **Daily Roster**, **Collect fee** — staff pick how they paid (cash/bKash/Nagad/card) or waive; they cannot type an amount. If extra fees exist they pick the visit type first. **With Stations (Super Admin opt-in):** On **Operations → Fee catalogue**, set each visit/procedure board price and clinic house share. On **Daily Roster**, **Collect fee** — pick a catalogue chip, type cash ৳ and mobile ৳ (discount and clinic/doctor split compute automatically; overpay is rejected). If **Referrals** is on, pick **Referred by (outside GP)** when a patient was sent by another doctor — visit ৳200 / intervention ৳1,000 commission is logged automatically. Consult sittings hide Collect fee. On **Operations → Cashbook**, **Add expense** or **Add income**, then read day/week/month income, expense, net, waived ৳, and (Stations) clinic/doctor/discount columns.
-- **Data/systems touched:** `chamber_cash_entries` (`fee_type` legacy path; `fee_catalog_item_id`, split columns on Stations path), `doctors.default_fee_taka`, `doctors.extra_fees`, `fee_catalog_items`, `ChamberCashService` / `StationsTillService`. Patients still pay at the chamber — no booking gateway.
+- **Steps:** **Without Stations:** On **Doctors**, set **Consultation fee**. Leave **Other visit fees** empty if every visit is the same price; add named rows (e.g. Follow-up ৳500) only if this doctor charges more than one price. On **Daily Roster**, **Collect fee** — staff pick how they paid (cash, one online method, or **Cash + online** with cash ৳ and online ৳ that must add up to the locked fee) or waive; they cannot type the total. If extra fees exist they pick the visit type first. **With Stations (Super Admin opt-in):** On **Operations → Fee catalogue**, set each visit/procedure board price and clinic house share. On **Daily Roster**, **Collect fee** — pick a catalogue chip, type cash ৳ and mobile ৳ (discount and clinic/doctor split compute automatically; overpay is rejected). If **Referrals** is on, pick **Referred by (outside GP)** when a patient was sent by another doctor — visit ৳200 / intervention ৳1,000 commission is logged automatically. Consult sittings hide Collect fee. Counseling rows also hide Collect fee and skip a voucher number. End-of-day money is **Operations → Cashbook**. On **Operations → Cashbook**, **Add expense** or **Add income** (each picks a category), then read day/week/month income, expense, net, waived ৳, and (Stations) clinic/doctor/discount columns. The account owner maintains category labels under **Operations → Cash categories** (hide unused headings, add custom ones such as Cleaning or Room rent).
+- **Data/systems touched:** `chamber_cash_entries`, `cash_categories`, `CashCategoryService` (`fee_type` legacy path; `fee_catalog_item_id`, split columns on Stations path), `doctors.default_fee_taka`, `doctors.extra_fees`, `fee_catalog_items`, `ChamberCashService` / `StationsTillService`. Patients still pay at the chamber — no booking gateway.
 - **Success:** End of day the khata shows what came in, what went out, clinic vs doctor share (Stations), and what is left.
 
 ### Outside GP referral payouts (when Referrals module on)
@@ -283,15 +296,21 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 
 ### Stations clinic floor (staff / doctor — when module on)
 - **Trigger:** A pain clinic runs consult / visit / intervention rooms, outdoor vitals, procedure handoffs, or one-off sitting hours.
-- **Steps:** Super Admin ticks **Stations** on the tenant. Staff set **Schedule Sessions** room type (consult / visit / intervention). **Daily Roster:** **Outdoor vitals** on waiting rows (BP + weight) → doctor consult pad prefills today's numbers. **Send to intervention** from a visit row creates a linked procedure serial. On intervention rows: **Mark prepped** → **Call doctor** → **Procedure done**. **Operations → Sitting day overrides** for tomorrow's hours without rewriting Saturday forever. Doctors receive a **Morning queue count** notification after 09:05 when visits or procedures are waiting.
+- **Steps:** Super Admin ticks **Stations** on the tenant. Staff set **Schedule Sessions** room type (visit / intervention / counseling; leftover `consult` still resolves). **Daily Roster:** **Outdoor vitals** on waiting rows (BP + weight) → doctor consult pad prefills today's numbers. **Book intervention** on Live Queue Control, Consult Screen, or Daily Roster (visit rows) opens a sitting picker: same day is always listed (even when OT was this morning, before visit hours); the default is the next sitting that has not ended. Confirming creates a linked procedure serial. If they cannot come, **Move intervention** picks another sitting. On intervention rows: **Mark prepped** → **Call doctor** → **Procedure done** → **Send to counseling** (same-day free row, no voucher). Forgotten next-day OT dates sit on **Operations → Missed procedures** (WhatsApp + Move; nothing auto-cancels). **Operations → Sitting day overrides** for tomorrow's hours without rewriting Saturday forever. Doctors receive a **Morning queue count** notification after 09:05 when visits or procedures are waiting. Waiting-room TV: per sitting `/screen/{session}`, or **All rooms TV** `/screen/chamber/{chamber}`.
 - **Data/systems touched:** `schedule_sessions.kind`, `bookings.voucher_number`, `bookings.related_booking_id`, `bookings.procedure_status`, `schedule_session_overrides`, `visit_records` vitals, `SendStationsMorningCountPushes`.
-- **Success:** Desk runs three lines, split till matches the paper Excel, and the doctor sees outdoor vitals before opening the pad.
+- **Success:** Desk runs visit → intervention → counseling, split till matches the paper Excel, free counseling rows take no voucher, and the doctor sees outdoor vitals before opening the pad.
 
 ### Earlier-date waiting list (staff — ops)
 - **Trigger:** Legacy bookings still flagged `wants_earlier_date` (the public wizard no longer offers the opt-in), or staff want to contact those patients when a seat frees up.
 - **Steps:** Tenant admin → **Operations** → **Waiting for earlier date** — review future flagged bookings (soonest booked date first) → tap **WhatsApp** per row to message that patient (staff-tapped; no automatic SMS).
 - **Data/systems touched:** `bookings.wants_earlier_date`, `bookings.booking_date`, patient name/phone on the booking row.
 - **Success:** Staff can reach patients who previously asked to move earlier without hunting through the full roster.
+
+### Missed procedure follow-up (staff — Stations)
+- **Trigger:** A patient was booked onto a later intervention sitting (often next day) and did not attend. No SMS is sent for that booking.
+- **Steps:** Tenant admin → **Operations → Missed procedures** — unfinished past-dated intervention rows (patient, phone, sitting, missed date, days overdue, originating visit) → **WhatsApp** (staff-tapped `wa.me`) or **Move intervention** onto another sitting. Rows stay until done, cancelled, or moved; nothing auto-no-shows.
+- **Data/systems touched:** `bookings.procedure_status`, `bookings.booking_date`, `StationsHandoffService::overdueProceduresQuery()` / `moveProcedure()`.
+- **Success:** Forgotten OT dates are still on a list staff can act on; a moved row leaves the list.
 
 ### Block a date — vacation / holiday / doctor away (staff / admin)
 - **Trigger:** The clinic, a chamber, or one doctor will not sit on a given date.
@@ -321,7 +340,7 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 - **Success:** Patients see the right rooms and hours on the booking wizard; the outdoor TV label matches the sitting.
 
 ### Patient records — lookup and corrections (admin/doctor)
-- **Trigger:** Staff need to see who has visited, fix a duplicate person, or move a visit to the right household member.
-- **Steps:** Tenant admin → **Patients** (search by name/phone) → edit demographics, or use **Join two records** / **Move a visit** actions. Run `php artisan patients:backfill` once per environment to link legacy bookings (use `--dry-run` first).
-- **Data/systems touched:** `patients`, `bookings.patient_id`.
-- **Success:** Each person has one record; family members on one phone can each book the same day; staff can merge mistaken duplicates.
+- **Trigger:** Staff need to see who has visited, fix a duplicate person, move a visit to the right household member, or mark someone treated on paper before ChamberQ as a returning patient.
+- **Steps:** Tenant admin → **Patients** (search by name/phone) → edit demographics including **Seen here before ChamberQ**, or use **Join two records** / **Move a visit**. Desk staff (who cannot open Patients) tick **They have been treated here before ChamberQ** on a walk-in, or tap **Old patient (paper file)** / **Mark as first visit** on Daily Roster or Live Queue. Run `php artisan patients:backfill` once per environment to link legacy bookings (use `--dry-run` first).
+- **Data/systems touched:** `patients`, `patients.seen_before_software`, `bookings.patient_id`.
+- **Success:** Each person has one record; family members on one phone can each book the same day; staff can merge mistaken duplicates; a paper-file patient is not labelled a first visit.

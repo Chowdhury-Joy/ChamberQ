@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\Booking;
+use App\Models\ScheduleSession;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 
 class VoucherService
@@ -13,24 +15,49 @@ class VoucherService
             return;
         }
 
+        $booking->loadMissing('bookable');
+        $session = $booking->bookable;
+        if ($session instanceof ScheduleSession && $session->isFreeKind()) {
+            return;
+        }
+
         if ($booking->voucher_number !== null) {
             return;
         }
 
-        $booking->voucher_number = $this->nextNumberForDate($booking->booking_date->toDateString());
-        $booking->save();
-    }
+        for ($attempt = 0; $attempt < 3; $attempt++) {
+            try {
+                DB::transaction(function () use ($booking): void {
+                    $locked = Booking::query()->whereKey($booking->id)->lockForUpdate()->first();
+                    if ($locked === null) {
+                        return;
+                    }
 
-    public function nextNumberForDate(string $bookingDate): int
-    {
-        return (int) DB::transaction(function () use ($bookingDate): int {
-            $max = Booking::query()
-                ->where('booking_date', $bookingDate)
-                ->whereNotNull('voucher_number')
-                ->lockForUpdate()
-                ->max('voucher_number');
+                    if ($locked->voucher_number !== null) {
+                        $booking->voucher_number = $locked->voucher_number;
 
-            return ((int) $max) + 1;
-        });
+                        return;
+                    }
+
+                    $date = $locked->booking_date->toDateString();
+                    $max = Booking::query()
+                        ->where('booking_date', $date)
+                        ->whereNotNull('voucher_number')
+                        ->lockForUpdate()
+                        ->max('voucher_number');
+
+                    $locked->voucher_number = ((int) $max) + 1;
+                    $locked->save();
+                    $booking->voucher_number = $locked->voucher_number;
+                });
+
+                return;
+            } catch (UniqueConstraintViolationException) {
+                $booking->refresh();
+                if ($booking->voucher_number !== null) {
+                    return;
+                }
+            }
+        }
     }
 }

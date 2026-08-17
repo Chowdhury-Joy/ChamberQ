@@ -158,7 +158,7 @@ You do **not** need to “code” anything. If you want a copy or photo change, 
 
 ## 7. What you get at go-live
 
-We set this up **with you over WhatsApp**. Typical handoff includes:
+We set this up **with you over WhatsApp**. You get a short question list (sittings, phone, a photo). Typical handoff includes:
 
 - Your public page live (platform link like `chamberq.com/yourname`)
 - Booking working for your sessions

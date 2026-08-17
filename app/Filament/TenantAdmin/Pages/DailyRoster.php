@@ -11,8 +11,10 @@ use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Actions\Action;
 use App\Filament\TenantAdmin\Support\CompleteBookingWithVisitNotes;
+use App\Filament\TenantAdmin\Support\PatientContinuityActions;
 use App\Filament\TenantAdmin\Support\StationsCollectFeeForm;
 use App\Filament\TenantAdmin\Support\VisitNotesFormSchema;
+use App\Filament\TenantAdmin\Support\VisitPaperScanForm;
 use App\Models\Booking;
 use App\Models\ChamberCashEntry;
 use App\Models\Doctor;
@@ -82,7 +84,7 @@ class DailyRoster extends Page implements HasTable, HasForms
             ->query(
                 Booking::query()
                     ->where('booking_date', today()->toDateString())
-                    ->with(['visitRecord.prescription', 'cashEntry.feeCatalogItem', 'bookable', 'labTests'])
+                    ->with(['visitRecord.prescription', 'cashEntry.feeCatalogItem', 'bookable', 'labTests', 'procedureBookings.bookable', 'patient'])
                     ->orderByRaw("CASE WHEN status = 'in_chamber' THEN 1 WHEN status = 'waiting' THEN 2 WHEN status = 'completed' THEN 3 WHEN status = 'cancelled' THEN 4 ELSE 5 END")
                     ->orderBy('serial_number')
             )
@@ -91,6 +93,7 @@ class DailyRoster extends Page implements HasTable, HasForms
                 TextColumn::make('voucher_number')
                     ->label(__('Voucher'))
                     ->visible(fn (): bool => tenant()?->hasStations() ?? false)
+                    ->searchable()
                     ->placeholder('—'),
                 TextColumn::make('bookable.kind')
                     ->label(__('Room'))
@@ -154,6 +157,12 @@ class DailyRoster extends Page implements HasTable, HasForms
                     }),
             ])
             ->recordActions([
+                PatientContinuityActions::toggleSeenBeforeSoftware(
+                    Action::make('toggleSeenBeforeSoftware'),
+                ),
+                VisitPaperScanForm::scanAction(
+                    Action::make('scanPapers'),
+                ),
                 Action::make('call')
                     ->label('Call to Chamber')
                     ->color('primary')
@@ -314,30 +323,13 @@ class DailyRoster extends Page implements HasTable, HasForms
                             ->send();
                     }),
 
-                Action::make('sendToIntervention')
-                    ->label(__('Send to intervention'))
-                    ->icon('heroicon-o-arrow-right-circle')
-                    ->color('warning')
-                    ->visible(fn (Booking $record): bool => static::canSendToIntervention($record))
-                    ->requiresConfirmation()
-                    ->action(function (Booking $record, StationsHandoffService $handoff): void {
-                        try {
-                            $procedure = $handoff->sendVisitToIntervention($record);
-                        } catch (\InvalidArgumentException $e) {
-                            Notification::make()
-                                ->title($e->getMessage())
-                                ->danger()
-                                ->send();
+                \App\Filament\TenantAdmin\Support\StationsHandoffForm::bookAction(
+                    Action::make('sendToIntervention'),
+                ),
 
-                            return;
-                        }
-
-                        Notification::make()
-                            ->title(__('Procedure row added'))
-                            ->body(__('Serial :n on intervention list.', ['n' => $procedure->serial_number]))
-                            ->success()
-                            ->send();
-                    }),
+                \App\Filament\TenantAdmin\Support\StationsHandoffForm::moveAction(
+                    Action::make('moveIntervention'),
+                ),
 
                 Action::make('markPrepped')
                     ->label(__('Mark prepped'))
@@ -355,6 +347,10 @@ class DailyRoster extends Page implements HasTable, HasForms
                     ->color('success')
                     ->visible(fn (Booking $record): bool => static::canAdvanceProcedure($record, Booking::PROCEDURE_DOCTOR_CALLED))
                     ->action(fn (Booking $record, StationsHandoffService $handoff) => static::advanceProcedure($record, $handoff, Booking::PROCEDURE_DONE)),
+
+                \App\Filament\TenantAdmin\Support\StationsHandoffForm::sendToCounselingAction(
+                    Action::make('sendToCounseling'),
+                ),
 
                 Action::make('collectFee')
                     ->label(fn (Booking $record): string => $record->cashEntry
@@ -380,6 +376,9 @@ class DailyRoster extends Page implements HasTable, HasForms
                         return [
                             'fee_type' => $feeType,
                             'method' => $entry?->method ?? ChamberCashEntry::METHOD_CASH,
+                            'cash_taka' => $entry?->cash_taka ?? 0,
+                            'online_taka' => $entry?->mobile_taka ?? 0,
+                            'online_method' => $entry?->mobile_method,
                             'waived' => $entry?->isWaived() ?? false,
                             'note' => $entry?->note,
                         ];
@@ -418,7 +417,54 @@ class DailyRoster extends Page implements HasTable, HasForms
                                 ->label(__('Paid how'))
                                 ->options(ChamberCashEntry::methods())
                                 ->required()
+                                ->live()
                                 ->native(false),
+                            TextInput::make('cash_taka')
+                                ->label(__('Cash (৳)'))
+                                ->numeric()
+                                ->minValue(0)
+                                ->default(0)
+                                ->live()
+                                ->visible(fn (Get $get): bool => $get('method') === ChamberCashEntry::METHOD_MIXED
+                                    && ! (bool) $get('waived'))
+                                ->rules([
+                                    fn (Get $get): \Closure => function (string $attribute, mixed $value, \Closure $fail) use ($get, $record): void {
+                                        if ($get('method') !== ChamberCashEntry::METHOD_MIXED || (bool) $get('waived')) {
+                                            return;
+                                        }
+
+                                        try {
+                                            $fee = app(ChamberCashService::class)->amountForFeeType(
+                                                $record,
+                                                (string) ($get('fee_type') ?: Doctor::FEE_CONSULTATION),
+                                            );
+                                        } catch (\InvalidArgumentException) {
+                                            return;
+                                        }
+
+                                        if ((int) $get('cash_taka') + (int) $get('online_taka') !== $fee) {
+                                            $fail(__('Cash plus online must equal the total amount.'));
+                                        }
+                                    },
+                                ]),
+                            TextInput::make('online_taka')
+                                ->label(__('Online (৳)'))
+                                ->numeric()
+                                ->minValue(0)
+                                ->default(0)
+                                ->live()
+                                ->visible(fn (Get $get): bool => $get('method') === ChamberCashEntry::METHOD_MIXED
+                                    && ! (bool) $get('waived')),
+                            Select::make('online_method')
+                                ->label(__('Online method'))
+                                ->options(ChamberCashEntry::onlineMethods())
+                                ->native(false)
+                                ->visible(fn (Get $get): bool => $get('method') === ChamberCashEntry::METHOD_MIXED
+                                    && ! (bool) $get('waived')
+                                    && (int) ($get('online_taka') ?? 0) > 0)
+                                ->required(fn (Get $get): bool => $get('method') === ChamberCashEntry::METHOD_MIXED
+                                    && ! (bool) $get('waived')
+                                    && (int) ($get('online_taka') ?? 0) > 0),
                             Checkbox::make('waived')
                                 ->label(__('Waive this fee'))
                                 ->live(),
@@ -458,6 +504,9 @@ class DailyRoster extends Page implements HasTable, HasForms
                                 waived: (bool) ($data['waived'] ?? false),
                                 note: filled($data['note'] ?? null) ? (string) $data['note'] : null,
                                 feeType: (string) ($data['fee_type'] ?? Doctor::FEE_CONSULTATION),
+                                cashTaka: isset($data['cash_taka']) ? (int) $data['cash_taka'] : null,
+                                onlineTaka: isset($data['online_taka']) ? (int) $data['online_taka'] : null,
+                                onlineMethod: filled($data['online_method'] ?? null) ? (string) $data['online_method'] : null,
                             );
                         } catch (\InvalidArgumentException $e) {
                             Notification::make()
@@ -770,6 +819,10 @@ class DailyRoster extends Page implements HasTable, HasForms
                             ->label(__('Share health records with other ChamberQ doctors'))
                             ->helperText(__('Visit notes and prescriptions can help the next ChamberQ doctor treat this patient safely. Voice notes and photos stay in this clinic.'))
                             ->default(true),
+                        Checkbox::make('seen_before_software')
+                            ->label(__('They have been treated here before ChamberQ'))
+                            ->helperText(__('Tick if they are an old paper-file patient. The doctor will see them as returning, not a first visit. You can also tap this on their row later.'))
+                            ->default(false),
                         Select::make('bookable')
                             ->label(__('Session'))
                             // Resolved names, never raw ids: two sessions both
@@ -804,6 +857,7 @@ class DailyRoster extends Page implements HasTable, HasForms
                                 ? (bool) $data['share_clinical_history']
                                 : true,
                             nid: $data['nid'] ?? null,
+                            seenBeforeSoftware: ! empty($data['seen_before_software']) ? true : null,
                         );
                     })
                     ->successNotificationTitle(__('Walk-in added to today\'s queue.'))
@@ -1040,28 +1094,7 @@ class DailyRoster extends Page implements HasTable, HasForms
 
         $session = $booking->bookable;
 
-        return $session instanceof ScheduleSession && $session->isConsultKind();
-    }
-
-    protected static function canSendToIntervention(Booking $booking): bool
-    {
-        if (! tenant()?->hasStations()) {
-            return false;
-        }
-
-        if (! auth()->user()?->canWorkDesk()) {
-            return false;
-        }
-
-        if ($booking->bookable_type !== ScheduleSession::class) {
-            return false;
-        }
-
-        $session = $booking->bookable;
-
-        return $session instanceof ScheduleSession
-            && $session->kind === ScheduleSession::KIND_VISIT
-            && ! in_array($booking->status, ['cancelled', 'no_show'], true);
+        return $session instanceof ScheduleSession && $session->isFreeKind();
     }
 
     protected static function canAdvanceProcedure(Booking $booking, string $expectedStatus): bool

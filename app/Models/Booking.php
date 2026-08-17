@@ -106,6 +106,16 @@ class Booking extends Model
         return $this->whatsappLink($message);
     }
 
+    public function missedProcedureWhatsappLink(): string
+    {
+        $message = __('Hello :name, you missed your procedure appointment on :date. Please reply so we can book another sitting.', [
+            'name' => $this->patient_name,
+            'date' => $this->booking_date?->translatedFormat('j F Y'),
+        ]);
+
+        return $this->whatsappLink($message);
+    }
+
     public function slotBlock()
     {
         return $this->belongsTo(SlotBlock::class, 'slot_block_id');

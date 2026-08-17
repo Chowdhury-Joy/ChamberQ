@@ -152,18 +152,6 @@ class PainSolutionStationsSeeder extends Seeder
                 'chamber_id' => $chamber->id,
                 'doctor_id' => $doctor->id,
                 'day_of_week' => $day,
-                'session_name' => 'Consult',
-                'kind' => ScheduleSession::KIND_CONSULT,
-                'start_time' => '09:00',
-                'end_time' => '10:00',
-                'slot_cap' => 30,
-                'walk_in_overflow_cap' => 0,
-            ]);
-
-            ScheduleSession::create([
-                'chamber_id' => $chamber->id,
-                'doctor_id' => $doctor->id,
-                'day_of_week' => $day,
                 'session_name' => 'Intervention',
                 'kind' => ScheduleSession::KIND_INTERVENTION,
                 'start_time' => '10:00',
@@ -182,6 +170,18 @@ class PainSolutionStationsSeeder extends Seeder
                 'end_time' => '14:30',
                 'slot_cap' => 25,
                 'walk_in_overflow_cap' => 6,
+            ]);
+
+            ScheduleSession::create([
+                'chamber_id' => $chamber->id,
+                'doctor_id' => $doctor->id,
+                'day_of_week' => $day,
+                'session_name' => 'Counseling',
+                'kind' => ScheduleSession::KIND_COUNSELING,
+                'start_time' => '10:00',
+                'end_time' => '14:30',
+                'slot_cap' => 40,
+                'walk_in_overflow_cap' => 0,
             ]);
         }
     }

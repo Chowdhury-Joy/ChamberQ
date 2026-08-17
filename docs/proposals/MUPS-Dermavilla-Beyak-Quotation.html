@@ -1,0 +1,605 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Quotation — MUPS &amp; Dermavilla</title>
+<style>
+  :root {
+    --ink: #1b2d5a;
+    --ink-soft: #24366f;
+    --accent: #c8a14a;
+    --body: #1a2332;
+    --muted: #6b7280;
+    --line: #e5e7eb;
+    --card: #f4f5f8;
+    --card-accent: #eef1f7;
+    --mint: #c8a14a;
+  }
+
+  @font-face {
+    font-family: "Bebas Neue";
+    src: url("assets/fonts/BebasNeue-Regular.ttf") format("truetype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: block;
+  }
+
+  @page { size: A4; margin: 16mm 16mm 18mm; }
+  @page cover { size: A4; margin: 0; }
+
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0;
+    padding: 0;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: var(--body);
+    font-size: 11.5pt;
+    line-height: 1.65;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  h1, h2, .cover-title, .block-title, .card-title, .price-name, .pill {
+    font-family: "Bebas Neue", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-weight: 400;
+    letter-spacing: -0.02em;
+    text-transform: uppercase;
+    line-height: 0.92;
+    color: var(--ink);
+  }
+  h1 { font-size: 40pt; margin: 0 0 12px; }
+  h2 { font-size: 22px; margin: 22px 0 10px; letter-spacing: 0; }
+  p { margin: 0 0 12px; }
+  strong { font-weight: 700; }
+
+  .cover {
+    page: cover;
+    page-break-after: always;
+    break-after: page;
+    width: 210mm;
+    height: 297mm;
+    margin: 0;
+    padding: 28mm 22mm 20mm;
+    background: linear-gradient(135deg, #152447 0%, #1b2d5a 55%, #24366f 100%);
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+  }
+  .cover-logo {
+    height: 68px;
+    width: auto;
+    max-width: 280px;
+    display: block;
+    margin: 0 0 16px;
+  }
+  .cover-tag {
+    font-family: "Bebas Neue", "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-size: 28pt;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #fff;
+    margin: 0 0 6px;
+    line-height: 1.15;
+  }
+  .cover-tag-sub {
+    font-size: 11pt;
+    color: rgba(255,255,255,0.78);
+    max-width: 380px;
+    margin: 0;
+    line-height: 1.5;
+  }
+  .cover-hero { margin-top: 58mm; max-width: 460px; }
+  .cover-rule {
+    width: 40px; height: 2px; background: var(--mint);
+    border: 0; margin: 0 0 22px;
+  }
+  .cover-title {
+    font-size: 64pt;
+    letter-spacing: -0.03em;
+    line-height: 0.88;
+    margin: 0 0 22px;
+    color: #fff;
+  }
+  .cover-lead {
+    font-size: 13pt;
+    color: rgba(255,255,255,0.9);
+    max-width: 420px;
+    line-height: 1.55;
+    margin: 0;
+  }
+  .cover-meta {
+    position: absolute;
+    left: 22mm;
+    bottom: 28mm;
+    font-size: 11pt;
+    line-height: 1.7;
+    color: rgba(255,255,255,0.88);
+  }
+  .cover-meta strong { color: #fff; }
+  .cover .doc-foot {
+    position: absolute;
+    left: 22mm;
+    right: 22mm;
+    bottom: 12mm;
+    border-top-color: rgba(255,255,255,0.28);
+    color: rgba(255,255,255,0.72);
+  }
+
+  .sheet {
+    page-break-after: always;
+    break-after: page;
+    position: relative;
+    min-height: 261mm;
+    padding-bottom: 14mm;
+  }
+  .sheet:last-child { page-break-after: auto; break-after: auto; }
+
+  .doc-foot {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    text-align: center;
+    border-top: 1px solid #d1d5db;
+    padding-top: 8px;
+    font-size: 8.5pt;
+    letter-spacing: 0.01em;
+    color: #6b7280;
+    line-height: 1.4;
+  }
+
+  .eyebrow {
+    font-size: 9.5pt;
+    font-weight: 700;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 12px;
+  }
+  .subhead {
+    font-size: 12pt;
+    color: var(--muted);
+    margin: 0 0 20px;
+    max-width: 540px;
+    line-height: 1.55;
+  }
+  .lede p {
+    margin: 0 0 12px;
+    font-size: 11pt;
+    line-height: 1.65;
+  }
+
+  .sheet-features {
+    display: flex;
+    flex-direction: column;
+  }
+  .sheet-features .blocks {
+    flex: 1 1 auto;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-evenly;
+    min-height: 0;
+  }
+  .sheet-features .block {
+    padding: 16px 0;
+    border-bottom: 1px solid var(--line);
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+  .sheet-features .block:last-child { border-bottom: 0; }
+  .sheet-features h1 { font-size: 34pt; margin: 0 0 10px; }
+  .sheet-features .subhead { margin: 0 0 8px; }
+  .sheet-features .lede p { margin: 0 0 10px; }
+  .block-title {
+    font-size: 22px !important;
+    margin: 0 0 6px !important;
+    letter-spacing: 0;
+    line-height: 0.95;
+  }
+  .block p:not(.block-title) {
+    margin: 0 0 8px;
+    font-size: 11pt;
+    color: #334155;
+    line-height: 1.5;
+  }
+  .block ul {
+    margin: 0;
+    padding: 0 0 0 1.15em;
+  }
+  .block li {
+    margin: 0 0 5px;
+    font-size: 11pt;
+    color: #334155;
+    line-height: 1.4;
+  }
+  .block li:last-child { margin-bottom: 0; }
+  .note ul {
+    margin: 8px 0 0;
+    padding: 0 0 0 1.15em;
+  }
+  .note li {
+    margin: 0 0 5px;
+    line-height: 1.4;
+  }
+  .note li:last-child { margin-bottom: 0; }
+
+  .pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 4px 0 8px;
+  }
+  .card {
+    border-radius: 10px;
+    padding: 12px 12px 12px;
+    border: 1px solid #dce1ea;
+    background: var(--card);
+  }
+  .card.personal {
+    background: var(--card-accent);
+    border-color: #e5d5a8;
+  }
+  .card-label {
+    font-size: 9pt;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    margin: 0 0 8px;
+    color: var(--accent);
+  }
+  .card-title {
+    font-size: 24px !important;
+    margin: 0 0 8px !important;
+    letter-spacing: 0;
+  }
+  .card p { margin: 0; font-size: 10.5pt; color: #334155; line-height: 1.5; }
+
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 6px;
+    margin: 10px 0 14px;
+  }
+  .flow-step {
+    border: 1.5px solid var(--accent);
+    border-radius: 8px;
+    padding: 8px 12px;
+    font-size: 10pt;
+    font-weight: 700;
+    color: var(--ink);
+    background: #fff;
+    line-height: 1.25;
+  }
+  .flow-arrow {
+    color: var(--accent);
+    font-weight: 700;
+    font-size: 13pt;
+  }
+
+  .note {
+    background: var(--card);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin: 16px 0 0;
+    font-size: 11pt;
+    color: #334155;
+    line-height: 1.55;
+  }
+
+  .price-card {
+    max-width: 400px;
+    border-radius: 12px;
+    border: 1px solid var(--accent);
+    background: var(--card-accent);
+    padding: 22px 20px 18px;
+    margin: 8px 0 18px;
+  }
+  .pill {
+    display: inline-block;
+    font-size: 14pt;
+    letter-spacing: 0.14em;
+    background: var(--accent);
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 999px;
+    margin-bottom: 14px;
+  }
+  .price-name {
+    font-size: 36pt;
+    letter-spacing: 0.1em;
+    margin: 0 0 4px;
+    line-height: 1.05;
+  }
+  .price-tag {
+    font-size: 10.5pt;
+    color: var(--muted);
+    margin: 0 0 14px;
+  }
+  .price-amount {
+    font-size: 26pt;
+    font-weight: 700;
+    color: var(--accent);
+    margin: 0;
+    line-height: 1.15;
+  }
+  .price-amount span {
+    font-size: 12pt;
+    font-weight: 500;
+    color: var(--muted);
+  }
+  .price-setup {
+    font-size: 10.5pt;
+    color: var(--muted);
+    margin: 6px 0 16px;
+  }
+  .price-card ul { margin: 0; padding: 0; list-style: none; }
+  .price-card li {
+    font-size: 10.5pt;
+    color: #334155;
+    padding: 0 0 8px 12px;
+    position: relative;
+    line-height: 1.45;
+  }
+  .price-card li::before {
+    content: "";
+    width: 4px; height: 4px;
+    border-radius: 50%;
+    background: var(--ink);
+    position: absolute;
+    left: 0; top: 7px;
+  }
+
+  ol.next {
+    margin: 8px 0 16px;
+    padding-left: 1.25em;
+  }
+  ol.next li {
+    margin-bottom: 8px;
+    color: #334155;
+    font-size: 11pt;
+    line-height: 1.5;
+  }
+</style>
+</head>
+<body>
+
+<section class="cover">
+  <img class="cover-logo" src="assets/beyak-logo-white.png" alt="Beyak Branding">
+  <p class="cover-tag">Quotation</p>
+  <p class="cover-tag-sub">MUPS Dhaka · MUPS Chittagong · Dermavilla</p>
+
+  <div class="cover-hero">
+    <hr class="cover-rule">
+    <h1 class="cover-title">Product<br>Proposal</h1>
+    <p class="cover-lead">Three clinic floors on one system as it ships today — live queue, digital prescriptions, stations, referrals, and HR. Not a hospital HIS.</p>
+  </div>
+
+  <div class="cover-meta">
+    Prepared by <strong>Beyak Branding</strong><br>
+    01329-877557 · beyakbranding@gmail.com<br>
+    16 August 2026 · Valid until 23 August 2026
+  </div>
+  <p class="doc-foot">Beyak Branding · Your Brand In Motion · www.beyakbranding.com</p>
+</section>
+
+<section class="sheet sheet-features">
+  <p class="eyebrow">Three centres</p>
+  <h1>Your clinics on one&nbsp;system</h1>
+  <div class="lede">
+    <p>MUPS already runs two locations. Dermavilla is a third floor with its own doctors and brand. This quotation is clinic software for that — more than one doctor, more than one room, labs on the same booking. All three centres sit on the same plan, as it ships today.</p>
+  </div>
+
+  <div class="pair">
+    <div class="card">
+      <p class="card-label">MUPS</p>
+      <p class="card-title">Two locations</p>
+      <p>Dr. Moin Uddin Pain Solution — Dhaka and Chittagong. Consult rooms, visit rooms, intervention rooms, and the till that splits across them.</p>
+    </div>
+    <div class="card personal">
+      <p class="card-label">Dermavilla</p>
+      <p class="card-title">One centre</p>
+      <p>Dr. Nusrat Sultana Urmi — same plan: site, serials, queue, Rx, stations, referrals, HR.</p>
+    </div>
+  </div>
+
+  <div class="blocks">
+    <div class="block">
+      <p class="block-title">1. Portfolio website under each&nbsp;name</p>
+      <ul>
+        <li>Departments, doctor grid, blog, and Book</li>
+        <li>Families find the clinic, not a hospital template</li>
+        <li>We set up the first version; staff edit when they want</li>
+      </ul>
+    </div>
+    <div class="block">
+      <p class="block-title">2. Online serial + labs on the same&nbsp;visit</p>
+      <ul>
+        <li>Patient books a doctor and date</li>
+        <li>Walk-ins stay in the same queue</li>
+        <li>Lab tests can ride on the same booking</li>
+      </ul>
+    </div>
+    <div class="block">
+      <p class="block-title">3. Ticket + waiting-room&nbsp;TV</p>
+      <ul>
+        <li>Live position on the phone</li>
+        <li>One outdoor screen per sitting calls the next numbers</li>
+        <li>English or বাংলা</li>
+      </ul>
+    </div>
+    <div class="block">
+      <p class="block-title">4. Consult screen + digital&nbsp;Rx</p>
+      <ul>
+        <li>Notes, history, medicines, follow-up</li>
+        <li>Print a slip or send a short link</li>
+        <li>Medicines for the family; diagnosis stays in the consult record</li>
+      </ul>
+    </div>
+  </div>
+  <p class="doc-foot">Beyak Branding · Your Brand In Motion · www.beyakbranding.com</p>
+</section>
+
+<section class="sheet sheet-features">
+  <p class="eyebrow">What is included · as it ships today</p>
+  <h1>What this adds on the&nbsp;floor</h1>
+  <p class="subhead">The extras a pain clinic and a skin clinic actually use — not an OT diary or a pharmacy warehouse.</p>
+
+  <div class="blocks">
+    <div class="block">
+      <p class="block-title">5. Multiple doctors, unlimited&nbsp;chambers</p>
+      <ul>
+        <li>Associates in one system</li>
+        <li>Each doctor’s notes stay private</li>
+        <li>No five-location cap</li>
+      </ul>
+    </div>
+    <div class="block">
+      <p class="block-title">6. Stations — rooms, fees,&nbsp;handoff</p>
+      <ul>
+        <li>Consult, visit, and intervention rooms (the MUPS pattern)</li>
+        <li>Fee catalogue, split till, and vouchers</li>
+        <li>Visit → intervention so a consult can send a patient to a procedure room without rewriting the file</li>
+      </ul>
+    </div>
+    <div class="block">
+      <p class="block-title">7. Referrals</p>
+      <ul>
+        <li>Outside GPs and commissions</li>
+        <li>A small amount per visit, a larger amount per intervention</li>
+        <li>Month-end envelopes match the book</li>
+      </ul>
+    </div>
+    <div class="block">
+      <p class="block-title">8. HR &amp; payroll</p>
+      <ul>
+        <li>Attendance and leave</li>
+        <li>One salary record per person per month</li>
+        <li>Optional post to the chamber cashbook so the till and payroll do not drift</li>
+      </ul>
+    </div>
+    <div class="block">
+      <p class="block-title">9. Till, roster, reports,&nbsp;notices</p>
+      <ul>
+        <li>Collect fee at the chamber</li>
+        <li>Daily roster</li>
+        <li>Day / week / month numbers</li>
+        <li>Booking, late, cancel, and Rx notices by SMS and/or WhatsApp</li>
+        <li>SMS uses a prepaid wallet; booking still works if it is empty</li>
+        <li>We keep a backup of the clinic’s data as part of the monthly fee</li>
+      </ul>
+    </div>
+  </div>
+  <p class="doc-foot">Beyak Branding · Your Brand In Motion · www.beyakbranding.com</p>
+</section>
+
+<section class="sheet">
+  <p class="eyebrow">A day on the floor</p>
+  <h1>How a sitting actually&nbsp;runs</h1>
+  <p class="subhead">Same loop at MUPS Dhaka, MUPS Chittagong, and Dermavilla — patients book or walk in; staff run one sitting at a time.</p>
+
+  <h2>Patient path</h2>
+  <p>From the family’s phone — no sign-up, just their mobile number.</p>
+  <div class="flow">
+    <span class="flow-step">Open the site</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">Book sitting</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">Get ticket</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">TV call</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">Consult + Rx</span>
+  </div>
+
+  <h2>At the desk</h2>
+  <p>Live Queue Control — one screen for the whole sitting.</p>
+  <div class="flow">
+    <span class="flow-step">Start sitting</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">Call next</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">Arrived</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">Collect fee</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">Station / Rx</span>
+  </div>
+
+  <div class="note">
+    Think of it as three shop floors with the same queue board, till, and staff roster — not a hospital ward system.
+  </div>
+  <div class="note">
+    <strong>Not in this proposal today</strong>
+    <ul>
+      <li>Hospital IPD / emergency / OT theatre / pharmacy stock</li>
+      <li>Online patient payment</li>
+      <li>Bangla homepage (paid add-on)</li>
+      <li>SMS credits (prepaid, extra)</li>
+      <li>If we ship a new module later and you want it, we add it at no extra charge</li>
+    </ul>
+  </div>
+  <p class="doc-foot">Beyak Branding · Your Brand In Motion · www.beyakbranding.com</p>
+</section>
+
+<section class="sheet">
+  <p class="eyebrow">Investment</p>
+  <h1>Software for three&nbsp;centres</h1>
+  <p class="subhead">We set everything up with you. A typical single centre is ৳75,000 setup and ৳7,500 / month. This package covers all three centres at the figures below.</p>
+
+  <div class="price-card">
+    <div class="pill">This proposal</div>
+    <p class="price-name">Three centres</p>
+    <p class="price-tag">MUPS Dhaka · MUPS Chittagong · Dermavilla</p>
+    <p class="price-amount">৳4,500<span>/month</span></p>
+    <p class="price-setup">One-time setup ৳1,20,000 · all three centres</p>
+    <ul>
+      <li>Done-with-you setup — branding, chambers, doctors, staff, stations, logins</li>
+      <li>Every module listed here, including stations, referrals, and HR</li>
+      <li>Hosting and backup of your clinic data — included in the monthly fee</li>
+      <li>Walkthrough of a real queue-and-consult day at each centre</li>
+      <li>New modules later — we add them for you at no extra charge, whenever you want them</li>
+    </ul>
+  </div>
+
+  <p>70% of setup to start; 30% at go-live. Monthly from the month after go-live. SMS credits extra. Custom domain (if you want one) is registered by the clinic; we point it at the live site.</p>
+  <p class="doc-foot">Beyak Branding · Your Brand In Motion · www.beyakbranding.com</p>
+</section>
+
+<section class="sheet">
+  <p class="eyebrow">Closing</p>
+  <h1>Whenever you are&nbsp;ready</h1>
+  <p class="subhead">Soft launch beside the current phone booking — no big-bang day required.</p>
+
+  <h2>How we go live</h2>
+  <ol class="next">
+    <li>Lock doctors, rooms, and sittings for MUPS Dhaka, MUPS Chittagong, and Dermavilla</li>
+    <li>We build each centre’s site, schedules, stations, and logins</li>
+    <li>Short training — desk on the boards and TVs; doctors on consult and Rx</li>
+    <li>Soft launch beside phone booking</li>
+  </ol>
+
+  <h2>Recommended next step</h2>
+  <div class="flow">
+    <span class="flow-step">WhatsApp</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">Live walkthrough</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">Lock sittings</span>
+    <span class="flow-arrow">→</span>
+    <span class="flow-step">Go live</span>
+  </div>
+  <ol class="next">
+    <li>Message us on WhatsApp: <strong>01329-877557</strong></li>
+    <li>We walk <strong>your</strong> MUPS / Dermavilla flow live</li>
+    <li>We lock the first sittings and give you a simple go-live checklist</li>
+  </ol>
+
+  <div class="note">
+    This quotation is valid until <strong>23 August 2026</strong>. Source code is not handed over. Clinical records belong to the clinic; we keep a backup of that data. Custom one-off work is extra. New modules we ship later are added at no extra charge, whenever you want them.
+  </div>
+  <p class="doc-foot">Beyak Branding · Your Brand In Motion · www.beyakbranding.com</p>
+</section>
+
+</body>
+</html>

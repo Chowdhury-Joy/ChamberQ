@@ -75,7 +75,7 @@
 
     <div class="backup-page">
         <p class="backup-note">
-            {{ __('Platform backup covers tenants, domains, marketers, discount codes, commissions, and billing payments. Chamber clinical data is restored per tenant from the Tenants list. Passwords are never included — use Forgot password after restore.') }}
+            {{ __('Platform backup covers tenants, domains, marketers, discount codes, commissions, billing payments, and booking-window settings. Chamber clinical data is restored per tenant from the Tenants list. Passwords are never included — use Forgot password after restore.') }}
         </p>
 
         <section class="backup-card">

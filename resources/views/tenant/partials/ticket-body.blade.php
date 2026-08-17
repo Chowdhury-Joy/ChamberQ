@@ -58,7 +58,11 @@
 
             <p class="text-muted">{{ __('Your serial number') }}</p>
             <p class="serial">{{ $booking->serial_number }}</p>
-            <p class="text-muted" style="margin-top:-0.75rem;margin-bottom:1.25rem;">{{ __('Show this number at reception') }}</p>
+            @if (($tenant?->hasStations() ?? false) && filled($booking->voucherLabel()))
+                <p class="text-muted" style="margin-top:-0.5rem;margin-bottom:0.25rem;">{{ __('Voucher') }}</p>
+                <p style="font-size:1.5rem;font-weight:600;margin:0 0 0.75rem;">{{ $booking->voucherLabel() }}</p>
+            @endif
+            <p class="text-muted" style="margin-bottom:1.25rem;">{{ __('Show this number at reception') }}</p>
 
             @if ($hasLiveQueue)
             <div class="eta-box" id="etaContainer" style="display: none;">

@@ -67,6 +67,10 @@ class TenancyUrlPublicAbsoluteTest extends TestCase
         $this->assertSame('http://127.0.0.1:8000/nusraturmi/screen/81', $url);
         $this->assertStringNotContainsString('nusraturmi.localhost', $url);
 
+        $chamberUrl = TenancyUrl::chamberScreenBookmarkUrl($tenant->id, 3);
+
+        $this->assertSame('http://127.0.0.1:8000/nusraturmi/screen/chamber/3', $chamberUrl);
+
         tenancy()->end();
     }
 }

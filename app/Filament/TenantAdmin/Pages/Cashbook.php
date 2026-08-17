@@ -5,6 +5,9 @@ namespace App\Filament\TenantAdmin\Pages;
 use App\Models\Chamber;
 use App\Models\ChamberCashEntry;
 use App\Models\User;
+use App\Filament\TenantAdmin\Resources\CashCategories\CashCategoryResource;
+use App\Models\CashCategory;
+use App\Services\CashCategoryService;
 use App\Services\ChamberCashService;
 use App\Services\OperationalReportService;
 use Carbon\Carbon;
@@ -202,6 +205,11 @@ class Cashbook extends Page implements HasTable
     protected function getHeaderActions(): array
     {
         return [
+            Action::make('manageCategories')
+                ->label(__('Manage categories'))
+                ->icon('heroicon-o-tag')
+                ->url(fn (): string => CashCategoryResource::getUrl())
+                ->visible(fn (): bool => auth()->user()?->isAdmin() ?? false),
             Action::make('addIncome')
                 ->label(__('Add income'))
                 ->icon('heroicon-o-plus')
@@ -225,6 +233,7 @@ class Cashbook extends Page implements HasTable
                     app(ChamberCashService::class)->recordOtherIncome(
                         $user,
                         $payment['amount'],
+                        $data['category'],
                         $payment['method'],
                         Carbon::parse($data['occurred_on'], OperationalReportService::TIMEZONE),
                         filled($data['chamber_id']) ? (int) $data['chamber_id'] : null,
@@ -300,13 +309,17 @@ class Cashbook extends Page implements HasTable
                 ->visible(fn (Get $get): bool => $get('method') !== ChamberCashEntry::METHOD_MIXED),
         ];
 
-        if ($expense) {
-            $fields[] = Select::make('category')
-                ->label(__('Category'))
-                ->options(ChamberCashEntry::expenseCategories())
-                ->required()
-                ->native(false);
-        }
+        $categoryService = app(CashCategoryService::class);
+        $categoryType = $expense ? CashCategory::TYPE_EXPENSE : CashCategory::TYPE_INCOME;
+
+        $fields[] = Select::make('category')
+            ->label(__('Category'))
+            ->options(fn (): array => $categoryService->pickerOptions($categoryType))
+            ->default(fn (): ?string => $expense
+                ? null
+                : (array_key_first($categoryService->pickerOptions(CashCategory::TYPE_INCOME)) ?: null))
+            ->required()
+            ->native(false);
 
         $fields[] = Select::make('method')
             ->label(__('Paid how'))

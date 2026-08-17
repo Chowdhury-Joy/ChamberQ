@@ -55,6 +55,9 @@ class ChamberCashService
         ?string $note = null,
         ?CarbonInterface $occurredOn = null,
         string $feeType = Doctor::FEE_CONSULTATION,
+        ?int $cashTaka = null,
+        ?int $onlineTaka = null,
+        ?string $onlineMethod = null,
     ): ChamberCashEntry {
         $this->assertMethod($method);
 
@@ -69,10 +72,17 @@ class ChamberCashService
             ? $booking->bookable
             : null;
 
+        $split = $waived
+            ? ['cash_taka' => null, 'online_taka' => null, 'online_method' => null]
+            : $this->resolvePaymentSplit($method, $amount, $cashTaka, $onlineTaka, $onlineMethod);
+
         $values = [
             'direction' => ChamberCashEntry::DIRECTION_INCOME,
             'amount' => $amount,
             'fee_type' => $feeType,
+            'cash_taka' => $split['cash_taka'],
+            'mobile_taka' => $split['online_taka'],
+            'mobile_method' => $split['online_method'],
             'category' => $waived ? ChamberCashEntry::CATEGORY_WAIVED : ChamberCashEntry::CATEGORY_PATIENT,
             'method' => $method,
             'chamber_id' => $session?->chamber_id,
@@ -114,9 +124,7 @@ class ChamberCashService
             throw new InvalidArgumentException('Expense must be at least ৳1.');
         }
 
-        if (! array_key_exists($category, ChamberCashEntry::expenseCategories())) {
-            throw new InvalidArgumentException('Unknown expense category.');
-        }
+        app(CashCategoryService::class)->validateManualExpenseCategory($category);
 
         $split = $this->resolvePaymentSplit($method, $amount, $cashTaka, $onlineTaka, $onlineMethod);
 
@@ -138,6 +146,7 @@ class ChamberCashService
     public function recordOtherIncome(
         User $user,
         int $amount,
+        string $category,
         string $method,
         CarbonInterface $occurredOn,
         ?int $chamberId = null,
@@ -152,6 +161,8 @@ class ChamberCashService
             throw new InvalidArgumentException('Income must be at least ৳1.');
         }
 
+        app(CashCategoryService::class)->validateManualIncomeCategory($category);
+
         $split = $this->resolvePaymentSplit($method, $amount, $cashTaka, $onlineTaka, $onlineMethod);
 
         return ChamberCashEntry::create([
@@ -160,7 +171,7 @@ class ChamberCashService
             'cash_taka' => $split['cash_taka'],
             'mobile_taka' => $split['online_taka'],
             'mobile_method' => $split['online_method'],
-            'category' => ChamberCashEntry::CATEGORY_OTHER_INCOME,
+            'category' => $category,
             'method' => $method,
             'chamber_id' => $chamberId,
             'recorded_by' => $user->id,

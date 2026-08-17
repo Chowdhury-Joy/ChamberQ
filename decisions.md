@@ -2593,3 +2593,240 @@
  <action>Ship **HR** as an opt-in module (`Tenant::MODULE_HR`, default off): employees, daily attendance, leave approve/reject, payroll payments that post **Salary** expenses to the existing cashbook. Admin-only Filament group **HR**.</action>
  <reason>Owner opens HR once a month; tying salary to cashbook keeps one truth for "money out" without building hospital-grade RBAC on Solo doctors.</reason>
 </decision>
+
+## 2026-08-16T22:33:59+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The setup Google Form was Bangla-only. Some doctors and staff read English first; others need Bangla beside it.</context>
+ <action>Every form title, section, question, hint, and choice is English with the Bangla in brackets. WhatsApp covers stay as they are (one Bangla, one English). Recipe: `docs/ChamberQ-setup-form.gs` and `docs/ChamberQ-Onboarding-Questionnaire.md`.</action>
+ <reason>Like a bilingual menu: English is the working language for typing emails and URLs; Bangla in brackets is the gloss so the person filling it never has to guess.</reason>
+</decision>
+
+## 2026-08-16T23:34:17+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>MUPS already has a public site at drmups.com (home, treatments, doctors, centres, fellowship, gallery, media, contact, appointment). They need that content on ChamberQ so patients can book a serial on the same look as other clinic sites.</context>
+ <action>Seed a clinic tenant `mups` on the current Clireo patient-site look (not a visual clone of the old PHP site). Map treatments → Departments, media articles → Blog, Dr. Moin → public doctor profile, appointment → ChamberQ `/book` (pay at chamber). Extra pages stay WebPage slugs: Centres, Fellowship, Gallery, Contact, Appointment. Photos still load from drmups.com until staff upload their own in Website.</action>
+ <reason>Like moving a shop’s window display into a new mall: keep the words and pictures customers already know, put them in the ChamberQ shopfront so Book appointment actually creates a serial. The old layout and chatbot stay behind; the new site matches every other clinic Front door.</reason>
+</decision>
+
+## 2026-08-16T23:47:15+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Clinic nav used homepage hash jumps (#treatments) and raw WebPage slugs (/centres). On http://127.0.0.1:8000/mups/ those extra pages 404’d, and inner CMS pages had a burger with no drawer.</context>
+ <action>One header partial for the clinic homepage and inner pages. Links: Home, Services (treatments list), Doctors, each extra published page, Health tips (articles). Hrefs go through tenant_safe_href so path tenants keep /mups/…. Book appointment stays the pink CTA.</action>
+ <reason>Like a restaurant menu on every wall, not only in the entrance hall — Centres and Fellowship have to be tappable from the bar, and the URL has to include the floor number (/mups/) or the lift opens on the wrong storey.</reason>
+</decision>
+
+## 2026-08-16T23:49:02+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>MUPS “The Founder” has one doctor. The clinic doctor grid treats one card as a tall stacked portrait, so on a laptop the photo sits on top of the name like a poster.</context>
+ <action>From 640px up, a one-card doctor grid is a side-by-side visiting-card: photo left, name and title right. Phones stay stacked. Several doctors still use the usual card row.</action>
+ <reason>One person on a wide screen should read left-to-right (face, then who they are), not as a long scroll of photo then caption.</reason>
+</decision>
+
+## 2026-08-16T23:51:37+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The MUPS homepage hero needed a wide photo of Dr. Moin at work, not the old standing cutout.</context>
+ <action>Commission a 16:9 sterile-theatre image of him doing an ultrasound-guided interventional procedure (`public/images/mups/mups-hero-surgery.jpg`) and set it as the homepage hero background. Left side stays darker for the headline.</action>
+ <reason>A landscape OT photo behind the headline is like a shop window showing the craft, not a passport photo stretched across a billboard.</reason>
+</decision>
+
+## 2026-08-16T23:54:25+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The MUPS browser tab used the full wide wordmark as the favicon, so the icon was an unreadable smear.</context>
+ <action>Replace it with a 32px-friendly square mark: navy rounded tile, blue nerve/neuron, green EKG (`/images/mups/favicon.svg`).</action>
+ <reason>A tab icon is a postage stamp, not a shop sign — only the nerve and heartbeat still read at that size.</reason>
+</decision>
+
+## 2026-08-16T23:56:06+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The MUPS About mission was a long paragraph squeezed into a 45rem column, so it stacked into a tall block of small-feeling lines.</context>
+ <action>Shorten the copy to two sentences and widen clinic `.about-head` from 45rem to 62rem so the heading can use more of the 1400px container.</action>
+ <reason>A mission line should read in one glance — fewer words on a wider measure, not an essay in a skinny column.</reason>
+</decision>
+
+## 2026-08-17T00:01:19+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>How far ahead a patient can book was hard-coded to 60 days, so Super Admin could not change the window for every Maestro and Clinic Front door at once.</context>
+ <action>Store `patient_booking_horizon_days` on a singleton `platform_settings` row (default 60, 1–365). Super Admin edits it at **Platform → Booking window**. `BookingService::openDatesFor()`, the public book POST, availability check, and clinic hero date picker all read that number. Desk walk-ins are not limited.</action>
+ <reason>Like one shop sign for opening hours rather than a note on each doctor’s door — new chambers inherit the same rule without a per-tenant setting.</reason>
+</decision>
+
+## 2026-08-17T00:04:00+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The clinic hero was itself 100vh, with the nav sitting above it, so the first screen was taller than the viewport and the fold cut through the hero.</context>
+ <action>Size the hero to the leftover viewport (`100dvh` minus the measured nav height) so nav + hero fill exactly one screen. JS writes `--clinic-nav-height` from the real bar.</action>
+ <reason>Like a shop window: the sign and the display should fit in the glass together, not leave the display hanging below the sill.</reason>
+</decision>
+
+## 2026-08-17T06:47:18+0600
+
+<decision>
+ <category>CRO</category>
+ <context>The MUPS homepage still used the old brand slogan “Precision Pain Solutions” — a name, not a reason to book — plus generic “leading national centre” language.</context>
+ <action>Rewrite homepage copy around the real offer: surgery-free, image-guided, under 30 minutes, first dedicated pain centre, book a serial, pay at the chamber. Hero, about, treatment strip, promise cards, and bottom CTA all say that in plain words.</action>
+ <reason>A patient in pain books when they see the outcome and the next step, not when they see a tagline. Same facts as drmups.com, written to convert.</reason>
+</decision>
+
+## 2026-08-17T06:56:24+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>In Find us, opening hours sat on one long line next to HOURS (Sun–Thu · Friday · Saturday), so the card was hard to scan.</context>
+ <action>Split hours on the middle-dot and stack each sitting on its own line under the Hours label.</action>
+ <reason>A timetable is a list, not a sentence — like a shop door that lists each day’s hours underneath, not across the glass.</reason>
+</decision>
+
+## 2026-08-17T06:59:22+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Uttara hours were “Sat–Wed 10 AM–1 PM and 5–9 PM”, so the column splitter only broke off Friday and left two sittings on one line.</context>
+ <action>Write Uttara the same way as Panchlaish: one sitting per dotted segment (`Sat–Wed 10 AM–1 PM · Sat–Wed 5–9 PM · Friday closed`).</action>
+ <reason>Every centre’s door should list sittings the same way, or Uttara looks unfinished next to Chittagong.</reason>
+</decision>
+
+## 2026-08-17T07:06:10+0600
+
+<decision>
+ <category>CRO</category>
+ <context>Voices of Relief had only three cards, and on a wide screen they sat still, so social proof ended after one glance.</context>
+ <action>Add five more MUPS-shaped reviews (eight total) and turn the row into a looping auto-scroller that pauses on hover, focus, or swipe. Reduced-motion visitors get a still, swipeable strip.</action>
+ <reason>A waiting-room full of stories converts better than three quotes in a frozen row — people skim while the cards keep moving, and they can grab one if they want to read.</reason>
+</decision>
+
+## 2026-08-17T07:17:40+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>On the one-doctor Founder card, the name sat in a white (or pale) panel beside the photo, like a paper slip stuck on the portrait.</context>
+ <action>Drop the fill on that card and its `.meta` so the name sits on the page background.</action>
+ <reason>A visiting card does not need a second sheet of paper for the name — photo, then who they are, on the same surface.</reason>
+</decision>
+
+## 2026-08-17T07:18:54+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The one-doctor Founder card was laid out left-to-right (photo | name). The owner wants the original stacked portrait back.</context>
+ <action>Remove the 640px+ two-column `doc-grid[data-card-count="1"]` rules. Photo on top, name under it. Keep the transparent name panel and do not swipe a single card.</action>
+ <reason>One founder should read top to bottom like a poster, not like a split visiting card.</reason>
+</decision>
+
+## 2026-08-17T07:20:49+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The Founder block stacked the headline, the portrait, and the navy numbers in one tall column, so the numbers felt like a footnote on the doctor instead of proof under the hero.</context>
+ <action>Move the stats into their own `stat_band` right under the hero. On wide screens, put the Founder headline and “View full profile” on the left and the portrait card on the right. Phones stay stacked.</action>
+ <reason>Like a shop window: the big numbers sit under the poster so you believe the claim, then you meet the person in a two-column spread instead of scrolling past a tower of boxes.</reason>
+</decision>
+
+## 2026-08-17T11:32:16+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The sitting form’s live pace helper looked like leftover developer text: heading “Minutes each hint”, sentence “At this window that is about 10 minutes each.”</context>
+ <action>Label it **Time per patient**. Normal copy: “That is about X minutes each. Does that match a real consult?” Under 5 minutes: “That is only X minutes each — too short…” in amber. Bangla strings in `lang/bn.json`.</action>
+ <reason>Same check as asking “if 12 people come in two hours, is that 10 minutes each in real life?” — the heading must say what the number is, not the field’s internal name.</reason>
+</decision>
+
+## 2026-08-17T11:37:35+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The pace line sat in the right column with a **Time per patient** heading. The owner wants it under Slot cap, short, and with no extra tag.</context>
+ <action>Drop the Placeholder. Slot cap helper text is “About X min each — real consult?” or, under 5 minutes, “Only X min each — too short.” Until start/end/cap are set it still says “At least 1 patient per session.”</action>
+ <reason>Like a price under a quantity box — you type 12 and immediately see “about 10 min each,” without a second labelled field beside it.</reason>
+</decision>
+
+## 2026-08-17T11:40:47+0600
+<decision>
+ <category>UI/UX</category>
+ <context>Collect fee offered Cash + online in Paid how, but unlike Cashbook it never asked how much was cash vs online, so the khata stored mixed with no split.</context>
+ <action>When Paid how is Cash + online (and the fee is not waived), Daily Roster Collect fee shows Cash (৳), Online (৳), and Online method. The two amounts must add up to the locked list price. `recordPatientIncome()` writes `cash_taka` / `mobile_taka` / `mobile_method` through the same split helper as Cashbook.</action>
+ <reason>Like a ৳1,000 bill paid ৳400 cash and ৳600 bKash — the till needs both numbers, not only the word “mixed.” Stations already typed cash and online; the default desk had the label without the boxes.</reason>
+</decision>
+
+## 2026-08-17T11:43:41+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>MUPS admin screens (Daily Roster, patients, cashbook, labs, slot blocks) were empty after the website seed, so a demo login looked unfinished.</context>
+ <action>`MupsSeeder` now calls `MupsDemoSeeder`: 12 pain-clinic patients, today's mixed queue with a live session, visit notes and prescriptions, cash + bKash + Nagad + waived fees, expenses, labs, future serials waiting for an earlier date, two closed days, and one sitting-time override. Demo phones `01899001001`–`012` so re-seed replaces them.</action>
+ <reason>Like stocking a showroom before a buyer walks in — the Front door already had copy; the staff rooms need sample files on every desk that this clinic actually uses (not Referrals/HR, which stay off).</reason>
+</decision>
+
+## 2026-08-17T12:24:50+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Sending a visit patient to intervention lived only on Daily Roster and always booked today. Staff work Live Queue; OT is often in the morning before visiting hours; many procedures are tomorrow or the next sitting, and a missed day must move rather than start over.</context>
+ <action>**Book intervention** on Live Queue Control, Consult Screen, and Daily Roster. The modal lists upcoming intervention sittings with clock times. Same day is always an explicit choice (staff/doctor can still list them today after morning OT via `allowEndedToday` on this path only). Default selection is the next sitting whose end has not passed. **Move intervention** reschedules an open procedure row. No extra Branding toggle — the picker is the option.</action>
+ <reason>Like a dentist booking a filling: the assistant stays on the chair-side screen, sees “Thursday 8:00 AM” (before afternoon OPD), can still squeeze someone onto today’s list if they will stay, and moves Thursday to Saturday if they do not come.</reason>
+</decision>
+
+## 2026-08-17T14:01:45+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Chambers go live with an empty patient list. People treated on paper before ChamberQ looked like first visits. Staff needed to overwrite that without importing an Excel of old names.</context>
+ <action>`patients.seen_before_software` (default off). Staff tick it on walk-in or tap **Old patient (paper file)** on Daily Roster / Live Queue (and can tap again to mark a first visit). Admin/doctor can set the same toggle on the Patients form. Consult Screen then says “Seen here before ChamberQ · paper file” instead of “First visit — no history”. It does not invent old notes. Once they have a completed ChamberQ visit, real visit count takes over. Merging two files keeps the mark if either had it. A later booking without the checkbox does not clear it.</action>
+ <reason>Like reception writing “old patient” on a new card when Fatima walks in with last year’s pad — staff who saw her before the software should be able to say so, without typing a fake history.</reason>
+</decision>
+
+## 2026-08-17T15:30:27+0600
+
+<decision>
+ <category>Code</category>
+ <context>A replayed offline Call next while serial #1 was still `called` used to advance to #2. The room-free guard (QueueAdvanceGuardTest) says Call next must not enter a room that is already occupied.</context>
+ <action>Treat a second Call next while the current patient is still `called` as a no-op (`ok: true`, queue unchanged). Advance only after complete-without-advance (or equivalent) frees the room. Offline arrived/skip against a wrong status is a conflict, not a silent ok.</action>
+ <reason>Like a receptionist tapping Call next twice because the tablet lagged — the second tap must not skip the person already standing in the doorway.</reason>
+</decision>
+
+<decision>
+ <category>Business_Logic</category>
+ <context>The clinic pathway is consultation → intervention → counseling. `KIND_CONSULT` already means a leftover free “Consult” sitting; renaming it would backfill live `kind = consult` rows we have not audited.</context>
+ <action>Add `KIND_COUNSELING` (`counseling`) and keep `KIND_CONSULT`. `isFreeKind()` covers both. Drop the seeder’s fictional 09:00 Consult line. Counseling is a `ScheduleSession` with nominal clinic-day hours, not publicly bookable, no advance booking — patients arrive only via **Send to counseling** from a done procedure. No voucher on free rows. No SMS for next-day procedures; **Missed procedures** is the mitigation.</action>
+ <reason>Like adding a new rubber stamp rather than rewriting the old one — yesterday’s cards still file, and counseling still hangs off the same sitting/booking/TV machinery the rest of the floor uses.</reason>
+</decision>
+
+<decision>
+ <category>Code</category>
+ <context>Voucher numbers were read under a lock that committed before the write, so two bookings could share a number. Putting that number on the patient ticket would make a collision “open the wrong file”.</context>
+ <action>`VoucherService::assignIfNeeded()` holds the lock across read and write (idempotent if already set). Unique index `bookings_voucher_unique` on `(tenant_id, booking_date, voucher_number)`. `down()` restores the plain index. Free kinds skip assignment.</action>
+ <reason>Like a token dispenser that only prints after the number is punched into the ledger — not after glancing at the last slip and walking away.</reason>
+</decision>
+
+<decision>
+ <category>UI/UX</category>
+ <context>A multi-doctor waiting room had one TV URL per sitting, so the board either missed a room or became an unreadable table. Brand `theme_color` on the calling tile can be white-on-white or navy-on-black.</context>
+ <action>Additive `/screen/chamber/{chamber}` tiles every live sitting today (omit idle rooms; four tiles is the cap). Numerals white; calling tile inverts to `#f8fafc` / `#0f172a`; `theme_color` is header-only. Audio queues room + serial + name.</action>
+ <reason>Like a departures board: the row that is boarding lights up, and the brand colour stays on the fascia, not on the digits you must read from across the room.</reason>
+</decision>
+
+## 2026-08-17T15:55:12+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>MUPS is one specialist who works two cities. A third Dhanmondi address from an older website made the public Centres page and the booking calendar look like three buildings. Queue, Stations, Referrals and HR were off or only half-seeded, so Super Admin did not match how a pain centre actually runs.</context>
+ <action>Keep two chambers only — Panchlaish (Chattogram) and Uttara (Dhaka) — with days that never overlap. Turn on Website, Live queue, Prescription, Stations, Referrals, HR, Bangla homepage, and queue branding (staff runner, live-average ETA, chime + Bangla voice). Each branch-day has Intervention / public Visit / Counseling. Seed fee catalogue, two referring GPs, and three HR rows. Same flags Super Admin would save on the tenant form.</action>
+ <reason>Like printing one rota for two clinics instead of three letterheads. Patients book a visit; the OT list is desk-only; the TV is per building.</reason>
+</decision>
+

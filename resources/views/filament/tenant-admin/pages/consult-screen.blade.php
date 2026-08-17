@@ -316,6 +316,13 @@
     @else
         @php
             $showRxDesk = $canWriteNotes && $booking->status === 'in_chamber';
+            $handoff = app(\App\Services\StationsHandoffService::class);
+            $canBookIntervention = tenant()?->hasStations()
+                && $handoff->actorMaySend(auth()->user())
+                && $handoff->canSendVisit($booking);
+            $canMoveIntervention = tenant()?->hasStations()
+                && $handoff->actorMaySend(auth()->user())
+                && $handoff->canMove($booking);
         @endphp
 
         @if ($showRxDesk)
@@ -503,6 +510,10 @@
                                         </div>
                                     @endif
                                 </div>
+                            @elseif ($patient && $patient->consultHistoryState() === 'paper_file')
+                                <p class="cs-muted">
+                                    {{ __('Seen here before ChamberQ · paper file') }}
+                                </p>
                             @elseif ($patient && $patient->completedVisitCount() > 0)
                                 <p class="cs-muted">
                                     {{ __(':count previous visits · no notes recorded', ['count' => $patient->completedVisitCount()]) }}
@@ -753,19 +764,28 @@
             </div>
         </div>
 
-        @if (auth()->user()?->canOperateQueueControls())
+        @if (auth()->user()?->canOperateQueueControls() || $canBookIntervention || $canMoveIntervention)
             <div class="cs-sticky-actions cq-freeze-queue {{ $showRxDesk ? 'is-desk-active' : '' }}">
-                @if ($booking->status === 'called')
+                @if (auth()->user()?->canOperateQueueControls() && $booking->status === 'called')
                     <x-filament::button class="cs-sticky-actions__btn" color="success" wire:click="mountAction('patientArrived')">
                         {{ 'Patient arrived' }}
                     </x-filament::button>
-                @elseif ($canWriteNotes && $booking->status === 'in_chamber')
+                @elseif (auth()->user()?->canOperateQueueControls() && $canWriteNotes && $booking->status === 'in_chamber')
                     <x-filament::button class="cs-sticky-actions__btn cs-complete-visit-btn" color="success" wire:click="mountAction('completeVisit')">
                         {{ 'Complete visit' }}
                     </x-filament::button>
-                @elseif ($booking->status === 'completed')
+                @elseif (auth()->user()?->canOperateQueueControls() && $booking->status === 'completed')
                     <x-filament::button class="cs-sticky-actions__btn" color="primary" wire:click="mountAction('callNext')">
                         {{ 'Call next patient' }}
+                    </x-filament::button>
+                @endif
+                @if ($canBookIntervention)
+                    <x-filament::button class="cs-sticky-actions__btn" color="warning" icon="heroicon-m-arrow-right-circle" wire:click="mountAction('bookIntervention')">
+                        {{ __('Book intervention') }}
+                    </x-filament::button>
+                @elseif ($canMoveIntervention)
+                    <x-filament::button class="cs-sticky-actions__btn" color="gray" icon="heroicon-m-calendar-days" wire:click="mountAction('moveIntervention')">
+                        {{ __('Move intervention') }}
                     </x-filament::button>
                 @endif
             </div>

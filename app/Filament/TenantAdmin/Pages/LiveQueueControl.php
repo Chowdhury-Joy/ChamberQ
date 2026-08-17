@@ -4,7 +4,10 @@ namespace App\Filament\TenantAdmin\Pages;
 
 use App\Filament\TenantAdmin\Concerns\AppliesVisitNotesDrafts;
 use App\Filament\TenantAdmin\Support\CompleteBookingWithVisitNotes;
+use App\Filament\TenantAdmin\Support\PatientContinuityActions;
+use App\Filament\TenantAdmin\Support\StationsHandoffForm;
 use App\Filament\TenantAdmin\Support\VisitNotesFormSchema;
+use App\Filament\TenantAdmin\Support\VisitPaperScanForm;
 use App\Models\Patient;
 use App\Models\ScheduleSession;
 use App\Models\LiveSession;
@@ -207,6 +210,10 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                         ->label(__('Share health records with other ChamberQ doctors'))
                         ->helperText(__('Visit notes and prescriptions can help the next ChamberQ doctor treat this patient safely. Voice notes and photos stay in this clinic.'))
                         ->default(true),
+                    Checkbox::make('seen_before_software')
+                        ->label(__('They have been treated here before ChamberQ'))
+                        ->helperText(__('Tick if they are an old paper-file patient. The doctor will see them as returning, not a first visit. You can also tap this on their row later.'))
+                        ->default(false),
                 ])
                 ->action(function (array $data, BookingService $bookingService) {
                     $bookable = ScheduleSession::findOrFail($this->selectedSessionId);
@@ -231,6 +238,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                         nid: $data['nid'] ?? null,
                         age: null,
                         allowOverflow: true,
+                        seenBeforeSoftware: ! empty($data['seen_before_software']) ? true : null,
                     );
                 })
                 ->successNotificationTitle(__('Walk-in added directly to this session\'s live queue.')),
@@ -440,7 +448,12 @@ class LiveQueueControl extends Page implements HasActions, HasTable
 
         return LiveSession::where('schedule_session_id', $this->selectedSessionId)
             ->where('session_date', Carbon::today()->toDateString())
-            ->with(['currentBooking.visitRecord.prescription.items'])
+            ->with([
+                'currentBooking.visitRecord.prescription.items',
+                'currentBooking.bookable',
+                'currentBooking.procedureBookings.bookable',
+                'currentBooking.relatedBooking.bookable',
+            ])
             ->first();
     }
 
@@ -451,6 +464,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
         return Booking::where('bookable_type', ScheduleSession::class)
             ->where('bookable_id', $this->selectedSessionId)
             ->where('booking_date', Carbon::today()->toDateString())
+            ->with(['bookable', 'procedureBookings.bookable', 'relatedBooking.bookable'])
             ->orderBy('serial_number')
             ->get();
     }
@@ -499,6 +513,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                     }, function ($query) {
                         $query->whereRaw('1 = 0');
                     })
+                    ->with(['patient', 'visitRecord'])
                     // The patient being called must sit at the top — an earlier
                     // version left 'called' out of this list, so the person the
                     // chamber was announcing sank below cancelled bookings.
@@ -566,6 +581,21 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                         ->count() > 0),
             ])
             ->recordActions([
+                PatientContinuityActions::toggleSeenBeforeSoftware(
+                    \Filament\Actions\Action::make('toggleSeenBeforeSoftware'),
+                ),
+                VisitPaperScanForm::scanAction(
+                    \Filament\Actions\Action::make('scanPapers'),
+                ),
+                StationsHandoffForm::bookAction(
+                    \Filament\Actions\Action::make('bookIntervention'),
+                ),
+                StationsHandoffForm::moveAction(
+                    \Filament\Actions\Action::make('moveIntervention'),
+                ),
+                StationsHandoffForm::sendToCounselingAction(
+                    \Filament\Actions\Action::make('sendToCounseling'),
+                ),
                 \Filament\Actions\Action::make('callNow')
                     ->label('Call now')
                     ->icon('heroicon-m-megaphone')
@@ -778,6 +808,30 @@ class LiveQueueControl extends Page implements HasActions, HasTable
         }
 
         $this->dispatchCallAnnounce();
+    }
+
+    public function bookCurrentInterventionAction(): Action
+    {
+        return StationsHandoffForm::bookAction(
+            Action::make('bookCurrentIntervention'),
+            fn (): ?Booking => $this->activeLiveSession?->currentBooking,
+        );
+    }
+
+    public function moveCurrentInterventionAction(): Action
+    {
+        return StationsHandoffForm::moveAction(
+            Action::make('moveCurrentIntervention'),
+            fn (): ?Booking => $this->activeLiveSession?->currentBooking,
+        );
+    }
+
+    public function sendCurrentToCounselingAction(): Action
+    {
+        return StationsHandoffForm::sendToCounselingAction(
+            Action::make('sendCurrentToCounseling'),
+            fn (): ?Booking => $this->activeLiveSession?->currentBooking,
+        );
     }
 
     public function completeVisitAction(): Action

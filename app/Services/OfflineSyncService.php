@@ -158,6 +158,25 @@ class OfflineSyncService
         }
 
         $type = (string) ($item['type'] ?? '');
+        $current = $liveSession->currentBooking;
+
+        // The id check above only asks *which* booking is current. Arrived
+        // and skip also need *what state* it is in: a stale snapshot can name
+        // the right row after the consult has already ended or begun.
+        if ($type === self::TYPE_QUEUE_PATIENT_ARRIVED
+            && (! $current || $current->status !== 'called')) {
+            throw new OfflineQueueConflictException(
+                'Refresh — that visit is no longer waiting to arrive.',
+            );
+        }
+
+        if ($type === self::TYPE_QUEUE_SKIP
+            && $current
+            && in_array($current->status, ['in_chamber', 'completed', 'no_show'], true)) {
+            throw new OfflineQueueConflictException(
+                'Refresh — that patient is already with the doctor or finished.',
+            );
+        }
 
         match ($type) {
             self::TYPE_QUEUE_CALL_NEXT => $this->liveSessionService->callNextPatient($liveSession),

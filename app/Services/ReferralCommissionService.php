@@ -12,6 +12,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 class ReferralCommissionService
@@ -95,55 +96,78 @@ class ReferralCommissionService
      */
     public function markPaid(Collection $commissions, User $user, string $method, ?string $note = null): ChamberCashEntry
     {
-        $pending = $commissions->filter(fn (ReferralCommission $row): bool => $row->isPending());
+        $ids = $commissions->pluck('id')->filter()->unique()->values()->all();
 
-        if ($pending->isEmpty()) {
+        if ($ids === []) {
             throw new InvalidArgumentException(__('Pick at least one pending commission.'));
         }
 
-        $total = (int) $pending->sum('amount_taka');
+        // One transaction, and the status is re-read here under a row lock
+        // rather than trusted from the passed collection. That collection is a
+        // Filament bulk selection — a snapshot of what the table showed, which
+        // may be minutes old and is a separate copy per request. Filtering it
+        // in memory let a double-click, or two staff on the same rows, both see
+        // "pending", both post an expense, and both mark paid: the doctor was
+        // paid twice and the second write overwrote payout_cash_entry_id,
+        // orphaning the first expense. Without the transaction, a failure
+        // partway down the loop also left the expense posted for the full total
+        // while some rows stayed pending, to be paid again next time.
+        return DB::transaction(function () use ($ids, $user, $method, $note): ChamberCashEntry {
+            $pending = ReferralCommission::query()
+                ->whereIn('id', $ids)
+                ->where('status', ReferralCommission::STATUS_PENDING)
+                ->lockForUpdate()
+                ->get();
 
-        if ($total < 1) {
-            throw new InvalidArgumentException(__('Nothing to pay.'));
-        }
+            if ($pending->isEmpty()) {
+                throw new InvalidArgumentException(__('Pick at least one pending commission.'));
+            }
 
-        $doctorNames = $pending
-            ->each(fn (ReferralCommission $row) => $row->loadMissing('referringDoctor'))
-            ->map(fn (ReferralCommission $row): string => $row->referringDoctor?->name ?? __('Doctor'))
-            ->unique()
-            ->values()
-            ->all();
+            $total = (int) $pending->sum('amount_taka');
 
-        $payoutNote = __('Referral payout: :doctors', [
-            'doctors' => implode(', ', $doctorNames),
-        ]);
+            if ($total < 1) {
+                throw new InvalidArgumentException(__('Nothing to pay.'));
+            }
 
-        if (filled($note)) {
-            $payoutNote .= ' — '.$note;
-        }
+            $doctorNames = $pending
+                ->each(fn (ReferralCommission $row) => $row->loadMissing('referringDoctor'))
+                ->map(fn (ReferralCommission $row): string => $row->referringDoctor?->name ?? __('Doctor'))
+                ->unique()
+                ->values()
+                ->all();
 
-        $expense = ChamberCashEntry::create([
-            'direction' => ChamberCashEntry::DIRECTION_EXPENSE,
-            'amount' => $total,
-            'category' => ChamberCashEntry::CATEGORY_REFERRAL_PAYOUT,
-            'method' => $method,
-            'recorded_by' => $user->id,
-            'occurred_on' => now(OperationalReportService::TIMEZONE)->toDateString(),
-            'note' => $payoutNote,
-        ]);
-
-        $now = now();
-
-        foreach ($pending as $commission) {
-            $commission->update([
-                'status' => ReferralCommission::STATUS_PAID,
-                'paid_at' => $now,
-                'paid_by' => $user->id,
-                'payout_cash_entry_id' => $expense->id,
+            $payoutNote = __('Referral payout: :doctors', [
+                'doctors' => implode(', ', $doctorNames),
             ]);
-        }
 
-        return $expense;
+            if (filled($note)) {
+                $payoutNote .= ' — '.$note;
+            }
+
+            $expense = ChamberCashEntry::create([
+                'direction' => ChamberCashEntry::DIRECTION_EXPENSE,
+                'amount' => $total,
+                'category' => ChamberCashEntry::CATEGORY_REFERRAL_PAYOUT,
+                'method' => $method,
+                'recorded_by' => $user->id,
+                'occurred_on' => now(OperationalReportService::TIMEZONE)->toDateString(),
+                'note' => $payoutNote,
+            ]);
+
+            // Still conditional on pending, so even a lost lock cannot flip a
+            // row that another payout already settled.
+            ReferralCommission::query()
+                ->whereIn('id', $pending->modelKeys())
+                ->where('status', ReferralCommission::STATUS_PENDING)
+                ->update([
+                    'status' => ReferralCommission::STATUS_PAID,
+                    'paid_at' => now(),
+                    'paid_by' => $user->id,
+                    'payout_cash_entry_id' => $expense->id,
+                ]);
+
+            return $expense;
+        });
     }
 
     /**

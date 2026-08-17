@@ -66,6 +66,21 @@ class StationsModuleTest extends TestCase
         ]);
 
         $this->assertTrue($consult->isConsultKind());
+        $this->assertTrue($consult->isFreeKind());
+        $this->assertTrue($consult->isPubliclyBookable());
+
+        $counseling = ScheduleSession::create([
+            'chamber_id' => $chamber->id,
+            'doctor_id' => $doctor->id,
+            'day_of_week' => Carbon::today()->dayOfWeek,
+            'session_name' => 'Counseling',
+            'kind' => ScheduleSession::KIND_COUNSELING,
+            'start_time' => '10:00',
+            'end_time' => '14:30',
+            'slot_cap' => 10,
+        ]);
+        $this->assertTrue($counseling->isFreeKind());
+        $this->assertFalse($counseling->isPubliclyBookable());
 
         tenancy()->end();
     }
