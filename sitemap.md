@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-18T14:53:25+0600
+Last Updated: 2026-08-18T18:24:32+0600
 
 ## Full Site Map
 
@@ -161,7 +161,7 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 
 ### Patient → book serial → ticket
 1. Open `/{slug}/` or custom domain home — see doctor brand + Book CTA. On clinic-tier sites the Book Appointment CTA now also sits in the header nav (desktop) and the mobile drawer, per the Clireo design port; solo keeps its locked layout.
-2. Book flow — chamber/doctor when needed, then **When can you come?** (only dates with seats left, soonest first; earliest option highlighted). **Your details** under the booking summary strip (Name / Phone / NID optional / Different WhatsApp / Who for?; **Share with other ChamberQ doctors**); **Change date** on the summary strip (or Back). If the number is known, choose **Who for?** inline — masked initials (`F. R., 34`); picking one stands the name field down. Clinic hero form can POST name/phone into the session first. A ChamberQ patient login on the same host prefills name/phone.
+2. Book flow — chamber/doctor when needed, then **When can you come?** (only dates with seats left, soonest first; earliest option highlighted). **Your details** under the booking summary strip (Name / Phone / Year of birth optional / NID optional / Different WhatsApp / Who for?; **Share with other ChamberQ doctors**); **Change date** on the summary strip (or Back). If the number is known, choose **Who for?** inline — masked initials (`F. R., 34`); picking one stands the name field down. Clinic hero form can POST name/phone into the session first. A ChamberQ patient login on the same host prefills name/phone.
 3. Submit → ticket at `…/bookings/{uuid}`. Goal: proof of serial; share via WhatsApp/copy, or Print / Save as PDF for a paper or file copy. With **Live queue**, the ticket also offers **জানাতে দিন** (Bangla): Allow once so the phone can buzz when the serial is two away / next / called, even if the ticket is closed. If Allow is blocked, the copy says to come at ticket time or sit by the TV.
 4. Optional: PWA install scoped to tenant path or custom domain.
 

@@ -344,9 +344,8 @@ class CrossTenantClinicalShareTest extends TestCase
     }
 
     /**
-     * `displayAge()` ages a stored number forward from `age_recorded_at`, so the
-     * same person written down at two chambers months apart can round a year
-     * apart. That must still be one person.
+     * Birth years inferred from leftover ages a few months apart can be one
+     * year out. That must still be one person.
      */
     public function test_a_year_of_age_drift_still_links(): void
     {

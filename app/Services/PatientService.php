@@ -8,6 +8,7 @@ use App\Models\Prescription;
 use App\Models\VisitRecord;
 use App\Support\BdNid;
 use App\Support\BdPhone;
+use App\Support\YearOfBirth;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
@@ -57,6 +58,9 @@ class PatientService
      *                                           updates the patient row. Null leaves
      *                                           an existing flag alone; new rows default true.
      * @param  string|null  $nid  Optional BD NID (10 or 13 digits). Blank is fine.
+     * @param  int|null  $yearOfBirth  Optional calendar year of birth. Fills a
+     *                                 missing year; never overwrites one already
+     *                                 on file (or an exact date of birth).
      * @param  bool|null  $seenBeforeSoftware  Staff-only: this person was treated
      *                                         here before ChamberQ. Null leaves
      *                                         an existing flag alone.
@@ -67,7 +71,7 @@ class PatientService
         ?string $patientId = null,
         ?bool $shareClinicalHistory = null,
         ?string $nid = null,
-        ?int $age = null,
+        ?int $yearOfBirth = null,
         ?bool $seenBeforeSoftware = null,
     ): Patient {
         $phone = $this->normalizePhone($phone);
@@ -83,7 +87,7 @@ class PatientService
                 // so a submitted name is not that person's real name — writing
                 // it back would overwrite "Fatima Rahman" with "F. R.". Staff
                 // correct spellings in the Patients resource instead.
-                $this->applyBookingUpdates($patient, $phone, $name, $nid, $shareClinicalHistory, $age, rename: false, seenBeforeSoftware: $seenBeforeSoftware);
+                $this->applyBookingUpdates($patient, $phone, $name, $nid, $shareClinicalHistory, $yearOfBirth, rename: false, seenBeforeSoftware: $seenBeforeSoftware);
 
                 return $patient->fresh() ?? $patient;
             }
@@ -93,7 +97,7 @@ class PatientService
             $byNid = Patient::query()->where('nid', $nid)->first();
 
             if ($byNid) {
-                $this->applyBookingUpdates($byNid, $phone, $name, $nid, $shareClinicalHistory, $age, rename: true, seenBeforeSoftware: $seenBeforeSoftware);
+                $this->applyBookingUpdates($byNid, $phone, $name, $nid, $shareClinicalHistory, $yearOfBirth, rename: true, seenBeforeSoftware: $seenBeforeSoftware);
 
                 return $byNid->fresh() ?? $byNid;
             }
@@ -107,7 +111,7 @@ class PatientService
             ->first(fn (Patient $patient) => $this->normalizeName($patient->name) === $normalizedName);
 
         if ($existing) {
-            $this->applyBookingUpdates($existing, $phone, $name, $nid, $shareClinicalHistory, $age, rename: true, seenBeforeSoftware: $seenBeforeSoftware);
+            $this->applyBookingUpdates($existing, $phone, $name, $nid, $shareClinicalHistory, $yearOfBirth, rename: true, seenBeforeSoftware: $seenBeforeSoftware);
 
             return $existing->fresh() ?? $existing;
         }
@@ -118,10 +122,7 @@ class PatientService
             'nid' => $nid,
             'share_clinical_history' => $shareClinicalHistory ?? true,
             'seen_before_software' => $seenBeforeSoftware ?? false,
-            'age' => $age,
-            // Stamped so `displayAge()` can carry a stated age forward; a bare
-            // number with no date drifts wrong the moment a year passes.
-            'age_recorded_at' => $age !== null ? today() : null,
+            'year_of_birth' => YearOfBirth::normalize($yearOfBirth),
         ]);
     }
 
@@ -134,7 +135,7 @@ class PatientService
         string $name,
         ?string $nid,
         ?bool $shareClinicalHistory,
-        ?int $age,
+        ?int $yearOfBirth,
         bool $rename,
         ?bool $seenBeforeSoftware = null,
     ): void {
@@ -157,13 +158,12 @@ class PatientService
             $updates['share_clinical_history'] = $shareClinicalHistory;
         }
 
-        // Fill a missing age, never overwrite one. Staff record ages at the desk
-        // from the person in front of them; a number typed into the public
-        // wizard — possibly by a relative booking on their behalf — does not get
-        // to overrule that.
-        if ($age !== null && $patient->age === null && ! $patient->date_of_birth) {
-            $updates['age'] = $age;
-            $updates['age_recorded_at'] = today();
+        // Fill a missing birth year, never overwrite one. Staff (or an earlier
+        // booking) already recorded it; a relative typing into the public
+        // wizard does not get to move that year.
+        $yearOfBirth = YearOfBirth::normalize($yearOfBirth);
+        if ($yearOfBirth !== null && $patient->year_of_birth === null && ! $patient->date_of_birth) {
+            $updates['year_of_birth'] = $yearOfBirth;
         }
 
         if ($seenBeforeSoftware !== null

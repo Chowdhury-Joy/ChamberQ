@@ -853,5 +853,11 @@
     "No intervention sitting is scheduled for this doctor on that date.": "সেই তারিখে এই ডাক্তারের কোনো ইন্টারভেনশন সিটিং নেই।",
     "No counseling sitting is scheduled for this doctor on that date.": "সেই তারিখে এই ডাক্তারের কোনো কাউন্সেলিং সিটিং নেই।",
     "Next": "পরবর্তী",
-    "Running late": "দেরি হচ্ছে"
+    "Running late": "দেরি হচ্ছে",
+    "Year of birth (optional)": "জন্মসাল (ঐচ্ছিক)",
+    "Year of birth": "জন্মসাল",
+    "Example: 1984. Helps the doctor see your past visits from other chambers.": "যেমন: ১৯৮৪। এতে ডাক্তার অন্য চেম্বারে আপনার আগের ভিজিটগুলো দেখতে পারবেন।",
+    "Example: 1984. Age on the pad is this year minus this number.": "যেমন: ১৯৮৪। প্যাডে বয়স = এই বছর বিয়োগ জন্মসাল।",
+    "Example: 1984. Age on the pad is this year minus this number. Prefer date of birth when they know the day.": "যেমন: ১৯৮৪। প্যাডে বয়স = এই বছর বিয়োগ জন্মসাল। দিন জানলে জন্মতারিখ দিন।",
+    "Use this when they know the exact day. Age on the pad is then exact.": "দিন জানলে এখানে দিন। তখন প্যাডে বয়স নির্ভুল হবে।"
 }

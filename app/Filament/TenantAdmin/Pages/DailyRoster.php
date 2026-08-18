@@ -12,6 +12,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Actions\Action;
 use App\Filament\TenantAdmin\Support\CompleteBookingWithVisitNotes;
 use App\Filament\TenantAdmin\Support\PatientContinuityActions;
+use App\Filament\TenantAdmin\Resources\Patients\Schemas\PatientForm;
 use App\Filament\TenantAdmin\Support\StationsCollectFeeForm;
 use App\Filament\TenantAdmin\Support\VisitNotesFormSchema;
 use App\Filament\TenantAdmin\Support\VisitPaperScanForm;
@@ -822,6 +823,7 @@ class DailyRoster extends Page implements HasTable, HasForms
                             ->extraInputAttributes(['name' => 'patient_name'])
                             ->autocomplete('name')
                             ->required(),
+                        PatientForm::yearOfBirthInput(),
                         TextInput::make('nid')
                             ->label(__('NID number (optional)'))
                             ->helperText(__('From the national ID card — helps reconnect records if the phone number changes.'))
@@ -873,6 +875,7 @@ class DailyRoster extends Page implements HasTable, HasForms
                                 ? (bool) $data['share_clinical_history']
                                 : true,
                             nid: $data['nid'] ?? null,
+                            yearOfBirth: filled($data['year_of_birth'] ?? null) ? (int) $data['year_of_birth'] : null,
                             seenBeforeSoftware: ! empty($data['seen_before_software']) ? true : null,
                         );
                     })

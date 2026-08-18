@@ -117,6 +117,7 @@ class BookingService
     /**
      * @param  array<int, int|string>  $labTestIds  Line items for a lab booking.
      * @param  bool  $sendSms  False for sample/dev seed bookings that must not burn credits.
+     * @param  int|null  $yearOfBirth  Optional calendar year of birth for the patient row.
      */
     public function createBookingForBookable(
         Model $bookable,
@@ -130,7 +131,7 @@ class BookingService
         ?string $whatsappPhone = null,
         ?bool $shareClinicalHistory = null,
         ?string $nid = null,
-        ?int $age = null,
+        ?int $yearOfBirth = null,
         bool $allowOverflow = false,
         ?string $repeatSeriesId = null,
         bool $allowEndedToday = false,
@@ -143,7 +144,7 @@ class BookingService
             $whatsappPhone = null;
         }
 
-        $booking = DB::transaction(function () use ($bookable, $bookingDate, $patientName, $patientPhone, $labTestIds, $patientId, $wantsEarlierDate, $whatsappPhone, $shareClinicalHistory, $nid, $age, $allowOverflow, $repeatSeriesId, $allowEndedToday, $seenBeforeSoftware, $allowCounselingHandoff) {
+        $booking = DB::transaction(function () use ($bookable, $bookingDate, $patientName, $patientPhone, $labTestIds, $patientId, $wantsEarlierDate, $whatsappPhone, $shareClinicalHistory, $nid, $yearOfBirth, $allowOverflow, $repeatSeriesId, $allowEndedToday, $seenBeforeSoftware, $allowCounselingHandoff) {
             $tenant = tenant();
             $capMode = $tenant->slot_cap_mode ?? 'per_session';
             if ($capMode === 'per_day') {
@@ -195,7 +196,7 @@ class BookingService
                 $patientId,
                 $shareClinicalHistory,
                 $nid,
-                $age,
+                $yearOfBirth,
                 $seenBeforeSoftware,
             );
 

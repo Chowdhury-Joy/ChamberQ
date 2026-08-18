@@ -11,6 +11,17 @@ use Filament\Schemas\Schema;
 
 class PatientForm
 {
+    public static function yearOfBirthInput(): TextInput
+    {
+        return TextInput::make('year_of_birth')
+            ->label(__('Year of birth (optional)'))
+            ->helperText(__('Example: 1984. Age on the pad is this year minus this number.'))
+            ->numeric()
+            ->integer()
+            ->minValue(\App\Support\YearOfBirth::minYear())
+            ->maxValue(\App\Support\YearOfBirth::maxYear());
+    }
+
     public static function configure(Schema $schema): Schema
     {
         return $schema->schema([
@@ -40,14 +51,10 @@ class PatientForm
                 ),
             DatePicker::make('date_of_birth')
                 ->label(__('Date of birth'))
+                ->helperText(__('Use this when they know the exact day. Age on the pad is then exact.'))
                 ->maxDate(now()),
-            TextInput::make('age')
-                ->numeric()
-                ->minValue(0)
-                ->maxValue(120),
-            DatePicker::make('age_recorded_at')
-                ->label(__('Age recorded on'))
-                ->maxDate(now()),
+            self::yearOfBirthInput()
+                ->helperText(__('Example: 1984. Age on the pad is this year minus this number. Prefer date of birth when they know the day.')),
             Select::make('sex')
                 ->options([
                     'male' => __('Male'),

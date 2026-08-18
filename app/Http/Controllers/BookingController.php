@@ -15,6 +15,7 @@ use App\Models\ScheduleSession;
 use App\Services\BookingService;
 use App\Services\PortalPrescriptionLock;
 use App\Support\BdNid;
+use App\Support\YearOfBirth;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
@@ -192,10 +193,12 @@ class BookingController extends Controller
             'share_clinical_history' => 'nullable|boolean',
             // Optional BD NID — never required; blank skips validation length.
             'nid' => ['nullable', 'string', 'max:20'],
-            // Age in whole years, not a date of birth: patients here reliably
-            // know "42" and often not the date. Optional, but it is what lets
+            // Year of birth is the stable number (1984). Age on the pad is
+            // this calendar year minus that. Optional, but it is what lets
             // this visit's record be matched to the same person at another
             // chamber — see CrossTenantClinicalHistoryService::isSamePerson().
+            // `age` is accepted from older clients and converted once.
+            'year_of_birth' => ['nullable', 'integer', 'min:'.YearOfBirth::minYear(), 'max:'.YearOfBirth::maxYear()],
             'age' => ['nullable', 'integer', 'min:0', 'max:120'],
         ], [
             'booking_date.after_or_equal' => __('Please choose today or a future date.'),
@@ -257,7 +260,10 @@ class BookingController extends Controller
                     ? filter_var($validated['share_clinical_history'], FILTER_VALIDATE_BOOLEAN)
                     : true,
                 nid: $validated['nid'] ?? null,
-                age: isset($validated['age']) ? (int) $validated['age'] : null,
+                yearOfBirth: YearOfBirth::fromRequest(
+                    $validated['year_of_birth'] ?? null,
+                    $validated['age'] ?? null,
+                ),
             );
         } catch (BookingUnavailableException $e) {
             // Only this exception type is safe to echo back to an anonymous

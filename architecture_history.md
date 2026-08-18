@@ -750,3 +750,6 @@
 - Portal prescription password is opt-in: pads stay phone-open until the patient chooses a lock; doctor shared-history paths do not use `PortalPrescriptionLock`.
 
 
+
+## 2026-08-18T18:24:32+0600
+- Patients store `year_of_birth`; booking / walk-in ask for birth year instead of a ticking age in years. `YearOfBirth` converts leftover `age` posts once; `displayAge()` is this calendar year minus the stored year (exact DOB still wins).

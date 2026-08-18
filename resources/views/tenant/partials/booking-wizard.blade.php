@@ -168,16 +168,17 @@
                     </div>
 
                     <div class="form-group field-float">
-                        {{-- Whole years, not a date of birth: patients here know
-                             "42" far more reliably than a date, and it is one tap
-                             on a phone keypad. Optional, but it is what lets this
-                             chamber recognise the same person's records from
-                             another chamber. --}}
-                        <input type="number" name="age" id="patient_age" class="form-control"
-                               inputmode="numeric" autocomplete="off" min="0" max="120" step="1"
+                        {{-- Birth year is the stable number. Age on the pad is
+                             this calendar year minus that, so 1984 does not
+                             become 1985 next year. --}}
+                        <input type="number" name="year_of_birth" id="patient_year_of_birth" class="form-control"
+                               inputmode="numeric" autocomplete="bday-year"
+                               min="{{ \App\Support\YearOfBirth::minYear() }}"
+                               max="{{ \App\Support\YearOfBirth::maxYear() }}"
+                               step="1"
                                placeholder=" ">
-                        <label class="field-float-label" for="patient_age">{{ __('Age in years (optional)') }}</label>
-                        <small class="text-muted" style="display:block;margin-top:0.4rem">{{ __('Helps the doctor see your past visits from other chambers.') }}</small>
+                        <label class="field-float-label" for="patient_year_of_birth">{{ __('Year of birth (optional)') }}</label>
+                        <small class="text-muted" style="display:block;margin-top:0.4rem">{{ __('Example: 1984. Helps the doctor see your past visits from other chambers.') }}</small>
                     </div>
 
                     <div class="form-group field-float">
@@ -1083,9 +1084,9 @@
             if (nidValue) {
                 formData.append('nid', nidValue);
             }
-            const ageValue = document.getElementById('patient_age')?.value.trim();
-            if (ageValue) {
-                formData.append('age', ageValue);
+            const yearOfBirthValue = document.getElementById('patient_year_of_birth')?.value.trim();
+            if (yearOfBirthValue) {
+                formData.append('year_of_birth', yearOfBirthValue);
             }
             if (differentWa && waInput.value.trim()) {
                 formData.append('whatsapp_phone', waInput.value.trim());

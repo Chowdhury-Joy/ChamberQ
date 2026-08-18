@@ -30,9 +30,8 @@ class CrossTenantClinicalHistoryService
     /**
      * How far two recorded ages may drift and still be one person.
      *
-     * `Patient::displayAge()` ages a stored `age` forward from
-     * `age_recorded_at`, so the same person written down at two chambers months
-     * apart can round to a year's difference.
+     * Birth year (or an exact date of birth) is the stable identity. Age on
+     * the pad is this calendar year minus that number.
      */
     public const AGE_MATCH_TOLERANCE_YEARS = 1;
 
@@ -242,13 +241,14 @@ class CrossTenantClinicalHistoryService
      * across chambers: it puts *somebody else's* diagnoses and prescriptions in
      * front of a doctor who is prescribing right now.
      *
-     * Age is what actually separates those people (a father and son sharing a
-     * name differ by decades), so it is required, and sex is checked whenever
-     * both sides recorded it.
+     * Birth year is what actually separates those people (a father and son
+     * sharing a name differ by decades), so it is required, and sex is checked
+     * whenever both sides recorded it.
      *
-     * **Fails closed.** No age on either side means no match. That costs
-     * cross-chamber history for chambers that never record an age, which is the
-     * correct direction to be wrong about a wrong-patient hazard.
+     * **Fails closed.** No birth year (or leftover age) on either side means
+     * no match. That costs cross-chamber history for chambers that never
+     * record one, which is the correct direction to be wrong about a
+     * wrong-patient hazard.
      */
     private function isSamePerson(Patient $local, Patient $other): bool
     {
@@ -264,17 +264,17 @@ class CrossTenantClinicalHistoryService
             return $local->date_of_birth->isSameDay($other->date_of_birth);
         }
 
-        $localAge = $local->displayAge();
-        $otherAge = $other->displayAge();
+        $localYear = $local->yearOfBirth();
+        $otherYear = $other->yearOfBirth();
 
-        if ($localAge === null || $otherAge === null) {
+        if ($localYear === null || $otherYear === null) {
             return false;
         }
 
-        // `displayAge()` ages a recorded `age` forward from `age_recorded_at`,
-        // so two chambers that wrote the same person down months apart can be a
-        // year out. Wider than that and they are different people.
-        return abs($localAge - $otherAge) <= self::AGE_MATCH_TOLERANCE_YEARS;
+        // Two chambers that converted a leftover "age in years" a few months
+        // apart can be one year out. Wider than that and they are different
+        // people.
+        return abs($localYear - $otherYear) <= self::AGE_MATCH_TOLERANCE_YEARS;
     }
 
     private function normalizedSex(Patient $patient): ?string

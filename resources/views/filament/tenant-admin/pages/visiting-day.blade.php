@@ -60,8 +60,11 @@
                     <input type="tel" x-model="form.phone" inputmode="numeric" placeholder="017XXXXXXXX">
                 </div>
                 <div class="vd-field">
-                    <label>{{ __('Age (optional)') }}</label>
-                    <input type="text" x-model="form.age">
+                    <label>{{ __('Year of birth (optional)') }}</label>
+                    <input type="number" x-model="form.yearOfBirth" inputmode="numeric"
+                           min="{{ \App\Support\YearOfBirth::minYear() }}"
+                           max="{{ \App\Support\YearOfBirth::maxYear() }}"
+                           placeholder="1984">
                 </div>
                 <div class="vd-field">
                     <label>{{ __('Attach to session') }}</label>
@@ -166,7 +169,7 @@
             current: null,
             savedLocal: false,
             frequencies: ['1+0+1', '1+1+1', '0+0+1', '1+0+0', 'SOS'],
-            form: { name: '', phone: '', age: '', sessionId: '' },
+            form: { name: '', phone: '', yearOfBirth: '', sessionId: '' },
             rx: { diagnosisLabel: '', advice: '', followUpRelative: '', items: [] },
 
             get filteredPatients() {
@@ -235,10 +238,13 @@
                     alert('Name and phone are required.');
                     return;
                 }
+                const year = parseInt(this.form.yearOfBirth, 10);
+                const age = Number.isFinite(year) ? (new Date().getFullYear() - year) : '';
                 this.openPatient({
                     name: this.form.name.trim(),
                     phone: this.form.phone.trim(),
-                    age: this.form.age.trim(),
+                    age: age === '' || age < 0 ? '' : age,
+                    year_of_birth: Number.isFinite(year) ? year : '',
                     last_visit: null,
                 });
             },
@@ -254,7 +260,7 @@
                 };
                 this.form.name = person.name;
                 this.form.phone = person.phone;
-                this.form.age = person.age || '';
+                this.form.yearOfBirth = person.year_of_birth || '';
             },
 
             applyPack(pack) {
@@ -311,6 +317,7 @@
                     schedule_session_id: Number(this.form.sessionId) || this.form.sessionId,
                     patient_name: this.current.name,
                     patient_phone: this.current.phone,
+                    year_of_birth: this.current.year_of_birth || this.form.yearOfBirth || null,
                     visit_date: new Date().toISOString().slice(0, 10),
                     data: this.payload(),
                 });

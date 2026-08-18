@@ -1443,3 +1443,12 @@
   <root_cause>Empty pivot means all-clinic; `constrainChamberIdsForLeadHire` returned `[]` when the lead picked only out-of-scope branches; `leadMayManageStaff` treated unscoped staff as manageable.</root_cause>
   <prevention_rule>Lead hire must validate branch picks (`assertLeadHireChamberIds`), reject out-of-scope intersections, and never list or edit staff without overlapping chamber rows when the lead is branch-locked.</prevention_rule>
 </bug>
+
+## 2026-08-18T18:24:32+0600
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>Storing a patient's age as a whole-year number (42) made the file wrong every birthday — the software either left 42 forever or quietly added a year on the anniversary of the booking, never on the real birthday.</symptom>
+ <root_cause>The public wizard asked for age in years and `PatientService` stored `age` + `age_recorded_at`, with `displayAge()` adding elapsed years. That number is not identity; a birth year is.</root_cause>
+ <prevention_rule>Ask for year of birth (জন্মসাল) on booking and walk-in. Store `patients.year_of_birth`. Compute display age as this calendar year minus that year. Never store a ticking age as the source of truth. A leftover `age` POST from an old client may be converted once.</prevention_rule>
+</bug>

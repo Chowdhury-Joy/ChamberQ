@@ -248,7 +248,13 @@ class OfflineSyncService
             ? (string) $item['visit_date']
             : now()->toDateString();
 
-        $booking = $this->findOrCreateVisitingBooking($session, $name, $phone, $date);
+        $booking = $this->findOrCreateVisitingBooking(
+            $session,
+            $name,
+            $phone,
+            $date,
+            \App\Support\YearOfBirth::normalize($item['year_of_birth'] ?? null),
+        );
         $this->saveNotes($doctor, $booking, $item);
 
         $queueOwns = in_array($booking->status, ['waiting', 'called', 'in_chamber'], true)
@@ -270,10 +276,15 @@ class OfflineSyncService
         string $name,
         string $phone,
         string $date,
+        ?int $yearOfBirth = null,
     ): Booking {
-        return DB::transaction(function () use ($session, $name, $phone, $date): Booking {
+        return DB::transaction(function () use ($session, $name, $phone, $date, $yearOfBirth): Booking {
             $locked = ScheduleSession::query()->whereKey($session->id)->lockForUpdate()->firstOrFail();
-            $patient = $this->patientService->resolveForBooking($phone, $name);
+            $patient = $this->patientService->resolveForBooking(
+                $phone,
+                $name,
+                yearOfBirth: $yearOfBirth,
+            );
 
             $existing = Booking::query()
                 ->where('bookable_type', ScheduleSession::class)

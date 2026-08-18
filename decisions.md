@@ -2893,3 +2893,12 @@
  <reason>A lock nobody asked for is worse than an open phone lookup they already lived with. The doctor's other-clinic history is a clinical handshake between practices, not the patient portal locker.</reason>
 </decision>
 
+
+## 2026-08-18T18:24:32+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Age as a typed number (42) changes every year, so the patient file and cross-chamber match drifted, and a pad could show this year's age on last year's visit. Patients here know a birth year more often than an exact date of birth.</context>
+ <action>Booking, desk walk-in, visiting-day walk-in, and the Patients form ask for **year of birth**. Stored on `patients.year_of_birth` (backfilled from date of birth or leftover age). `displayAge()` is this calendar year minus that year (exact `date_of_birth` still wins when present). Public wizard no longer asks age in years; an old client posting `age` is converted once. Fill a missing year, never overwrite one. Cross-chamber match uses `yearOfBirth()` with the same ±1 year tolerance.</action>
+ <reason>Like writing 1984 on the paper file instead of 42 — the year never needs editing. Age on today's pad is just subtraction. Exact date of birth remains optional for chambers that collect it.</reason>
+</decision>

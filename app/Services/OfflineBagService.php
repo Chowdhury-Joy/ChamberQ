@@ -143,6 +143,7 @@ class OfflineBagService
                 'name' => $patient->name,
                 'phone' => $patient->phone,
                 'age' => $patient->displayAge(),
+                'year_of_birth' => $patient->yearOfBirth(),
                 'sex' => $patient->displaySex(),
                 'allergies' => $patient->allergies,
                 'conditions' => $patient->conditions,

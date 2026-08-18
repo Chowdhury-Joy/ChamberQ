@@ -89,6 +89,7 @@ class OfflineController extends Controller
             'items.*.expected_current_booking_id' => ['nullable', 'string', 'max:40'],
             'items.*.patient_name' => ['nullable', 'string', 'max:120'],
             'items.*.patient_phone' => ['nullable', 'string', 'max:20'],
+            'items.*.year_of_birth' => ['nullable', 'integer', 'min:'.\App\Support\YearOfBirth::minYear(), 'max:'.\App\Support\YearOfBirth::maxYear()],
             'items.*.visit_date' => ['nullable', 'date'],
             'items.*.data' => ['nullable', 'array'],
         ]);

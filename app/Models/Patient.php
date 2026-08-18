@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
+use App\Support\YearOfBirth;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -17,6 +18,7 @@ class Patient extends Model
         'phone',
         'nid',
         'date_of_birth',
+        'year_of_birth',
         'age',
         'age_recorded_at',
         'sex',
@@ -29,11 +31,28 @@ class Patient extends Model
 
     protected $casts = [
         'date_of_birth' => 'date',
+        'year_of_birth' => 'integer',
         'age_recorded_at' => 'date',
         'age' => 'integer',
         'share_clinical_history' => 'boolean',
         'seen_before_software' => 'boolean',
     ];
+
+    protected static function booted(): void
+    {
+        static::saving(function (self $patient): void {
+            if ($patient->date_of_birth) {
+                $patient->year_of_birth = (int) $patient->date_of_birth->year;
+            } elseif ($patient->year_of_birth === null && $patient->age !== null) {
+                $patient->year_of_birth = YearOfBirth::fromStatedAge(
+                    $patient->age,
+                    $patient->age_recorded_at,
+                );
+            }
+
+            $patient->year_of_birth = YearOfBirth::normalize($patient->year_of_birth);
+        });
+    }
 
     public function bookings(): HasMany
     {
@@ -109,6 +128,12 @@ class Patient extends Model
             return (int) $this->date_of_birth->diffInYears(now());
         }
 
+        $fromYear = YearOfBirth::ageFromYear($this->yearOfBirth());
+
+        if ($fromYear !== null) {
+            return $fromYear;
+        }
+
         if ($this->age !== null && $this->age_recorded_at) {
             $yearsSince = (int) $this->age_recorded_at->diffInYears(now());
 
@@ -116,6 +141,20 @@ class Patient extends Model
         }
 
         return $this->age;
+    }
+
+    /** Stored birth year, or inferred from an exact DOB / leftover stated age. */
+    public function yearOfBirth(): ?int
+    {
+        if ($this->date_of_birth) {
+            return YearOfBirth::normalize((int) $this->date_of_birth->year);
+        }
+
+        if ($this->year_of_birth !== null) {
+            return YearOfBirth::normalize($this->year_of_birth);
+        }
+
+        return YearOfBirth::fromStatedAge($this->age, $this->age_recorded_at);
     }
 
     public function displaySex(): ?string
