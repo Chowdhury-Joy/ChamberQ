@@ -6,6 +6,7 @@ use App\Filament\TenantAdmin\Resources\Users\Pages\CreateUser;
 use App\Filament\TenantAdmin\Resources\Users\Pages\EditUser;
 use App\Filament\TenantAdmin\Resources\Users\Pages\ListUsers;
 use App\Models\User;
+use App\Support\ChamberQHelperAccess;
 use BackedEnum;
 use Filament\Forms;
 use Filament\Resources\Resource;
@@ -13,6 +14,8 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\Rules\Unique;
 
 class UserResource extends Resource
@@ -31,6 +34,68 @@ class UserResource extends Resource
         $user = auth()->user();
 
         return $user?->canManageUsers() ?? false;
+    }
+
+    public static function canView(Model $record): bool
+    {
+        if (! $record instanceof User) {
+            return false;
+        }
+
+        if ($record->isHelper() && ! ChamberQHelperAccess::actorSeesHelpersOnStaffList()) {
+            return false;
+        }
+
+        return static::canViewAny();
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        if (! $record instanceof User) {
+            return false;
+        }
+
+        if ($record->isHelper()) {
+            $actor = auth()->user();
+
+            return $actor instanceof User
+                && $actor->isHelper()
+                && $actor->id === $record->id;
+        }
+
+        return static::canViewAny();
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        if (! $record instanceof User) {
+            return false;
+        }
+
+        return ! $record->isHelper() && static::canViewAny();
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+
+        if (ChamberQHelperAccess::actorSeesHelpersOnStaffList()) {
+            return $query;
+        }
+
+        return $query->where('role', '!=', User::ROLE_HELPER);
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public static function clientRoleOptions(): array
+    {
+        return [
+            User::ROLE_OWNER => 'Owner (practice setup)',
+            User::ROLE_DOCTOR => 'Doctor (operations)',
+            User::ROLE_STAFF => 'Staff (desk + content)',
+        ];
     }
 
     public static function form(Schema $schema): Schema
@@ -60,13 +125,11 @@ class UserResource extends Resource
 
                 Forms\Components\Select::make('role')
                     ->label('Access Role')
-                    ->options([
-                        User::ROLE_ADMIN => 'Admin (Full Access)',
-                        User::ROLE_DOCTOR => 'Doctor (Operations Only)',
-                        User::ROLE_STAFF => 'Staff (Content + Queue)',
-                    ])
+                    ->options(self::clientRoleOptions())
                     ->default(User::ROLE_STAFF)
-                    ->required(),
+                    ->required()
+                    ->disabled(fn (?User $record): bool => $record?->isHelper() ?? false)
+                    ->dehydrated(),
 
                 Forms\Components\TextInput::make('password')
                     ->extraInputAttributes(['name' => 'password'])
@@ -94,13 +157,15 @@ class UserResource extends Resource
                 Tables\Columns\TextColumn::make('role')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {
-                        User::ROLE_ADMIN => 'danger',
+                        User::ROLE_OWNER => 'danger',
+                        User::ROLE_HELPER => 'gray',
                         User::ROLE_DOCTOR => 'warning',
                         User::ROLE_STAFF => 'success',
                         default => 'gray',
                     })
                     ->formatStateUsing(fn (string $state): string => match ($state) {
-                        User::ROLE_ADMIN => 'Admin',
+                        User::ROLE_OWNER => 'Owner',
+                        User::ROLE_HELPER => 'ChamberQ helper',
                         User::ROLE_DOCTOR => 'Doctor',
                         User::ROLE_STAFF => 'Staff',
                         default => ucfirst($state),

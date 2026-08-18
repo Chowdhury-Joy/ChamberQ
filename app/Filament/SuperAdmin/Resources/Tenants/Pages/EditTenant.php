@@ -6,8 +6,11 @@ use App\Filament\SuperAdmin\Resources\Tenants\TenantResource;
 use App\Filament\SuperAdmin\Support\TenantBackupActions;
 use App\Models\DiscountCode;
 use App\Models\Tenant;
+use App\Models\User;
 use App\Services\CommissionService;
 use App\Services\SmsService;
+use App\Services\TenantUserBootstrapService;
+use App\Support\ChamberQHelperAccess;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\DeleteAction;
@@ -15,6 +18,8 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class EditTenant extends EditRecord
 {
@@ -252,6 +257,77 @@ class EditTenant extends EditRecord
                         ->body(__('Balance is now :balance credits.', [
                             'balance' => $this->record->sms_balance,
                         ]))
+                        ->success()
+                        ->send();
+                }),
+            Action::make('addChamberqHelper')
+                ->label(__('Add ChamberQ helper'))
+                ->icon('heroicon-o-key')
+                ->schema([
+                    TextInput::make('email')
+                        ->label(__('Helper email'))
+                        ->email()
+                        ->required()
+                        ->maxLength(255),
+                    TextInput::make('name')
+                        ->label(__('Name'))
+                        ->maxLength(255)
+                        ->default('ChamberQ Support'),
+                ])
+                ->action(function (array $data, TenantUserBootstrapService $bootstrap): void {
+                    $password = Str::password(16);
+                    $helper = $bootstrap->addHelperLogin(
+                        $this->record,
+                        $data['email'],
+                        $data['name'] ?? null,
+                        $password,
+                    );
+
+                    if (! $helper->wasRecentlyCreated) {
+                        throw ValidationException::withMessages([
+                            'email' => __('That login already exists on this clinic.'),
+                        ]);
+                    }
+
+                    Notification::make()
+                        ->title(__('ChamberQ helper added — copy this password now'))
+                        ->body($helper->email.' / '.$password)
+                        ->success()
+                        ->persistent()
+                        ->send();
+                }),
+            Action::make('removeExtraHelper')
+                ->label(__('Remove extra helper'))
+                ->icon('heroicon-o-minus-circle')
+                ->color('danger')
+                ->visible(fn (): bool => ChamberQHelperAccess::helperCountForTenant($this->record->id) > 1)
+                ->schema([
+                    TextInput::make('email')
+                        ->label(__('Helper email to remove'))
+                        ->email()
+                        ->required(),
+                ])
+                ->requiresConfirmation()
+                ->action(function (array $data): void {
+                    $helper = User::withoutGlobalScope(\App\Scopes\TenantScope::class)
+                        ->where('tenant_id', $this->record->id)
+                        ->where('role', User::ROLE_HELPER)
+                        ->where('email', $data['email'])
+                        ->first();
+
+                    if (! $helper) {
+                        Notification::make()
+                            ->title(__('No ChamberQ helper with that email'))
+                            ->danger()
+                            ->send();
+
+                        return;
+                    }
+
+                    $helper->delete();
+
+                    Notification::make()
+                        ->title(__('Helper removed'))
                         ->success()
                         ->send();
                 }),

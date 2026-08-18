@@ -72,7 +72,7 @@ class PainSolutionStationsSeeder extends Seeder
             ['email' => 'admin@painsolution.local', 'tenant_id' => self::TENANT_ID],
             [
                 'name' => 'ChamberQ Support',
-                'role' => User::ROLE_ADMIN,
+                'role' => User::ROLE_HELPER,
             ],
             'pass',
         );

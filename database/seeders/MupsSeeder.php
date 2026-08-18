@@ -97,8 +97,17 @@ class MupsSeeder extends Seeder
         SeedAccounts::upsert(
             ['email' => 'admin@mups.local', 'tenant_id' => self::TENANT_ID],
             [
-                'name' => 'MUPS Admin',
+                'name' => 'MUPS Owner',
                 'role' => User::ROLE_ADMIN,
+            ],
+            'pass',
+        );
+
+        SeedAccounts::upsert(
+            ['email' => 'support@mups.chamberq.internal', 'tenant_id' => self::TENANT_ID],
+            [
+                'name' => 'ChamberQ Support',
+                'role' => User::ROLE_HELPER,
             ],
             'pass',
         );

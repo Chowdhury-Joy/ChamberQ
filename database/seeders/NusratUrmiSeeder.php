@@ -52,8 +52,17 @@ class NusratUrmiSeeder extends Seeder
         SeedAccounts::upsert(
             ['email' => 'admin@nusraturmi.local', 'tenant_id' => self::TENANT_ID],
             [
-                'name' => 'Dermavilla Admin',
+                'name' => 'Dermavilla Owner',
                 'role' => User::ROLE_ADMIN,
+            ],
+            'pass',
+        );
+
+        SeedAccounts::upsert(
+            ['email' => 'support@nusraturmi.chamberq.internal', 'tenant_id' => self::TENANT_ID],
+            [
+                'name' => 'ChamberQ Support',
+                'role' => User::ROLE_HELPER,
             ],
             'pass',
         );

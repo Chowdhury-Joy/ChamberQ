@@ -724,3 +724,12 @@
 
 ## 2026-08-17
 - Closed the gaps around the Stations pathway: counseling hand-off visibility now asserts a counseling sitting exists, a post-commit voucher failure can no longer fail a booking that was already taken, and the publicly-bookable rule moved into a `scopePubliclyBookable()` query scope so the availability and open-dates endpoints stop reporting on intervention sittings. Both Bangla scan lists widened to reach model/service labels and the combined chamber TV view.
+
+## 2026-08-17T21:32:19+0600
+- Solo demo seed now fills every staff screen the `solo` tenant actually has (queue statuses, prescriptions, cashbook, SMS, closed days, sitting override, waitlist, follow-up reminders, My medicines packs) plus extra homepage CMS blocks; re-run with `SoloDemoSeeder`.
+
+## 2026-08-17T22:43:46+0600
+- Daily Roster / Live Queue row button `Old patient (paper file)` renamed to **For follow up** (`PatientContinuityActions`); behaviour unchanged.
+
+## 2026-08-18T13:45:36+0600
+- Tenant **`helper`** role (`ChamberQHelperAccess`, `TenantUserBootstrapService`, Super Admin tenant create/edit) — ChamberQ vendor login on each clinic, hidden from owner Staff & Roles, same setup powers as owner but no queue/Rx; owner cannot remove or demote helpers.

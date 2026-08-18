@@ -7,11 +7,17 @@ use App\Models\DiscountCode;
 use App\Models\Tenant;
 use App\Services\CommissionService;
 use App\Services\TenantUserBootstrapService;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
 class CreateTenant extends CreateRecord
 {
     protected static string $resource = TenantResource::class;
+
+    /** @var array<string, mixed> */
+    private array $loginBootstrap = [];
 
     public function mount(): void
     {
@@ -53,10 +59,45 @@ class CreateTenant extends CreateRecord
         $data['feature_flags'] = Tenant::mergeOptInModuleFlag($data['feature_flags'], Tenant::MODULE_REFERRALS, $referrals);
         $data['feature_flags'] = Tenant::mergeOptInModuleFlag($data['feature_flags'], Tenant::MODULE_HR, $hr);
 
+        $this->loginBootstrap = [
+            'owner_email' => $data['initial_owner_email'] ?? null,
+            'owner_name' => $data['initial_owner_name'] ?? null,
+            'doctor_email' => $data['initial_doctor_email'] ?? null,
+            'doctor_name' => $data['initial_doctor_name'] ?? null,
+            'helper_email' => $data['initial_helper_email'] ?? null,
+            'helper_name' => $data['initial_helper_name'] ?? null,
+        ];
+
         // Not tenant columns — handled in afterCreate.
-        unset($data['initial_doctor_email'], $data['initial_doctor_name']);
+        unset(
+            $data['initial_doctor_email'],
+            $data['initial_doctor_name'],
+            $data['initial_owner_email'],
+            $data['initial_owner_name'],
+            $data['initial_helper_email'],
+            $data['initial_helper_name'],
+        );
 
         return $data;
+    }
+
+    protected function beforeCreate(): void
+    {
+        $state = $this->form->getState();
+        $emails = array_filter(array_map(
+            fn ($email): string => strtolower(trim((string) $email)),
+            [
+                $state['initial_owner_email'] ?? '',
+                $state['initial_doctor_email'] ?? '',
+                $state['initial_helper_email'] ?? '',
+            ],
+        ));
+
+        if (count($emails) !== count(array_unique($emails))) {
+            throw ValidationException::withMessages([
+                'initial_doctor_email' => __('Owner, doctor, and helper emails must be different.'),
+            ]);
+        }
     }
 
     protected function afterCreate(): void
@@ -74,11 +115,50 @@ class CreateTenant extends CreateRecord
             $commissions->createPendingSetupCommission($tenant);
         }
 
-        $formState = $this->form->getState();
-        app(TenantUserBootstrapService::class)->ensureDoctorLogin(
+        $formState = $this->loginBootstrap;
+        $bootstrap = app(TenantUserBootstrapService::class);
+
+        $ownerPassword = Str::password(16);
+        $helperPassword = Str::password(16);
+        $doctorPassword = Str::password(16);
+
+        $owner = $bootstrap->ensureOwnerLogin(
             $tenant,
-            $formState['initial_doctor_email'] ?? null,
-            $formState['initial_doctor_name'] ?? null,
+            $formState['owner_email'] ?? null,
+            $formState['owner_name'] ?? null,
+            $ownerPassword,
         );
+        $helper = $bootstrap->ensureHelperLogin(
+            $tenant,
+            filled($formState['helper_email'] ?? null) ? $formState['helper_email'] : null,
+            $formState['helper_name'] ?? null,
+            $helperPassword,
+        );
+        $doctor = $bootstrap->ensureDoctorLogin(
+            $tenant,
+            $formState['doctor_email'] ?? null,
+            $formState['doctor_name'] ?? null,
+            $doctorPassword,
+        );
+
+        $lines = [];
+        if ($owner->wasRecentlyCreated) {
+            $lines[] = __('Owner :email / :password', ['email' => $owner->email, 'password' => $ownerPassword]);
+        }
+        if ($helper->wasRecentlyCreated) {
+            $lines[] = __('ChamberQ helper :email / :password', ['email' => $helper->email, 'password' => $helperPassword]);
+        }
+        if ($doctor->wasRecentlyCreated) {
+            $lines[] = __('Doctor :email / :password', ['email' => $doctor->email, 'password' => $doctorPassword]);
+        }
+
+        if ($lines !== []) {
+            Notification::make()
+                ->title(__('Logins created — copy these passwords now'))
+                ->body(implode("\n", $lines))
+                ->success()
+                ->persistent()
+                ->send();
+        }
     }
 }

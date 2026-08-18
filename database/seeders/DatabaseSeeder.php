@@ -56,7 +56,13 @@ class DatabaseSeeder extends Seeder
 
         SeedAccounts::upsert(
             ['email' => 'admin@solo.com'],
-            ['name' => 'Solo Admin', 'role' => User::ROLE_ADMIN, 'tenant_id' => 'solo'],
+            ['name' => 'Solo Owner', 'role' => User::ROLE_ADMIN, 'tenant_id' => 'solo'],
+            'pass',
+        );
+
+        SeedAccounts::upsert(
+            ['email' => 'support@solo.chamberq.internal'],
+            ['name' => 'ChamberQ Support', 'role' => User::ROLE_HELPER, 'tenant_id' => 'solo'],
             'pass',
         );
 
@@ -312,7 +318,13 @@ class DatabaseSeeder extends Seeder
 
         SeedAccounts::upsert(
             ['email' => 'admin@demo.com'],
-            ['name' => 'Demo Admin', 'role' => User::ROLE_ADMIN, 'tenant_id' => 'demo'],
+            ['name' => 'Demo Owner', 'role' => User::ROLE_ADMIN, 'tenant_id' => 'demo'],
+            'pass',
+        );
+
+        SeedAccounts::upsert(
+            ['email' => 'support@demo.chamberq.internal'],
+            ['name' => 'ChamberQ Support', 'role' => User::ROLE_HELPER, 'tenant_id' => 'demo'],
             'pass',
         );
 

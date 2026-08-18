@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-17T15:48:27+0600
+Last Updated: 2026-08-18T13:45:36+0600
 
 ## Full Site Map
 
@@ -180,10 +180,10 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 
 ### New tenant → go live (Super Admin)
 - **Trigger:** Sales closes a doctor/clinic.
-- **Steps:** Create Tenant with URL **slug** (e.g. `drkarim`; rejected if already taken or if it matches a reserved path prefix such as `admin` / `book` / `find` / `me`) and **doctor login email** (required; creates doctor user). Plan Tier starts as **Maestro**, billing as trial, SMS as 0, all three modules on, theme and locale filled — change them only when the deal is not the default. Optional custom **domain** (repeater starts empty). Tick launch offers if honouring them (Prescription free for life / prepaid-year 50% setup) → attach **marketer** / **discount code**, read the labeled list/due + partner preview → Create → hand off admin + doctor logins.
+- **Steps:** Create Tenant with URL **slug** (e.g. `drkarim`; rejected if already taken or if it matches a reserved path prefix such as `admin` / `book` / `find` / `me`), **owner login email** (founder — may not be a doctor), **doctor login email** (required), and optional **helper email** (defaults to `support@{slug}.chamberq.internal`). Plan Tier starts as **Maestro**, billing as trial, SMS as 0, all three modules on, theme and locale filled — change them only when the deal is not the default. Optional custom **domain** (repeater starts empty). Tick launch offers if honouring them (Prescription free for life / prepaid-year 50% setup) → attach **marketer** / **discount code**, read the labeled list/due + partner preview → Create → copy the one-shot **owner / helper / doctor** passwords from the notification → hand off owner + doctor logins to the client (never the helper password).
 - **URLs:** Platform `/{slug}/…`; after custom domain DNS, also `drkarim.com/…` at root.
 - **Modules:** Front door alone = website + book + day list (no outdoor TV / Call next / come-around). Live queue adds TV + live ticket. Prescription adds consult/Rx. Booking confirmation SMS is optional (credits + doctor toggle).
-- **Success:** Enabled module routes work; disabled ones 404. Admin at `/{slug}/admin` (or `/admin` on custom domain).
+- **Success:** Enabled module routes work; disabled ones 404. Owner at `/{slug}/admin` (or `/admin` on custom domain). ChamberQ uses the **helper** login on the same URL — invisible on the owner’s Staff & Roles list.
 
 ### Set how far ahead patients can book (Super Admin)
 - **Trigger:** Owner wants a shorter or longer online booking window for every Front door (Maestro and Clinic).
@@ -341,6 +341,6 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 
 ### Patient records — lookup and corrections (admin/doctor)
 - **Trigger:** Staff need to see who has visited, fix a duplicate person, move a visit to the right household member, or mark someone treated on paper before ChamberQ as a returning patient.
-- **Steps:** Tenant admin → **Patients** (search by name/phone) → edit demographics including **Seen here before ChamberQ**, or use **Join two records** / **Move a visit**. Desk staff (who cannot open Patients) tick **They have been treated here before ChamberQ** on a walk-in, or tap **Old patient (paper file)** / **Mark as first visit** on Daily Roster or Live Queue. Run `php artisan patients:backfill` once per environment to link legacy bookings (use `--dry-run` first).
+- **Steps:** Tenant admin → **Patients** (search by name/phone) → edit demographics including **Seen here before ChamberQ**, or use **Join two records** / **Move a visit**. Desk staff (who cannot open Patients) tick **They have been treated here before ChamberQ** on a walk-in, or tap **For follow up** / **Mark as first visit** on Daily Roster or Live Queue. Run `php artisan patients:backfill` once per environment to link legacy bookings (use `--dry-run` first).
 - **Data/systems touched:** `patients`, `patients.seen_before_software`, `bookings.patient_id`.
 - **Success:** Each person has one record; family members on one phone can each book the same day; staff can merge mistaken duplicates; a paper-file patient is not labelled a first visit.

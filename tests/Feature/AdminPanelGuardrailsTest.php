@@ -387,6 +387,7 @@ class AdminPanelGuardrailsTest extends TestCase
                 'billing_status' => 'trial',
                 'sms_balance' => 0,
                 'initial_doctor_email' => 'doctor@copycat.test',
+                'initial_owner_email' => 'owner@copycat.test',
             ])
             ->call('create')
             ->assertHasFormErrors(['id']);
@@ -399,6 +400,7 @@ class AdminPanelGuardrailsTest extends TestCase
                 'billing_status' => 'trial',
                 'sms_balance' => 0,
                 'initial_doctor_email' => 'doctor@unreachable.test',
+                'initial_owner_email' => 'owner@unreachable.test',
             ])
             ->call('create')
             ->assertHasFormErrors(['id']);

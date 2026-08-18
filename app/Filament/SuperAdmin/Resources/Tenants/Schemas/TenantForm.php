@@ -67,6 +67,21 @@ class TenantForm
                             ->maxLength(20),
                     ]),
 
+                Fieldset::make(__('Owner login'))
+                    ->visible(fn (string $operation): bool => $operation === 'create')
+                    ->schema([
+                        TextInput::make('initial_owner_email')
+                            ->label(__('Owner login email'))
+                            ->email()
+                            ->required()
+                            ->maxLength(255)
+                            ->helperText(__('The founder — not necessarily a doctor. Their password is theirs; ChamberQ does not use this login.')),
+                        TextInput::make('initial_owner_name')
+                            ->label(__('Owner name on login'))
+                            ->maxLength(255)
+                            ->placeholder(fn (Get $get): string => (string) ($get('name') ?: 'Owner')),
+                    ]),
+
                 Fieldset::make(__('First doctor login'))
                     ->visible(fn (string $operation): bool => $operation === 'create')
                     ->schema([
@@ -80,6 +95,20 @@ class TenantForm
                             ->label(__('Doctor name on login'))
                             ->maxLength(255)
                             ->placeholder(fn (Get $get): string => (string) ($get('name') ?: 'Dr.')),
+                    ]),
+
+                Fieldset::make(__('ChamberQ helper'))
+                    ->visible(fn (string $operation): bool => $operation === 'create')
+                    ->schema([
+                        TextInput::make('initial_helper_email')
+                            ->label(__('Helper login email'))
+                            ->email()
+                            ->maxLength(255)
+                            ->helperText(__('Leave blank for support@{slug}.chamberq.internal. Hidden from the owner’s Staff & Roles list.')),
+                        TextInput::make('initial_helper_name')
+                            ->label(__('Helper name on login'))
+                            ->maxLength(255)
+                            ->placeholder('ChamberQ Support'),
                     ]),
 
                 Fieldset::make(__('Plan & Billing'))

@@ -40,7 +40,7 @@ class SendStationsMorningCountPushes implements ShouldQueue
         ]);
 
         User::query()
-            ->whereIn('role', [User::ROLE_DOCTOR, User::ROLE_ADMIN])
+            ->whereIn('role', [User::ROLE_DOCTOR, User::ROLE_ADMIN, User::ROLE_HELPER])
             ->each(function (User $user) use ($body): void {
                 Notification::make()
                     ->title(__('Morning queue count'))

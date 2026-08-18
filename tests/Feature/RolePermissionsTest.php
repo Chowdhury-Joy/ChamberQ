@@ -104,6 +104,37 @@ class RolePermissionsTest extends TestCase
         $this->assertFalse($staff->canManageBranding());
     }
 
+    public function test_helper_mirrors_owner_setup_without_queue_or_consult(): void
+    {
+        tenancy()->initialize($this->tenant);
+
+        $this->makeUser(User::ROLE_STAFF, 'staff-for-helper@test.loc');
+        $helper = $this->makeUser(User::ROLE_HELPER, 'helper@test.loc');
+        $page = WebPage::create([
+            'title' => 'Helper Page',
+            'slug' => 'helper-page',
+            'is_published' => true,
+            'content' => [],
+        ]);
+
+        $this->actingAs($helper);
+
+        $this->assertTrue($helper->isHelper());
+        $this->assertTrue($helper->isAdmin());
+        $this->assertFalse($helper->isOwner());
+        $this->assertTrue(WebPageResource::canCreate());
+        $this->assertTrue(WebPageResource::canDelete($page));
+        $this->assertTrue(UserResource::canViewAny());
+        $this->assertTrue(BrandingSettings::canAccess());
+        $this->assertTrue(DoctorResource::canViewAny());
+        $this->assertTrue(ChamberResource::canViewAny());
+        $this->assertTrue(DailyRoster::canAccess());
+        $this->assertFalse(LiveQueueControl::canAccess());
+        $this->assertFalse(ConsultScreen::canAccess());
+        $this->assertFalse(FollowUpReminders::canAccess());
+        $this->assertFalse(WaitingForEarlierDate::canAccess());
+    }
+
     public function test_staff_can_edit_content_queue_chambers_and_hours_but_not_doctors_or_users(): void
     {
         tenancy()->initialize($this->tenant);

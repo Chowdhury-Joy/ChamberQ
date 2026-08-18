@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use App\Models\Concerns\BelongsToTenant;
+use App\Support\ChamberQHelperAccess;
 
 class User extends Authenticatable implements FilamentUser, CanResetPasswordContract
 {
@@ -20,6 +21,12 @@ class User extends Authenticatable implements FilamentUser, CanResetPasswordCont
     public const ROLE_SUPER_ADMIN = 'super_admin';
 
     public const ROLE_ADMIN = 'admin';
+
+    /** Alias: the clinic founder. Stored as `admin` so existing rows stay valid. */
+    public const ROLE_OWNER = self::ROLE_ADMIN;
+
+    /** ChamberQ vendor login on a clinic — hidden from the owner. */
+    public const ROLE_HELPER = 'helper';
 
     public const ROLE_DOCTOR = 'doctor';
 
@@ -36,6 +43,7 @@ class User extends Authenticatable implements FilamentUser, CanResetPasswordCont
      */
     public const TENANT_PANEL_ROLES = [
         self::ROLE_ADMIN,
+        self::ROLE_HELPER,
         self::ROLE_DOCTOR,
         self::ROLE_STAFF,
     ];
@@ -82,7 +90,16 @@ class User extends Authenticatable implements FilamentUser, CanResetPasswordCont
      */
     protected static function booted(): void
     {
+        static::creating(function (self $user): void {
+            ChamberQHelperAccess::guardCreating($user);
+        });
+
+        static::updating(function (self $user): void {
+            ChamberQHelperAccess::guardUpdating($user);
+        });
+
         static::deleting(function (self $user): void {
+            ChamberQHelperAccess::guardDeleting($user);
             Doctor::query()->where('user_id', $user->id)->update(['user_id' => null]);
         });
     }
@@ -96,9 +113,25 @@ class User extends Authenticatable implements FilamentUser, CanResetPasswordCont
         return $this->hasOne(Doctor::class);
     }
 
+    public function isSuperAdmin(): bool
+    {
+        return $this->role === self::ROLE_SUPER_ADMIN && $this->tenant_id === null;
+    }
+
+    /** Practice setup: clinic founder or ChamberQ helper. */
     public function isAdmin(): bool
     {
-        return $this->role === self::ROLE_ADMIN;
+        return $this->isOwner() || $this->isHelper();
+    }
+
+    public function isOwner(): bool
+    {
+        return $this->role === self::ROLE_OWNER;
+    }
+
+    public function isHelper(): bool
+    {
+        return $this->role === self::ROLE_HELPER;
     }
 
     public function isDoctor(): bool
@@ -114,13 +147,13 @@ class User extends Authenticatable implements FilamentUser, CanResetPasswordCont
     /** Doctors, patients, labs — not website, not chambers/hours, not the front desk lists. */
     public function canManageOps(): bool
     {
-        return in_array($this->role, [self::ROLE_ADMIN, self::ROLE_DOCTOR], true);
+        return $this->isAdmin() || $this->isDoctor();
     }
 
-    /** Edit page text/images; admin also owns page structure. */
+    /** Edit page text/images; owner/helper also own page structure. */
     public function canManageContent(): bool
     {
-        return in_array($this->role, [self::ROLE_ADMIN, self::ROLE_STAFF], true);
+        return $this->isAdmin() || $this->isStaff();
     }
 
     /** Full page builder: add/remove/reorder blocks, slug, rich HTML. */
@@ -129,10 +162,10 @@ class User extends Authenticatable implements FilamentUser, CanResetPasswordCont
         return $this->isAdmin();
     }
 
-    /** Desk cashbook — income collected and expenses paid. Admin, doctor, or staff. */
+    /** Desk cashbook — income collected and expenses paid. Owner, helper, doctor, or staff. */
     public function canManageCash(): bool
     {
-        return in_array($this->role, [self::ROLE_ADMIN, self::ROLE_DOCTOR, self::ROLE_STAFF], true);
+        return $this->isAdmin() || $this->isDoctor() || $this->isStaff();
     }
 
     /** Daily roster and queue-adjacent workflows — doctor or staff, not account owner. */

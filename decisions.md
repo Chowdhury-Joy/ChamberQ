@@ -2839,3 +2839,21 @@
  <reason>Like reprinting a clinic's letterhead without also resetting the front-door lock. Demo logins stay `pass` only on first create.</reason>
 </decision>
 
+## 2026-08-17T22:43:46+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Desk staff found “Old patient (paper file)” unclear when marking someone who is coming back for a follow-up.</context>
+ <action>Rename the Daily Roster / Live Queue row button to **For follow up**. Tapping it still sets `seen_before_software`. The reverse label stays **Mark as first visit**. Consult Screen copy is unchanged.</action>
+ <reason>Like writing “follow-up” on a token instead of “old paper file” — the desk already thinks in follow-up vs first visit, so the button should say that.</reason>
+</decision>
+
+## 2026-08-18T13:45:36+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Hospital founders may not be doctors, will not share their password with ChamberQ or desk staff, and need us to manage hours/website without stuffing every clinic into Super Admin. The owner must never see or remove our access.</context>
+ <action>Split tenant **`owner`** (DB `admin`) from **`helper`** (ChamberQ vendor). Both reach practice setup — users, branding, website, chambers, hours, slot blocks, Daily Roster, reports, cashbook — but neither runs Live Queue or Consult Screen / Rx. Super Admin **Create Tenant** always creates owner + helper + doctor (helper defaults to `support@{slug}.chamberq.internal`). Owner Staff & Roles hides helpers entirely; `ChamberQHelperAccess` blocks owner create/edit/delete/demote on helpers at the model layer. Helpers see other helpers; only Super Admin adds/removes extras (never the last helper). Impersonation stays off.</action>
+ <reason>Separate vendor key from the founder’s key — like a building-management card the tenant never holds. Super Admin stays billing/modules; clinic nitty-gritty stays on `/{slug}/admin` via helper logins. Deferred: Super Admin job scopes, hospital vs doctor staff types, branch-scoped logins, one ChamberQ employee across many clinics.</reason>
+</decision>
+
