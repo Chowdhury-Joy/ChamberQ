@@ -105,6 +105,10 @@
             border-color: var(--color-primary);
             box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-primary) 18%, transparent);
         }
+        .portal-rx-form { display: flex; flex-direction: column; gap: 0.75rem; max-width: 24rem; margin-top: 1rem; }
+        .portal-rx-lock-lead, .portal-rx-hint { color: #64748b; }
+        .portal-rx-hint { font-size: 0.82rem; margin-top: 0.75rem; }
+        .portal-error { margin: 0.75rem 0 0; font-size: 0.9rem; color: #dc2626; }
     </style>
 </head>
 <body class="min-h-full flex flex-col bg-white text-slate-900 antialiased">
@@ -145,7 +149,7 @@
                 {{ __('Patient Access Portal') }}
             </h1>
             <p class="mx-auto mt-3 max-w-md text-center text-sm leading-relaxed text-slate-600">
-                {{ __('Enter your mobile phone number to look up your appointments, queue tickets, prescriptions, and lab test status.') }}
+                {{ __('Enter your mobile number to look up appointments, tickets, and prescriptions. After a visit you can optionally set a password for next time.') }}
             </p>
 
             <form action="{{ tenant_web_url('/portal') }}" method="GET" class="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -172,10 +176,19 @@
 
         @if(filled($phone) && empty($error))
             <div class="mx-auto max-w-4xl">
+                @include('tenant.partials.portal-prescription-lock', ['rxSetupButtonClass' => 'solo-cta'])
+
                 @if(($prescriptions ?? collect())->isNotEmpty())
-                    <h2 class="font-display text-2xl text-slate-900 sm:text-3xl">
-                        {{ __('Your prescriptions') }}
-                    </h2>
+                    <div class="mb-2 flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                        <h2 class="font-display text-2xl text-slate-900 sm:text-3xl">
+                            {{ __('Your prescriptions') }}
+                        </h2>
+                        <form action="{{ tenant_web_route('patient.portal.rx-lock', [], absolute: false) }}" method="POST">
+                            @csrf
+                            <input type="hidden" name="phone" value="{{ $phone }}">
+                            <button type="submit" class="text-sm font-semibold text-slate-500 underline">{{ __('Hide prescriptions') }}</button>
+                        </form>
+                    </div>
                     <div class="mt-6 mb-10 space-y-4">
                         @foreach($prescriptions as $prescription)
                             @php

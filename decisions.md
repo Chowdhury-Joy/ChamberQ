@@ -2875,3 +2875,21 @@
  <reason>Like giving three keys on one badge — till key, queue clicker, BP machine — instead of three login types. Empty ticks preserve solo Maestro demos; lead hiring covers the floor supervisor without sharing the owner password.</reason>
 </decision>
 
+## 2026-08-18T14:49:03+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Anyone who knew a patient's mobile could open every old prescription on `/portal`. Booking must stay frictionless; a password at first book would drop conversions.</context>
+ <action>Keep serials and tickets phone-only. After a completed visit at that clinic, `/portal` asks them to set a password (min 4 characters) for old prescriptions; later visits enter it for this browser session. `POST /portal/rx-password|rx-unlock|rx-lock`. Direct pad URLs redirect until unlocked. SMS `/p/{token}` still works 48h without it. Reception can clear a forgotten password on Patients. Never shown on the booking wizard.</action>
+ <reason>Like a locker at the clinic: you get a serial without a key, but you set a combination after the first visit so a relative with the number cannot read last month's pad. Forgot combination → desk resets it.</reason>
+</decision>
+
+## 2026-08-18T14:53:25+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>The first portal-password pass hid every old pad until a password was set. That locked prescriptions by default, and must not touch a doctor reading shared history from another ChamberQ clinic.</context>
+ <action>Password is opt-in. After a completed visit the portal still lists pads with just the phone, plus an optional setup. Only after the patient chooses a password does later `/portal` access need unlock. `prescriptionsVisible()` is true unless `GATE_UNLOCK`. Consult Screen, `CrossTenantClinicalHistoryService`, and `/me` history never read `portal_phone_passwords`.</action>
+ <reason>A lock nobody asked for is worse than an open phone lookup they already lived with. The doctor's other-clinic history is a clinical handshake between practices, not the patient portal locker.</reason>
+</decision>
+

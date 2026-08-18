@@ -743,3 +743,10 @@
 ## 2026-08-18T14:26:23+0600
 - Production hardening pass: Staff & Roles branch sync via form getState; lead hire chamber validation; fee/referral admin-only setup; Stations till+referral one transaction; follow-up SMS row lock; day-of-week DB indexes; TRUSTED_PROXIES env; cancellation SMS custom body capped.
 
+## 2026-08-18T14:49:03+0600
+- Portal prescription password (`portal_phone_passwords`, `PortalPrescriptionLock`): after a completed visit, old pads on `/portal` need a per-clinic phone password; serials stay phone-only; SMS `/p/{token}` unchanged.
+
+## 2026-08-18T14:53:25+0600
+- Portal prescription password is opt-in: pads stay phone-open until the patient chooses a lock; doctor shared-history paths do not use `PortalPrescriptionLock`.
+
+

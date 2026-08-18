@@ -159,7 +159,43 @@ class PortalPrescriptionTest extends TestCase
         return $prescription->fresh();
     }
 
-    public function test_portal_lists_every_prescription_with_medicines(): void
+    public function test_waiting_serial_does_not_ask_for_a_prescription_password(): void
+    {
+        tenancy()->initialize($this->tenant);
+
+        $chamber = Chamber::create(['name' => 'Wait Chamber']);
+        $doctorProfile = Doctor::create(['name' => 'Dr Wait']);
+        $session = ScheduleSession::create([
+            'chamber_id' => $chamber->id,
+            'doctor_id' => $doctorProfile->id,
+            'day_of_week' => Carbon::today()->dayOfWeek,
+            'session_name' => 'Morning',
+            'start_time' => '09:00',
+            'end_time' => '12:00',
+            'slot_cap' => 20,
+        ]);
+
+        Booking::create([
+            'bookable_type' => ScheduleSession::class,
+            'bookable_id' => $session->id,
+            'booking_date' => today(),
+            'patient_name' => 'Waiting Patient',
+            'patient_phone' => $this->phone,
+            'serial_number' => 1,
+            'status' => 'waiting',
+        ]);
+
+        tenancy()->end();
+
+        $this->get('http://portal-rx.localhost/portal?phone='.$this->phone)
+            ->assertOk()
+            ->assertSee('Waiting Patient', false)
+            ->assertDontSee('Set a password for your prescriptions', false)
+            ->assertDontSee('Enter your prescription password', false)
+            ->assertDontSee('View prescription', false);
+    }
+
+    public function test_after_a_visit_prescriptions_stay_open_and_password_is_optional(): void
     {
         $oldest = $this->makePrescription('OLDEST', 'Old Diagnosis', now()->subDays(3));
         $second = $this->makePrescription('SECOND', 'Second Diagnosis', now()->subDays(2));
@@ -167,14 +203,58 @@ class PortalPrescriptionTest extends TestCase
 
         $this->get('http://portal-rx.localhost/portal?phone='.$this->phone)
             ->assertOk()
-            ->assertSee('Your prescriptions', false)
+            ->assertSee('Set a password for your prescriptions', false)
+            ->assertSee('Optional. Skip this if you like', false)
             ->assertSee('View prescription', false)
             ->assertSee('/portal/prescriptions/'.$newest->id, false)
             ->assertSee('/portal/prescriptions/'.$second->id, false)
             ->assertSee('/portal/prescriptions/'.$oldest->id, false);
+
+        $this->get('http://portal-rx.localhost/portal/prescriptions/'.$newest->id.'?phone='.$this->phone)
+            ->assertOk()
+            ->assertSee('NEWEST', false);
     }
 
-    public function test_portal_prescription_view_requires_matching_phone(): void
+    public function test_later_visits_need_the_password_to_open_old_prescriptions(): void
+    {
+        $prescription = $this->makePrescription('NAPA', 'SECRETDIAGNOSISNAME');
+
+        $this->post('http://portal-rx.localhost/portal/rx-password', [
+            'phone' => $this->phone,
+            'password' => 'gate-one',
+            'password_confirmation' => 'gate-one',
+        ]);
+
+        $this->flushSession();
+
+        $this->get('http://portal-rx.localhost/portal?phone='.$this->phone)
+            ->assertOk()
+            ->assertSee('Enter your prescription password', false)
+            ->assertDontSee('View prescription', false)
+            ->assertDontSee('SECRETDIAGNOSISNAME', false);
+
+        $this->from('http://portal-rx.localhost/portal?phone='.$this->phone)
+            ->post('http://portal-rx.localhost/portal/rx-unlock', [
+                'phone' => $this->phone,
+                'password' => 'wrong-gate',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasErrors('password');
+
+        $this->from('http://portal-rx.localhost/portal?phone='.$this->phone)
+            ->post('http://portal-rx.localhost/portal/rx-unlock', [
+                'phone' => $this->phone,
+                'password' => 'gate-one',
+            ])
+            ->assertRedirect('http://portal-rx.localhost/portal?phone='.$this->phone);
+
+        $this->get('http://portal-rx.localhost/portal?phone='.$this->phone)
+            ->assertOk()
+            ->assertSee('View prescription', false)
+            ->assertSee('/portal/prescriptions/'.$prescription->id, false);
+    }
+
+    public function test_portal_prescription_view_requires_matching_phone_and_stays_open_until_they_choose_a_password(): void
     {
         $prescription = $this->makePrescription('NAPA', 'SECRETDIAGNOSISNAME');
 
@@ -194,6 +274,33 @@ class PortalPrescriptionTest extends TestCase
             ->assertDontSee('Secret transcript must stay off')
             ->assertDontSee('visit-audio')
             ->assertDontSee('visit-photos');
+    }
+
+    public function test_portal_password_is_not_wired_into_doctor_or_shared_clinic_history(): void
+    {
+        foreach ([
+            app_path('Services/CrossTenantClinicalHistoryService.php'),
+            app_path('Services/PlatformPatientHistoryService.php'),
+            app_path('Filament/TenantAdmin/Pages/ConsultScreen.php'),
+        ] as $path) {
+            $this->assertStringNotContainsString(
+                'PortalPrescriptionLock',
+                (string) file_get_contents($path),
+                basename($path).' must not require the patient portal password',
+            );
+        }
+    }
+
+    public function test_cannot_set_prescription_password_before_a_completed_visit(): void
+    {
+        $this->from('http://portal-rx.localhost/portal?phone='.$this->phone)
+            ->post('http://portal-rx.localhost/portal/rx-password', [
+                'phone' => $this->phone,
+                'password' => 'gate-one',
+                'password_confirmation' => 'gate-one',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasErrors('phone');
     }
 
     public function test_portal_list_does_not_expose_visit_media_paths(): void

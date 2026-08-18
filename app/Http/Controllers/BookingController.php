@@ -13,7 +13,9 @@ use App\Models\PlatformSetting;
 use App\Models\Prescription;
 use App\Models\ScheduleSession;
 use App\Services\BookingService;
+use App\Services\PortalPrescriptionLock;
 use App\Support\BdNid;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
 
@@ -459,9 +461,13 @@ class BookingController extends Controller
                     ->take(10)
                     ->get();
 
-                // Durable backup for the expiring /p/{token} link: every
-                // prescription that actually has medicines, newest first.
-                if (tenant()?->hasPrescription()) {
+                $rxLock = app(PortalPrescriptionLock::class);
+                $rxGate = $rxLock->gate($request, (string) $phone);
+
+                // Pads stay listed unless this phone chose a password and has
+                // not unlocked it this session. Doctor consult / shared
+                // history never uses this gate.
+                if (tenant()?->hasPrescription() && $rxLock->prescriptionsVisible($request, (string) $phone)) {
                     $prescriptions = Prescription::query()
                         ->whereHas('items')
                         ->whereHas('visitRecord.booking', function ($query) use ($variants) {
@@ -481,7 +487,59 @@ class BookingController extends Controller
             'prescriptions' => $prescriptions,
             'phone' => $phone,
             'error' => $error,
+            'rxGate' => $rxGate ?? PortalPrescriptionLock::GATE_NONE,
         ]);
+    }
+
+    public function setPortalPrescriptionPassword(Request $request, PortalPrescriptionLock $lock): RedirectResponse
+    {
+        $validated = $this->validatePortalRxPasswordForm($request, confirming: true);
+
+        $lock->setPassword($request, $validated['phone'], $validated['password']);
+
+        return redirect($lock->portalRedirect($validated['phone']));
+    }
+
+    public function unlockPortalPrescriptions(Request $request, PortalPrescriptionLock $lock): RedirectResponse
+    {
+        $validated = $this->validatePortalRxPasswordForm($request, confirming: false);
+
+        $lock->unlock($request, $validated['phone'], $validated['password']);
+
+        return redirect($lock->portalRedirect($validated['phone']));
+    }
+
+    public function lockPortalPrescriptions(Request $request, PortalPrescriptionLock $lock): RedirectResponse
+    {
+        $validated = $request->validate([
+            'phone' => ['required', 'string', 'regex:/^(?:\+?88)?01[3-9]\d{8}$/'],
+        ]);
+
+        $lock->lock($request, $validated['phone']);
+
+        return redirect($lock->portalRedirect($validated['phone']));
+    }
+
+    /**
+     * @return array{phone: string, password: string}
+     */
+    private function validatePortalRxPasswordForm(Request $request, bool $confirming): array
+    {
+        $rules = [
+            'phone' => ['required', 'string', 'regex:/^(?:\+?88)?01[3-9]\d{8}$/'],
+            'password' => [
+                'required',
+                'string',
+                'min:'.PortalPrescriptionLock::MIN_LENGTH,
+                'max:'.PortalPrescriptionLock::MAX_LENGTH,
+            ],
+        ];
+
+        if ($confirming) {
+            $rules['password'][] = 'confirmed';
+        }
+
+        return $request->validate($rules);
     }
 
     /**

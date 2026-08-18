@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-18T14:20:41+0600
+Last Updated: 2026-08-18T14:53:25+0600
 
 ## Full Site Map
 
@@ -32,7 +32,7 @@ Same central host; tenant identified by URL slug (tenant `id`), e.g. `drkarim`.
 | `/{slug}/` | Branded website home | public (**Front door** module) |
 | `/{slug}/book` | Booking wizard | public (**Front door**) |
 | `/{slug}/bookings/{booking}` | Patient ticket (sitting window always; live queue / come-around only with **Live queue**) | public (UUID, 60/min throttle) |
-| `/{slug}/portal` | Phone lookup — bookings + every prescription with medicines (Rx list needs **Prescription**) | public (throttled, **Front door**) |
+| `/{slug}/portal` | Phone lookup — bookings and prescriptions stay open; optional password after the first completed visit (**Prescription**) | public (throttled, **Front door**) |
 | `/{slug}/screen/{session}` | Outdoor TV (always today for that schedule session — bookmark once) | public (**Live queue**) |
 | `/{slug}/screen/chamber/{chamber}` | Combined waiting-room TV for every live sitting in that chamber today | public (**Live queue**) |
 | `/{slug}/screen/{session}/{date}` | Outdoor display for a specific date (legacy / deep link) | public (**Live queue**) |
@@ -72,7 +72,7 @@ When a doctor connects their own domain (e.g. `drkarim.com`), routes live at the
 | `/book` | Online serial booking wizard | public |
 | `POST /book` | Homepage hero form target — flashes name/phone to session, redirects to the wizard so patient details never enter the URL | public (throttled) |
 | `/bookings/{booking}` | Patient ticket (UUID) | public (60/min throttle) |
-| `/portal` | Phone lookup — bookings + every prescription with medicines | public (throttled) |
+| `/portal` | Phone lookup — bookings and prescriptions stay open; optional password after the first completed visit | public (throttled) |
 | `/screen/{session}` | Outdoor waiting-room TV (always today — bookmark once per schedule session) | public (throttled) |
 | `/screen/chamber/{chamber}` | Combined waiting-room TV for every live sitting in that chamber today | public (throttled) |
 | `/screen/{session}/{date}` | Outdoor waiting-room display for a specific date (legacy) | public (throttled) |
@@ -140,7 +140,10 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 | Route | Purpose | Access |
 |-------|---------|--------|
 | `GET /p/{token}` | SMS/WhatsApp copy of **one** prescription. Short token so the SMS fits one billable segment. Unknown or expired token → 404. | public, **10-char token, expires 48h**, throttled 30/min |
-| `GET /portal/prescriptions/{prescription}?phone=` | Durable portal backup when staff forget to send `/p/{token}`. Phone must match the booking that owns the visit. | public, phone-gated, throttled 30/min |
+| `GET /portal/prescriptions/{prescription}?phone=` | Durable portal backup when staff forget to send `/p/{token}`. Phone must match. Password only if the patient chose one. | public, phone-gated, throttled 30/min |
+| `POST /portal/rx-password` | Optional: set prescription password (only after a completed visit) | public, throttled 10/min |
+| `POST /portal/rx-unlock` | Unlock old prescriptions for this session | public, throttled 10/min |
+| `POST /portal/rx-lock` | Hide prescriptions again | public, throttled 20/min |
 | `GET /prescriptions/{prescription}/share` | **Superseded by `/p/{token}`.** Kept only so links already delivered keep working; every one expires within 48h. | public, **signed URL, expires 48h**, throttled |
 
 ## Customer Journeys
@@ -169,8 +172,8 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 
 ### Patient → check status later
 1. Open `/portal` or ticket link — or, with a ChamberQ login, `/me`.
-2. Portal: enter BD phone → see matching bookings **and**, when present, every prescription with medicines (newest first). `/me` lists every clinic for that phone without re-typing it.
-3. Tap **View prescription** → full pad (phone must still match, or the logged-in account owns it). Goal: get medicines/diagnosis even if staff forgot the SMS/WhatsApp link.
+2. Portal: enter BD phone → see matching bookings **and** prescriptions (open by default). After a completed visit they may optionally set a password; until they do, pads stay visible. `/me` lists every clinic for that phone without re-typing it.
+3. Tap **View prescription** → full pad (phone must still match, or the logged-in account owns it). If they chose a portal password, enter it first. SMS `/p/{token}` still opens today’s pad for 48h without it. Doctors on Consult Screen still see shared history from other ChamberQ clinics **without** this password. Reception can clear a forgotten password on **Patients**.
 
 ### Patient → waiting room
 1. Watch the outdoor TV (staff bookmark `/screen/{session}` once for one sitting, or `/screen/chamber/{chamber}` for every live room in that chamber today).

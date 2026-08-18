@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\Prescription;
+use App\Services\PortalPrescriptionLock;
 use App\Support\BdPhone;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -44,10 +46,10 @@ class PrescriptionShareController extends Controller
     }
 
     /**
-     * Portal backup: anyone who can look up the booking phone can open this
-     * prescription. Phone must match the booking that owns the visit.
+     * Portal backup: phone must match the booking, then the prescription
+     * password for that number must be unlocked in this session.
      */
-    public function showFromPortal(Request $request, Prescription $prescription): View
+    public function showFromPortal(Request $request, Prescription $prescription): View|RedirectResponse
     {
         $phone = $request->query('phone');
 
@@ -83,6 +85,11 @@ class PrescriptionShareController extends Controller
 
         if ($prescription->items->isEmpty()) {
             abort(404);
+        }
+
+        $lock = app(PortalPrescriptionLock::class);
+        if ($lock->gate($request, (string) $phone) === PortalPrescriptionLock::GATE_UNLOCK) {
+            return redirect($lock->portalRedirect((string) $phone));
         }
 
         return $this->render($prescription, showExpiryFootnote: false);

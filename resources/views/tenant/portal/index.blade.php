@@ -112,6 +112,11 @@
         .btn-ghost:hover { background: var(--bg); }
 
         .portal-error { margin: 1rem 0 0; text-align: center; font-size: 0.9rem; color: #dc2626; }
+        .portal-rx-form { display: flex; flex-direction: column; gap: 0.75rem; max-width: 24rem; margin-top: 1rem; }
+        .portal-rx-lock-lead, .portal-rx-hint { color: var(--muted); }
+        .portal-rx-hint { font-size: 0.82rem; margin-top: 0.75rem; }
+        .portal-rx-heading { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 0.75rem; margin-bottom: 1.5rem; }
+        .portal-rx-heading h2 { margin: 0; }
 
         .portal-results { max-width: 900px; margin: 0 auto; }
         .portal-results h2 {
@@ -206,7 +211,7 @@
             <div class="portal-lookup">
                 <h1>{{ __('Patient Access Portal') }}</h1>
                 <p class="portal-lead">
-                    {{ __('Enter your mobile phone number to look up your appointments, queue tickets, prescriptions, and lab test status.') }}
+                    {{ __('Enter your mobile number to look up appointments, tickets, and prescriptions. After a visit you can optionally set a password for next time.') }}
                 </p>
 
                 <form class="portal-form" action="{{ tenant_web_url('/portal') }}" method="GET">
@@ -232,8 +237,17 @@
 
             @if(filled($phone) && empty($error))
                 <div class="portal-results">
+                    @include('tenant.partials.portal-prescription-lock', ['rxSetupButtonClass' => 'btn btn-primary'])
+
                     @if(($prescriptions ?? collect())->isNotEmpty())
-                        <h2>{{ __('Your prescriptions') }}</h2>
+                        <div class="portal-rx-heading">
+                            <h2>{{ __('Your prescriptions') }}</h2>
+                            <form action="{{ tenant_web_route('patient.portal.rx-lock', [], absolute: false) }}" method="POST">
+                                @csrf
+                                <input type="hidden" name="phone" value="{{ $phone }}">
+                                <button class="btn btn-ghost" type="submit">{{ __('Hide prescriptions') }}</button>
+                            </form>
+                        </div>
                         <div class="portal-list" style="margin-bottom: 2.5rem;">
                             @foreach($prescriptions as $prescription)
                                 @php

@@ -78,7 +78,20 @@ class PatientsTable
                     }),
             ])
             ->recordActions([
-                EditAction::make(),
+                Action::make('clearPortalPassword')
+                    ->label(__('Clear prescription password'))
+                    ->icon('heroicon-o-key')
+                    ->requiresConfirmation()
+                    ->modalHeading(__('Clear prescription password'))
+                    ->modalDescription(__('They will set a new one the next time they open prescriptions on the portal.'))
+                    ->action(function (Patient $record): void {
+                        app(\App\Services\PortalPrescriptionLock::class)->clearPassword($record->phone);
+
+                        Notification::make()
+                            ->title(__('Prescription password cleared'))
+                            ->success()
+                            ->send();
+                    }),
                 Action::make('moveVisit')
                     ->label(__('Move a visit'))
                     ->icon('heroicon-o-arrow-right-circle')

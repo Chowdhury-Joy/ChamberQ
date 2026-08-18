@@ -216,6 +216,18 @@ $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
         ->middleware(['throttle:30,1', 'tenant.module:front_door'])
         ->name($routeName('patient.portal'));
 
+    Route::post('/portal/rx-password', [BookingController::class, 'setPortalPrescriptionPassword'])
+        ->middleware(['throttle:10,1', 'tenant.module:front_door'])
+        ->name($routeName('patient.portal.rx-password'));
+
+    Route::post('/portal/rx-unlock', [BookingController::class, 'unlockPortalPrescriptions'])
+        ->middleware(['throttle:10,1', 'tenant.module:front_door'])
+        ->name($routeName('patient.portal.rx-unlock'));
+
+    Route::post('/portal/rx-lock', [BookingController::class, 'lockPortalPrescriptions'])
+        ->middleware(['throttle:20,1', 'tenant.module:front_door'])
+        ->name($routeName('patient.portal.rx-lock'));
+
     // Note: /portal/prescriptions/{prescription} is registered above with the
     // other prescription patient routes so it stays next to /p/{token}.
 
