@@ -19,8 +19,8 @@ class PatientContinuityActions
     {
         return $action
             ->label(fn (Booking $record): string => $record->patient?->seen_before_software
-                ? 'Mark as first visit'
-                : 'Old patient (paper file)')
+                ? __('Mark as first visit')
+                : __('For follow up'))
             ->icon(fn (Booking $record): string => $record->patient?->seen_before_software
                 ? 'heroicon-o-user'
                 : 'heroicon-o-identification')
