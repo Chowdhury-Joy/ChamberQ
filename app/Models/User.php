@@ -12,6 +12,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use App\Models\Concerns\BelongsToTenant;
 use App\Support\ChamberQHelperAccess;
+use App\Support\StaffDeskJobs;
 
 class User extends Authenticatable implements FilamentUser, CanResetPasswordContract
 {
@@ -59,6 +60,9 @@ class User extends Authenticatable implements FilamentUser, CanResetPasswordCont
         'password',
         'tenant_id',
         'role',
+        'assigned_doctor_id',
+        'desk_jobs',
+        'desk_is_lead',
     ];
 
     /**
@@ -81,6 +85,8 @@ class User extends Authenticatable implements FilamentUser, CanResetPasswordCont
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'desk_jobs' => 'array',
+            'desk_is_lead' => 'boolean',
         ];
     }
 
@@ -111,6 +117,25 @@ class User extends Authenticatable implements FilamentUser, CanResetPasswordCont
     public function doctorProfile(): \Illuminate\Database\Eloquent\Relations\HasOne
     {
         return $this->hasOne(Doctor::class);
+    }
+
+    /** Desk staff assistant lock — null means hospital team. */
+    public function assignedDoctor(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Doctor::class, 'assigned_doctor_id');
+    }
+
+    /**
+     * Branches this login may work at. Empty pivot = all branches (owner,
+     * helper, or unscoped staff/doctor).
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsToMany<Chamber, $this>
+     */
+    public function chambers(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Chamber::class, 'chamber_user')
+            ->withTimestamps()
+            ->withPivot('tenant_id');
     }
 
     public function isSuperAdmin(): bool
@@ -317,14 +342,14 @@ class User extends Authenticatable implements FilamentUser, CanResetPasswordCont
         return $prescribingDoctor?->allowsStaffPrescriptionEntry() ?? false;
     }
 
-    /** Live Queue Control — only the party configured to run the queue. */
+    /** Live Queue Control — only staff/doctors with the queue desk job. */
     public function canAccessLiveQueueControl(): bool
     {
         if (! tenant()?->hasLiveQueue()) {
             return false;
         }
 
-        return $this->canOperateQueueControls();
+        return StaffDeskJobs::canRunQueue($this);
     }
 
     /**
@@ -357,6 +382,17 @@ class User extends Authenticatable implements FilamentUser, CanResetPasswordCont
     public function canManageUsers(): bool
     {
         return $this->isAdmin();
+    }
+
+    /** Lead desk may hire other Staff only — not owners, doctors, or helpers. */
+    public function canManageDeskStaff(): bool
+    {
+        return $this->canManageUsers() || StaffDeskJobs::isLeadDesk($this);
+    }
+
+    public function canViewStaffAndRoles(): bool
+    {
+        return $this->canManageDeskStaff();
     }
 
     public function canManageBranding(): bool

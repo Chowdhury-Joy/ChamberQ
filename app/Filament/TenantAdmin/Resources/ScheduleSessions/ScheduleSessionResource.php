@@ -8,6 +8,8 @@ use App\Filament\TenantAdmin\Resources\ScheduleSessions\Pages\ListScheduleSessio
 use App\Filament\TenantAdmin\Resources\ScheduleSessions\Schemas\ScheduleSessionForm;
 use App\Filament\TenantAdmin\Resources\ScheduleSessions\Tables\ScheduleSessionsTable;
 use App\Models\ScheduleSession;
+use App\Models\User;
+use App\Support\StaffDeskScope;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -33,6 +35,18 @@ class ScheduleSessionResource extends Resource
     public static function shouldRegisterNavigation(): bool
     {
         return static::canViewAny();
+    }
+
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = parent::getEloquentQuery();
+        $user = auth()->user();
+
+        if ($user instanceof User) {
+            StaffDeskScope::constrainScheduleSessions($query, $user);
+        }
+
+        return $query;
     }
 
     public static function form(Schema $schema): Schema

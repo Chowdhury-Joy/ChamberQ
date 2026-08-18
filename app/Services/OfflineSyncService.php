@@ -10,6 +10,8 @@ use App\Models\ScheduleSession;
 use App\Models\User;
 use App\Models\VisitRecord;
 use App\Support\BdPhone;
+use App\Support\StaffDeskJobs;
+use App\Support\StaffDeskScope;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -57,13 +59,13 @@ class OfflineSyncService
 
             try {
                 if ($this->isQueueEvent($type)) {
-                    if (! $user->canOperateQueueControls() || ! $user->belongsToCurrentTenant()) {
+                    if (! StaffDeskJobs::canRunQueue($user) || ! $user->belongsToCurrentTenant()) {
                         throw ValidationException::withMessages([
                             'type' => 'You cannot replay queue actions for this chamber.',
                         ]);
                     }
 
-                    $this->applyQueueEvent($item);
+                    $this->applyQueueEvent($user, $item);
                     $results[] = ['id' => $id, 'ok' => true];
                 } else {
                     if (! $user->canRecordVisitNotes() || ! $user->belongsToCurrentTenant()) {
@@ -124,7 +126,7 @@ class OfflineSyncService
     /**
      * @param  array<string, mixed>  $item
      */
-    private function applyQueueEvent(array $item): void
+    private function applyQueueEvent(User $user, array $item): void
     {
         $syncId = (string) ($item['id'] ?? '');
         $liveSessionId = (int) ($item['live_session_id'] ?? 0);
@@ -135,17 +137,21 @@ class OfflineSyncService
             ]);
         }
 
-        DB::transaction(function () use ($item, $syncId, $liveSessionId): void {
+        DB::transaction(function () use ($user, $item, $syncId, $liveSessionId): void {
             if (OfflineQueueEvent::query()->whereKey($syncId)->lockForUpdate()->exists()) {
                 return;
             }
 
-            $liveSession = LiveSession::query()->whereKey($liveSessionId)->lockForUpdate()->first();
+            $liveSession = LiveSession::query()->with('scheduleSession')->whereKey($liveSessionId)->lockForUpdate()->first();
 
             if (! $liveSession) {
                 throw ValidationException::withMessages([
                     'live_session_id' => 'That session is no longer live.',
                 ]);
+            }
+
+            if ($liveSession->scheduleSession) {
+                StaffDeskScope::assertCanAccessSession($user, $liveSession->scheduleSession);
             }
 
             $expected = filled($item['expected_current_booking_id'] ?? null)
@@ -211,6 +217,8 @@ class OfflineSyncService
             throw ValidationException::withMessages(['booking_id' => 'That booking was cancelled.']);
         }
 
+        StaffDeskScope::assertCanAccessBooking($doctor, $booking);
+
         $this->saveNotes($doctor, $booking, $item);
 
         return $booking->id;
@@ -226,6 +234,8 @@ class OfflineSyncService
         if (! $session) {
             throw ValidationException::withMessages(['schedule_session_id' => 'Pick a chamber session for this visit.']);
         }
+
+        StaffDeskScope::assertCanAccessSession($doctor, $session);
 
         $name = trim((string) ($item['patient_name'] ?? ''));
         $phone = BdPhone::normalize((string) ($item['patient_phone'] ?? ''));

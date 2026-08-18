@@ -33,6 +33,8 @@ use App\Services\VisitRecordService;
 use Filament\Notifications\Notification;
 use App\Models\LabCollectionSlot;
 use App\Models\ScheduleSession;
+use App\Support\StaffDeskJobs;
+use App\Support\StaffDeskScope;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
@@ -80,14 +82,20 @@ class DailyRoster extends Page implements HasTable, HasForms
 
     public function table(Table $table): Table
     {
+        $user = auth()->user();
+
+        $bookingQuery = Booking::query()
+            ->where('booking_date', today()->toDateString())
+            ->with(['visitRecord.prescription', 'cashEntry.feeCatalogItem', 'bookable.doctor', 'bookable', 'labTests', 'procedureBookings.bookable', 'patient'])
+            ->orderByRaw("CASE WHEN status = 'in_chamber' THEN 1 WHEN status = 'waiting' THEN 2 WHEN status = 'completed' THEN 3 WHEN status = 'cancelled' THEN 4 ELSE 5 END")
+            ->orderBy('serial_number');
+
+        if ($user instanceof \App\Models\User) {
+            StaffDeskScope::constrainBookings($bookingQuery, $user);
+        }
+
         return $table
-            ->query(
-                Booking::query()
-                    ->where('booking_date', today()->toDateString())
-                    ->with(['visitRecord.prescription', 'cashEntry.feeCatalogItem', 'bookable', 'labTests', 'procedureBookings.bookable', 'patient'])
-                    ->orderByRaw("CASE WHEN status = 'in_chamber' THEN 1 WHEN status = 'waiting' THEN 2 WHEN status = 'completed' THEN 3 WHEN status = 'cancelled' THEN 4 ELSE 5 END")
-                    ->orderBy('serial_number')
-            )
+            ->query($bookingQuery)
             ->columns([
                 TextColumn::make('serial_number')->label(__('Serial')),
                 TextColumn::make('voucher_number')
@@ -167,7 +175,8 @@ class DailyRoster extends Page implements HasTable, HasForms
                     ->label('Call to Chamber')
                     ->color('primary')
                     ->visible(fn (Booking $record): bool => (tenant()?->hasLiveQueue() ?? false)
-                        && (auth()->user()?->canOperateQueueControls() ?? false)
+                        && (auth()->user() instanceof \App\Models\User
+                            && StaffDeskJobs::canRunQueue(auth()->user()))
                         && $record->status === 'waiting')
                     ->action(function (Booking $record): void {
                         // Refused while someone else is mid-consult. Say so —
@@ -190,7 +199,9 @@ class DailyRoster extends Page implements HasTable, HasForms
                     ->label('Arrived')
                     ->color('info')
                     ->visible(fn (Booking $record): bool => ! (tenant()?->hasLiveQueue() ?? true)
-                        && (auth()->user()?->canManageQueue() ?? false)
+                        && (auth()->user() instanceof \App\Models\User
+                            && (StaffDeskJobs::canRunQueue(auth()->user())
+                                || (! (tenant()?->hasLiveQueue() ?? true) && auth()->user()->canManageQueue())))
                         && $record->status === 'waiting')
                     ->action(function (Booking $record): void {
                         $record->update(['status' => 'in_chamber']);
@@ -206,7 +217,9 @@ class DailyRoster extends Page implements HasTable, HasForms
                     ->color('danger')
                     ->requiresConfirmation()
                     ->visible(fn (Booking $record): bool => ! (tenant()?->hasLiveQueue() ?? true)
-                        && (auth()->user()?->canManageQueue() ?? false)
+                        && (auth()->user() instanceof \App\Models\User
+                            && (StaffDeskJobs::canRunQueue(auth()->user())
+                                || (! (tenant()?->hasLiveQueue() ?? true) && auth()->user()->canManageQueue())))
                         && in_array($record->status, ['waiting', 'in_chamber', 'called'], true))
                     ->action(function (Booking $record): void {
                         $record->update(['status' => 'no_show']);
@@ -281,7 +294,8 @@ class DailyRoster extends Page implements HasTable, HasForms
                     ->icon('heroicon-o-heart')
                     ->color('gray')
                     ->visible(fn (Booking $record): bool => (tenant()?->hasStations() ?? false)
-                        && (auth()->user()?->canWorkDesk() ?? false)
+                        && (auth()->user() instanceof \App\Models\User
+                            && StaffDeskJobs::canRecordPrep(auth()->user()))
                         && $record->status === 'waiting')
                     ->fillForm(fn (Booking $record): array => [
                         'weight_kg' => $record->visitRecord?->weight_kg,
@@ -358,7 +372,8 @@ class DailyRoster extends Page implements HasTable, HasForms
                         : 'Collect fee')
                     ->icon('heroicon-o-banknotes')
                     ->color('success')
-                    ->visible(fn (Booking $record): bool => (auth()->user()?->canManageCash() ?? false)
+                    ->visible(fn (Booking $record): bool => (auth()->user() instanceof \App\Models\User
+                            && StaffDeskJobs::canCollectFee(auth()->user()))
                         && ! in_array($record->status, ['cancelled', 'no_show'], true)
                         && ! static::shouldHideCollectFee($record))
                     ->fillForm(function (Booking $record): array {
@@ -626,7 +641,8 @@ class DailyRoster extends Page implements HasTable, HasForms
                     ->label('Mark Late')
                     ->color('warning')
                     ->icon('heroicon-o-clock')
-                    ->visible(fn (): bool => (auth()->user()?->canManageQueue() ?? false)
+                    ->visible(fn (): bool => (auth()->user() instanceof \App\Models\User
+                            && StaffDeskJobs::canRunQueue(auth()->user()))
                         && static::markableSessionOptions() !== [])
                     ->form([
                         Select::make('schedule_session_id')
@@ -900,10 +916,12 @@ class DailyRoster extends Page implements HasTable, HasForms
         }
 
         if (tenant()?->hasLiveQueue()) {
-            return $user->canOperateQueueControls();
+            return StaffDeskJobs::canRunQueue($user);
         }
 
-        return $user->canManageQueue();
+        return $user->isStaff()
+            ? StaffDeskJobs::hasJob($user, StaffDeskJobs::JOB_QUEUE) && $user->canManageQueue()
+            : $user->canManageQueue();
     }
 
     /**
@@ -917,9 +935,15 @@ class DailyRoster extends Page implements HasTable, HasForms
         $today = today()->dayOfWeek;
         $options = [];
 
-        $sessions = ScheduleSession::with(['doctor', 'chamber'])
-            ->where('day_of_week', $today)
-            ->get();
+        $sessionsQuery = ScheduleSession::with(['doctor', 'chamber'])
+            ->where('day_of_week', $today);
+
+        $user = auth()->user();
+        if ($user instanceof \App\Models\User) {
+            StaffDeskScope::constrainScheduleSessions($sessionsQuery, $user);
+        }
+
+        $sessions = $sessionsQuery->get();
 
         foreach ($sessions as $session) {
             $kindSuffix = (tenant()?->hasStations() && filled($session->kind))
@@ -938,7 +962,14 @@ class DailyRoster extends Page implements HasTable, HasForms
         }
 
         if (tenant()?->hasFeature('lab_tests')) {
-            $slots = LabCollectionSlot::with('chamber')->where('day_of_week', $today)->get();
+            $labQuery = LabCollectionSlot::with('chamber')->where('day_of_week', $today);
+            if ($user instanceof \App\Models\User) {
+                $chamberIds = StaffDeskScope::chamberIdsFor($user);
+                if ($chamberIds !== null) {
+                    $labQuery->whereIn('chamber_id', $chamberIds);
+                }
+            }
+            $slots = $labQuery->get();
 
             foreach ($slots as $slot) {
                 $options['lab:' . $slot->id] = sprintf(
@@ -967,10 +998,16 @@ class DailyRoster extends Page implements HasTable, HasForms
         $todayDow = Carbon::today()->dayOfWeek;
         $todayDate = Carbon::today()->toDateString();
 
-        $sessions = ScheduleSession::with(['doctor', 'chamber'])
+        $sessionsQuery = ScheduleSession::with(['doctor', 'chamber'])
             ->where('day_of_week', $todayDow)
-            ->orderBy('start_time')
-            ->get();
+            ->orderBy('start_time');
+
+        $user = auth()->user();
+        if ($user instanceof \App\Models\User) {
+            StaffDeskScope::constrainScheduleSessions($sessionsQuery, $user);
+        }
+
+        $sessions = $sessionsQuery->get();
 
         if ($sessions->isEmpty()) {
             return [];
@@ -1103,7 +1140,8 @@ class DailyRoster extends Page implements HasTable, HasForms
             return false;
         }
 
-        if (! auth()->user()?->canWorkDesk()) {
+        if (! auth()->user() instanceof \App\Models\User
+            || ! StaffDeskJobs::canRecordPrep(auth()->user())) {
             return false;
         }
 

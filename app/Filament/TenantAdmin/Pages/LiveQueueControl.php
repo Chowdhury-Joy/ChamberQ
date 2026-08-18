@@ -11,6 +11,8 @@ use App\Filament\TenantAdmin\Support\VisitPaperScanForm;
 use App\Models\Patient;
 use App\Models\ScheduleSession;
 use App\Models\LiveSession;
+use App\Models\User;
+use App\Support\StaffDeskScope;
 use App\Services\LiveSessionService;
 use App\Services\PatientService;
 use App\Services\SittingPrompt;
@@ -77,12 +79,22 @@ class LiveQueueControl extends Page implements HasActions, HasTable
     public int $delayedNotifyMinutes = 0;
     public function mount()
     {
-        // Prefer the most recently started live session for today.
-        $activeLiveSession = LiveSession::where('session_date', Carbon::today()->toDateString())
+        $user = auth()->user();
+
+        $candidates = LiveSession::with('scheduleSession')
+            ->where('session_date', Carbon::today()->toDateString())
             ->whereIn('status', ['active', 'paused', 'delayed'])
             ->orderByDesc('started_at')
             ->orderByDesc('id')
-            ->first();
+            ->get();
+
+        $activeLiveSession = $candidates->first(function (LiveSession $live) use ($user): bool {
+            if (! $live->scheduleSession) {
+                return false;
+            }
+
+            return ! ($user instanceof User) || StaffDeskScope::sessionIsVisible($user, $live->scheduleSession);
+        });
 
         if ($activeLiveSession) {
             $this->selectedSessionId = $activeLiveSession->schedule_session_id;
@@ -90,8 +102,6 @@ class LiveQueueControl extends Page implements HasActions, HasTable
             return;
         }
 
-        // A solo chamber usually has exactly one session today — making staff
-        // pick it from a dropdown every morning is a step with no decision in it.
         if ($this->sessions->count() === 1) {
             $this->selectedSessionId = $this->sessions->keys()->first();
         }
@@ -408,9 +418,16 @@ class LiveQueueControl extends Page implements HasActions, HasTable
     {
         $today = Carbon::today()->dayOfWeek;
 
-        return ScheduleSession::with('chamber')
+        $query = ScheduleSession::with('chamber')
             ->where('day_of_week', $today)
-            ->orderBy('start_time')
+            ->orderBy('start_time');
+
+        $user = auth()->user();
+        if ($user instanceof User) {
+            StaffDeskScope::constrainScheduleSessions($query, $user);
+        }
+
+        return $query
             ->get()
             ->mapWithKeys(function ($session) {
                 $chamber = $session->chamber?->name ?? 'Chamber';

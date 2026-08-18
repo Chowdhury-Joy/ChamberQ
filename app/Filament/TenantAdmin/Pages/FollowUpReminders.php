@@ -4,7 +4,9 @@ namespace App\Filament\TenantAdmin\Pages;
 
 use App\Models\Booking;
 use App\Models\Doctor;
+use App\Models\User;
 use App\Models\VisitRecord;
+use App\Support\StaffDeskScope;
 use App\Services\FollowUpReminderService;
 use Filament\Actions\Action;
 use Filament\Pages\Page;
@@ -40,15 +42,21 @@ class FollowUpReminders extends Page implements HasTable
 
     public function table(Table $table): Table
     {
+        $user = auth()->user();
+
+        $query = VisitRecord::query()
+            ->whereNotNull('follow_up_reminder_whatsapp_queued_at')
+            ->whereNull('follow_up_reminder_whatsapp_sent_at')
+            ->where('follow_up_date', '>=', now()->toDateString())
+            ->with(['booking'])
+            ->orderBy('follow_up_date');
+
+        if ($user instanceof User) {
+            $query->whereHas('booking', fn ($bookingQuery) => StaffDeskScope::constrainBookings($bookingQuery, $user));
+        }
+
         return $table
-            ->query(
-                VisitRecord::query()
-                    ->whereNotNull('follow_up_reminder_whatsapp_queued_at')
-                    ->whereNull('follow_up_reminder_whatsapp_sent_at')
-                    ->where('follow_up_date', '>=', now()->toDateString())
-                    ->with(['booking'])
-                    ->orderBy('follow_up_date')
-            )
+            ->query($query)
             ->columns([
                 TextColumn::make('booking.patient_name')
                     ->label(__('Patient'))

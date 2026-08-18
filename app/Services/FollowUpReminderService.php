@@ -8,6 +8,7 @@ use App\Models\SmsMessage;
 use App\Models\User;
 use App\Models\VisitRecord;
 use Filament\Notifications\Notification;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -93,10 +94,25 @@ class FollowUpReminderService
         }
 
         if ($doctor->wantsSms(Doctor::NOTIFY_FOLLOW_UP) && $visit->follow_up_reminder_sms_sent_at === null) {
-            $message = $this->sms->sendFollowUpReminder($booking, $visit, $doctor);
+            $sent = DB::transaction(function () use ($visit, $booking, $doctor): bool {
+                $locked = VisitRecord::query()->whereKey($visit->id)->lockForUpdate()->first();
 
-            if ($message?->status === SmsMessage::STATUS_SENT) {
-                $visit->forceFill(['follow_up_reminder_sms_sent_at' => now()])->save();
+                if (! $locked || $locked->follow_up_reminder_sms_sent_at !== null) {
+                    return false;
+                }
+
+                $message = $this->sms->sendFollowUpReminder($booking, $locked, $doctor);
+
+                if ($message?->status !== SmsMessage::STATUS_SENT) {
+                    return false;
+                }
+
+                $locked->forceFill(['follow_up_reminder_sms_sent_at' => now()])->save();
+
+                return true;
+            });
+
+            if ($sent) {
                 $smsSent++;
             }
         }

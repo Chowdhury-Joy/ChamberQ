@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\ReferralCommissionService;
 use Carbon\CarbonInterface;
 use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
 
 class StationsTillService
@@ -112,28 +113,30 @@ class StationsTillService
             'note' => $note,
         ];
 
-        $existing = ChamberCashEntry::query()->where('booking_id', $booking->id)->first();
+        return DB::transaction(function () use ($booking, $user, $catalogItem, $cashTaka, $mobileTaka, $mobileMethod, $note, $occurredOn, $waived, $split, $session, $category, $values): ChamberCashEntry {
+            $existing = ChamberCashEntry::query()->where('booking_id', $booking->id)->lockForUpdate()->first();
 
-        if ($existing) {
-            $existing->fill($values)->save();
-            $entry = $existing;
-        } else {
-            try {
-                $entry = ChamberCashEntry::create([
-                    ...$values,
-                    'booking_id' => $booking->id,
-                ]);
-            } catch (UniqueConstraintViolationException) {
-                $entry = ChamberCashEntry::query()->where('booking_id', $booking->id)->firstOrFail();
-                $entry->fill($values)->save();
+            if ($existing) {
+                $existing->fill($values)->save();
+                $entry = $existing;
+            } else {
+                try {
+                    $entry = ChamberCashEntry::create([
+                        ...$values,
+                        'booking_id' => $booking->id,
+                    ]);
+                } catch (UniqueConstraintViolationException) {
+                    $entry = ChamberCashEntry::query()->where('booking_id', $booking->id)->lockForUpdate()->firstOrFail();
+                    $entry->fill($values)->save();
+                }
             }
-        }
 
-        if (tenant()?->hasReferrals() && $booking->referring_doctor_id) {
-            app(ReferralCommissionService::class)->syncForBookingIncome($booking, $entry, $catalogItem);
-        }
+            if (tenant()?->hasReferrals() && $booking->referring_doctor_id) {
+                app(ReferralCommissionService::class)->syncForBookingIncome($booking, $entry, $catalogItem);
+            }
 
-        return $entry;
+            return $entry;
+        });
     }
 
     private function resolveMethod(int $cash, int $mobile, ?string $mobileMethod): string

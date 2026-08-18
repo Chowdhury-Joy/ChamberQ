@@ -3,6 +3,7 @@
 namespace App\Filament\TenantAdmin\Resources\ScheduleSessions\Schemas;
 
 use App\Models\ScheduleSession;
+use App\Support\StaffDeskScope;
 use App\Support\DayOfWeek;
 use App\Support\ScheduleSessionPace;
 use Filament\Forms\Components\Select;
@@ -18,12 +19,32 @@ class ScheduleSessionForm
         return $schema
             ->components([
                 Select::make('chamber_id')
-                    ->relationship('chamber', 'name')
+                    ->relationship(
+                        'chamber',
+                        'name',
+                        modifyQueryUsing: fn ($query) => auth()->user() instanceof \App\Models\User
+                            ? StaffDeskScope::constrainChambers($query, auth()->user())
+                            : $query,
+                    )
                     ->required()
                     ->searchable()
                     ->preload(),
                 Select::make('doctor_id')
-                    ->relationship('doctor', 'name')
+                    ->relationship(
+                        'doctor',
+                        'name',
+                        modifyQueryUsing: function ($query): void {
+                            $user = auth()->user();
+                            if (! $user instanceof \App\Models\User) {
+                                return;
+                            }
+
+                            $doctorIds = StaffDeskScope::doctorIdsFor($user);
+                            if ($doctorIds !== null) {
+                                $query->whereIn('id', $doctorIds);
+                            }
+                        },
+                    )
                     ->required()
                     ->searchable()
                     ->preload(),

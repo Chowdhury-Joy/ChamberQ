@@ -5,6 +5,8 @@ namespace App\Filament\TenantAdmin\Pages;
 use App\Models\Chamber;
 use App\Models\ChamberCashEntry;
 use App\Models\User;
+use App\Support\StaffDeskJobs;
+use App\Support\StaffDeskScope;
 use App\Filament\TenantAdmin\Resources\CashCategories\CashCategoryResource;
 use App\Models\CashCategory;
 use App\Services\CashCategoryService;
@@ -56,7 +58,7 @@ class Cashbook extends Page implements HasTable
         /** @var User|null $user */
         $user = auth()->user();
 
-        return $user?->canManageCash() ?? false;
+        return $user instanceof User && StaffDeskJobs::canCollectFee($user);
     }
 
     public function mount(): void
@@ -354,7 +356,13 @@ class Cashbook extends Page implements HasTable
             ->required();
         $fields[] = Select::make('chamber_id')
             ->label(__('Chamber'))
-            ->options(fn (): array => Chamber::query()->orderBy('name')->pluck('name', 'id')->all())
+            ->options(function (): array {
+                $user = auth()->user();
+
+                return $user instanceof User
+                    ? StaffDeskScope::chamberOptionsFor($user)
+                    : Chamber::query()->orderBy('name')->pluck('name', 'id')->all();
+            })
             ->native(false);
         $fields[] = Textarea::make('note')
             ->label(__('Note'))
@@ -418,11 +426,18 @@ class Cashbook extends Page implements HasTable
     {
         [$from, $to] = $this->range();
 
-        return ChamberCashEntry::query()
+        $query = ChamberCashEntry::query()
             ->with(['booking', 'feeCatalogItem'])
             ->where('occurred_on', '>=', $from->toDateString())
             ->where('occurred_on', '<=', $to->toDateString())
             ->orderByDesc('occurred_on')
             ->orderByDesc('created_at');
+
+        $user = auth()->user();
+        if ($user instanceof User) {
+            StaffDeskScope::constrainCashEntries($query, $user);
+        }
+
+        return $query;
     }
 }

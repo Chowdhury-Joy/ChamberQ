@@ -1427,3 +1427,19 @@
   <root_cause>Both Bangla tests scan hard-coded file lists. Labels defined in models and services (`Booking::procedureStatusOptions()`, `ScheduleSession::kindOptions()`, `StationsHandoffService` error toasts) were never scanned, and the patient-facing list named `screen.blade.php` but not the new `screen-chamber.blade.php`.</root_cause>
   <prevention_rule>When a feature adds a view or a class that emits `__()` strings, add it to the matching Bangla scan list in the same task. A green translation test only proves the files it was told about.</prevention_rule>
 </bug>
+
+## 2026-08-18T14:26:23+0600
+
+<bug>
+  <category>Business_Logic</category>
+  <symptom>Branch picks on Staff & Roles never saved — every desk login stayed “all branches” after create/edit.</symptom>
+  <root_cause>`chamber_ids` used `->dehydrated(false)` but Create/Edit read it from `mutateFormDataBeforeCreate/Save`, which only receives dehydrated fields — so `$chamberIds` was always `[]` and `syncChambers` detached the pivot.</root_cause>
+  <prevention_rule>Non-column form fields that sync elsewhere must be read from `$this->form->getState()` in `beforeCreate` / `beforeSave`, not from mutate hooks — same pattern as Super Admin Create Tenant bootstrap emails.</prevention_rule>
+</bug>
+
+<bug>
+  <category>Business_Logic</category>
+  <symptom>Branch-locked lead desk could grant “all branches” or manage hospital-wide staff by leaving branches empty or intersecting to zero.</symptom>
+  <root_cause>Empty pivot means all-clinic; `constrainChamberIdsForLeadHire` returned `[]` when the lead picked only out-of-scope branches; `leadMayManageStaff` treated unscoped staff as manageable.</root_cause>
+  <prevention_rule>Lead hire must validate branch picks (`assertLeadHireChamberIds`), reject out-of-scope intersections, and never list or edit staff without overlapping chamber rows when the lead is branch-locked.</prevention_rule>
+</bug>

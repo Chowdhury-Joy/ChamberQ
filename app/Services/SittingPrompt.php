@@ -5,6 +5,8 @@ namespace App\Services;
 use App\Models\Booking;
 use App\Models\LiveSession;
 use App\Models\ScheduleSession;
+use App\Models\User;
+use App\Support\StaffDeskScope;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 
@@ -44,10 +46,16 @@ class SittingPrompt
         $todayDow = $now->dayOfWeek;
         $todayDate = $now->toDateString();
 
-        $sessions = ScheduleSession::query()
+        $sessionsQuery = ScheduleSession::query()
             ->where('day_of_week', $todayDow)
-            ->orderBy('start_time')
-            ->get();
+            ->orderBy('start_time');
+
+        $user = auth()->user();
+        if ($user instanceof User) {
+            StaffDeskScope::constrainScheduleSessions($sessionsQuery, $user);
+        }
+
+        $sessions = $sessionsQuery->get();
 
         if ($sessions->isEmpty()) {
             return collect();

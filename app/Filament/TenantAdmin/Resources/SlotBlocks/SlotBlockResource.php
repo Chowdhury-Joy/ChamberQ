@@ -8,7 +8,9 @@ use App\Filament\TenantAdmin\Resources\SlotBlocks\Pages\ListSlotBlocks;
 use App\Filament\TenantAdmin\Resources\SlotBlocks\Schemas\SlotBlockForm;
 use App\Filament\TenantAdmin\Resources\SlotBlocks\Tables\SlotBlocksTable;
 use App\Models\SlotBlock;
+use App\Models\User;
 use App\Services\SlotBlockService;
+use App\Support\StaffDeskScope;
 use BackedEnum;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -39,6 +41,18 @@ class SlotBlockResource extends Resource
         return static::canViewAny();
     }
 
+    public static function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = parent::getEloquentQuery();
+        $user = auth()->user();
+
+        if ($user instanceof User) {
+            StaffDeskScope::constrainSlotBlocks($query, $user);
+        }
+
+        return $query;
+    }
+
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
@@ -46,10 +60,30 @@ class SlotBlockResource extends Resource
                 ->required()
                 ->live(),
             Forms\Components\Select::make('chamber_id')
-                ->relationship('chamber', 'name')
+                ->relationship(
+                    'chamber',
+                    'name',
+                    modifyQueryUsing: fn ($query) => auth()->user() instanceof User
+                        ? StaffDeskScope::constrainChambers($query, auth()->user())
+                        : $query,
+                )
                 ->live(),
             Forms\Components\Select::make('doctor_id')
-                ->relationship('doctor', 'name')
+                ->relationship(
+                    'doctor',
+                    'name',
+                    modifyQueryUsing: function ($query): void {
+                        $user = auth()->user();
+                        if (! $user instanceof User) {
+                            return;
+                        }
+
+                        $doctorIds = StaffDeskScope::doctorIdsFor($user);
+                        if ($doctorIds !== null) {
+                            $query->whereIn('id', $doctorIds);
+                        }
+                    },
+                )
                 ->live(),
             Forms\Components\TextInput::make('reason')
                 ->maxLength(255),

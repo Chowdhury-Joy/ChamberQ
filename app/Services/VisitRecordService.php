@@ -10,6 +10,7 @@ use App\Models\ScheduleSession;
 use App\Models\User;
 use App\Models\LiveSession;
 use App\Models\VisitRecord;
+use App\Support\StaffDeskJobs;
 use App\Filament\TenantAdmin\Support\VisitNotesFormSchema;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -189,7 +190,7 @@ class VisitRecordService
             abort(403);
         }
 
-        if (! $staff->canWorkDesk()) {
+        if (! StaffDeskJobs::canRecordPrep($staff)) {
             abort(403);
         }
 

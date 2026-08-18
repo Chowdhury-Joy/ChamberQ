@@ -6,6 +6,8 @@ use App\Models\ScheduleSession;
 use App\Services\OfflineBagService;
 use App\Services\OfflineQueueBagService;
 use App\Services\OfflineSyncService;
+use App\Support\StaffDeskJobs;
+use App\Support\StaffDeskScope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -30,6 +32,12 @@ class OfflineController extends Controller
             abort(403);
         }
 
+        if (! StaffDeskJobs::canRunQueue($user)) {
+            abort(403);
+        }
+
+        StaffDeskScope::assertCanAccessSession($user, $session);
+
         $date = $request->query('date');
 
         return response()->json($queues->build($session, is_string($date) ? $date : null));
@@ -44,7 +52,7 @@ class OfflineController extends Controller
         }
 
         $canRx = $user->canRecordVisitNotes();
-        $canQueue = $user->canOperateQueueControls();
+        $canQueue = StaffDeskJobs::canRunQueue($user);
 
         if (! $canRx && ! $canQueue) {
             abort(403);

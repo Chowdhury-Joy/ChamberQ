@@ -2857,3 +2857,21 @@
  <reason>Separate vendor key from the founder’s key — like a building-management card the tenant never holds. Super Admin stays billing/modules; clinic nitty-gritty stays on `/{slug}/admin` via helper logins. Deferred: Super Admin job scopes, hospital vs doctor staff types, branch-scoped logins, one ChamberQ employee across many clinics.</reason>
 </decision>
 
+## 2026-08-18T14:01:13+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Multi-branch clinics (e.g. MUPS) and hospital-vs-doctor desk teams need staff to see only their branch and, optionally, only one doctor’s list — without a permission maze or exposing ChamberQ helpers.</context>
+ <action>Three-phase staffing model shipped together: (1) Staff & Roles groups Owners / Doctors / Desk staff with a job filter; helpers stay invisible to owners. (2) `chamber_user` pivot — empty = all branches; owner/helper always all-clinic; field hidden on one-chamber Maestro. (3) `users.assigned_doctor_id` on staff — null = hospital team, set = that doctor’s assistant. `StaffDeskScope` filters Daily Roster, Live Queue sessions, Cashbook, Schedule Sessions, Slot Blocks, follow-up / earlier-date lists, SittingPrompt, and offline queue/sync — not menus alone. Super Admin helper job scopes and one-email-across-many-clinics stay deferred.</action>
+ <reason>Stamp badges in order — job title first, then which door, then whose team — instead of inventing hospital RBAC in one release. Panchlaish reception must not open Uttara’s queue; a consultant’s assistant must not see another consultant’s serials.</reason>
+</decision>
+
+## 2026-08-18T14:20:41+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Multi-counter clinics want one receptionist on the till, one on Call next, one on weight/BP — without inventing new roles or letting a receptionist hire owners or see ChamberQ helpers.</context>
+ <action>Desk **jobs** on the existing Staff role: `users.desk_jobs` JSON (`money` / `queue` / `prep`; null or empty = all three for legacy one-desk logins) and optional `users.desk_is_lead` (owner/helper-granted only). `StaffDeskJobs` gates Collect fee, Cashbook, Live Queue, roster queue actions, outdoor vitals / Mark prepped, Consult Screen queue controls, and offline queue APIs — not sidebar hiding alone. **Lead desk** gets every job plus `canManageDeskStaff()` to list/create/edit Staff only, filtered by `StaffDeskScope` branch lock. Fee catalogue and referring-doctor setup stay owner/helper (`canManageOps`).</action>
+ <reason>Like giving three keys on one badge — till key, queue clicker, BP machine — instead of three login types. Empty ticks preserve solo Maestro demos; lead hiring covers the floor supervisor without sharing the owner password.</reason>
+</decision>
+

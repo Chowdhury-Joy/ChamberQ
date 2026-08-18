@@ -31,7 +31,7 @@ class ReferringDoctorResource extends Resource
     {
         $user = auth()->user();
 
-        return ($user?->canManageCash() ?? false)
+        return ($user?->isAdmin() ?? false)
             && (tenant()?->hasReferrals() ?? false);
     }
 

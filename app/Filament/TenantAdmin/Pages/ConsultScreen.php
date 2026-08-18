@@ -2,6 +2,7 @@
 
 namespace App\Filament\TenantAdmin\Pages;
 
+use App\Support\StaffDeskJobs;
 use App\Models\Booking;
 use App\Models\LabCollectionSlot;
 use App\Models\LiveSession;
@@ -310,7 +311,7 @@ class ConsultScreen extends Page implements HasActions
             ];
         }
 
-        if (! auth()->user()?->canOperateQueueControls()) {
+        if (! auth()->user() instanceof \App\Models\User || ! StaffDeskJobs::canRunQueue(auth()->user())) {
             return $handoff;
         }
 
@@ -769,7 +770,7 @@ class ConsultScreen extends Page implements HasActions
 
     public function startSessionFromPrompt(int $scheduleSessionId): void
     {
-        if (! auth()->user()?->canOperateQueueControls()) {
+        if (! auth()->user() instanceof \App\Models\User || ! StaffDeskJobs::canRunQueue(auth()->user())) {
             return;
         }
 
@@ -779,7 +780,7 @@ class ConsultScreen extends Page implements HasActions
 
     public function mountMarkLateForPrompt(int $scheduleSessionId, int $suggestedMinutes): void
     {
-        if (! auth()->user()?->canOperateQueueControls()) {
+        if (! auth()->user() instanceof \App\Models\User || ! StaffDeskJobs::canRunQueue(auth()->user())) {
             return;
         }
 

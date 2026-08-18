@@ -3,6 +3,8 @@
 namespace App\Filament\TenantAdmin\Pages;
 
 use App\Models\Booking;
+use App\Models\User;
+use App\Support\StaffDeskScope;
 use Filament\Actions\Action;
 use Filament\Pages\Page;
 use Filament\Tables\Columns\TextColumn;
@@ -36,15 +38,21 @@ class WaitingForEarlierDate extends Page implements HasTable
 
     public function table(Table $table): Table
     {
+        $user = auth()->user();
+
+        $query = Booking::query()
+            ->where('wants_earlier_date', true)
+            ->where('booking_date', '>=', now()->toDateString())
+            ->where('status', '!=', 'cancelled')
+            ->orderBy('booking_date')
+            ->orderBy('serial_number');
+
+        if ($user instanceof User) {
+            StaffDeskScope::constrainBookings($query, $user);
+        }
+
         return $table
-            ->query(
-                Booking::query()
-                    ->where('wants_earlier_date', true)
-                    ->where('booking_date', '>=', now()->toDateString())
-                    ->where('status', '!=', 'cancelled')
-                    ->orderBy('booking_date')
-                    ->orderBy('serial_number')
-            )
+            ->query($query)
             ->columns([
                 TextColumn::make('serial_number')
                     ->label(__('Serial'))

@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-18T13:45:36+0600
+Last Updated: 2026-08-18T14:20:41+0600
 
 ## Full Site Map
 
@@ -251,6 +251,12 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 - **Steps:** Tenant admin → **Doctors** → the doctor's row → **Login account** → pick their user account → Save. One account per doctor; picking one already used gives a validation error.
 - **Data/systems touched:** `doctors.user_id`.
 - **Success:** That doctor's **My medicines** page and medicine search show their own practice type's catalogue instead of the general-physician list. Prescriptions written inside a consult were already correct (they resolve from the booking's session) and are unchanged.
+
+### Staff & Roles (owner / helper / lead desk — settings)
+- **Trigger:** Owner adds a partner, doctor login, or desk staff member; a **lead desk** supervisor hires counter staff; ChamberQ helper manages logins the owner must not see.
+- **Steps:** **Settings → Staff & Roles** — list is grouped by job (Owners / Doctors / Desk staff) with filter chips. Create user → pick **Owner**, **Doctor**, or **Staff (desk + content)**. For **Staff**, optional **Desk jobs** ticks: **Money** (Collect fee + Cashbook), **Queue** (Live Queue + Call next), **Prep** (outdoor vitals + Mark prepped); leave all ticked for one person doing everything. **Lead desk** (owner/helper only) covers all counters and may add/edit **Staff** only — not owners, doctors, or helpers. On multi-branch clinics, optional **Branches** multi-select (empty = all branches; hidden when only one chamber). For desk staff, optional **Works for** one doctor (empty = hospital team at their branch(es)). ChamberQ helpers never appear for the owner; Super Admin adds/removes helpers separately. A lead with branch lock only hires staff for those branches.
+- **Data/systems touched:** `users`, `users.desk_jobs`, `users.desk_is_lead`, `chamber_user`, `users.assigned_doctor_id`.
+- **Success:** Owner can scan who is who at a glance; till / queue / weight counters only see their buttons; lead desk can grow the team without owner passwords; branch-locked reception only sees their roster/queue/cash; a doctor’s assistant only sees that doctor’s sittings.
 
 ### Content update (staff)
 - **Trigger:** Doctor wants copy/photo change.

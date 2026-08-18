@@ -18,7 +18,14 @@ class NotifySmsController extends Controller
     {
         $this->authorizeStaffNotify($request->user());
 
-        $custom = $request->string('message')->trim()->toString();
+        $validated = $request->validate([
+            'message' => ['nullable', 'string', 'max:160'],
+        ]);
+
+        $custom = trim((string) ($validated['message'] ?? ''));
+        if ($custom !== '' && preg_match('/https?:\/\//i', $custom)) {
+            abort(422, __('Custom cancellation text cannot include links.'));
+        }
         $message = $sms->sendCancellationNotice(
             $booking,
             $custom !== '' ? $custom : null,

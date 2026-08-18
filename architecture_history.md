@@ -731,5 +731,15 @@
 ## 2026-08-17T22:43:46+0600
 - Daily Roster / Live Queue row button `Old patient (paper file)` renamed to **For follow up** (`PatientContinuityActions`); behaviour unchanged.
 
-## 2026-08-18T13:45:36+0600
-- Tenant **`helper`** role (`ChamberQHelperAccess`, `TenantUserBootstrapService`, Super Admin tenant create/edit) — ChamberQ vendor login on each clinic, hidden from owner Staff & Roles, same setup powers as owner but no queue/Rx; owner cannot remove or demote helpers.
+## 2026-08-18T14:01:13+0600
+- Staff desk scope (`StaffDeskScope`, `chamber_user`, `users.assigned_doctor_id`) — branch lock and doctor-assistant stamps on staff/doctor logins; Staff & Roles grouped by job; roster/queue/cash/sittings/offline APIs filtered to allowed chambers and doctors.
+
+## 2026-08-18T14:01:13+0600 (correction)
+- The 2026-08-18T13:45:36 architecture_history line for tenant **`helper`** (ChamberQHelperAccess / bootstrap) was accidentally dropped when this entry was appended; that helper work remains in force from commit e4dc6f6.
+
+## 2026-08-18T14:20:41+0600
+- Desk jobs on Staff logins (`users.desk_jobs`, `users.desk_is_lead`, `StaffDeskJobs`) — money / queue / prep ticks plus lead-desk hiring; gates on roster, Cashbook, Live Queue, vitals, offline queue, and fee-setup resources.
+
+## 2026-08-18T14:26:23+0600
+- Production hardening pass: Staff & Roles branch sync via form getState; lead hire chamber validation; fee/referral admin-only setup; Stations till+referral one transaction; follow-up SMS row lock; day-of-week DB indexes; TRUSTED_PROXIES env; cancellation SMS custom body capped.
+
