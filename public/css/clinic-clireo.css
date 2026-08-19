@@ -154,10 +154,19 @@ button { cursor: pointer; border: 0; background: none; }
 }
 .hero-bg {
   position: absolute; inset: 0;
-  background:
-    linear-gradient(90deg, color-mix(in srgb, var(--ink-deep) 92.0%, transparent) 0%, color-mix(in srgb, var(--ink) 72.0%, transparent) 42%, color-mix(in srgb, var(--ink) 15.0%, transparent) 100%),
-    url("https://images.pexels.com/photos/7579833/pexels-photo-7579833.jpeg?auto=compress&cs=tinysrgb&w=2400")
-      center / cover no-repeat;
+  /* Photo is its own layer so a broken --brand / color-mix overlay cannot
+     drop the url() the way a combined background-image declaration does. */
+  background-color: var(--ink-deep);
+  background-image: var(--hero-photo, url("https://images.pexels.com/photos/7579833/pexels-photo-7579833.jpeg?auto=compress&cs=tinysrgb&w=2400"));
+  background-position: center right;
+  background-size: cover;
+  background-repeat: no-repeat;
+}
+.hero-bg::after {
+  content: "";
+  position: absolute; inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, color-mix(in srgb, var(--ink-deep) 92.0%, transparent) 0%, color-mix(in srgb, var(--ink) 72.0%, transparent) 42%, color-mix(in srgb, var(--ink) 15.0%, transparent) 100%);
 }
 .hero .grid-hero { position: relative; z-index: 2; }
 @media (min-width: 1200px) {
@@ -286,6 +295,14 @@ button { cursor: pointer; border: 0; background: none; }
 .field-row { display: grid; gap: 0.65rem; }
 @media (min-width: 480px) { .field-row { grid-template-columns: 1fr 1fr; } }
 .field textarea { min-height: 5.5rem; resize: vertical; }
+.field-hint {
+  display: block;
+  margin-top: 0.35rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+.field-hint[hidden] { display: none; }
 /*
  * Primary button machine (owner-approved):
  *
@@ -1159,64 +1176,33 @@ html.has-js [data-reveal-section] [data-reveal-block][data-reveal-kind="stagger"
 .google-score { display: flex; align-items: center; gap: 0.65rem; font-weight: 600; }
 .google-score .logo-img--sm { flex: 0 0 auto; }
 
-/* Doctors — uses .grid-cards; swipe peeks on small screens */
+/* Doctors — 3-column team grid; extra cards scroll inside a 3-row window */
 .doc-grid { margin-top: var(--space-xxl); }
-@media (min-width: 1200px) {
-  #doctors .docs-split:has(.doc-grid[data-card-count="1"]) {
-    display: grid;
-    grid-template-columns: minmax(16rem, 0.95fr) minmax(16rem, 1.05fr);
-    gap: var(--space-xxl);
-    align-items: center;
-  }
-  #doctors .docs-split:has(.doc-grid[data-card-count="1"]) .treat-head {
-    flex-direction: column;
-    align-items: flex-start;
-    margin-bottom: 0;
-  }
-  #doctors .docs-split:has(.doc-grid[data-card-count="1"]) .doc-grid {
-    margin-top: 0;
-  }
-}
-@media (max-width: 1199.98px) {
-  .doc-grid.grid-cards {
-    display: grid;
-    grid-auto-flow: column;
-    grid-template-columns: unset;
-    grid-auto-columns: calc((100% - var(--space-lg)) / 1.2);
-    overflow-x: auto;
-    overflow-y: hidden;
-    scroll-snap-type: x mandatory;
-    -webkit-overflow-scrolling: touch;
-    overscroll-behavior-x: contain;
-    padding-bottom: 0.35rem;
-  }
-  .doc-grid.grid-cards > * {
-    scroll-snap-align: start;
-    min-width: 0;
-  }
-}
-@media (min-width: 640px) and (max-width: 1199.98px) {
-  .doc-grid.grid-cards {
-    grid-auto-columns: calc((100% - var(--space-lg)) / 1.8);
-  }
-}
-/*
- * One doctor (MUPS “The Founder”): keep the portrait stacked — photo on top,
- * name under it. A one-card swipe row is pointless, so turn that off from
- * 640px up. Multi-doctor grids still use the usual card row.
- */
-@media (min-width: 640px) {
-  .doc-grid.grid-cards[data-card-count="1"] {
-    display: grid;
-    grid-auto-flow: row;
-    grid-template-columns: 1fr;
-    grid-auto-columns: unset;
-    overflow: visible;
-    scroll-snap-type: none;
-  }
+.doc-grid--team.grid-cards,
+.doc-grid--team.grid-cards[data-card-count="1"],
+.doc-grid--team.grid-cards[data-card-count="2"],
+.doc-grid--team.grid-cards[data-card-count="3"],
+.doc-grid--team.grid-cards[data-card-count="5"],
+.doc-grid--team.grid-cards[data-card-count="6"],
+.doc-grid--team.grid-cards[data-card-count="9"] {
+  display: grid;
+  grid-auto-flow: row;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-columns: unset;
+  align-content: start;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  scroll-snap-type: none;
+  container-type: inline-size;
+  --doc-col: calc((100cqi - 2 * var(--space-lg)) / 3);
+  --doc-img: calc(var(--doc-col) * 4 / 3);
+  --doc-meta: 4.6rem;
+  max-height: calc(3 * (var(--doc-img) + var(--doc-meta)) + 2 * var(--space-lg));
 }
 .doc-card { border-radius: 18px; overflow: hidden; background: var(--white); }
-.doc-grid[data-card-count="1"] .doc-card { background: transparent; }
+.doc-grid:not(.doc-grid--team)[data-card-count="1"] .doc-card { background: transparent; }
 .doc-card img {
   width: 100%; aspect-ratio: 3/4; object-fit: cover; object-position: center center;
 }

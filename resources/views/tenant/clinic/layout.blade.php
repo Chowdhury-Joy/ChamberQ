@@ -1,6 +1,6 @@
 @php
     $tenant = $tenant ?? tenant();
-    $themeColor = $themeColor ?? ($tenant->theme_color ?: '#1B2978');
+    $themeColor = $themeColor ?? $tenant->cssThemeColor();
     $brand = $brand ?? $tenant->displayName();
     $locale = $locale ?? app()->getLocale();
     $banglaHomepage = $banglaHomepage ?? $tenant->hasFeature('bangla_homepage');

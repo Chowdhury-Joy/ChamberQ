@@ -92,6 +92,11 @@ class DatabaseSeeder extends Seeder
             'name' => 'Dr. Shamim Ahmed',
             'practice_type' => Doctor::PRACTICE_GENERAL,
             'qualifications' => 'MBBS, MRCP (London, UK), CCD (Diabetes)',
+            'default_fee_taka' => 800,
+            'extra_fees' => [
+                ['label' => 'Follow-up', 'amount' => 500],
+                ['label' => 'Review with reports', 'amount' => 600],
+            ],
         ]);
 
         $chamber = Chamber::create([
@@ -140,6 +145,14 @@ class DatabaseSeeder extends Seeder
                     'cta_link' => '/book',
                     'image_url' => 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?auto=format&fit=crop&w=1200&q=80',
                 ]],
+                ['type' => 'trust_bar', 'data' => [
+                    'badges' => [
+                        ['text_badge' => 'MRCP (London)'],
+                        ['text_badge' => 'CCD — Diabetes'],
+                        ['text_badge' => 'Belle Vue Hospital, Chattogram'],
+                        ['text_badge' => 'Online serial · pay at chamber'],
+                    ],
+                ]],
                 ['type' => 'condition_library', 'data' => [
                     'heading' => 'Conditions I Treat',
                     'conditions' => [
@@ -173,6 +186,26 @@ class DatabaseSeeder extends Seeder
                                 'Heart risk assessment',
                             ],
                         ],
+                        [
+                            'name' => 'Thyroid Care',
+                            'description' => 'Clear plans for under-active and over-active thyroid, with simple follow-up.',
+                            'features' => [
+                                'TSH review and dose adjustment',
+                                'Pregnancy-related thyroid checks',
+                                'Symptom tracking between visits',
+                                'When to repeat blood tests',
+                            ],
+                        ],
+                        [
+                            'name' => 'Infections & Fever',
+                            'description' => 'Same-week care for cough, flu, urine infection, and unexplained fever.',
+                            'features' => [
+                                'Chest and throat examination',
+                                'When antibiotics are needed',
+                                'Home isolation advice',
+                                'Red-flag symptoms to watch',
+                            ],
+                        ],
                     ],
                 ]],
                 ['type' => 'about_doctor', 'data' => [
@@ -188,6 +221,35 @@ class DatabaseSeeder extends Seeder
                         [
                             'title' => 'Experience',
                             'description' => 'Former Clinical Associate at Sengkang General Hospital, Singapore.',
+                        ],
+                        [
+                            'title' => 'Chamber',
+                            'description' => 'Belle Vue Hospital, Room 311 — Saturday to Thursday mornings, plus selected evenings.',
+                        ],
+                    ],
+                ]],
+                ['type' => 'patient_journey', 'data' => [
+                    'heading' => 'How a visit works',
+                    'steps' => [
+                        [
+                            'step_number' => '01',
+                            'title' => 'Book a serial',
+                            'description' => 'Pick a morning or evening sitting from your phone. No payment until you see the doctor.',
+                        ],
+                        [
+                            'step_number' => '02',
+                            'title' => 'Watch the queue',
+                            'description' => 'The ticket shows when to leave home. Come around your turn — not two hours early.',
+                        ],
+                        [
+                            'step_number' => '03',
+                            'title' => 'Consult in chamber',
+                            'description' => 'Bring old prescriptions and recent reports. Pay at the desk after the visit.',
+                        ],
+                        [
+                            'step_number' => '04',
+                            'title' => 'Follow the plan',
+                            'description' => 'You leave with medicines, tests if needed, and a date to come back.',
                         ],
                     ],
                 ]],
@@ -215,6 +277,16 @@ class DatabaseSeeder extends Seeder
                             'title' => 'Asthma medicines explained',
                             'type' => 'link',
                             'video_url' => 'https://www.youtube.com/watch?v=h6DVjzDcHMA',
+                        ],
+                        [
+                            'title' => 'Thyroid disorders explained',
+                            'type' => 'link',
+                            'video_url' => 'https://www.youtube.com/watch?v=Z5VyU3eEZ8E',
+                        ],
+                        [
+                            'title' => 'Diabetic kidney disease — Osmosis',
+                            'type' => 'link',
+                            'video_url' => 'https://www.youtube.com/watch?v=Y8HIFRPU6pM',
                         ],
                     ],
                 ]],
@@ -246,7 +318,25 @@ class DatabaseSeeder extends Seeder
                             'name' => 'Farzana Islam',
                             'label' => 'Verified Patient',
                         ],
+                        [
+                            'quote' => 'My thyroid dose finally made sense. He wrote the next blood-test date on the prescription so I did not have to guess.',
+                            'name' => 'Sultana Ahmed',
+                            'label' => 'Verified Patient',
+                        ],
+                        [
+                            'quote' => 'Evening serials on Tuesday saved me a day off work. The queue on my phone meant I arrived just in time.',
+                            'name' => 'Rafiq Islam',
+                            'label' => 'Verified Patient',
+                        ],
                     ],
+                ]],
+                ['type' => 'location_hours', 'data' => [
+                    'heading' => 'Chamber location & hours',
+                    'address' => '3rd Floor, Room #311, Prabartak Hill, 12/12 O.R. Nizam Road, Panchlaish, Chattogram',
+                    'operating_hours' => 'Sat–Thu 11:00 am – 2:00 pm · Sun, Tue, Thu 7:00 pm – 9:00 pm · Closed Friday',
+                    'phone' => '01333-709771',
+                    'email' => 'admin@solo.com',
+                    'google_maps_url' => 'https://www.google.com/maps?q=22.3470%2C91.8123',
                 ]],
                 ['type' => 'faq', 'data' => [
                     'heading' => 'Everything You Need To Know',
@@ -287,7 +377,23 @@ class DatabaseSeeder extends Seeder
                             'question' => 'What payment methods do you accept?',
                             'answer' => 'Pay at the chamber after your visit. Cash and common mobile financial services are accepted at reception.',
                         ],
+                        [
+                            'question' => 'How much is the consultation fee?',
+                            'answer' => 'A new visit is ৳800. Follow-up is ৳500. Review with reports is ৳600. Pay at the desk after you see the doctor.',
+                        ],
+                        [
+                            'question' => 'Can I bring family on the same phone number?',
+                            'answer' => 'Yes. Book separately for each person. At the desk we can keep household members on the same phone so history stays together.',
+                        ],
                     ],
+                ]],
+                ['type' => 'cta_banner', 'data' => [
+                    'headline' => 'Need a serial this week? Book from your phone.',
+                    'subheadline' => 'Pick a sitting, watch the live queue, and pay at Belle Vue after the visit.',
+                    'cta_text' => 'Book Appointment',
+                    'cta_link' => '/book',
+                    'trust_phone' => '01333-709771',
+                    'trust_address' => 'Belle Vue Hospital, Room 311, Panchlaish',
                 ]],
             ],
         ]);

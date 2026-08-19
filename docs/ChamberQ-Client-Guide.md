@@ -42,17 +42,17 @@ Not sure which fits? Message us on WhatsApp — we’ll recommend based on how y
 
 | Plan | Setup (one-time) | Monthly |
 |------|------------------|---------|
-| **Solo** | ৳15,000 | ৳3,000 |
+| **Maestro** | ৳25,000 | ৳3,000 |
 | **Clinic** | ৳75,000 | ৳7,500 |
 
 You can also buy pieces (one doctor):
 
 | What you want | Setup (one-time) | Monthly |
 |---------------|------------------|---------|
-| Website + booking | ৳3,000 | ৳1,000 |
-| + Prescription | +৳2,500 | +৳250 |
-| + Live queue | +৳12,000 | +৳2,000 |
-| All three together | ৳15,000 | ৳3,000 |
+| Website + booking | ৳5,000 | ৳1,000 |
+| + Prescription | +৳4,500 | +৳250 |
+| + Live queue | +৳18,000 | +৳2,000 |
+| All three together | ৳25,000 | ৳3,000 |
 
 ### What’s included in the plan
 **Solo**
@@ -244,7 +244,7 @@ If you already have an account and need help:
 - Staff can update website text/photos
 - SMS is optional prepaid credits
 
-**Solo price:** ৳15,000 setup + ৳3,000 / month  
+**Maestro price:** ৳25,000 setup + ৳3,000 / month  
 **Clinic price:** ৳75,000 setup + ৳7,500 / month  
 
 ---

@@ -4,6 +4,7 @@ namespace App\Filament\TenantAdmin\Resources\Doctors\Pages;
 
 use App\Filament\TenantAdmin\Concerns\HasPrimaryCreate;
 use App\Filament\TenantAdmin\Resources\Doctors\DoctorResource;
+use App\Filament\TenantAdmin\Resources\Doctors\Pages\EditDoctor;
 use App\Models\Doctor;
 use Filament\Resources\Pages\CreateRecord;
 
@@ -24,6 +25,6 @@ class CreateDoctor extends CreateRecord
             is_array($data['notify_channels'] ?? null) ? $data['notify_channels'] : [],
         );
 
-        return $data;
+        return EditDoctor::applyPracticeRules($data);
     }
 }

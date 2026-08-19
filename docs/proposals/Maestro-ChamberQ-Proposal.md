@@ -50,14 +50,12 @@ ChamberQ vs tools doctors often hear about (eDoctorBD, ProtonEMR, RxSWBD, Bissoy
 
 | What you get | Setup (one-time) | Monthly |
 |---|---|---|
-| Front door — website + online booking | ৳3,000 | ৳1,000 |
-| Live queue — queue + outdoor TV | ৳12,000 | ৳2,000 |
-| Prescription — digital Rx + WhatsApp | ৳2,500 | ৳250 |
-| **All three = Maestro** (save ৳2,500 setup) | **৳15,000** | **৳3,000** |
+| Front door — website + online booking | ৳5,000 | ৳1,000 |
+| Live queue — queue + outdoor TV | ৳18,000 | ৳2,000 |
+| Prescription — digital Rx + WhatsApp | ৳4,500 | ৳250 |
+| **All three = Maestro** (save ৳2,500 setup) | **৳25,000** | **৳3,000** |
 
-**Launch offer** — get your website by **31 August** and Prescription is **free for life** (৳2,500 setup + ৳250/month waived).
-
-**Prepaid-year offer** — confirm one year of payment before **30 September** and every one-time setup fee is **50% off** (Maestro setup ৳15,000 → ৳7,500).
+**Launch offer** — get your website by **31 August** and Prescription is **free for life** (৳4,500 setup + ৳250/month waived).
 
 - Done-with-you setup — chambers, sittings, site, TV links, login  
 - Portfolio website, live queue, consult screen, digital Rx  

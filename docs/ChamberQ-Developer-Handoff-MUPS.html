@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>ChamberQ — MUPS developer handoff (two branches, start to finish)</title>
+<title>ChamberQ — MUPS developer handoff</title>
 <style>
   :root {
     --ink: #0f3d3e;
@@ -26,7 +26,7 @@
   html, body {
     margin: 0; padding: 0;
     font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
-    color: var(--body); font-size: 10pt; line-height: 1.5;
+    color: var(--body); font-size: 12pt; line-height: 1.5;
     -webkit-print-color-adjust: exact; print-color-adjust: exact;
   }
   .cover {
@@ -35,49 +35,86 @@
     margin: 0; padding: 28mm 22mm 20mm;
     background: #0a2f30; color: #fff; position: relative; overflow: hidden;
   }
-  .cover-brand { font-size: 12pt; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin: 0 0 8px; }
-  .cover-tag { font-size: 10.5pt; color: rgba(255,255,255,0.78); max-width: 420px; margin: 0; line-height: 1.5; }
-  .cover-hero { margin-top: 42mm; max-width: 500px; }
+  .cover-brand { font-size: 14pt; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; margin: 0 0 8px; }
+  .cover-tag { font-size: 13pt; color: rgba(255,255,255,0.78); max-width: 440px; margin: 0; line-height: 1.5; }
+  .cover-hero { margin-top: 42mm; max-width: 520px; }
   .cover-rule { width: 40px; height: 2px; background: var(--mint); border: 0; margin: 0 0 20px; }
-  .cover-title { font-size: 26pt; font-weight: 700; letter-spacing: 0.02em; line-height: 1.12; margin: 0 0 16px; color: #fff; }
-  .cover-lead { font-size: 12pt; color: rgba(255,255,255,0.9); max-width: 440px; line-height: 1.55; margin: 0; }
-  .cover-meta { position: absolute; left: 22mm; bottom: 18mm; font-size: 10.5pt; line-height: 1.7; color: rgba(255,255,255,0.88); }
+  .cover-title { font-size: 30pt; font-weight: 700; letter-spacing: 0.02em; line-height: 1.12; margin: 0 0 16px; color: #fff; }
+  .cover-lead { font-size: 14.5pt; color: rgba(255,255,255,0.9); max-width: 480px; line-height: 1.55; margin: 0; }
+  .cover-meta { position: absolute; left: 22mm; bottom: 18mm; font-size: 12.5pt; line-height: 1.7; color: rgba(255,255,255,0.88); }
   .cover-meta strong { color: #fff; font-weight: 700; }
   .sheet { page-break-after: always; padding-bottom: 4mm; }
   .sheet:last-child { page-break-after: auto; }
-  .eyebrow { font-size: 8pt; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); margin: 0 0 8px; }
-  h1 { font-size: 20pt; font-weight: 700; color: var(--ink); margin: 0 0 10px; line-height: 1.15; }
-  h2 { font-size: 12pt; font-weight: 700; color: var(--ink-soft); margin: 16px 0 8px; border-bottom: 1px solid var(--line); padding-bottom: 3px; }
-  h3 { font-size: 10.5pt; font-weight: 700; color: var(--body); margin: 12px 0 6px; }
+  .eyebrow { font-size: 10pt; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--accent); margin: 0 0 8px; }
+  h1 { font-size: 22pt; font-weight: 700; color: var(--ink); margin: 0 0 10px; line-height: 1.15; }
+  h2 { font-size: 14pt; font-weight: 700; color: var(--ink-soft); margin: 16px 0 8px; border-bottom: 1px solid var(--line); padding-bottom: 3px; }
+  h3 { font-size: 12.5pt; font-weight: 700; color: var(--body); margin: 12px 0 6px; }
   p { margin: 0 0 8px; }
-  .subhead { font-size: 10.5pt; color: var(--muted-2); margin: 0 0 14px; line-height: 1.45; }
+  .subhead { font-size: 12.5pt; color: var(--muted-2); margin: 0 0 14px; line-height: 1.45; }
   ul, ol { margin: 0 0 10px; padding-left: 1.2em; }
-  li { margin-bottom: 4px; }
+  li { margin-bottom: 5px; }
   li strong { color: var(--ink-soft); }
-  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 8.5pt; background: var(--card); padding: 1px 4px; }
-  .callout { background: var(--card-accent); border-left: 3px solid var(--accent); padding: 8px 12px; margin: 10px 0 14px; font-size: 9.5pt; }
+  code { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 10.5pt; background: var(--card); padding: 1px 4px; }
+  .callout { background: var(--card-accent); border-left: 3px solid var(--accent); padding: 8px 12px; margin: 10px 0 14px; font-size: 11.5pt; }
   .callout-warn { background: var(--warn-bg); border-left-color: var(--warn-border); }
   .callout-danger { background: var(--danger-bg); border-left-color: var(--danger-border); }
   .callout strong { color: var(--ink); }
-  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 8.5pt; line-height: 1.35; }
-  th, td { border: 1px solid var(--line); padding: 5px 7px; vertical-align: top; text-align: left; }
-  th { background: var(--ink); color: #fff; font-weight: 700; font-size: 8pt; }
+  table { width: 100%; border-collapse: collapse; margin: 8px 0 14px; font-size: 10.5pt; line-height: 1.4; }
+  th, td { border: 1px solid var(--line); padding: 6px 8px; vertical-align: top; text-align: left; }
+  th { background: var(--ink); color: #fff; font-weight: 700; font-size: 10pt; }
   tr:nth-child(even) td { background: var(--card); }
   .stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin: 10px 0 14px; }
   .stat-box { background: var(--card); border: 1px solid var(--line); padding: 8px 10px; }
-  .stat-label { font-size: 7.5pt; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
-  .stat-value { font-size: 11pt; font-weight: 700; color: var(--ink); }
+  .stat-label { font-size: 9.5pt; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); margin-bottom: 3px; }
+  .stat-value { font-size: 14pt; font-weight: 700; color: var(--ink); }
+  .flow-sheet h1 { font-size: 18pt; margin-bottom: 6px; }
+  .flow-sheet .subhead { font-size: 11pt; margin-bottom: 10px; }
+  .flow-split {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    width: 100%;
+  }
+  .flow-col { display: flex; flex-direction: column; align-items: center; }
+  .flow-col-title {
+    font-size: 11pt; font-weight: 700; color: var(--ink);
+    margin: 0 0 4px; text-align: center; width: 100%;
+  }
+  .flow-col-title span { display: block; font-weight: 500; color: var(--muted-2); font-size: 9.5pt; }
+  .flow-box {
+    width: 100%;
+    border: 1.5px solid var(--ink);
+    background: #fff;
+    padding: 5px 9px;
+    text-align: center;
+    font-size: 10.5pt;
+    line-height: 1.28;
+    border-radius: 5px;
+  }
+  .flow-box strong { display: block; color: var(--ink); font-size: 11pt; }
+  .flow-box span { color: var(--muted-2); font-size: 9.5pt; }
+  .flow-box.visit { background: var(--card-accent); border-color: var(--accent); }
+  .flow-box.ot { background: var(--warn-bg); border-color: var(--warn-border); }
+  .flow-box.counsel { background: var(--card); border-color: var(--ink-soft); }
+  .flow-arrow {
+    width: 0; height: 0;
+    border-left: 6px solid transparent;
+    border-right: 6px solid transparent;
+    border-top: 8px solid var(--accent);
+    margin: 2px 0;
+  }
+  .flow-foot { margin: 10px 0 0; font-size: 10.5pt; }
 </style>
 </head>
 <body>
 
 <section class="cover">
-  <p class="cover-brand">ChamberQ</p>
-  <p class="cover-tag">Developer handoff — one clinic, two branches, every floor module on</p>
+  <p class="cover-brand">ChamberQ · MUPS</p>
+  <p class="cover-tag">Developer handoff — this clinic only</p>
   <div class="cover-hero">
     <hr class="cover-rule">
-    <h1 class="cover-title">MUPS from first login to last patient of the day</h1>
-    <p class="cover-lead">Moin Uddin Pain Solution is a two-centre interventional pain clinic. This document is the walkthrough a new developer (or a desk supervisor) needs: what is switched on, who sits where, and what happens from the public website through the waiting-room TV.</p>
+    <h1 class="cover-title">Moin Uddin Pain Solution: what is built, and how a day runs</h1>
+    <p class="cover-lead">Today one specialist works two cities, three rooms per sitting day. The floor is already sized for a second doctor (a fellow, an associate) without changing product. This document is MUPS only — website, booking, queue, TV, prescription, till, referrals, HR, and what changes when another name goes on the door.</p>
   </div>
   <p class="cover-meta">
     <strong>Client:</strong> MUPS — Dr. Mohammad Moin Uddin<br>
@@ -89,35 +126,64 @@
 
 <section class="sheet">
   <p class="eyebrow">0 · Picture this first</p>
-  <h1>What you are looking at</h1>
-  <p class="subhead">Like a small hospital with one specialist who flies between two cities. Software has to know which building he is in today, which room is calling, and that a patient booked online for a <em>visit</em> cannot accidentally land on the OT list.</p>
+  <h1>What MUPS is</h1>
+  <p class="subhead">Like a small hospital with one specialist who works two cities — and a kitchen that already has a second stove. Software has to know which building, which room, which doctor’s list, and that a consultation booking cannot land on the OT list.</p>
   <div class="stat-grid">
     <div class="stat-box"><div class="stat-label">Branches</div><div class="stat-value">2</div><p>Panchlaish and Uttara. Never the same day.</p></div>
-    <div class="stat-box"><div class="stat-label">Rooms per branch-day</div><div class="stat-value">3</div><p>Intervention, Visit (public), Counseling (free).</p></div>
-    <div class="stat-box"><div class="stat-label">Modules on</div><div class="stat-value">All</div><p>Website, Queue, Rx, Stations, Referrals, HR.</p></div>
+    <div class="stat-box"><div class="stat-label">Rooms per branch-day</div><div class="stat-value">3</div><p>Intervention, Consultation (public), Counseling (free).</p></div>
+    <div class="stat-box"><div class="stat-label">Doctors</div><div class="stat-value">1 now</div><p>Dr. Moin today. A second profile is allowed; the Doctors menu is already on.</p></div>
   </div>
-  <p>ChamberQ here is not a generic “clinic app.” For MUPS it is:</p>
+  <p>For this tenant, ChamberQ is the whole MUPS floor:</p>
   <ul>
-    <li>The <strong>public website</strong> patients already expect (relief without surgery, book a serial, pay at the chamber).</li>
+    <li>The <strong>public website</strong> patients expect (relief without surgery, book a serial, pay at the chamber).</li>
     <li>The <strong>day list and live queue</strong> the receptionist runs while Dr. Moin is in a room.</li>
-    <li>The <strong>waiting-room TV</strong> that can show every live room in that building.</li>
+    <li>The <strong>waiting-room TV</strong> for every live room in that building.</li>
     <li>The <strong>prescription pad</strong>, cash khata, referring-GP ledger, and a small HR roster.</li>
   </ul>
   <div class="callout">
-    <strong>Seed this clinic:</strong> <code>php artisan db:seed --class=MupsSeeder</code>.
-    That is the same as Super Admin opening the tenant and ticking every product box, then filling Branding queue settings. Re-fill today’s fake patients with <code>php artisan db:seed --class=MupsDemoSeeder</code> only.
+    <strong>Spin this clinic up:</strong> <code>php artisan db:seed --class=MupsSeeder</code>.
+    That creates tenant <code>mups</code>, both branches, rooms, website, fees, GPs, HR, and today’s fake patients. To refresh only the fake day list, run <code>php artisan db:seed --class=MupsDemoSeeder</code>. Seeders refuse <code>APP_ENV=production</code> and never overwrite an existing user’s password.
   </div>
 </section>
 
 <section class="sheet">
-  <p class="eyebrow">1 · Doors and keys</p>
+  <p class="eyebrow">1 · What this setup includes</p>
+  <h1>The MUPS floor, as seeded</h1>
+  <p>This is not a menu of other products. It is what MUPS actually has when the seeder finishes — the same flags Super Admin would save on tenant <code>mups</code>.</p>
+  <table>
+    <thead><tr><th>Area</th><th>On for MUPS?</th><th>What staff and patients feel</th></tr></thead>
+    <tbody>
+      <tr><td>Website + online serial</td><td>Yes</td><td>Public site, <code>/book</code>, Daily Roster day list</td></tr>
+      <tr><td>Live queue</td><td>Yes</td><td>Call next, outdoor TV, ticket “now serving”, come-around time</td></tr>
+      <tr><td>Prescription</td><td>Yes</td><td>Consult pad, digital Rx, medicines, follow-ups</td></tr>
+      <tr><td>Rooms + split till</td><td>Yes</td><td>Consultation / Intervention / Counseling, fee catalogue, vouchers, Send to counseling</td></tr>
+      <tr><td>Referring GPs</td><td>Yes</td><td>Pick referring doctor at Collect fee; ৳200 consultation / ৳1,000 intervention owed</td></tr>
+      <tr><td>HR</td><td>Yes</td><td>Employees, attendance, leave, payroll → cashbook salary</td></tr>
+      <tr><td>Labs</td><td>Yes</td><td>Lab rows in the tenant (demo seeder fills a few tests)</td></tr>
+      <tr><td>Bangla homepage</td><td>Yes</td><td>Public header shows EN | BN</td></tr>
+      <tr><td>More than one doctor</td><td>Yes (sized)</td><td>Doctors menu on. Seed has one profile. Add another without a Super Admin revisit.</td></tr>
+    </tbody>
+  </table>
+  <h2>Queue settings (Tenant Admin → Settings → Branding)</h2>
+  <ul>
+    <li><strong>Who runs the queue:</strong> Staff. Desk taps Call next. Doctor stays on Consult Screen.</li>
+    <li><strong>ETA:</strong> Live average of today’s finished consults — not a guess from the timetable.</li>
+    <li><strong>Announce:</strong> Chime + voice, locale Bangla. The TV says the serial the waiting room actually speaks.</li>
+    <li><strong>Call timeout:</strong> 15 seconds. <strong>First N patients:</strong> 3, asked 15 minutes early.</li>
+  </ul>
+  <p>On Dr. Moin’s card, every notify stage is on for SMS and WhatsApp (booking, doctor late, cancellation, prescription, follow-up). SMS only leaves the building when the server’s SMS driver is a real gateway. Locally it writes to the log.</p>
+  <p>Pay stays at the desk. There is no bKash checkout on the website — that is an owner decision, not a missing feature.</p>
+</section>
+
+<section class="sheet">
+  <p class="eyebrow">2 · Doors and keys</p>
   <h1>URLs and logins</h1>
   <p>Password for every demo login below is <code>pass</code>. Change it before a real chamber uses this database.</p>
   <table>
-    <thead><tr><th>Who</th><th>Opens</th><th>Login</th></tr></thead>
+    <thead><tr><th>Who</th><th>Opens</th><th>Address</th></tr></thead>
     <tbody>
-      <tr><td>Patient (path tenancy)</td><td>Website, book, ticket</td><td><code>http://localhost/mups/</code> · book at <code>/mups/book</code></td></tr>
-      <tr><td>Patient (custom host)</td><td>Same site at root</td><td><code>http://mups.localhost/</code> · book at <code>/book</code></td></tr>
+      <tr><td>Patient (path)</td><td>Website, book, ticket</td><td><code>http://localhost/mups/</code> · book at <code>/mups/book</code></td></tr>
+      <tr><td>Patient (host)</td><td>Same site at root</td><td><code>http://mups.localhost/</code> · book at <code>/book</code></td></tr>
       <tr><td>Desk / doctor / owner</td><td>Tenant admin</td><td><code>http://localhost/mups/admin</code> or <code>http://mups.localhost/admin</code></td></tr>
       <tr><td>ChamberQ operator</td><td>Super Admin</td><td><code>http://localhost/admin</code> — tenant <code>mups</code></td></tr>
       <tr><td>Waiting-room TV</td><td>All rooms in one building</td><td>Live Queue Control → <strong>All rooms TV</strong> (bookmark once per branch)</td></tr>
@@ -126,49 +192,23 @@
   <table>
     <thead><tr><th>Role</th><th>Email</th><th>What they do</th></tr></thead>
     <tbody>
-      <tr><td>Admin (owner desk)</td><td><code>admin@mups.local</code></td><td>Everything: branding, cash categories, backup, HR, referrals</td></tr>
-      <tr><td>Doctor</td><td><code>doctor@mups.local</code></td><td>Consult Screen, Rx, queue if needed, visit notes</td></tr>
+      <tr><td>Admin</td><td><code>admin@mups.local</code></td><td>Branding, cash categories, backup, HR, referrals, website</td></tr>
+      <tr><td>Doctor</td><td><code>doctor@mups.local</code></td><td>Consult Screen, Rx, consultation notes</td></tr>
       <tr><td>Desk</td><td><code>staff@mups.local</code></td><td>Daily Roster, Call next, Collect fee, walk-ins, TV</td></tr>
     </tbody>
   </table>
   <div class="callout callout-warn">
-    Super Admin at <code>/admin</code> is a different login from <code>admin@mups.local</code>. The first is ChamberQ staff editing the tenant (modules, SMS credits). The second is the clinic owner inside MUPS.
+    Super Admin at <code>/admin</code> is a different login from <code>admin@mups.local</code>. The first is ChamberQ staff editing the tenant. The second is the clinic owner inside MUPS.
   </div>
-</section>
-
-<section class="sheet">
-  <p class="eyebrow">2 · Super Admin (this is “enable from the admin panel”)</p>
-  <h1>What is switched on for MUPS</h1>
-  <p>On <strong>Super Admin → Tenants → mups</strong> the Product modules fieldset is the master switch. The seeder writes the same flags the form would save.</p>
-  <table>
-    <thead><tr><th>Checkbox</th><th>On?</th><th>What the clinic feels</th></tr></thead>
-    <tbody>
-      <tr><td>Front door (Website)</td><td>Yes</td><td>Public site, online serial, Daily Roster day list</td></tr>
-      <tr><td>Live queue</td><td>Yes</td><td>Live Queue Control, outdoor TV, ticket “now serving”, come-around time</td></tr>
-      <tr><td>Prescription</td><td>Yes</td><td>Consult pad, digital Rx, medicines, follow-ups</td></tr>
-      <tr><td>Stations — rooms + split till</td><td>Yes</td><td>Visit / Intervention / Counseling rooms, fee catalogue, vouchers, Send to counseling</td></tr>
-      <tr><td>Referrals — outside GP</td><td>Yes</td><td>Pick referring doctor at Collect fee; ৳200 visit / ৳1,000 intervention owed</td></tr>
-      <tr><td>HR</td><td>Yes</td><td>Employees, attendance, leave, payroll → cashbook salary</td></tr>
-    </tbody>
-  </table>
-  <p>Also on in feature flags (clinic size, not extra price): labs, multiple chambers, multiple doctors, <strong>Bangla homepage</strong> so the public header shows EN | BN.</p>
-  <h2>Queue branding (Tenant Admin → Settings → Branding)</h2>
-  <p>These are the knobs the receptionist would set once, like choosing the doorbell sound:</p>
-  <ul>
-    <li><strong>Who runs the queue:</strong> Staff (desk Call next; doctor stays in Consult Screen).</li>
-    <li><strong>ETA model:</strong> Live average (today’s finished consults, not a guess from the timetable).</li>
-    <li><strong>Announce:</strong> Chime + voice, locale Bangla — the TV says the serial in the language the waiting room actually speaks.</li>
-    <li><strong>Call timeout:</strong> 15 seconds. <strong>First N patients:</strong> 3, asked 15 minutes early.</li>
-  </ul>
-  <p>On the doctor card, every notify stage is on for both SMS and WhatsApp (booking, doctor late, cancellation, prescription, follow-up). SMS still only leaves the building when the server’s SMS driver is a real gateway — locally it writes to the log.</p>
+  <p>Production domains already mapped on this tenant: <code>drmups.com</code> and <code>www.drmups.com</code>. Local extra: <code>mups.localhost</code>. Booking phone on the seed: <code>01880728711</code>.</p>
 </section>
 
 <section class="sheet">
   <p class="eyebrow">3 · Two branches</p>
   <h1>Who is open which day</h1>
-  <p>Dr. Moin cannot be in Chittagong and Dhaka at the same hour. The calendar is built so the public wizard never offers two cities on the same day.</p>
+  <p>Dr. Moin cannot be in Chittagong and Dhaka at the same hour. The calendar never offers two cities on the same day.</p>
   <table>
-    <thead><tr><th>Day</th><th>Building</th><th>Intervention</th><th>Visit (patients book this)</th></tr></thead>
+    <thead><tr><th>Day</th><th>Building</th><th>Intervention</th><th>Consultation (patients book this)</th></tr></thead>
     <tbody>
       <tr><td>Saturday</td><td>Panchlaish</td><td>10:00–13:00</td><td>13:00–20:00</td></tr>
       <tr><td>Sunday</td><td>Panchlaish</td><td>16:00–17:30</td><td>17:30–21:00</td></tr>
@@ -179,77 +219,185 @@
       <tr><td>Friday</td><td>Panchlaish</td><td>16:00–17:30</td><td>17:30–20:00</td></tr>
     </tbody>
   </table>
-  <p>Counseling covers the same clock as intervention through visit. It is <strong>not</strong> on the public website. Patients arrive only when desk taps <strong>Send to counseling</strong> after a procedure is marked done — like being walked to the next room, not given a new appointment card for next week.</p>
+  <p><strong>Panchlaish:</strong> Neurosense, near Chittagong Medical College. <strong>Uttara:</strong> Sector 4, about 10 minutes from the airport.</p>
+  <p>Counseling covers the same clock as intervention through consultation. It is <strong>not</strong> on the public website. Patients arrive only when desk taps <strong>Send to counseling</strong> after a procedure is marked done — walked to the next room, not given a new appointment card for next week.</p>
   <div class="callout">
-    The public <strong>/centres</strong> page now says “Two centres. One standard of care.” The old Epic Healthcare / Dhanmondi chamber was a third address copied from an older site. MUPS as sold here is Dhaka (Uttara) and Chittagong (Panchlaish) only.
+    Public <strong>/centres</strong> says “Two centres. One standard of care.” An older website listed Epic Healthcare / Dhanmondi as a third address. MUPS here is Dhaka (Uttara) and Chittagong (Panchlaish) only. Do not put Dhanmondi back.
   </div>
 </section>
 
 <section class="sheet">
-  <p class="eyebrow">4 · Patient journey</p>
-  <h1>From Google to a paperless ticket</h1>
-  <ol>
-    <li><strong>Land on the website.</strong> Hero: “Relief without surgery.” Book a serial; pay at the chamber. Language switcher EN | BN is on.</li>
-    <li><strong>Book.</strong> The wizard only lists <strong>Visit</strong> sittings. A patient cannot self-book the OT (intervention) or counseling list. Name + BD mobile, no account required.</li>
-    <li><strong>Ticket.</strong> UUID link (the secret). Shows sitting window always. With Live queue on, it also shows now-serving and come-around. Voucher number prints when Stations assigned one (not on free counseling rows).</li>
-    <li><strong>Waiting room.</strong> TV at that branch: <strong>All rooms TV</strong> for Panchlaish or Uttara. Idle rooms stay off the board so tiles stay large. Calling room inverts to light tile / dark numerals.</li>
-    <li><strong>Portal (optional).</strong> Phone lookup, or ChamberQ <code>/me</code> OTP locker across clinics.</li>
-  </ol>
-  <p>Pay stays at the desk. There is no bKash checkout on the website — that is an owner decision, not a missing feature.</p>
+  <p class="eyebrow">4 · Public website</p>
+  <h1>What patients see before they book</h1>
+  <p>Copy is rewritten for conversion from public <code>drmups.com</code> facts. Visual shell is the clinic website look (not a pixel clone of the old PHP site). Hero photo is the landscape OT / ultrasound image at <code>/images/mups/mups-hero-surgery.jpg</code>. Tab icon is the navy tile at <code>/images/mups/favicon.svg</code>.</p>
+  <table>
+    <thead><tr><th>Page</th><th>Path</th><th>What it is for</th></tr></thead>
+    <tbody>
+      <tr><td>Home</td><td><code>/</code></td><td>“Relief without surgery.” Stats, founder, treatments strip, eight looping reviews, book CTA. EN | BN.</td></tr>
+      <tr><td>Services</td><td><code>/departments</code></td><td>Nine treatments: Spine, Knee &amp; Hip, Headache &amp; Neck, Nerve, Shoulder, Wrist, Sports, Arthritis, Full-body MSK.</td></tr>
+      <tr><td>Doctors</td><td><code>/doctors</code></td><td>One card: Dr. Mohammad Moin Uddin. Split layout (heading | portrait) from 1200px.</td></tr>
+      <tr><td>Centres</td><td><code>/centres</code></td><td>Two buildings, hours, “what every centre has.”</td></tr>
+      <tr><td>Fellowship</td><td><code>/fellowship</code></td><td>FIPP-track year, ৳ 3,50,000, WhatsApp apply.</td></tr>
+      <tr><td>Gallery</td><td><code>/gallery</code></td><td>Photo journal.</td></tr>
+      <tr><td>Health tips</td><td><code>/blog</code></td><td>Three articles (back pain, knee replacement delay, nerve pain).</td></tr>
+      <tr><td>Contact</td><td><code>/contact</code></td><td>Phone, <code>hello@mups.com.bd</code>.</td></tr>
+      <tr><td>Appointment</td><td><code>/appointment</code></td><td>Explains booking in under 60 seconds, then sends people to <code>/book</code>.</td></tr>
+    </tbody>
+  </table>
+  <p>Header is the same on home and inner pages. Book appointment stays the pink CTA and must keep a tenant-safe <code>/book</code> href so path tenants hit <code>/mups/book</code>.</p>
+  <p>With one doctor the homepage founder block is a wide split (heading | portrait from 1200px). The moment a second published doctor exists, that block becomes a card grid, each card linking to their profile and <code>/book?doctor=…</code>. Do not keep the one-person poster layout once there are two names.</p>
 </section>
 
 <section class="sheet">
-  <p class="eyebrow">5 · Desk day (queue)</p>
+  <p class="eyebrow">5 · Patient journey</p>
+  <h1>From Google to a paperless ticket</h1>
+  <ol>
+    <li><strong>Land on the website.</strong> Hero: “Relief without surgery.” Book a serial; pay at the chamber.</li>
+    <li><strong>Book.</strong> The wizard only lists <strong>Consultation</strong> sittings. A patient cannot self-book intervention or counseling. Name + BD mobile. No account required. With one doctor, that step is skipped. With two, patients pick the doctor first (or arrive pre-filled from a profile Book button).</li>
+    <li><strong>Ticket.</strong> UUID link (the secret). Sitting window always. Now-serving and come-around because live queue is on. Voucher number prints when the till assigned one (not on free counseling rows).</li>
+    <li><strong>Waiting room.</strong> TV for that branch: <strong>All rooms TV</strong> for Panchlaish or Uttara. Idle rooms stay off the board so tiles stay large. The calling room inverts to light tile / dark numerals.</li>
+    <li><strong>Portal (optional).</strong> Phone lookup, or ChamberQ <code>/me</code> OTP locker.</li>
+  </ol>
+  <p>Consultation sittings: cap 20 + 6 walk-in overflow. Intervention: cap 12, desk-only (no public overflow). Counseling: cap 40, desk-created after a procedure.</p>
+</section>
+
+<section class="sheet">
+  <p class="eyebrow">6 · Desk day</p>
   <h1>Reception from open to close</h1>
   <p>Think of Daily Roster as the paper register, Live Queue Control as the microphone, and the TV as the board in the hall.</p>
   <ol>
-    <li><strong>Morning.</strong> Open Daily Roster. Today’s Visit / Intervention / Counseling rows are already there if the seeder ran. Walk-ins: add a person onto today’s Visit sitting (public kind). Intervention walk-ins are desk-only.</li>
+    <li><strong>Morning.</strong> Open Daily Roster. Today’s Consultation / Intervention / Counseling rows are already there if the seeder ran. Walk-ins: add a person onto today’s Consultation sitting. Intervention walk-ins are desk-only.</li>
     <li><strong>Start the sitting</strong> on Live Queue Control (or Start in Live Queue from the roster). Staff is the queue runner.</li>
     <li><strong>Call next.</strong> TV speaks. Ticket updates. If the line drops, Call next still works on this computer; it uploads when the line returns. A second Call next while someone is still <em>called</em> does nothing — the doorway is occupied.</li>
     <li><strong>Patient arrived</strong> → they are in the chamber. Doctor’s Consult Screen follows that person.</li>
-    <li><strong>Collect fee</strong> (Stations form): pick catalogue chip (Visit new / Follow-up / Epidural / RFA / PRP…), type cash ৳ and online ৳, optional referring GP. Discount and clinic/doctor split compute. Counseling and leftover consult kinds hide Collect fee (free).</li>
+    <li><strong>Collect fee:</strong> pick catalogue chip, type cash ৳ and online ৳, optional referring GP. Discount and clinic/doctor split compute. Counseling hides Collect fee (free).</li>
     <li><strong>Procedure done</strong> on an intervention row → <strong>Send to counseling</strong> (same day, no SMS, no voucher).</li>
-    <li><strong>Missed procedures</strong> (Operations): people who were listed for OT but did not complete — WhatsApp + move. No auto-cancel.</li>
+    <li><strong>Missed procedures</strong> (Operations): listed for OT but did not complete — WhatsApp + move. No auto-cancel.</li>
     <li><strong>Mark Late</strong> if Dr. Moin is stuck in traffic — patients get the delay SMS because doctor-late notify is on.</li>
     <li><strong>End session</strong> names who will be cancelled and offers WhatsApp links.</li>
   </ol>
-  <p><strong>All rooms TV:</strong> one bookmark per branch. Panchlaish’s TV must not show Uttara’s rooms. Bookmark the chamber URL, not a single sitting.</p>
+  <p><strong>All rooms TV:</strong> one bookmark per branch. Panchlaish’s TV must not show Uttara’s rooms. Bookmark the chamber URL, not a single sitting. The next page is two mixed-room patients — consultation, OT, counseling — on one Saturday board.</p>
+</section>
+
+<section class="sheet flow-sheet">
+  <p class="eyebrow">7 · Queue flowchart · mixed rooms</p>
+  <h1>A messy Saturday: consultation, then OT, then counseling</h1>
+  <p class="subhead">Patients do not stay in one queue. Like a clinic with a consultation room, a procedure room, and a counseling room — one person can walk all three before they go home. The hall TV shows every live room in that building.</p>
+  <div class="flow-split">
+    <div class="flow-col">
+      <p class="flow-col-title">Rina — same day, three rooms<span>Booked a consultation. Leaves with an epidural and counseling.</span></p>
+      <div class="flow-box visit"><strong>1 · Consultation (she booked this)</strong><span>Public wizard. Call next → arrived → Collect consultation fee.</span></div>
+      <div class="flow-arrow"></div>
+      <div class="flow-box ot"><strong>2 · Book intervention</strong><span>From the consultation row. Same-day OT is always offered, even if OT was this morning.</span></div>
+      <div class="flow-arrow"></div>
+      <div class="flow-box visit"><strong>3 · Complete the consultation</strong><span>Pad / Rx in the consult room. Call next is a separate tap for the next person.</span></div>
+      <div class="flow-arrow"></div>
+      <div class="flow-box ot"><strong>4 · Intervention queue</strong><span>New serial on the OT sitting. Collect procedure fee. Prepped → Call doctor → Done.</span></div>
+      <div class="flow-arrow"></div>
+      <div class="flow-box counsel"><strong>5 · Send to counseling</strong><span>Same day, free, no SMS, no voucher. Own sitting on the same TV.</span></div>
+    </div>
+    <div class="flow-col">
+      <p class="flow-col-title">Karim — third consultation needs a procedure<span>Two ordinary consultations already. Today the plan changes.</span></p>
+      <div class="flow-box visit"><strong>Consultation 1 · weeks ago</strong><span>New patient. Consultation fee. Sent home with medicine.</span></div>
+      <div class="flow-arrow"></div>
+      <div class="flow-box visit"><strong>Consultation 2 · follow-up</strong><span>Follow-up chip. Still no OT.</span></div>
+      <div class="flow-arrow"></div>
+      <div class="flow-box visit"><strong>Consultation 3 · today</strong><span>“You need an injection.” Book intervention from this row.</span></div>
+      <div class="flow-arrow"></div>
+      <div class="flow-box ot"><strong>Intervention</strong><span>Linked serial. Collect OT fee. If he cannot stay, Move intervention — nothing auto-cancels.</span></div>
+      <div class="flow-arrow"></div>
+      <div class="flow-box counsel"><strong>Counseling, then a later consultation</strong><span>Walked to counseling today. Next review is another Consultation sitting, not a new OT card.</span></div>
+    </div>
+  </div>
+  <p class="flow-foot">Teal = Consultation (patients can book). Amber = Intervention (desk/doctor only). Grey = Counseling (only after a procedure is marked done). One person can sit on all three lists the same afternoon; the TV is still one board per building.</p>
 </section>
 
 <section class="sheet">
-  <p class="eyebrow">6 · Doctor, money, people</p>
-  <h1>Consult, cash, referrals, HR</h1>
+  <p class="eyebrow">8 · Money and people</p>
+  <h1>Fees, till, referrals, HR</h1>
+  <h2>Fee catalogue (seeded)</h2>
+  <table>
+    <thead><tr><th>Item</th><th>List</th><th>House share</th><th>Room</th></tr></thead>
+    <tbody>
+      <tr><td>Consultation (new)</td><td>৳1,000</td><td>৳200</td><td>Consultation</td></tr>
+      <tr><td>Follow-up</td><td>৳800</td><td>৳100</td><td>Consultation</td></tr>
+      <tr><td>Epidural (caudal / TF)</td><td>৳8,000</td><td>৳1,000</td><td>Intervention</td></tr>
+      <tr><td>Facet / RFA</td><td>৳12,000</td><td>৳1,000</td><td>Intervention</td></tr>
+      <tr><td>Knee HA / cortisone</td><td>৳5,000</td><td>৳800</td><td>Intervention</td></tr>
+      <tr><td>PRP knee (single)</td><td>৳8,000</td><td>৳1,000</td><td>Intervention</td></tr>
+      <tr><td>Shoulder (single)</td><td>৳8,000</td><td>৳1,000</td><td>Intervention</td></tr>
+      <tr><td>Nerve block / pulsed RF</td><td>৳8,000</td><td>৳1,000</td><td>Intervention</td></tr>
+      <tr><td>SI joint</td><td>৳10,000</td><td>৳1,000</td><td>Intervention</td></tr>
+      <tr><td>Hip joint</td><td>৳10,000</td><td>৳1,000</td><td>Intervention</td></tr>
+    </tbody>
+  </table>
   <h2>Consult Screen</h2>
-  <p>Follows the in-chamber patient. Write prescription (staff may also enter a paper Rx later — that toggle is on for Dr. Moin). Complete visit, then Call next is a separate tap so the prescription can be handed over while the patient is still in the room.</p>
+  <p>Follows the in-chamber patient. Staff may also enter a paper Rx later (that toggle is on for Dr. Moin). Complete the consultation, then Call next is a separate tap so the prescription can be handed over while the patient is still in the room.</p>
   <h2>Cashbook</h2>
-  <p>Operations → Cashbook. Patient fees from Collect fee; expenses (rent, salary, referral payout). Mixed cash + online is supported. Categories are under Operations → Cash categories.</p>
+  <p>Operations → Cashbook. Patient fees from Collect fee; expenses (rent, salary, referral payout). Mixed cash + online is supported. Categories live under Operations → Cash categories.</p>
   <h2>Referrals</h2>
-  <p>Seeded GPs: Dr. Karim (Panchlaish) and Dr. Sultana (Uttara ortho). At Collect fee, pick “Referred by.” End of month: Referral ledger → Mark selected as paid.</p>
+  <p>Seeded GPs: Dr. Karim (Panchlaish) and Dr. Sultana (Uttara ortho). At Collect fee, pick “Referred by.” End of month: Referral ledger → Mark selected as paid. Default owed: ৳200 per consultation, ৳1,000 per intervention. A waived fee voids the commission.</p>
   <h2>HR</h2>
-  <p>Three people: desk (linked to <code>staff@mups.local</code>), procedure nurse Panchlaish, procedure nurse Uttara. Attendance / leave / payroll live under the HR nav. Paying salary writes a cashbook expense in the same breath as the payroll row — so a double-click cannot leave an orphan expense.</p>
+  <p>Three people: desk (linked to <code>staff@mups.local</code>, ৳18,000), procedure nurse Panchlaish (Nurse Rina, ৳22,000), procedure nurse Uttara (Nurse Farhana, ৳22,000). Paying salary writes a cashbook expense in the same breath as the payroll row — a double-click cannot leave an orphan expense.</p>
   <h2>Offline</h2>
   <p>Pack bag (Rx) and queue snapshot work on this computer if the ISP dies. There is no separate queue worker to install — that is deliberate for a chamber laptop.</p>
 </section>
 
 <section class="sheet">
-  <p class="eyebrow">7 · What not to “fix”</p>
-  <h1>Locks and production reality</h1>
+  <p class="eyebrow">9 · More than one doctor</p>
+  <h1>When a fellow or associate joins</h1>
+  <p class="subhead">Today Dr. Moin is the only name on the door. Think of adding a second doctor like hiring a second chef: same restaurant, same hall TV, but each chef needs their own station, their own tickets, and their own pad. Do not copy Moin’s sitting onto the new person and hope the queue sorts it out.</p>
+  <h2>What is already true on this tenant</h2>
+  <ul>
+    <li>Admin can add unlimited doctor profiles (Website → Doctors). Staff cannot edit BM&amp;DC, fees, or the paper-Rx toggle.</li>
+    <li>A doctor profile and a login are two things. Pair them with <strong>Login account</strong> on the Doctors form. One login, one profile. A visiting doctor may have a public card and no login.</li>
+    <li>Never guess the pairing. The wrong pair prints the wrong name and registration number on a prescription.</li>
+  </ul>
+  <h2>How to set the second person up</h2>
+  <ol>
+    <li>Create the doctor profile: name, qualifications, BM&amp;DC, photo, <strong>Show on website</strong>, fees, notify channels, whether staff may type their paper Rx.</li>
+    <li>Create a doctor login (or pair an existing one). Example shape: <code>associate@mups.local</code> — not a second use of <code>doctor@mups.local</code>.</li>
+    <li>Give them <strong>their own sittings</strong> on Schedule Sessions: branch + weekday + room type + clock. A sitting always belongs to one doctor. If the associate only sees consultations in Uttara on Tuesdays, that Consultation row is theirs; Moin’s Intervention row stays Moin’s.</li>
+    <li>Counseling still follows the procedure doctor’s chamber/day. Send to counseling looks for a counseling sitting for <em>that</em> doctor in that building. If the associate will finish procedures, they need a counseling sitting too, or the button hides.</li>
+  </ol>
+  <div class="callout">
+    Two realistic MUPS shapes: (1) <strong>Same building, two rooms</strong> — Moin in Intervention, associate in Consultation, one waiting-room TV. (2) <strong>Same brand, different days</strong> — associate covers a Panchlaish afternoon Moin used to fly for. Days can overlap once there are two people; the “never the same city” rule was for one body, not a software lock.
+  </div>
+  <h2>What patients and desk then see</h2>
+  <ul>
+    <li><strong>Book:</strong> Pick doctor appears. Dates and Consultation sittings are only that doctor’s. Intervention and counseling stay off the public wizard.</li>
+    <li><strong>Website:</strong> Doctors page lists both. Homepage grid is cards, not the single founder poster. Tick <strong>Show on website</strong> off for a fellow who should not be bookable from Google.</li>
+    <li><strong>Desk:</strong> Daily Roster and Live Queue Control list every sitting today. The receptionist picks the room the way they pick a counter. Walk-ins must land on the right doctor’s Consultation sitting — the wrong sitting is the wrong pad and the wrong fee split.</li>
+    <li><strong>TV:</strong> All rooms TV is still <em>per building</em>. If both doctors are live in Panchlaish, both rooms can appear (up to four tiles). Uttara’s TV must not show Panchlaish. Idle rooms stay off the board.</li>
+    <li><strong>Money:</strong> The fee catalogue is clinic-wide (Consultation ৳1,000, epidural ৳8,000…). House share vs doctor share is on the chip, not a second price list per name. If an associate charges differently, add a catalogue row or use that doctor’s extra fees — do not silently reuse Moin’s consultation chip and hope.</li>
+    <li><strong>Prescription:</strong> The booking’s sitting doctor wins. If Moin covers the associate’s list, the printed pad is still the sitting’s name. My medicines and packs stay on the signed-in doctor. Staff paper entry follows the sitting doctor’s toggle, not whoever is at the desk.</li>
+  </ul>
+  <div class="callout callout-warn">
+    <strong>Consult Screen today follows the most recently started live sitting in the whole MUPS tenant</strong> — it does not pin to “whoever just logged in.” Two doctors in two rooms at once can see each other’s in-chamber patient. Until that is split, run one live consult at a time, or have desk Call next only on the room whose doctor is actually at that computer. Live Queue Control is already per sitting; that is the safe board for two rooms.
+  </div>
+</section>
+
+<section class="sheet">
+  <p class="eyebrow">10 · What not to “fix”</p>
+  <h1>Locks, go-live, and a five-minute check</h1>
   <div class="callout callout-danger">
     <strong>Do not</strong> shorten session idle timeout unless the owner says <code>change session expiry</code> or <code>restore session timeout</code>. Desk machines stay signed in on purpose.<br><br>
-    <strong>Do not</strong> restyle the solo patient homepage. MUPS uses the <em>clinic</em> Clireo site, which is fair game; the locked files are <code>resources/views/tenant/solo/**</code>.
+    <strong>Do not</strong> add online payment on the MUPS website unless the owner asks.<br><br>
+    <strong>Do not</strong> restore a Dhanmondi / Epic Healthcare third branch.
   </div>
   <p>Before this database faces real patients on a public domain, run:</p>
   <p><code>php artisan app:production-check --strict</code></p>
-  <p>It will refuse a laptop that still has debug on, SQLite, <code>localhost</code> as APP_URL, and SMS/mail writing to log files. That is the remaining “go live” list — not another feature toggle in Super Admin.</p>
+  <p>It will refuse a laptop that still has debug on, SQLite, <code>localhost</code> as APP_URL, and SMS/mail writing to log files. That is the remaining go-live list for this clinic — not another toggle.</p>
   <h2>Quick test after you pull</h2>
   <ol>
     <li>Seed MUPS. Open <code>/mups/</code> — homepage loads, nav has Centres, not a 500.</li>
-    <li>Open Super Admin tenant mups — Website, Queue, Rx, Stations, Referrals, HR all ticked.</li>
-    <li>Tenant admin → Chambers = 2. Schedule = Intervention / Visit / Counseling on each branch day.</li>
-    <li><code>/mups/book</code> offers Visit only.</li>
+    <li>Tenant admin → Chambers = 2. Schedule = Intervention / Consultation / Counseling on each branch day.</li>
+    <li><code>/mups/book</code> offers Consultation only.</li>
+    <li><code>/mups/centres</code> shows Panchlaish and Uttara, not Epic Healthcare.</li>
     <li>Live Queue Control → All rooms TV for today’s branch.</li>
+    <li>If you add a second doctor: wizard shows Pick doctor; new sittings are theirs; Consult Screen still follows the latest live sitting — confirm before two rooms run at once.</li>
   </ol>
-  <p>Tests that pin this clinic: <code>php artisan test --filter=MupsWebsiteTest</code> and <code>MupsDemoSeederTest</code>.</p>
+  <p>Tests that pin this clinic: <code>php artisan test --filter=MupsWebsiteTest</code> and <code>MupsDemoSeederTest</code>. Production database engine is MySQL; green on SQLite is not the same as green on MySQL.</p>
 </section>
 
 </body>

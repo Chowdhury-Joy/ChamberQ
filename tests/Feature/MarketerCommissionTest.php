@@ -102,8 +102,8 @@ class MarketerCommissionTest extends TestCase
 
         $commission = Commission::where('tenant_id', $tenant->id)->first();
         $this->assertNotNull($commission);
-        $this->assertSame(12000, $commission->base_amount);
-        $this->assertSame(2400, $commission->commission_amount);
+        $this->assertSame(20000, $commission->base_amount);
+        $this->assertSame(4000, $commission->commission_amount);
         $this->assertSame(Commission::STATUS_PENDING, $commission->status);
     }
 
@@ -144,7 +144,7 @@ class MarketerCommissionTest extends TestCase
 
         $service = app(CommissionService::class);
         $service->applyPricingToTenant($tenant);
-        $tenant->update(['setup_paid_at' => now(), 'billing_status' => 'active']);
+        $tenant->update(['setup_paid_at' => now()->subYear(), 'billing_status' => 'active']);
         $tenant->save();
 
         $period = now()->format('Y-m');
@@ -315,7 +315,7 @@ class MarketerCommissionTest extends TestCase
         $tenant = $this->createReferredTenant(withSetupPaid: true);
         $service = app(CommissionService::class);
         $service->applyPricingToTenant($tenant);
-        $tenant->update(['setup_paid_at' => now(), 'billing_status' => 'active']);
+        $tenant->update(['setup_paid_at' => now()->subYear(), 'billing_status' => 'active']);
         $tenant->save();
 
         $period = now()->format('Y-m');
@@ -342,8 +342,8 @@ class MarketerCommissionTest extends TestCase
         $service->createPendingSetupCommission($tenant);
 
         $commission = Commission::where('tenant_id', $tenant->id)->first();
-        $this->assertSame(15000, $commission->base_amount);
-        $this->assertSame(3000, $commission->commission_amount);
+        $this->assertSame(25000, $commission->base_amount);
+        $this->assertSame(5000, $commission->commission_amount);
 
         $tenant->feature_flags = Tenant::featureFlagsWithModules([], [Tenant::MODULE_FRONT_DOOR]);
         $service->applyPricingToTenant($tenant);
@@ -351,8 +351,8 @@ class MarketerCommissionTest extends TestCase
         $service->syncPendingCommissions($tenant);
 
         $commission->refresh();
-        $this->assertSame(3000, $commission->base_amount);
-        $this->assertSame(600, $commission->commission_amount);
+        $this->assertSame(5000, $commission->base_amount);
+        $this->assertSame(1000, $commission->commission_amount);
         $this->assertSame(Commission::STATUS_PENDING, $commission->status);
     }
 
@@ -363,7 +363,7 @@ class MarketerCommissionTest extends TestCase
             'plan_tier' => 'solo',
             'marketer_id' => $this->marketer->id,
             'billing_status' => 'active',
-            'setup_paid_at' => now(),
+            'setup_paid_at' => now()->subYear(),
             'feature_flags' => Tenant::featureFlagsWithModules([], Tenant::productModules()),
         ]);
 
@@ -421,8 +421,8 @@ class MarketerCommissionTest extends TestCase
 
         $commission->refresh();
         $this->assertSame(Commission::STATUS_PAID, $commission->status);
-        $this->assertSame(15000, $commission->base_amount);
-        $this->assertSame(3000, $commission->commission_amount);
+        $this->assertSame(25000, $commission->base_amount);
+        $this->assertSame(5000, $commission->commission_amount);
         $this->assertSame('already-paid', $commission->payout_note);
     }
 
@@ -455,9 +455,14 @@ class MarketerCommissionTest extends TestCase
             ->where('tenant_id', $tenant->id)
             ->where('type', BillingPayment::TYPE_MONTHLY)
             ->count());
-        $this->assertSame(12, Commission::query()
+        $this->assertSame(0, Commission::query()
             ->where('tenant_id', $tenant->id)
             ->where('type', Commission::TYPE_MONTHLY)
+            ->where('status', Commission::STATUS_OWED)
+            ->count());
+        $this->assertSame(1, Commission::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('type', Commission::TYPE_YEAR_PREPAID)
             ->where('status', Commission::STATUS_OWED)
             ->count());
         $this->assertSame(3000, (int) BillingPayment::query()
@@ -465,10 +470,9 @@ class MarketerCommissionTest extends TestCase
             ->where('type', BillingPayment::TYPE_MONTHLY)
             ->where('period', '2026-08')
             ->value('amount_paid'));
-        $this->assertSame(300, (int) Commission::query()
+        $this->assertSame(7200, (int) Commission::query()
             ->where('tenant_id', $tenant->id)
-            ->where('type', Commission::TYPE_MONTHLY)
-            ->where('period', '2026-08')
+            ->where('type', Commission::TYPE_YEAR_PREPAID)
             ->value('commission_amount'));
         $this->assertSame(36000, (int) BillingPayment::query()
             ->where('tenant_id', $tenant->id)

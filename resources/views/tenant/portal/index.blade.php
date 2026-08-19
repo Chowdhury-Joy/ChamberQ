@@ -7,7 +7,7 @@
      */
     $tenant = tenant();
     $brand = $tenant->displayName();
-    $themeColor = $tenant->theme_color ?: \App\Models\Tenant::DEFAULT_THEME_COLOR;
+    $themeColor = $tenant->cssThemeColor();
     $locale = app()->getLocale();
 @endphp
 <!DOCTYPE html>

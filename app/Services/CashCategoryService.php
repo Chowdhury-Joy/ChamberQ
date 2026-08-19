@@ -22,6 +22,7 @@ class CashCategoryService
         ['type' => CashCategory::TYPE_EXPENSE, 'code' => ChamberCashEntry::CATEGORY_SALARY, 'name' => 'Salary', 'is_locked' => true, 'sort_order' => 40],
         ['type' => CashCategory::TYPE_EXPENSE, 'code' => ChamberCashEntry::CATEGORY_TRANSPORT, 'name' => 'Transport', 'is_locked' => false, 'sort_order' => 50],
         ['type' => CashCategory::TYPE_EXPENSE, 'code' => ChamberCashEntry::CATEGORY_REFERRAL_PAYOUT, 'name' => 'Referral payout', 'is_locked' => true, 'sort_order' => 60],
+        ['type' => CashCategory::TYPE_EXPENSE, 'code' => ChamberCashEntry::CATEGORY_PATIENT_REFUND, 'name' => 'Patient refund', 'is_locked' => true, 'sort_order' => 65],
         ['type' => CashCategory::TYPE_EXPENSE, 'code' => ChamberCashEntry::CATEGORY_OTHER_EXPENSE, 'name' => 'Other expense', 'is_locked' => false, 'sort_order' => 70],
     ];
 
@@ -31,11 +32,11 @@ class CashCategoryService
             return;
         }
 
-        if (CashCategory::query()->exists()) {
-            return;
-        }
-
         foreach (self::DEFAULTS as $row) {
+            if (CashCategory::query()->where('code', $row['code'])->exists()) {
+                continue;
+            }
+
             CashCategory::create([
                 'type' => $row['type'],
                 'code' => $row['code'],

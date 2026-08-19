@@ -85,12 +85,16 @@ class PublicBookingKindGuardTest extends TestCase
         $this->sitting(ScheduleSession::KIND_VISIT, 'Visit desk');
         $this->sitting(ScheduleSession::KIND_INTERVENTION, 'OT-ONLY-SECRET');
         $this->sitting(ScheduleSession::KIND_COUNSELING, 'COUNSEL-ONLY');
+        $this->sitting(ScheduleSession::KIND_MSK, 'MSK-ONLY');
+        $this->sitting(ScheduleSession::KIND_REPORT, 'REPORT-ONLY');
 
         $this->get($this->host.'/book')
             ->assertOk()
             ->assertSee('Visit desk', false)
             ->assertDontSee('OT-ONLY-SECRET', false)
-            ->assertDontSee('COUNSEL-ONLY', false);
+            ->assertDontSee('COUNSEL-ONLY', false)
+            ->assertDontSee('MSK-ONLY', false)
+            ->assertDontSee('REPORT-ONLY', false);
     }
 
     private function sitting(string $kind, string $name): ScheduleSession

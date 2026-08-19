@@ -8,7 +8,7 @@
                 <h1 class="fx-heading" data-fx-words data-reveal-block data-reveal-kind="heading">{{ __('Meet the team') }}</h1>
             </div>
 
-            <div class="doc-grid grid-cards" data-card-count="{{ $doctors->count() }}" data-reveal-block data-reveal-kind="fade">
+            <div class="doc-grid doc-grid--team grid-cards" data-card-count="{{ $doctors->count() }}" data-reveal-block data-reveal-kind="fade">
                 @foreach($doctors as $doctor)
                     <a class="doc-card @if(blank($doctor->photo_url)) doc-card--initial @endif" href="{{ tenant_web_url('/doctors/'.$doctor->public_slug) }}">
                         @if(filled($doctor->photo_url))

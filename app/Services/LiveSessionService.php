@@ -539,6 +539,8 @@ class LiveSessionService
                 'current_called_at' => null,
             ]);
 
+            $this->refundMissedDoorFees($toCancel);
+
             return $toCancel;
         });
     }
@@ -642,6 +644,8 @@ class LiveSessionService
                 'current_booking_id' => null,
                 'current_called_at' => null,
             ]);
+
+            $this->refundMissedDoorFees($toCancel);
 
             return $toCancel;
         });
@@ -839,5 +843,20 @@ class LiveSessionService
             ->whereIn('status', ['waiting', 'called', 'in_chamber'])
             ->where('serial_number', '<', $booking->serial_number)
             ->count();
+    }
+
+    /**
+     * Query `update()` skips model events, so door-pay refunds would be missed
+     * if we only hooked Booking::updated.
+     *
+     * @param  \Illuminate\Support\Collection<int, Booking>|\Illuminate\Database\Eloquent\Collection<int, Booking>  $bookings
+     */
+    private function refundMissedDoorFees($bookings): void
+    {
+        $refunds = app(PatientFeeRefundService::class);
+
+        foreach ($bookings as $booking) {
+            $refunds->refundIfMissed($booking->fresh());
+        }
     }
 }

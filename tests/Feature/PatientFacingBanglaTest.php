@@ -36,6 +36,7 @@ class PatientFacingBanglaTest extends TestCase
         'resources/views/tenant/partials/clinic-header.blade.php',
         'resources/views/tenant/clinic/layout.blade.php',
         'resources/views/tenant/webpage.blade.php',
+        'resources/views/tenant/sections/hero.blade.php',
         'app/helpers.php',
     ];
 

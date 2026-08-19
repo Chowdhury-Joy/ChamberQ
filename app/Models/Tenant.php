@@ -22,6 +22,19 @@ class Tenant extends BaseTenant
 
     public const DEFAULT_THEME_COLOR = '#2563eb';
 
+    /** Hex colour safe to emit into CSS (`--brand`). Anything else blanks the clinic hero. */
+    public static function isCssColor(?string $value): bool
+    {
+        return is_string($value) && preg_match('/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/', trim($value)) === 1;
+    }
+
+    public function cssThemeColor(): string
+    {
+        $value = trim((string) ($this->getAttributes()['theme_color'] ?? ''));
+
+        return self::isCssColor($value) ? $value : self::DEFAULT_THEME_COLOR;
+    }
+
     /** Default browser tab icon when a tenant has not uploaded a custom favicon. */
     public const DEFAULT_FAVICON = '/icons/health-favicon.svg';
 
@@ -194,6 +207,15 @@ class Tenant extends BaseTenant
         return in_array($mode, [self::ANNOUNCE_VOICE, self::ANNOUNCE_CHIME_AND_VOICE], true);
     }
 
+    /**
+     * When false (default), Collect fee is a primary after the visit.
+     * When true, staff also see it on waiting / just-arrived patients.
+     */
+    public function collectsFeeAtCheckin(): bool
+    {
+        return (bool) $this->collect_fee_at_checkin;
+    }
+
     public static function getCustomColumns(): array
     {
         // Every real column MUST be listed here. Anything omitted is folded into
@@ -218,16 +240,25 @@ class Tenant extends BaseTenant
             'sms_balance',
             'plan_tier',
             'marketer_id',
+            'medical_representative_id',
             'discount_code_id',
             'list_setup_amount',
             'list_monthly_amount',
             'setup_amount_due',
             'monthly_amount_due',
+            'paying_setup_amount',
+            'paying_monthly_amount',
             'referral_note',
             'referred_at',
             'setup_paid_at',
             'offer_prescription_lifetime_free',
             'offer_prepaid_year_setup',
+            'commission_setup_mr_rate',
+            'commission_setup_marketer_rate',
+            'commission_year1_prepaid_mr_rate',
+            'commission_year1_prepaid_marketer_rate',
+            'commission_year2_mr_rate',
+            'commission_year2_marketer_rate',
             'slot_cap_mode',
             'feature_flags',
             'call_timeout_seconds',
@@ -240,6 +271,8 @@ class Tenant extends BaseTenant
             'call_announce_mode',
             'call_announce_locale',
             'queue_runner',
+            'collect_fee_at_checkin',
+            'practice_rules',
             'created_at',
             'updated_at',
         ];
@@ -280,16 +313,25 @@ class Tenant extends BaseTenant
     {
         return [
             'feature_flags' => 'array',
+            'practice_rules' => 'array',
             'custom_code_approved_at' => 'datetime',
             'sms_balance' => 'integer',
             'list_setup_amount' => 'integer',
             'list_monthly_amount' => 'integer',
             'setup_amount_due' => 'integer',
             'monthly_amount_due' => 'integer',
+            'paying_setup_amount' => 'integer',
+            'paying_monthly_amount' => 'integer',
             'referred_at' => 'datetime',
             'setup_paid_at' => 'datetime',
             'offer_prescription_lifetime_free' => 'boolean',
             'offer_prepaid_year_setup' => 'boolean',
+            'commission_setup_mr_rate' => 'float',
+            'commission_setup_marketer_rate' => 'float',
+            'commission_year1_prepaid_mr_rate' => 'float',
+            'commission_year1_prepaid_marketer_rate' => 'float',
+            'commission_year2_mr_rate' => 'float',
+            'commission_year2_marketer_rate' => 'float',
         ];
     }
 
@@ -298,9 +340,35 @@ class Tenant extends BaseTenant
         return $this->belongsTo(Marketer::class);
     }
 
+    public function medicalRepresentative(): BelongsTo
+    {
+        return $this->belongsTo(MedicalRepresentative::class);
+    }
+
     public function discountCode(): BelongsTo
     {
         return $this->belongsTo(DiscountCode::class);
+    }
+
+    /**
+     * 1 = first 12 billing months after setup was marked paid; 2+ after that.
+     */
+    public function serviceYearForPeriod(string $period): int
+    {
+        $start = $this->setup_paid_at
+            ? $this->setup_paid_at->copy()->startOfMonth()
+            : now()->startOfMonth();
+        $target = \Illuminate\Support\Carbon::createFromFormat('Y-m', $period)?->startOfMonth();
+        if (! $target) {
+            return 1;
+        }
+
+        $months = (($target->year - $start->year) * 12) + ($target->month - $start->month);
+        if ($months < 0) {
+            return 1;
+        }
+
+        return intdiv($months, 12) + 1;
     }
 
     public function billingPayments(): HasMany

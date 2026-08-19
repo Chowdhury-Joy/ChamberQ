@@ -149,10 +149,10 @@ class BackupCsv
     private static function jsonColumns(string $table): array
     {
         return match ($table) {
-            'tenants' => ['feature_flags', 'data'],
+            'tenants' => ['feature_flags', 'practice_rules', 'data'],
             'conditions' => ['aliases'],
             'medicines' => ['aliases', 'practice_types'],
-            'doctors' => ['notify_channels', 'practice_types', 'extra_fees'],
+            'doctors' => ['notify_channels', 'practice_types', 'extra_fees', 'practice_rules'],
             'chambers' => ['hours'],
             'web_pages' => ['content'],
             default => [],
@@ -163,7 +163,9 @@ class BackupCsv
     private static function booleanColumns(string $table): array
     {
         return match ($table) {
+            'doctors' => ['staff_may_enter_prescriptions', 'allows_repeat_serials', 'show_on_website', 'collect_fee_at_checkin'],
             'marketers' => ['is_active'],
+            'medical_representatives' => ['is_active'],
             'discount_codes' => ['is_active'],
             default => [],
         };

@@ -103,6 +103,51 @@ class BrandingTest extends TestCase
         tenancy()->end();
     }
 
+    public function test_owner_can_turn_on_collect_fee_at_checkin(): void
+    {
+        tenancy()->initialize($this->soloTenant);
+        $this->actingAs($this->soloAdmin);
+        \Filament\Facades\Filament::setCurrentPanel(\Filament\Facades\Filament::getPanel('tenantAdmin'));
+
+        $this->assertFalse($this->soloTenant->collectsFeeAtCheckin());
+
+        Livewire::test(BrandingSettings::class)
+            ->fillForm([
+                'name' => 'Dr. Custom Branding',
+                'theme_color' => '#8b5cf6',
+                'font_family' => 'Outfit',
+                'default_locale' => 'en',
+                'collect_fee_at_checkin' => true,
+            ])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertTrue($this->soloTenant->fresh()->collectsFeeAtCheckin());
+
+        tenancy()->end();
+    }
+
+    public function test_branding_settings_reject_a_non_hex_theme_color(): void
+    {
+        tenancy()->initialize($this->soloTenant);
+        $this->actingAs($this->soloAdmin);
+        \Filament\Facades\Filament::setCurrentPanel(\Filament\Facades\Filament::getPanel('tenantAdmin'));
+
+        Livewire::test(BrandingSettings::class)
+            ->fillForm([
+                'name' => 'Dr. Custom Branding',
+                'theme_color' => 'QA sweep',
+                'font_family' => 'Outfit',
+                'default_locale' => 'en',
+            ])
+            ->call('save')
+            ->assertHasFormErrors(['theme_color']);
+
+        $this->assertNotEquals('QA sweep', $this->soloTenant->fresh()->theme_color);
+
+        tenancy()->end();
+    }
+
     public function test_public_booking_page_renders_custom_font_and_color(): void
     {
         $this->soloTenant->update([

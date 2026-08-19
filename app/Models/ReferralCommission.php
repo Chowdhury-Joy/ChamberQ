@@ -15,6 +15,8 @@ class ReferralCommission extends Model
 
     public const KIND_INTERVENTION = 'intervention';
 
+    public const KIND_MSK = 'msk';
+
     public const STATUS_PENDING = 'pending';
 
     public const STATUS_PAID = 'paid';
@@ -47,6 +49,7 @@ class ReferralCommission extends Model
         return [
             self::KIND_VISIT => __('Visit'),
             self::KIND_INTERVENTION => __('Intervention'),
+            self::KIND_MSK => __('MSK scan'),
         ];
     }
 

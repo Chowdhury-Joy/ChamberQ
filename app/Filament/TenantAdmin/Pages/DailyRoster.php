@@ -10,34 +10,25 @@ use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Tables\Table;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Actions\Action;
-use App\Filament\TenantAdmin\Support\CompleteBookingWithVisitNotes;
-use App\Filament\TenantAdmin\Support\PatientContinuityActions;
+use Filament\Actions\ActionGroup;
 use App\Filament\TenantAdmin\Resources\Patients\Schemas\PatientForm;
-use App\Filament\TenantAdmin\Support\StationsCollectFeeForm;
-use App\Filament\TenantAdmin\Support\VisitNotesFormSchema;
-use App\Filament\TenantAdmin\Support\VisitPaperScanForm;
+use App\Filament\TenantAdmin\Support\RosterRecordActions;
 use App\Models\Booking;
-use App\Models\ChamberCashEntry;
 use App\Models\Doctor;
 use App\Models\LiveSession;
 use App\Models\Patient;
 use Carbon\Carbon;
+use App\Exceptions\BookingUnavailableException;
 use App\Services\BookingService;
-use App\Services\ChamberCashService;
 use App\Services\LiveSessionService;
-use App\Services\MedicineService;
 use App\Services\PatientService;
-use App\Services\RepeatBookingService;
 use App\Services\SittingPrompt;
-use App\Services\StationsHandoffService;
-use App\Services\VisitRecordService;
 use Filament\Notifications\Notification;
 use App\Models\LabCollectionSlot;
 use App\Models\ScheduleSession;
 use App\Support\StaffDeskJobs;
 use App\Support\StaffDeskScope;
 use Filament\Forms\Components\Checkbox;
-use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -165,474 +156,7 @@ class DailyRoster extends Page implements HasTable, HasForms
                         return __('Due');
                     }),
             ])
-            ->recordActions([
-                PatientContinuityActions::toggleSeenBeforeSoftware(
-                    Action::make('toggleSeenBeforeSoftware'),
-                ),
-                VisitPaperScanForm::scanAction(
-                    Action::make('scanPapers'),
-                ),
-                Action::make('call')
-                    ->label('Call to Chamber')
-                    ->color('primary')
-                    ->visible(fn (Booking $record): bool => (tenant()?->hasLiveQueue() ?? false)
-                        && (auth()->user() instanceof \App\Models\User
-                            && StaffDeskJobs::canRunQueue(auth()->user()))
-                        && $record->status === 'waiting')
-                    ->action(function (Booking $record): void {
-                        // Refused while someone else is mid-consult. Say so —
-                        // silently doing nothing looks like a broken button.
-                        if (app(LiveSessionService::class)->bringBookingToChamber($record)) {
-                            return;
-                        }
-
-                        Notification::make()
-                            ->warning()
-                            ->title(__('Someone is still with the doctor'))
-                            ->body(__('Complete the patient currently in the chamber before calling #:serial in.', [
-                                'serial' => $record->serial_number,
-                            ]))
-                            ->send();
-                    }),
-
-                // Front-door day list (no live queue): mark arrival without Call next.
-                Action::make('arrived')
-                    ->label('Arrived')
-                    ->color('info')
-                    ->visible(fn (Booking $record): bool => ! (tenant()?->hasLiveQueue() ?? true)
-                        && (auth()->user() instanceof \App\Models\User
-                            && (StaffDeskJobs::canRunQueue(auth()->user())
-                                || (! (tenant()?->hasLiveQueue() ?? true) && auth()->user()->canManageQueue())))
-                        && $record->status === 'waiting')
-                    ->action(function (Booking $record): void {
-                        $record->update(['status' => 'in_chamber']);
-
-                        Notification::make()
-                            ->title(__('Marked arrived'))
-                            ->success()
-                            ->send();
-                    }),
-
-                Action::make('noShow')
-                    ->label('No-show')
-                    ->color('danger')
-                    ->requiresConfirmation()
-                    ->visible(fn (Booking $record): bool => ! (tenant()?->hasLiveQueue() ?? true)
-                        && (auth()->user() instanceof \App\Models\User
-                            && (StaffDeskJobs::canRunQueue(auth()->user())
-                                || (! (tenant()?->hasLiveQueue() ?? true) && auth()->user()->canManageQueue())))
-                        && in_array($record->status, ['waiting', 'in_chamber', 'called'], true))
-                    ->action(function (Booking $record): void {
-                        $record->update(['status' => 'no_show']);
-
-                        Notification::make()
-                            ->title(__('Marked no-show'))
-                            ->success()
-                            ->send();
-                    }),
-
-                VisitNotesFormSchema::configureModal(Action::make('complete'))
-                    ->label('Mark Completed')
-                    ->color('success')
-                    ->visible(fn (Booking $record): bool => static::canCompleteFromRoster($record)
-                        && in_array($record->status, ['waiting', 'in_chamber', 'called'], true))
-                    ->form(fn (Booking $record): array => auth()->user()?->canRecordVisitNotes()
-                        ? VisitNotesFormSchema::components(
-                            $record->patient,
-                            app(VisitRecordService::class)->lastRecordedVisitForPatient($record->patient, $record->id),
-                            $record,
-                        )
-                        : [])
-                    ->modalHeading(fn (): ?string => auth()->user()?->canRecordVisitNotes()
-                        ? __('Complete visit')
-                        : null)
-                    ->modalDescription(fn (): ?string => auth()->user()?->canRecordVisitNotes()
-                        ? __('Add optional notes, or leave everything blank and tap Complete.')
-                        : null)
-                    ->modalSubmitActionLabel('Complete')
-                    ->action(function (
-                        Booking $record,
-                        array $data,
-                        LiveSessionService $liveSessionService,
-                        VisitRecordService $visitRecordService,
-                    ): void {
-                        CompleteBookingWithVisitNotes::finish(
-                            $record,
-                            $data,
-                            $liveSessionService,
-                            $visitRecordService,
-                        );
-                    }),
-
-                // Staff typing up a paper prescription after the patient left.
-                // Only appears for doctors who switched the delegation on.
-                VisitNotesFormSchema::configureModal(Action::make('enterPrescription'))
-                    ->label(fn (Booking $record): string => $record->visitRecord?->prescription
-                        ? 'Edit prescription'
-                        : 'Enter prescription')
-                    ->icon('heroicon-o-pencil-square')
-                    ->color('warning')
-                    ->visible(fn (Booking $record): bool => static::staffMayEnterPrescriptionFor($record))
-                    ->modalHeading('Enter paper prescription')
-                    ->modalDescription(__('Copy in what the doctor wrote by hand. This does not change the visit status.'))
-                    ->modalSubmitActionLabel('Save prescription')
-                    ->fillForm(fn (Booking $record): array => VisitNotesFormSchema::staffStateFromRecord($record->visitRecord))
-                    ->form(fn (Booking $record): array => VisitNotesFormSchema::staffPrescriptionComponents($record))
-                    ->action(function (Booking $record, array $data, VisitRecordService $visitRecordService): void {
-                        /** @var \App\Models\User $user */
-                        $user = auth()->user();
-
-                        $visitRecordService->saveStaffEnteredPrescription($record, $user, $data);
-
-                        Notification::make()
-                            ->title(__('Prescription saved'))
-                            ->success()
-                            ->send();
-                    }),
-
-                Action::make('recordVitals')
-                    ->label(__('Outdoor vitals'))
-                    ->icon('heroicon-o-heart')
-                    ->color('gray')
-                    ->visible(fn (Booking $record): bool => (tenant()?->hasStations() ?? false)
-                        && (auth()->user() instanceof \App\Models\User
-                            && StaffDeskJobs::canRecordPrep(auth()->user()))
-                        && $record->status === 'waiting')
-                    ->fillForm(fn (Booking $record): array => [
-                        'weight_kg' => $record->visitRecord?->weight_kg,
-                        'bp_systolic' => $record->visitRecord?->bp_systolic,
-                        'bp_diastolic' => $record->visitRecord?->bp_diastolic,
-                    ])
-                    ->schema([
-                        TextInput::make('weight_kg')
-                            ->label(__('Weight (kg)'))
-                            ->numeric()
-                            ->minValue(0),
-                        TextInput::make('bp_systolic')
-                            ->label(__('BP systolic'))
-                            ->numeric()
-                            ->minValue(0),
-                        TextInput::make('bp_diastolic')
-                            ->label(__('BP diastolic'))
-                            ->numeric()
-                            ->minValue(0),
-                    ])
-                    ->action(function (Booking $record, array $data, VisitRecordService $visitRecordService): void {
-                        /** @var \App\Models\User $user */
-                        $user = auth()->user();
-
-                        try {
-                            $visitRecordService->saveStaffVitals($record, $user, $data);
-                        } catch (\InvalidArgumentException $e) {
-                            Notification::make()
-                                ->title($e->getMessage())
-                                ->danger()
-                                ->send();
-
-                            return;
-                        }
-
-                        Notification::make()
-                            ->title(__('Vitals saved'))
-                            ->success()
-                            ->send();
-                    }),
-
-                \App\Filament\TenantAdmin\Support\StationsHandoffForm::bookAction(
-                    Action::make('sendToIntervention'),
-                ),
-
-                \App\Filament\TenantAdmin\Support\StationsHandoffForm::moveAction(
-                    Action::make('moveIntervention'),
-                ),
-
-                Action::make('markPrepped')
-                    ->label(__('Mark prepped'))
-                    ->visible(fn (Booking $record): bool => static::canAdvanceProcedure($record, Booking::PROCEDURE_LOGGED))
-                    ->action(fn (Booking $record, StationsHandoffService $handoff) => static::advanceProcedure($record, $handoff, Booking::PROCEDURE_PREPPED)),
-
-                Action::make('callDoctorForProcedure')
-                    ->label(__('Call doctor'))
-                    ->color('warning')
-                    ->visible(fn (Booking $record): bool => static::canAdvanceProcedure($record, Booking::PROCEDURE_PREPPED))
-                    ->action(fn (Booking $record, StationsHandoffService $handoff) => static::advanceProcedure($record, $handoff, Booking::PROCEDURE_DOCTOR_CALLED)),
-
-                Action::make('procedureDone')
-                    ->label(__('Procedure done'))
-                    ->color('success')
-                    ->visible(fn (Booking $record): bool => static::canAdvanceProcedure($record, Booking::PROCEDURE_DOCTOR_CALLED))
-                    ->action(fn (Booking $record, StationsHandoffService $handoff) => static::advanceProcedure($record, $handoff, Booking::PROCEDURE_DONE)),
-
-                \App\Filament\TenantAdmin\Support\StationsHandoffForm::sendToCounselingAction(
-                    Action::make('sendToCounseling'),
-                ),
-
-                Action::make('collectFee')
-                    ->label(fn (Booking $record): string => $record->cashEntry
-                        ? 'Edit fee'
-                        : 'Collect fee')
-                    ->icon('heroicon-o-banknotes')
-                    ->color('success')
-                    ->visible(fn (Booking $record): bool => (auth()->user() instanceof \App\Models\User
-                            && StaffDeskJobs::canCollectFee(auth()->user()))
-                        && ! in_array($record->status, ['cancelled', 'no_show'], true)
-                        && ! static::shouldHideCollectFee($record))
-                    ->fillForm(function (Booking $record): array {
-                        if (tenant()?->hasStations()) {
-                            return StationsCollectFeeForm::fillFromEntry($record);
-                        }
-
-                        $entry = $record->cashEntry;
-                        $doctor = Doctor::resolveForBooking($record);
-                        $feeType = $entry?->fee_type ?? Doctor::FEE_CONSULTATION;
-                        if ($doctor && ! array_key_exists($feeType, $doctor->feeTypes())) {
-                            $feeType = Doctor::FEE_CONSULTATION;
-                        }
-
-                        return [
-                            'fee_type' => $feeType,
-                            'method' => $entry?->method ?? ChamberCashEntry::METHOD_CASH,
-                            'cash_taka' => $entry?->cash_taka ?? 0,
-                            'online_taka' => $entry?->mobile_taka ?? 0,
-                            'online_method' => $entry?->mobile_method,
-                            'waived' => $entry?->isWaived() ?? false,
-                            'note' => $entry?->note,
-                        ];
-                    })
-                    ->form(function (Booking $record): array {
-                        if (tenant()?->hasStations()) {
-                            return StationsCollectFeeForm::components($record);
-                        }
-
-                        $hasExtras = Doctor::resolveForBooking($record)?->hasExtraFeeTypes() ?? false;
-
-                        return [
-                            $hasExtras
-                                ? Select::make('fee_type')
-                                    ->label(__('Visit type'))
-                                    ->options(fn (): array => app(ChamberCashService::class)->feeTypeOptions($record))
-                                    ->required()
-                                    ->live()
-                                    ->native(false)
-                                : Hidden::make('fee_type')
-                                    ->default(Doctor::FEE_CONSULTATION),
-                            Placeholder::make('amount_due')
-                                ->label(__('Amount'))
-                                ->content(function (Get $get) use ($record): string {
-                                    $type = (string) ($get('fee_type') ?: Doctor::FEE_CONSULTATION);
-                                    try {
-                                        $taka = app(ChamberCashService::class)->amountForFeeType($record, $type);
-                                    } catch (\InvalidArgumentException) {
-                                        $taka = app(ChamberCashService::class)->suggestedAmountTaka($record);
-                                    }
-
-                                    return '৳'.number_format($taka);
-                                })
-                                ->helperText(__('Set on the doctor\'s fee list. Staff cannot type an amount.')),
-                            Select::make('method')
-                                ->label(__('Paid how'))
-                                ->options(ChamberCashEntry::methods())
-                                ->required()
-                                ->live()
-                                ->native(false),
-                            TextInput::make('cash_taka')
-                                ->label(__('Cash (৳)'))
-                                ->numeric()
-                                ->minValue(0)
-                                ->default(0)
-                                ->live()
-                                ->visible(fn (Get $get): bool => $get('method') === ChamberCashEntry::METHOD_MIXED
-                                    && ! (bool) $get('waived'))
-                                ->rules([
-                                    fn (Get $get): \Closure => function (string $attribute, mixed $value, \Closure $fail) use ($get, $record): void {
-                                        if ($get('method') !== ChamberCashEntry::METHOD_MIXED || (bool) $get('waived')) {
-                                            return;
-                                        }
-
-                                        try {
-                                            $fee = app(ChamberCashService::class)->amountForFeeType(
-                                                $record,
-                                                (string) ($get('fee_type') ?: Doctor::FEE_CONSULTATION),
-                                            );
-                                        } catch (\InvalidArgumentException) {
-                                            return;
-                                        }
-
-                                        if ((int) $get('cash_taka') + (int) $get('online_taka') !== $fee) {
-                                            $fail(__('Cash plus online must equal the total amount.'));
-                                        }
-                                    },
-                                ]),
-                            TextInput::make('online_taka')
-                                ->label(__('Online (৳)'))
-                                ->numeric()
-                                ->minValue(0)
-                                ->default(0)
-                                ->live()
-                                ->visible(fn (Get $get): bool => $get('method') === ChamberCashEntry::METHOD_MIXED
-                                    && ! (bool) $get('waived')),
-                            Select::make('online_method')
-                                ->label(__('Online method'))
-                                ->options(ChamberCashEntry::onlineMethods())
-                                ->native(false)
-                                ->visible(fn (Get $get): bool => $get('method') === ChamberCashEntry::METHOD_MIXED
-                                    && ! (bool) $get('waived')
-                                    && (int) ($get('online_taka') ?? 0) > 0)
-                                ->required(fn (Get $get): bool => $get('method') === ChamberCashEntry::METHOD_MIXED
-                                    && ! (bool) $get('waived')
-                                    && (int) ($get('online_taka') ?? 0) > 0),
-                            Checkbox::make('waived')
-                                ->label(__('Waive this fee'))
-                                ->live(),
-                            TextInput::make('note')
-                                ->label(__('Note')),
-                        ];
-                    })
-                    ->action(function (Booking $record, array $data): void {
-                        /** @var \App\Models\User $user */
-                        $user = auth()->user();
-
-                        if (tenant()?->hasStations()) {
-                            try {
-                                StationsCollectFeeForm::save($record, $data, $user);
-                            } catch (\InvalidArgumentException $e) {
-                                Notification::make()
-                                    ->title($e->getMessage())
-                                    ->danger()
-                                    ->send();
-
-                                return;
-                            }
-
-                            Notification::make()
-                                ->title(($data['waived'] ?? false) ? __('Fee waived') : __('Fee collected'))
-                                ->success()
-                                ->send();
-
-                            return;
-                        }
-
-                        try {
-                            app(ChamberCashService::class)->recordPatientIncome(
-                                $record,
-                                $user,
-                                $data['method'],
-                                waived: (bool) ($data['waived'] ?? false),
-                                note: filled($data['note'] ?? null) ? (string) $data['note'] : null,
-                                feeType: (string) ($data['fee_type'] ?? Doctor::FEE_CONSULTATION),
-                                cashTaka: isset($data['cash_taka']) ? (int) $data['cash_taka'] : null,
-                                onlineTaka: isset($data['online_taka']) ? (int) $data['online_taka'] : null,
-                                onlineMethod: filled($data['online_method'] ?? null) ? (string) $data['online_method'] : null,
-                            );
-                        } catch (\InvalidArgumentException $e) {
-                            Notification::make()
-                                ->title($e->getMessage())
-                                ->danger()
-                                ->send();
-
-                            return;
-                        }
-
-                        Notification::make()
-                            ->title(($data['waived'] ?? false) ? __('Fee waived') : __('Fee collected'))
-                            ->success()
-                            ->send();
-                    }),
-
-                Action::make('repeatSerial')
-                    ->label('Repeat sitting')
-                    ->icon('heroicon-o-arrow-path')
-                    ->visible(fn (Booking $record): bool => ! in_array($record->status, ['cancelled', 'no_show'], true)
-                        && app(RepeatBookingService::class)->doctorAllowsRepeat($record))
-                    ->form(function (Booking $record): array {
-                        return [
-                            Select::make('weeks')
-                                ->label(__('How many more sittings?'))
-                                ->options(array_combine(
-                                    range(1, RepeatBookingService::MAX_WEEKS),
-                                    range(1, RepeatBookingService::MAX_WEEKS),
-                                ))
-                                ->default(4)
-                                ->required()
-                                ->live()
-                                ->native(false),
-                            Placeholder::make('dates_preview')
-                                ->label(__('Dates that will get a serial'))
-                                ->content(function (Get $get) use ($record): string {
-                                    $weeks = (int) ($get('weeks') ?: 4);
-                                    try {
-                                        $plan = app(RepeatBookingService::class)->planDates($record, $weeks);
-                                    } catch (\InvalidArgumentException $e) {
-                                        return $e->getMessage();
-                                    }
-
-                                    if ($plan['dates'] === []) {
-                                        return __('No open sittings in the next weeks.');
-                                    }
-
-                                    $lines = array_map(
-                                        fn (string $date): string => Carbon::parse($date)->toFormattedDateString(),
-                                        $plan['dates'],
-                                    );
-                                    $skipNote = $plan['skipped'] === []
-                                        ? ''
-                                        : ' '.__('(:count dates skipped — full or closed)', [
-                                            'count' => count($plan['skipped']),
-                                        ]);
-
-                                    return implode(', ', $lines).$skipNote;
-                                }),
-                        ];
-                    })
-                    ->action(function (Booking $record, array $data): void {
-                        try {
-                            $result = app(RepeatBookingService::class)->repeatFromBooking(
-                                $record,
-                                (int) $data['weeks'],
-                            );
-                        } catch (\InvalidArgumentException $e) {
-                            Notification::make()
-                                ->title($e->getMessage())
-                                ->danger()
-                                ->send();
-
-                            return;
-                        }
-
-                        Notification::make()
-                            ->title(__('Booked :count more sittings', ['count' => count($result['created'])]))
-                            ->body($result['skipped'] === []
-                                ? null
-                                : __('Skipped :count dates that were full or closed.', [
-                                    'count' => count($result['skipped']),
-                                ]))
-                            ->success()
-                            ->send();
-                    }),
-
-                Action::make('cancelRepeatRemainder')
-                    ->label('Cancel later sittings')
-                    ->icon('heroicon-o-x-mark')
-                    ->color('danger')
-                    ->requiresConfirmation()
-                    ->modalHeading('Cancel later sittings')
-                    ->modalDescription(__('This visit stays. Later dates in this repeating series will be cancelled.'))
-                    ->visible(fn (Booking $record): bool => filled($record->repeat_series_id)
-                        && Booking::query()
-                            ->where('repeat_series_id', $record->repeat_series_id)
-                            ->where('id', '!=', $record->id)
-                            ->where('booking_date', '>', $record->booking_date->toDateString())
-                            ->whereIn('status', ['waiting', 'called', 'skipped'])
-                            ->exists())
-                    ->action(function (Booking $record): void {
-                        $count = app(RepeatBookingService::class)->cancelRemainder($record);
-
-                        Notification::make()
-                            ->title(__('Cancelled :count later sittings', ['count' => $count]))
-                            ->success()
-                            ->send();
-                    }),
-            ])
+            ->recordActions(RosterRecordActions::compact())
             ->headerActions([
                 // Same Mark Late path as Live Queue Control — here so staff can
                 // tell waiting patients the doctor is delayed without opening
@@ -728,39 +252,52 @@ class DailyRoster extends Page implements HasTable, HasForms
                         Notification::make()->title(__('Session Delayed'))->success()->send();
                     }),
 
-                Action::make('notifyDelayed')
-                    ->label('Tell waiting patients')
-                    ->icon('heroicon-o-chat-bubble-left-right')
-                    ->color('warning')
-                    ->modalHeading('Doctor is running late')
-                    ->modalSubmitAction(false)
-                    ->modalCancelActionLabel('Done')
-                    ->modalContent(function (): \Illuminate\Contracts\View\View {
-                        $bookings = Booking::whereIn('id', $this->delayedNotifyBookingIds)
-                            ->orderBy('serial_number')
-                            ->get();
-                        $minutes = $this->delayedNotifyMinutes;
-
-                        return view('filament.tenant-admin.slot-block-notify', [
-                            'bookings' => $bookings,
-                            'stage' => Doctor::NOTIFY_DOCTOR_LATE,
-                            'messages' => $bookings->mapWithKeys(fn (Booking $booking) => [
-                                $booking->id => __('Hello :name, the doctor is running :minutes minutes late. Your serial is :serial.', [
-                                    'name' => $booking->patient_name,
-                                    'minutes' => $minutes,
-                                    'serial' => $booking->serial_number,
-                                ]),
-                            ])->all(),
-                        ]);
-                    })
-                    ->visible(fn (): bool => $this->delayedNotifyBookingIds !== []),
-
                 Action::make('manageQueue')
                     ->label('Manage Live Queue')
                     ->icon('heroicon-o-queue-list')
                     ->url(LiveQueueControl::getUrl())
                     ->color('primary')
-                    ->visible(fn (): bool => auth()->user()?->canAccessLiveQueueControl() ?? false),
+                    ->visible(fn (): bool => (auth()->user()?->canAccessLiveQueueControl() ?? false)
+                        && static::markableSessionOptions() === []),
+
+                ActionGroup::make([
+                    Action::make('manageQueueMore')
+                        ->label('Manage Live Queue')
+                        ->icon('heroicon-o-queue-list')
+                        ->url(LiveQueueControl::getUrl())
+                        ->visible(fn (): bool => (auth()->user()?->canAccessLiveQueueControl() ?? false)
+                            && static::markableSessionOptions() !== []),
+                    Action::make('notifyDelayed')
+                        ->label('Tell waiting patients')
+                        ->icon('heroicon-o-chat-bubble-left-right')
+                        ->color('warning')
+                        ->modalHeading('Doctor is running late')
+                        ->modalSubmitAction(false)
+                        ->modalCancelActionLabel('Done')
+                        ->modalContent(function (): \Illuminate\Contracts\View\View {
+                            $bookings = Booking::whereIn('id', $this->delayedNotifyBookingIds)
+                                ->orderBy('serial_number')
+                                ->get();
+                            $minutes = $this->delayedNotifyMinutes;
+
+                            return view('filament.tenant-admin.slot-block-notify', [
+                                'bookings' => $bookings,
+                                'stage' => Doctor::NOTIFY_DOCTOR_LATE,
+                                'messages' => $bookings->mapWithKeys(fn (Booking $booking) => [
+                                    $booking->id => __('Hello :name, the doctor is running :minutes minutes late. Your serial is :serial.', [
+                                        'name' => $booking->patient_name,
+                                        'minutes' => $minutes,
+                                        'serial' => $booking->serial_number,
+                                    ]),
+                                ])->all(),
+                            ]);
+                        })
+                        ->visible(fn (): bool => $this->delayedNotifyBookingIds !== []),
+                ])
+                    ->label(__('More'))
+                    ->icon('heroicon-m-ellipsis-horizontal')
+                    ->color('gray')
+                    ->button(),
 
                 Action::make('newWalkIn')
                     ->label('New Walk-In')
@@ -768,7 +305,10 @@ class DailyRoster extends Page implements HasTable, HasForms
                     ->schema([
                         TextInput::make('patient_phone')
                             ->label(__('Phone number'))
-                            ->extraInputAttributes(['name' => 'patient_phone'])
+                            ->extraInputAttributes([
+                                'name' => 'patient_phone',
+                                'form' => 'cq-no-native-form',
+                            ])
                             ->autocomplete('tel')
                             ->tel()
                             ->required()
@@ -820,7 +360,10 @@ class DailyRoster extends Page implements HasTable, HasForms
                             }),
                         TextInput::make('patient_name')
                             ->label(__('Patient name'))
-                            ->extraInputAttributes(['name' => 'patient_name'])
+                            ->extraInputAttributes([
+                                'name' => 'patient_name',
+                                'form' => 'cq-no-native-form',
+                            ])
                             ->autocomplete('name')
                             ->required(),
                         PatientForm::yearOfBirthInput(),
@@ -841,6 +384,18 @@ class DailyRoster extends Page implements HasTable, HasForms
                             ->label(__('They have been treated here before ChamberQ'))
                             ->helperText(__('Tick if they are an old paper-file patient. The doctor will see them as returning, not a first visit. You can also tap this on their row later.'))
                             ->default(false),
+                        Select::make('referring_doctor_id')
+                            ->label(__('Referred by (outside GP)'))
+                            ->options(fn (): array => \App\Models\ReferringDoctor::query()
+                                ->where('is_active', true)
+                                ->orderBy('name')
+                                ->get()
+                                ->mapWithKeys(fn (\App\Models\ReferringDoctor $doctor) => [$doctor->id => $doctor->displayLabel()])
+                                ->all())
+                            ->placeholder(__('Walk-in / no referrer'))
+                            ->searchable()
+                            ->native(false)
+                            ->visible(fn (): bool => tenant()?->hasReferrals() ?? false),
                         Select::make('bookable')
                             ->label(__('Session'))
                             // Resolved names, never raw ids: two sessions both
@@ -861,70 +416,41 @@ class DailyRoster extends Page implements HasTable, HasForms
                             ? null
                             : ($data['patient_id'] ?? null);
 
-                        $bookingService->createBookingForBookable(
-                            $bookable,
-                            today()->toDateString(),
-                            $data['patient_name'],
-                            $data['patient_phone'],
-                            [],
-                            sendSms: true,
-                            patientId: $patientId,
-                            wantsEarlierDate: false,
-                            whatsappPhone: null,
-                            shareClinicalHistory: array_key_exists('share_clinical_history', $data)
-                                ? (bool) $data['share_clinical_history']
-                                : true,
-                            nid: $data['nid'] ?? null,
-                            yearOfBirth: filled($data['year_of_birth'] ?? null) ? (int) $data['year_of_birth'] : null,
-                            seenBeforeSoftware: ! empty($data['seen_before_software']) ? true : null,
-                        );
+                        try {
+                            $bookingService->createBookingForBookable(
+                                $bookable,
+                                today()->toDateString(),
+                                $data['patient_name'],
+                                $data['patient_phone'],
+                                [],
+                                sendSms: true,
+                                patientId: $patientId,
+                                wantsEarlierDate: false,
+                                whatsappPhone: null,
+                                shareClinicalHistory: array_key_exists('share_clinical_history', $data)
+                                    ? (bool) $data['share_clinical_history']
+                                    : true,
+                                nid: $data['nid'] ?? null,
+                                yearOfBirth: filled($data['year_of_birth'] ?? null) ? (int) $data['year_of_birth'] : null,
+                                allowOverflow: true,
+                                allowEndedToday: true,
+                                seenBeforeSoftware: ! empty($data['seen_before_software']) ? true : null,
+                                allowMskWalkIn: $bookable instanceof ScheduleSession
+                                    && $bookable->kind === ScheduleSession::KIND_MSK,
+                                referringDoctorId: filled($data['referring_doctor_id'] ?? null)
+                                    ? (int) $data['referring_doctor_id']
+                                    : null,
+                            );
+                        } catch (BookingUnavailableException $e) {
+                            Notification::make()
+                                ->title($e->getMessage())
+                                ->danger()
+                                ->send();
+                            $this->halt();
+                        }
                     })
                     ->successNotificationTitle(__('Walk-in added to today\'s queue.'))
             ]);
-    }
-
-    /**
-     * Staff-only affordance: doctors already have the full notes modal, so
-     * showing them a second, narrower prescription form would just be confusing.
-     */
-    protected static function staffMayEnterPrescriptionFor(Booking $booking): bool
-    {
-        if (! tenant()?->hasPrescription()) {
-            return false;
-        }
-
-        /** @var \App\Models\User|null $user */
-        $user = auth()->user();
-
-        if (! $user?->isStaff() || $booking->status !== 'completed') {
-            return false;
-        }
-
-        return $user->canEnterPrescriptionFor(
-            app(MedicineService::class)->resolvePrescribingDoctor($booking)
-        );
-    }
-
-    /**
-     * Live-queue runners keep Call-next ownership; front-door-only day lists
-     * let any queue-capable staff mark Done without Live Queue Control.
-     */
-    protected static function canCompleteFromRoster(Booking $booking): bool
-    {
-        /** @var \App\Models\User|null $user */
-        $user = auth()->user();
-
-        if (! $user) {
-            return false;
-        }
-
-        if (tenant()?->hasLiveQueue()) {
-            return StaffDeskJobs::canRunQueue($user);
-        }
-
-        return $user->isStaff()
-            ? StaffDeskJobs::hasJob($user, StaffDeskJobs::JOB_QUEUE) && $user->canManageQueue()
-            : $user->canManageQueue();
     }
 
     /**
@@ -1120,65 +646,5 @@ class DailyRoster extends Page implements HasTable, HasForms
             ->first();
 
         return $live?->status === 'delayed';
-    }
-
-    protected static function shouldHideCollectFee(Booking $booking): bool
-    {
-        if (! tenant()?->hasStations()) {
-            return false;
-        }
-
-        if ($booking->bookable_type !== ScheduleSession::class) {
-            return false;
-        }
-
-        $session = $booking->bookable;
-
-        return $session instanceof ScheduleSession && $session->isFreeKind();
-    }
-
-    protected static function canAdvanceProcedure(Booking $booking, string $expectedStatus): bool
-    {
-        if (! tenant()?->hasStations()) {
-            return false;
-        }
-
-        if (! auth()->user() instanceof \App\Models\User
-            || ! StaffDeskJobs::canRecordPrep(auth()->user())) {
-            return false;
-        }
-
-        if ($booking->bookable_type !== ScheduleSession::class) {
-            return false;
-        }
-
-        $session = $booking->bookable;
-
-        return $session instanceof ScheduleSession
-            && $session->isInterventionKind()
-            && ($booking->procedure_status ?? Booking::PROCEDURE_LOGGED) === $expectedStatus
-            && ! in_array($booking->status, ['cancelled', 'no_show', 'completed'], true);
-    }
-
-    protected static function advanceProcedure(
-        Booking $booking,
-        StationsHandoffService $handoff,
-        string $status,
-    ): void {
-        try {
-            $handoff->advanceProcedureStatus($booking, $status);
-        } catch (\InvalidArgumentException $e) {
-            Notification::make()
-                ->title($e->getMessage())
-                ->danger()
-                ->send();
-
-            return;
-        }
-
-        Notification::make()
-            ->title(Booking::procedureStatusOptions()[$status] ?? __('Updated'))
-            ->success()
-            ->send();
     }
 }

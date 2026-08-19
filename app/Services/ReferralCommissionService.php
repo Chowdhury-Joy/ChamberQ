@@ -31,6 +31,11 @@ class ReferralCommissionService
         return $this->rateFromTenant($tenant, 'referral_intervention_commission_taka', self::DEFAULT_INTERVENTION_TAKA);
     }
 
+    public function mskCommissionTaka(?Tenant $tenant = null): int
+    {
+        return $this->rateFromTenant($tenant, 'referral_msk_commission_taka', 0);
+    }
+
     /**
      * Create or update the commission row when a patient fee is collected.
      */
@@ -60,6 +65,12 @@ class ReferralCommissionService
         }
 
         $amount = $this->amountForKind($kind, tenant());
+
+        if ($amount < 1) {
+            $this->voidForBooking($booking);
+
+            return null;
+        }
 
         $commission = ReferralCommission::query()->firstOrNew([
             'tenant_id' => $booking->tenant_id,
@@ -207,6 +218,7 @@ class ReferralCommissionService
         return match ($kind) {
             ScheduleSession::KIND_VISIT => ReferralCommission::KIND_VISIT,
             ScheduleSession::KIND_INTERVENTION => ReferralCommission::KIND_INTERVENTION,
+            ScheduleSession::KIND_MSK => ReferralCommission::KIND_MSK,
             default => null,
         };
     }
@@ -216,6 +228,7 @@ class ReferralCommissionService
         return match ($kind) {
             ReferralCommission::KIND_VISIT => $this->visitCommissionTaka($tenant),
             ReferralCommission::KIND_INTERVENTION => $this->interventionCommissionTaka($tenant),
+            ReferralCommission::KIND_MSK => $this->mskCommissionTaka($tenant),
             default => 0,
         };
     }

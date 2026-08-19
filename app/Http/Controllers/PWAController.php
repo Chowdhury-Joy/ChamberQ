@@ -13,7 +13,7 @@ class PWAController extends Controller
     {
         $tenant = tenant();
         $name = $tenant?->displayName() ?? config('app.name');
-        $theme = $tenant?->theme_color ?: self::DEFAULT_THEME;
+        $theme = $tenant?->cssThemeColor() ?? self::DEFAULT_THEME;
         $scope = tenant_web_url('/');
 
         return response()->json([
@@ -49,10 +49,7 @@ class PWAController extends Controller
     public function icon(int $size): Response
     {
         $tenant = tenant();
-        $theme = $tenant?->theme_color ?: self::DEFAULT_THEME;
-        if (! preg_match('/^#[0-9a-fA-F]{6}$/', $theme)) {
-            $theme = self::DEFAULT_THEME;
-        }
+        $theme = $tenant?->cssThemeColor() ?? self::DEFAULT_THEME;
 
         $initial = htmlspecialchars(
             mb_strtoupper(mb_substr($tenant?->displayName() ?? 'C', 0, 1)),
@@ -83,7 +80,7 @@ class PWAController extends Controller
         $scopePrefixJs = json_encode(rtrim($scopePrefix, '/') ?: '');
 
         $sw = <<<JS
-const CACHE_NAME = 'clinic-shell-v8';
+const CACHE_NAME = 'clinic-shell-v10';
 const SCOPE_PREFIX = {$scopePrefixJs};
 const PRECACHE = [
     '/css/theme.css',
@@ -140,11 +137,17 @@ function scopedApiPath(pathname) {
 
 self.addEventListener('fetch', event => {
     const request = event.request;
-
-    if (request.method !== 'GET') return;
-
     const url = new URL(request.url);
     if (url.origin !== self.location.origin) return;
+    // Patient-site scope is /{tenant}/ which also covers /{tenant}/admin.
+    // The desk is Livewire; never intercept it or /livewire/update, and
+    // uninstall this worker so an old cached copy cannot keep hijacking.
+    if (url.pathname.includes('/admin') || url.pathname.includes('/livewire/')) {
+        event.waitUntil(self.registration.unregister());
+        return;
+    }
+
+    if (request.method !== 'GET') return;
 
     if (request.mode === 'navigate' || scopedApiPath(url.pathname)) {
         event.respondWith(

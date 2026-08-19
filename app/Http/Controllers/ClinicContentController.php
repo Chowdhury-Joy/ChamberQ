@@ -92,7 +92,7 @@ class ClinicContentController extends Controller
             'pageTitle' => $pageTitle,
             'tenant' => $tenant,
             'brand' => $tenant?->displayName() ?? 'ChamberQ',
-            'themeColor' => $tenant?->theme_color ?: '#1B2978',
+            'themeColor' => $tenant?->cssThemeColor() ?? \App\Models\Tenant::DEFAULT_THEME_COLOR,
             'locale' => app()->getLocale(),
             'banglaHomepage' => $tenant?->hasFeature('bangla_homepage') ?? false,
         ];

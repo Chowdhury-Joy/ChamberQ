@@ -8,6 +8,7 @@ use Filament\Forms\Components\ColorPicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
@@ -51,7 +52,7 @@ class BrandingSettings extends Page implements HasForms
                 'tagline' => $tenant->tagline,
                 'logo_url' => $tenant->logo_url,
                 'favicon_url' => $tenant->favicon_url,
-                'theme_color' => $tenant->theme_color ?? \App\Models\Tenant::DEFAULT_THEME_COLOR,
+                'theme_color' => $tenant->cssThemeColor(),
                 'font_family' => $tenant->font_family ?? 'Outfit',
                 'contact_phone' => $tenant->contact_phone,
                 'whatsapp_number' => $tenant->whatsapp_number,
@@ -66,7 +67,8 @@ class BrandingSettings extends Page implements HasForms
                 'call_announce_mode' => $tenant->call_announce_mode ?? \App\Models\Tenant::ANNOUNCE_CHIME_AND_VOICE,
                 'call_announce_locale' => $tenant->call_announce_locale ?? 'en',
                 'queue_runner' => $tenant->queue_runner ?? \App\Models\Tenant::QUEUE_RUNNER_STAFF,
-            ]);
+                'collect_fee_at_checkin' => (bool) $tenant->collect_fee_at_checkin,
+            ] + \App\Services\PracticeRules::normalize($tenant->practice_rules));
         }
     }
 
@@ -105,7 +107,8 @@ class BrandingSettings extends Page implements HasForms
                     ->schema([
                         ColorPicker::make('theme_color')
                             ->label(__('Primary Brand Color'))
-                            ->required(),
+                            ->required()
+                            ->regex('/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/'),
                         Select::make('font_family')
                             ->label(__('Font Family'))
                             ->options([
@@ -142,6 +145,18 @@ class BrandingSettings extends Page implements HasForms
                             ->default('en')
                             ->required(),
                     ]),
+
+                Fieldset::make(__('Desk'))
+                    ->schema([
+                        Toggle::make('collect_fee_at_checkin')
+                            ->label(__('Collect fee at check-in'))
+                            ->helperText(__('When off (usual), staff take the fee after the visit. When on, Collect fee shows for waiting patients on Daily Roster and Live Queue. Each doctor can override this on their profile. No-shows get an automatic cashbook refund if they already paid at the door.')),
+                    ]),
+
+                ...\App\Filament\TenantAdmin\Support\PracticeRulesForm::fieldsets(
+                    '',
+                    fn (): bool => tenant()?->hasStations() ?? false,
+                ),
 
                 Fieldset::make(__('Live Queue Settings'))
                     ->visible(fn (): bool => tenant()?->hasLiveQueue() ?? false)
@@ -281,6 +296,8 @@ class BrandingSettings extends Page implements HasForms
                 'contact_phone' => $data['contact_phone'],
                 'whatsapp_number' => $data['whatsapp_number'],
                 'default_locale' => $data['default_locale'],
+                'collect_fee_at_checkin' => (bool) ($data['collect_fee_at_checkin'] ?? false),
+                'practice_rules' => \App\Services\PracticeRules::normalize($data),
             ];
 
             if ($tenant->hasLiveQueue()) {

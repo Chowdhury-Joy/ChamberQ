@@ -3,6 +3,7 @@
 namespace App\Filament\TenantAdmin\Support;
 
 use App\Models\Booking;
+use App\Services\CarePath;
 use App\Services\PatientService;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
@@ -37,12 +38,37 @@ class PatientContinuityActions
                 $nowMarked = ! $patient->seen_before_software;
                 $patientService->setSeenBeforeSoftware($patient, $nowMarked);
 
-                Notification::make()
+                if ($nowMarked) {
+                    if (CarePath::isFollowUpEligible($patient, \App\Models\Doctor::resolveForBooking($record))) {
+                        $record->update([
+                            'care_path' => CarePath::FOLLOW_UP,
+                            'care_branch' => null,
+                        ]);
+                    } else {
+                        $record->update([
+                            'care_path' => CarePath::VISIT,
+                            'care_branch' => null,
+                        ]);
+                    }
+                } else {
+                    $record->update([
+                        'care_path' => CarePath::VISIT,
+                        'care_branch' => null,
+                    ]);
+                }
+
+                $notification = Notification::make()
                     ->title($nowMarked
                         ? __('Marked as seen here before ChamberQ')
-                        : __('Marked as a first visit in ChamberQ'))
-                    ->success()
-                    ->send();
+                        : __('Marked as a first visit in ChamberQ'));
+
+                if ($nowMarked) {
+                    $notification->body(CarePath::isFollowUpEligible($patient, \App\Models\Doctor::resolveForBooking($record))
+                        ? __('Follow-up path (clinic rules).')
+                        : __('Clinic rules still treat this as a new visit path.'));
+                }
+
+                $notification->success()->send();
             });
     }
 }

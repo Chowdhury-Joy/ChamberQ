@@ -22,6 +22,11 @@ class StaffDeskBanglaTest extends TestCase
         // entirely, which is how three procedure statuses and the Counseling
         // room label shipped untranslated under a translated column heading.
         'app/Filament/TenantAdmin/Support/StationsHandoffForm.php',
+        'app/Filament/TenantAdmin/Support/RosterRecordActions.php',
+        'app/Filament/TenantAdmin/Support/QueueRecordActions.php',
+        'app/Filament/TenantAdmin/Support/PatientContinuityActions.php',
+        'app/Filament/TenantAdmin/Support/CollectFeeAction.php',
+        'app/Filament/TenantAdmin/Support/OutdoorVitalsAction.php',
         'app/Services/StationsHandoffService.php',
         'app/Models/Booking.php',
         'app/Models/ScheduleSession.php',

@@ -107,10 +107,34 @@ class StationsCollectFeeForm
     public static function fillFromEntry(Booking $record): array
     {
         $entry = $record->cashEntry;
+        $itemId = $entry?->fee_catalog_item_id;
+
+        if (! $itemId) {
+            $record->loadMissing('bookable');
+            $kind = $record->bookable instanceof \App\Models\ScheduleSession
+                ? $record->bookable->kind
+                : null;
+            if (filled($kind)) {
+                $preferFollowUp = $kind === \App\Models\ScheduleSession::KIND_VISIT
+                    && $record->care_path === \App\Services\CarePath::FOLLOW_UP;
+
+                $query = FeeCatalogItem::query()
+                    ->where('is_active', true)
+                    ->where('sitting_kind', $kind)
+                    ->orderBy('sort_order');
+
+                if ($preferFollowUp) {
+                    $itemId = (clone $query)->where('label', 'like', '%ollow-up%')->value('id')
+                        ?: $query->value('id');
+                } else {
+                    $itemId = $query->value('id');
+                }
+            }
+        }
 
         return [
             'referring_doctor_id' => $record->referring_doctor_id,
-            'fee_catalog_item_id' => $entry?->fee_catalog_item_id,
+            'fee_catalog_item_id' => $itemId,
             'cash_taka' => $entry?->cash_taka ?? 0,
             'mobile_taka' => $entry?->mobile_taka ?? 0,
             'mobile_method' => $entry?->mobile_method ?? ChamberCashEntry::METHOD_BKASH,

@@ -87,11 +87,7 @@
             </div>
             <div class="mk-offer">
                 <span class="mk-offer-label">Launch offer</span>
-                <p class="mk-offer-text">Get your website by <strong>31 August</strong> and <strong>Prescription is free for life</strong> (৳2,500 setup + ৳250/month waived).</p>
-            </div>
-            <div class="mk-offer">
-                <span class="mk-offer-label">Prepaid-year offer</span>
-                <p class="mk-offer-text">Confirm one year of payment before <strong>30 September</strong> and your one-time setup is <strong>50% off</strong> (Maestro setup ৳15,000 → ৳7,500).</p>
+                <p class="mk-offer-text">Get your website by <strong>31 August</strong> and <strong>Prescription is free for life</strong> (৳4,500 setup + ৳250/month waived).</p>
             </div>
             <p class="mk-modules-note">SMS confirmations optional (prepaid credits). Walk-ins included with website.</p>
             <a class="mk-btn mk-btn-secondary mk-modules-cta" href="{{ $modulesWa }}" target="_blank" rel="noopener noreferrer">

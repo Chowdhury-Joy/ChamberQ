@@ -60,7 +60,7 @@ class ScheduleSessionForm
                     ->native(false)
                     ->visible(fn (): bool => tenant()?->hasStations() ?? false)
                     ->required(fn (): bool => tenant()?->hasStations() ?? false)
-                    ->helperText(__('Counseling and leftover Consult rows are free — Collect fee stays hidden. Visit and intervention use the fee catalogue.')),
+                    ->helperText(__('Counseling, MSK and Report are free — Collect fee stays hidden. Visit and intervention use the fee catalogue.')),
                 TimePicker::make('start_time')
                     ->required()
                     ->seconds(false)

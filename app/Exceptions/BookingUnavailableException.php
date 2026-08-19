@@ -53,9 +53,14 @@ class BookingUnavailableException extends Exception
 
     public static function counselingWalkIn(): self
     {
+        return self::staffHandoffWalkIn();
+    }
+
+    public static function staffHandoffWalkIn(): self
+    {
         return self::make(
-            __('Counseling seats are assigned after a procedure, not as a walk-in.'),
-            'counseling_handoff'
+            __('Report and counseling seats are assigned by the desk, not as a walk-in.'),
+            'staff_handoff'
         );
     }
 
@@ -105,7 +110,7 @@ class BookingUnavailableException extends Exception
      */
     public function render(Request $request)
     {
-        if ($request->expectsJson()) {
+        if ($request->headers->has('X-Livewire') || $request->expectsJson()) {
             return response()->json([
                 'success' => false,
                 'message' => $this->getMessage(),

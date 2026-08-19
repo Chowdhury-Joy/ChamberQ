@@ -210,12 +210,94 @@ class StationsHandoffForm
             });
     }
 
+    public static function sendToMskAction(Action $action, ?Closure $booking = null): Action
+    {
+        return self::freeRoomAction(
+            $action,
+            $booking,
+            __('Send to MSK'),
+            __('Puts this patient on today\'s MSK list. Collect the scan fee at the door.'),
+            __('Sent to MSK'),
+            __('Serial :n on today\'s MSK list.'),
+            fn (StationsHandoffService $handoff, Booking $target): bool => $handoff->canSendToMsk($target),
+            fn (StationsHandoffService $handoff, Booking $target): Booking => $handoff->sendToMsk($target),
+        );
+    }
+
+    public static function sendToReportAction(Action $action, ?Closure $booking = null): Action
+    {
+        return self::freeRoomAction(
+            $action,
+            $booking,
+            __('Send to report'),
+            __('Puts this patient on today\'s report list. No extra fee.'),
+            __('Sent to report'),
+            __('Serial :n on today\'s report list.'),
+            fn (StationsHandoffService $handoff, Booking $target): bool => $handoff->canSendToReport($target),
+            fn (StationsHandoffService $handoff, Booking $target): Booking => $handoff->sendToReport($target),
+        );
+    }
+
     public static function actorMaySend(): bool
     {
         /** @var \App\Models\User|null $user */
         $user = auth()->user();
 
         return app(StationsHandoffService::class)->actorMaySend($user);
+    }
+
+    /**
+     * @param  callable(StationsHandoffService, Booking): bool  $can
+     * @param  callable(StationsHandoffService, Booking): Booking  $send
+     */
+    private static function freeRoomAction(
+        Action $action,
+        ?Closure $booking,
+        string $label,
+        string $description,
+        string $doneTitle,
+        string $doneBody,
+        callable $can,
+        callable $send,
+    ): Action {
+        return $action
+            ->label($label)
+            ->icon('heroicon-o-arrow-right-circle')
+            ->color('success')
+            ->requiresConfirmation()
+            ->modalHeading($label)
+            ->modalDescription($description)
+            ->modalSubmitActionLabel(__('Send'))
+            ->visible(function (...$args) use ($booking, $can): bool {
+                $target = self::resolveBooking($booking, $args);
+
+                return $target !== null
+                    && self::actorMaySend()
+                    && $can(app(StationsHandoffService::class), $target);
+            })
+            ->action(function (...$args) use ($booking, $send, $doneTitle, $doneBody): void {
+                $target = self::resolveBooking($booking, $args);
+                if (! $target) {
+                    return;
+                }
+
+                try {
+                    $row = $send(app(StationsHandoffService::class), $target);
+                } catch (InvalidArgumentException $e) {
+                    Notification::make()
+                        ->title($e->getMessage())
+                        ->danger()
+                        ->send();
+
+                    return;
+                }
+
+                Notification::make()
+                    ->title($doneTitle)
+                    ->body(strtr($doneBody, [':n' => (string) $row->serial_number]))
+                    ->success()
+                    ->send();
+            });
     }
 
     /**

@@ -15,6 +15,16 @@ class MarketingLandingPageTest extends TestCase
     // in one order and pass in another.
     use RefreshDatabase;
 
+    public function test_central_root_does_not_accept_post(): void
+    {
+        // Clinic sites register POST / as a hero-form safety net. That route
+        // is also in the custom-domain group, so on the marketing host Laravel
+        // finds a POST / and then tenancy refuses it (404), rather than 405.
+        $this->post('http://localhost/')
+            ->assertStatus(404)
+            ->assertDontSee('Keep your chamber', false);
+    }
+
     public function test_central_root_shows_solo_focused_sales_landing(): void
     {
         $response = $this->get('http://localhost/');
@@ -41,9 +51,9 @@ class MarketingLandingPageTest extends TestCase
         $response->assertSee('Your day list', escape: false);
         $response->assertSee('Your name travels', escape: false);
         $response->assertSee('Who is next?', escape: false);
-        $response->assertSee('৳15,000', escape: false);
+        $response->assertSee('৳25,000', escape: false);
         $response->assertSee('৳3,000', escape: false);
-        $response->assertSee('৳12,000', escape: false);
+        $response->assertSee('৳18,000', escape: false);
         $response->assertSee('৳2,000', escape: false);
         $response->assertSee('৳75,000', escape: false);
         $response->assertSee('৳7,500', escape: false);
@@ -57,11 +67,9 @@ class MarketingLandingPageTest extends TestCase
         $response->assertSee('Launch offer', escape: false);
         $response->assertSee('31 August', escape: false);
         $response->assertSee('Prescription is free for life', escape: false);
-        $response->assertSee('৳2,500 setup + ৳250/month waived', escape: false);
-        $response->assertSee('30 September', escape: false);
-        $response->assertSee('one-time setup is', escape: false);
-        $response->assertSee('50% off', escape: false);
-        $response->assertSee('৳15,000 → ৳7,500', escape: false);
+        $response->assertSee('৳4,500 setup + ৳250/month waived', escape: false);
+        $response->assertDontSee('50% off', escape: false);
+        $response->assertDontSee('৳15,000 → ৳7,500', escape: false);
         $response->assertDontSee('Rising Star', escape: false);
         $response->assertDontSee('Choose Solo', escape: false);
         $response->assertDontSee('Running a multi-doctor clinic?', escape: false);

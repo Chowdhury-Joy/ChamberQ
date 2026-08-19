@@ -93,22 +93,39 @@ class ChamberCashService
             'note' => $note,
         ];
 
-        $existing = ChamberCashEntry::query()->where('booking_id', $booking->id)->first();
+        $existing = ChamberCashEntry::query()
+            ->where('booking_id', $booking->id)
+            ->where('direction', ChamberCashEntry::DIRECTION_INCOME)
+            ->first();
 
         if ($existing) {
             $existing->fill($values)->save();
+            if (! $waived && $amount > 0) {
+                app(PatientFeeRefundService::class)->discardRefundOnRecollect($booking);
+            }
 
             return $existing;
         }
 
         try {
-            return ChamberCashEntry::create([
+            $entry = ChamberCashEntry::create([
                 ...$values,
                 'booking_id' => $booking->id,
             ]);
+            if (! $waived && $amount > 0) {
+                app(PatientFeeRefundService::class)->discardRefundOnRecollect($booking);
+            }
+
+            return $entry;
         } catch (UniqueConstraintViolationException) {
-            $race = ChamberCashEntry::query()->where('booking_id', $booking->id)->firstOrFail();
+            $race = ChamberCashEntry::query()
+                ->where('booking_id', $booking->id)
+                ->where('direction', ChamberCashEntry::DIRECTION_INCOME)
+                ->firstOrFail();
             $race->fill($values)->save();
+            if (! $waived && $amount > 0) {
+                app(PatientFeeRefundService::class)->discardRefundOnRecollect($booking);
+            }
 
             return $race;
         }

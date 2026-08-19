@@ -21,7 +21,7 @@ class CommissionService
      * List vs due for Super Admin preview and tenant snapshots.
      *
      * List is the module (or Clinic) sticker. Due applies Prescription-free-for-life
-     * (Solo only), then a percent discount code, then 50% prepaid-year setup.
+     * (Solo only), then a percent discount code, then a paying-price override.
      *
      * @param  list<string>  $modules
      * @return array{
@@ -38,14 +38,16 @@ class CommissionService
         array $modules,
         ?DiscountCode $code = null,
         bool $rxLifetimeFree = false,
-        bool $prepaidYearSetup = false,
+        ?int $payingSetup = null,
+        ?int $payingMonthly = null,
     ): array {
         return $this->planPricing->quote(
             $planTier,
             $modules,
             $code,
             $rxLifetimeFree,
-            $prepaidYearSetup,
+            $payingSetup,
+            $payingMonthly,
         );
     }
 
@@ -63,7 +65,8 @@ class CommissionService
             $tenant->enabledProductModules(),
             $code,
             (bool) $tenant->offer_prescription_lifetime_free,
-            (bool) $tenant->offer_prepaid_year_setup,
+            $tenant->paying_setup_amount !== null ? (int) $tenant->paying_setup_amount : null,
+            $tenant->paying_monthly_amount !== null ? (int) $tenant->paying_monthly_amount : null,
         );
 
         $tenant->fill([
@@ -90,100 +93,161 @@ class CommissionService
     {
         $this->createPendingSetupCommission($tenant);
         $this->refreshPendingMonthlyCommissions($tenant);
+        $this->refreshPendingYearPrepaidCommissions($tenant);
     }
 
     /**
-     * @return array{setup_rate: float, monthly_rate: float, setup_commission: int, monthly_commission: int, display_name: string}|null
+     * @return array{
+     *     setup_rate: float,
+     *     monthly_rate: float,
+     *     setup_commission: int,
+     *     monthly_commission: int,
+     *     display_name: string,
+     *     mr_name: ?string,
+     *     mr_setup_rate: float,
+     *     mr_setup_commission: int,
+     *     year1_prepaid_marketer_rate: float,
+     *     year1_prepaid_marketer_commission: int,
+     *     year1_prepaid_mr_rate: float,
+     *     year1_prepaid_mr_commission: int,
+     *     year2_marketer_rate: float,
+     *     year2_marketer_commission: int,
+     *     year2_mr_rate: float,
+     *     year2_mr_commission: int
+     * }|null
      */
-    public function previewCommission(?int $marketerId, int $setupDue, int $monthlyDue): ?array
-    {
-        if (! $marketerId) {
+    public function previewCommission(
+        ?int $marketerId,
+        int $setupDue,
+        int $monthlyDue,
+        ?int $medicalRepresentativeId = null,
+        ?Tenant $tenant = null,
+    ): ?array {
+        if (! $marketerId && ! $medicalRepresentativeId) {
             return null;
         }
 
-        $marketer = Marketer::find($marketerId);
-        if (! $marketer) {
-            return null;
+        $scratch = $tenant ? $tenant->replicate() : new Tenant;
+        $scratch->marketer_id = $marketerId;
+        $scratch->medical_representative_id = $medicalRepresentativeId;
+        if ($tenant) {
+            foreach ([
+                'commission_setup_mr_rate',
+                'commission_setup_marketer_rate',
+                'commission_year1_prepaid_mr_rate',
+                'commission_year1_prepaid_marketer_rate',
+                'commission_year2_mr_rate',
+                'commission_year2_marketer_rate',
+            ] as $column) {
+                $scratch->{$column} = $tenant->{$column};
+            }
         }
+
+        $rates = new DealCommissionRates($scratch);
+        $year = $monthlyDue * Tenant::PREPAID_YEAR_MONTHS;
+        $marketer = $marketerId ? Marketer::find($marketerId) : null;
 
         return [
-            'display_name' => (string) $marketer->display_name,
-            'setup_rate' => (float) $marketer->setup_commission_rate,
-            'monthly_rate' => (float) $marketer->monthly_commission_rate,
-            'setup_commission' => $this->commissionAmount($setupDue, (float) $marketer->setup_commission_rate),
-            'monthly_commission' => $this->commissionAmount($monthlyDue, (float) $marketer->monthly_commission_rate),
+            'display_name' => (string) ($marketer?->display_name ?? 'Marketer'),
+            'setup_rate' => $rates->marketerRate(DealCommissionRates::KIND_SETUP),
+            'monthly_rate' => $rates->marketerRate(DealCommissionRates::KIND_YEAR1_MONTHLY),
+            'setup_commission' => $this->commissionAmount($setupDue, $rates->marketerRate(DealCommissionRates::KIND_SETUP)),
+            'monthly_commission' => $this->commissionAmount($monthlyDue, $rates->marketerRate(DealCommissionRates::KIND_YEAR1_MONTHLY)),
+            'mr_name' => $scratch->medicalRepresentative?->name,
+            'mr_setup_rate' => $rates->mrRate(DealCommissionRates::KIND_SETUP),
+            'mr_setup_commission' => $this->commissionAmount($setupDue, $rates->mrRate(DealCommissionRates::KIND_SETUP)),
+            'year1_prepaid_marketer_rate' => $rates->marketerRate(DealCommissionRates::KIND_YEAR1_PREPAID),
+            'year1_prepaid_marketer_commission' => $this->commissionAmount($year, $rates->marketerRate(DealCommissionRates::KIND_YEAR1_PREPAID)),
+            'year1_prepaid_mr_rate' => $rates->mrRate(DealCommissionRates::KIND_YEAR1_PREPAID),
+            'year1_prepaid_mr_commission' => $this->commissionAmount($year, $rates->mrRate(DealCommissionRates::KIND_YEAR1_PREPAID)),
+            'year2_marketer_rate' => $rates->marketerRate(DealCommissionRates::KIND_YEAR2),
+            'year2_marketer_commission' => $this->commissionAmount($monthlyDue, $rates->marketerRate(DealCommissionRates::KIND_YEAR2)),
+            'year2_mr_rate' => $rates->mrRate(DealCommissionRates::KIND_YEAR2),
+            'year2_mr_commission' => $this->commissionAmount($monthlyDue, $rates->mrRate(DealCommissionRates::KIND_YEAR2)),
         ];
     }
 
     /**
-     * Create or refresh a pending setup commission when tenant has a marketer.
+     * Create or refresh pending setup commission rows for marketer and MR.
      * Owed/paid rows are left alone.
      */
     public function createPendingSetupCommission(Tenant $tenant): ?Commission
     {
-        if (! $tenant->marketer_id) {
-            return null;
+        $rates = new DealCommissionRates($tenant);
+        $base = (int) $tenant->setup_amount_due;
+        $first = null;
+
+        if ($tenant->marketer_id) {
+            $first = $this->upsertPending(
+                $tenant,
+                Commission::TYPE_SETUP,
+                null,
+                $base,
+                $rates->marketerRate(DealCommissionRates::KIND_SETUP),
+                marketerId: (int) $tenant->marketer_id,
+            );
         }
 
-        $marketer = Marketer::find($tenant->marketer_id);
-        if (! $marketer) {
-            return null;
+        if ($tenant->medical_representative_id) {
+            $row = $this->upsertPending(
+                $tenant,
+                Commission::TYPE_SETUP,
+                null,
+                $base,
+                $rates->mrRate(DealCommissionRates::KIND_SETUP),
+                mrId: (int) $tenant->medical_representative_id,
+            );
+            $first ??= $row;
         }
 
-        $lookup = [
-            'marketer_id' => $marketer->id,
-            'tenant_id' => $tenant->id,
-            'type' => Commission::TYPE_SETUP,
-            'period' => null,
-        ];
-
-        $payload = [
-            'base_amount' => (int) $tenant->setup_amount_due,
-            'rate' => $marketer->setup_commission_rate,
-            'commission_amount' => $this->commissionAmount((int) $tenant->setup_amount_due, $marketer->setup_commission_rate),
-            'status' => Commission::STATUS_PENDING,
-        ];
-
-        $existing = Commission::where($lookup)->first();
-        if ($existing) {
-            if ($existing->status === Commission::STATUS_PENDING) {
-                $existing->update($payload);
-            }
-
-            return $existing->fresh();
-        }
-
-        if (! $tenant->setup_amount_due) {
-            return null;
-        }
-
-        return Commission::create(array_merge($lookup, $payload));
+        return $first;
     }
 
     private function refreshPendingMonthlyCommissions(Tenant $tenant): void
     {
-        if (! $tenant->marketer_id) {
-            return;
-        }
-
-        $marketer = Marketer::find($tenant->marketer_id);
-        if (! $marketer) {
-            return;
-        }
-
         Commission::query()
             ->where('tenant_id', $tenant->id)
             ->where('type', Commission::TYPE_MONTHLY)
             ->where('status', Commission::STATUS_PENDING)
             ->get()
-            ->each(function (Commission $commission) use ($tenant, $marketer): void {
+            ->each(function (Commission $commission) use ($tenant): void {
+                $kind = (new DealCommissionRates($tenant))->kindForMonthlyPeriod((string) $commission->period);
+                $rate = $this->rateForRow($tenant, $kind, $commission);
+                $base = (int) $tenant->monthly_amount_due;
+
+                if ($rate <= 0) {
+                    $commission->update([
+                        'status' => Commission::STATUS_VOID,
+                        'payout_note' => 'Year 1 monthly is not commissionable.',
+                    ]);
+
+                    return;
+                }
+
                 $commission->update([
-                    'base_amount' => (int) $tenant->monthly_amount_due,
-                    'rate' => $marketer->monthly_commission_rate,
-                    'commission_amount' => $this->commissionAmount(
-                        (int) $tenant->monthly_amount_due,
-                        $marketer->monthly_commission_rate,
-                    ),
+                    'base_amount' => $base,
+                    'rate' => $rate,
+                    'commission_amount' => $this->commissionAmount($base, $rate),
+                ]);
+            });
+    }
+
+    private function refreshPendingYearPrepaidCommissions(Tenant $tenant): void
+    {
+        Commission::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('type', Commission::TYPE_YEAR_PREPAID)
+            ->where('status', Commission::STATUS_PENDING)
+            ->get()
+            ->each(function (Commission $commission) use ($tenant): void {
+                $year = $tenant->serviceYearForPeriod((string) $commission->period);
+                $kind = (new DealCommissionRates($tenant))->prepaidKindForYear($year);
+                $rate = $this->rateForRow($tenant, $kind, $commission);
+                $base = (int) $tenant->monthly_amount_due * Tenant::PREPAID_YEAR_MONTHS;
+                $commission->update([
+                    'base_amount' => $base,
+                    'rate' => $rate,
+                    'commission_amount' => $this->commissionAmount($base, $rate),
                 ]);
             });
     }
@@ -214,15 +278,21 @@ class CommissionService
 
             $tenant->update(['setup_paid_at' => now()]);
 
-            $this->markCommissionOwed($tenant, Commission::TYPE_SETUP, null, $billing, $paid);
+            $this->markKindOwed($tenant, DealCommissionRates::KIND_SETUP, Commission::TYPE_SETUP, null, $billing, $paid);
 
             return $billing;
         });
     }
 
-    public function confirmMonthlyPayment(Tenant $tenant, string $period, User $confirmedBy, ?string $notes = null, ?int $amountPaid = null): BillingPayment
-    {
-        return DB::transaction(function () use ($tenant, $period, $confirmedBy, $notes, $amountPaid) {
+    public function confirmMonthlyPayment(
+        Tenant $tenant,
+        string $period,
+        User $confirmedBy,
+        ?string $notes = null,
+        ?int $amountPaid = null,
+        bool $skipCommission = false,
+    ): BillingPayment {
+        return DB::transaction(function () use ($tenant, $period, $confirmedBy, $notes, $amountPaid, $skipCommission) {
             $paid = $amountPaid ?? (int) $tenant->monthly_amount_due;
             $list = (int) $tenant->list_monthly_amount;
             $discount = max(0, $list - $paid);
@@ -244,7 +314,10 @@ class CommissionService
                 ]
             );
 
-            $this->markCommissionOwed($tenant, Commission::TYPE_MONTHLY, $period, $billing, $paid);
+            if (! $skipCommission) {
+                $kind = (new DealCommissionRates($tenant))->kindForMonthlyPeriod($period);
+                $this->markKindOwed($tenant, $kind, Commission::TYPE_MONTHLY, $period, $billing, $paid);
+            }
 
             return $billing;
         });
@@ -256,32 +329,45 @@ class CommissionService
         $count = 0;
 
         Tenant::query()
-            ->whereNotNull('marketer_id')
+            ->where(function ($query): void {
+                $query->whereNotNull('marketer_id')
+                    ->orWhereNotNull('medical_representative_id');
+            })
             ->whereNotNull('setup_paid_at')
             ->whereIn('billing_status', ['active', 'trial'])
-            ->each(function (Tenant $tenant) use ($period, &$count) {
-                $marketer = $tenant->marketer;
-                if (! $marketer || ! $marketer->is_active) {
-                    return;
+            ->each(function (Tenant $tenant) use ($period, &$count): void {
+                $kind = (new DealCommissionRates($tenant))->kindForMonthlyPeriod($period);
+                $base = (int) $tenant->monthly_amount_due;
+
+                if ($tenant->marketer_id) {
+                    $marketer = $tenant->marketer;
+                    if ($marketer && $marketer->is_active) {
+                        $created = $this->createPendingIfMissing(
+                            $tenant,
+                            Commission::TYPE_MONTHLY,
+                            $period,
+                            $base,
+                            (new DealCommissionRates($tenant))->marketerRate($kind),
+                            marketerId: (int) $tenant->marketer_id,
+                        );
+                        if ($created) {
+                            $count++;
+                        }
+                    }
                 }
 
-                $created = Commission::firstOrCreate(
-                    [
-                        'marketer_id' => $marketer->id,
-                        'tenant_id' => $tenant->id,
-                        'type' => Commission::TYPE_MONTHLY,
-                        'period' => $period,
-                    ],
-                    [
-                        'base_amount' => (int) $tenant->monthly_amount_due,
-                        'rate' => $marketer->monthly_commission_rate,
-                        'commission_amount' => $this->commissionAmount((int) $tenant->monthly_amount_due, $marketer->monthly_commission_rate),
-                        'status' => Commission::STATUS_PENDING,
-                    ]
-                );
-
-                if ($created->wasRecentlyCreated) {
-                    $count++;
+                if ($tenant->medical_representative_id) {
+                    $created = $this->createPendingIfMissing(
+                        $tenant,
+                        Commission::TYPE_MONTHLY,
+                        $period,
+                        $base,
+                        (new DealCommissionRates($tenant))->mrRate($kind),
+                        mrId: (int) $tenant->medical_representative_id,
+                    );
+                    if ($created) {
+                        $count++;
+                    }
                 }
             });
 
@@ -333,11 +419,27 @@ class CommissionService
         return DB::transaction(function () use ($tenant, $confirmedBy, $notes, $open, $base, $remainder) {
             $created = 0;
             $last = count($open) - 1;
+            $buckets = [];
 
             foreach ($open as $i => $period) {
                 $amount = $base + ($i === $last ? $remainder : 0);
-                $this->confirmMonthlyPayment($tenant, $period, $confirmedBy, $notes, $amount);
+                $billing = $this->confirmMonthlyPayment($tenant, $period, $confirmedBy, $notes, $amount, skipCommission: true);
+                $year = min(2, $tenant->serviceYearForPeriod($period));
+                $buckets[$year] ??= ['amount' => 0, 'period' => $period, 'billing' => $billing];
+                $buckets[$year]['amount'] += $amount;
                 $created++;
+            }
+
+            foreach ($buckets as $year => $bucket) {
+                $kind = (new DealCommissionRates($tenant))->prepaidKindForYear((int) $year);
+                $this->markKindOwed(
+                    $tenant,
+                    $kind,
+                    Commission::TYPE_YEAR_PREPAID,
+                    $bucket['period'],
+                    $bucket['billing'],
+                    $bucket['amount'],
+                );
             }
 
             return $created;
@@ -365,44 +467,182 @@ class CommissionService
         return $commission->fresh();
     }
 
-    private function markCommissionOwed(Tenant $tenant, string $type, ?string $period, BillingPayment $billing, int $amountPaid): void
-    {
-        if (! $tenant->marketer_id) {
+    private function markKindOwed(
+        Tenant $tenant,
+        string $kind,
+        string $type,
+        ?string $period,
+        BillingPayment $billing,
+        int $amountPaid,
+    ): void {
+        $rates = new DealCommissionRates($tenant);
+
+        if ($tenant->marketer_id) {
+            $this->markPayeeOwed(
+                $tenant,
+                $type,
+                $period,
+                $billing,
+                $amountPaid,
+                $rates->marketerRate($kind),
+                marketerId: (int) $tenant->marketer_id,
+            );
+        }
+
+        if ($tenant->medical_representative_id) {
+            $this->markPayeeOwed(
+                $tenant,
+                $type,
+                $period,
+                $billing,
+                $amountPaid,
+                $rates->mrRate($kind),
+                mrId: (int) $tenant->medical_representative_id,
+            );
+        }
+    }
+
+    private function markPayeeOwed(
+        Tenant $tenant,
+        string $type,
+        ?string $period,
+        BillingPayment $billing,
+        int $amountPaid,
+        float $rate,
+        ?int $marketerId = null,
+        ?int $mrId = null,
+    ): void {
+        if ($rate <= 0) {
             return;
         }
 
-        $marketer = Marketer::find($tenant->marketer_id);
-        if (! $marketer) {
-            return;
-        }
-
-        $rate = $type === Commission::TYPE_SETUP
-            ? $marketer->setup_commission_rate
-            : $marketer->monthly_commission_rate;
-
-        $lookup = [
-            'marketer_id' => $marketer->id,
-            'tenant_id' => $tenant->id,
-            'type' => $type,
-            'period' => $period,
-        ];
-
+        $lookup = $this->payeeLookup($tenant, $type, $period, $marketerId, $mrId);
         $existing = Commission::where($lookup)->first();
 
-        // Already paid: leave the ledger row alone (status AND amounts).
-        // Re-confirming setup at a different figure must not rewrite a payout
-        // that was already recorded (e.g. ৳1000 paid → still shows ৳1000).
         if ($existing && $existing->status === Commission::STATUS_PAID) {
             return;
         }
 
         Commission::updateOrCreate($lookup, [
+            'marketer_id' => $marketerId,
+            'medical_representative_id' => $mrId,
+            'payee_key' => $lookup['payee_key'],
             'billing_payment_id' => $billing->id,
             'base_amount' => $amountPaid,
             'rate' => $rate,
             'commission_amount' => $this->commissionAmount($amountPaid, $rate),
             'status' => Commission::STATUS_OWED,
         ]);
+    }
+
+    private function upsertPending(
+        Tenant $tenant,
+        string $type,
+        ?string $period,
+        int $base,
+        float $rate,
+        ?int $marketerId = null,
+        ?int $mrId = null,
+    ): ?Commission {
+        $lookup = $this->payeeLookup($tenant, $type, $period, $marketerId, $mrId);
+        $existing = Commission::where($lookup)->first();
+
+        if ($rate <= 0) {
+            if ($existing && $existing->status === Commission::STATUS_PENDING) {
+                $existing->update([
+                    'status' => Commission::STATUS_VOID,
+                    'payout_note' => 'Rate is 0% for this deal.',
+                ]);
+            }
+
+            return $existing?->fresh();
+        }
+
+        $payload = [
+            'marketer_id' => $marketerId,
+            'medical_representative_id' => $mrId,
+            'payee_key' => $lookup['payee_key'],
+            'base_amount' => $base,
+            'rate' => $rate,
+            'commission_amount' => $this->commissionAmount($base, $rate),
+            'status' => Commission::STATUS_PENDING,
+        ];
+
+        if ($existing) {
+            if ($existing->status === Commission::STATUS_PENDING) {
+                $existing->update($payload);
+            }
+
+            return $existing->fresh();
+        }
+
+        if ($base <= 0) {
+            return null;
+        }
+
+        return Commission::create(array_merge($lookup, $payload));
+    }
+
+    private function createPendingIfMissing(
+        Tenant $tenant,
+        string $type,
+        ?string $period,
+        int $base,
+        float $rate,
+        ?int $marketerId = null,
+        ?int $mrId = null,
+    ): bool {
+        if ($rate <= 0 || $base <= 0) {
+            return false;
+        }
+
+        $lookup = $this->payeeLookup($tenant, $type, $period, $marketerId, $mrId);
+        if (Commission::where($lookup)->exists()) {
+            return false;
+        }
+
+        Commission::create(array_merge($lookup, [
+            'marketer_id' => $marketerId,
+            'medical_representative_id' => $mrId,
+            'payee_key' => $lookup['payee_key'],
+            'base_amount' => $base,
+            'rate' => $rate,
+            'commission_amount' => $this->commissionAmount($base, $rate),
+            'status' => Commission::STATUS_PENDING,
+        ]));
+
+        return true;
+    }
+
+    /**
+     * @return array{payee_key: string, tenant_id: string, type: string, period: ?string}
+     */
+    private function payeeLookup(
+        Tenant $tenant,
+        string $type,
+        ?string $period,
+        ?int $marketerId,
+        ?int $mrId,
+    ): array {
+        $payeeKey = $mrId
+            ? Commission::payeeKeyForMr($mrId)
+            : Commission::payeeKeyForMarketer((int) $marketerId);
+
+        return [
+            'payee_key' => $payeeKey,
+            'tenant_id' => $tenant->id,
+            'type' => $type,
+            'period' => $period,
+        ];
+    }
+
+    private function rateForRow(Tenant $tenant, string $kind, Commission $commission): float
+    {
+        $rates = new DealCommissionRates($tenant);
+
+        return $commission->medical_representative_id
+            ? $rates->mrRate($kind)
+            : $rates->marketerRate($kind);
     }
 
     private function commissionAmount(int $base, float $rate): int
@@ -431,7 +671,7 @@ class CommissionService
             $owedQuery->where(function ($q) use ($period) {
                 $q->where('period', $period)
                     ->orWhere(function ($q2) use ($period) {
-                        $q2->where('type', Commission::TYPE_SETUP)
+                        $q2->whereIn('type', [Commission::TYPE_SETUP, Commission::TYPE_YEAR_PREPAID])
                             ->whereHas('billingPayment', function ($q3) use ($period) {
                                 $q3->whereYear('confirmed_at', substr($period, 0, 4))
                                     ->whereMonth('confirmed_at', substr($period, 5, 2));

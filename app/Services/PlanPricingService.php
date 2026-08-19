@@ -86,9 +86,11 @@ class PlanPricingService
     }
 
     /**
-     * Sticker list plus due after Super Admin offer ticks and a discount code.
+     * Sticker list plus due after Super Admin offer ticks, a discount code,
+     * and an optional paying-price override. List snapshots stay the pre-offer sticker.
+     *
      * Order: module list → waive Prescription units (Solo only) → percent code
-     * → 50% prepaid-year setup. List snapshots stay the pre-offer sticker.
+     * → paying override (typed taka wins).
      *
      * @param  list<string>  $modules
      * @return array{
@@ -105,7 +107,8 @@ class PlanPricingService
         array $modules,
         ?DiscountCode $code = null,
         bool $prescriptionLifetimeFree = false,
-        bool $prepaidYearSetup = false,
+        ?int $payingSetup = null,
+        ?int $payingMonthly = null,
     ): array {
         $list = $this->listPricesForModules($planTier, $modules);
         $setupDue = $list['setup'];
@@ -136,10 +139,14 @@ class PlanPricingService
             $monthlyDue = $fromCode['monthly_due'];
         }
 
-        if ($prepaidYearSetup) {
-            $half = (int) round($setupDue * 0.5);
-            $setupDiscount += $half;
-            $setupDue -= $half;
+        if ($payingSetup !== null) {
+            $setupDue = max(0, $payingSetup);
+            $setupDiscount = max(0, $list['setup'] - $setupDue);
+        }
+
+        if ($payingMonthly !== null) {
+            $monthlyDue = max(0, $payingMonthly);
+            $monthlyDiscount = max(0, $list['monthly'] - $monthlyDue);
         }
 
         return [
@@ -169,7 +176,8 @@ class PlanPricingService
             $tenant->enabledProductModules(),
             $code,
             (bool) $tenant->offer_prescription_lifetime_free,
-            (bool) $tenant->offer_prepaid_year_setup,
+            $tenant->paying_setup_amount !== null ? (int) $tenant->paying_setup_amount : null,
+            $tenant->paying_monthly_amount !== null ? (int) $tenant->paying_monthly_amount : null,
         );
     }
 

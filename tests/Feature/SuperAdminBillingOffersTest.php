@@ -64,9 +64,9 @@ class SuperAdminBillingOffersTest extends TestCase
         $tenant->save();
 
         $tenant->refresh();
-        $this->assertSame(15000, (int) $tenant->list_setup_amount);
+        $this->assertSame(25000, (int) $tenant->list_setup_amount);
         $this->assertSame(3000, (int) $tenant->list_monthly_amount);
-        $this->assertSame(12500, (int) $tenant->setup_amount_due);
+        $this->assertSame(20500, (int) $tenant->setup_amount_due);
         $this->assertSame(2750, (int) $tenant->monthly_amount_due);
     }
 
@@ -87,13 +87,13 @@ class SuperAdminBillingOffersTest extends TestCase
         $tenant->save();
         $tenant->refresh();
 
-        $this->assertSame(5500, (int) $tenant->list_setup_amount);
+        $this->assertSame(9500, (int) $tenant->list_setup_amount);
         $this->assertSame(1250, (int) $tenant->list_monthly_amount);
-        $this->assertSame(3000, (int) $tenant->setup_amount_due);
+        $this->assertSame(5000, (int) $tenant->setup_amount_due);
         $this->assertSame(1000, (int) $tenant->monthly_amount_due);
     }
 
-    public function test_prepaid_year_halves_setup_after_rx_free(): void
+    public function test_prepaid_year_flag_does_not_halve_setup(): void
     {
         $tenant = $this->maestroTenant([
             'offer_prescription_lifetime_free' => true,
@@ -104,8 +104,8 @@ class SuperAdminBillingOffersTest extends TestCase
         $tenant->save();
         $tenant->refresh();
 
-        $this->assertSame(15000, (int) $tenant->list_setup_amount);
-        $this->assertSame(6250, (int) $tenant->setup_amount_due);
+        $this->assertSame(25000, (int) $tenant->list_setup_amount);
+        $this->assertSame(20500, (int) $tenant->setup_amount_due);
         $this->assertSame(2750, (int) $tenant->monthly_amount_due);
     }
 
@@ -124,7 +124,7 @@ class SuperAdminBillingOffersTest extends TestCase
         $tenant->save();
         $tenant->refresh();
 
-        $this->assertSame(3000, (int) $tenant->setup_amount_due);
+        $this->assertSame(5000, (int) $tenant->setup_amount_due);
         $this->assertSame(1000, (int) $tenant->monthly_amount_due);
     }
 
@@ -136,7 +136,7 @@ class SuperAdminBillingOffersTest extends TestCase
         $tenant->save();
         $service->createPendingSetupCommission($tenant);
 
-        $this->assertSame(15000, (int) Commission::where('tenant_id', $tenant->id)->value('base_amount'));
+        $this->assertSame(25000, (int) Commission::where('tenant_id', $tenant->id)->value('base_amount'));
 
         $tenant->feature_flags = Tenant::featureFlagsWithModules($tenant->feature_flags, [
             Tenant::MODULE_FRONT_DOOR,
@@ -146,8 +146,8 @@ class SuperAdminBillingOffersTest extends TestCase
         $service->createPendingSetupCommission($tenant);
 
         $commission = Commission::where('tenant_id', $tenant->id)->first();
-        $this->assertSame(3000, (int) $commission->base_amount);
-        $this->assertSame(600, (int) $commission->commission_amount);
+        $this->assertSame(5000, (int) $commission->base_amount);
+        $this->assertSame(1000, (int) $commission->commission_amount);
         $this->assertSame(Commission::STATUS_PENDING, $commission->status);
     }
 
@@ -158,7 +158,7 @@ class SuperAdminBillingOffersTest extends TestCase
         $service->applyPricingToTenant($tenant);
         $tenant->save();
         $service->createPendingSetupCommission($tenant);
-        $service->confirmSetupPayment($tenant, $this->superAdmin, null, 15000);
+        $service->confirmSetupPayment($tenant, $this->superAdmin, null, 25000);
 
         $tenant->feature_flags = Tenant::featureFlagsWithModules($tenant->feature_flags, [
             Tenant::MODULE_FRONT_DOOR,
@@ -171,8 +171,8 @@ class SuperAdminBillingOffersTest extends TestCase
             ->where('type', Commission::TYPE_SETUP)
             ->first();
         $this->assertSame(Commission::STATUS_OWED, $commission->status);
-        $this->assertSame(15000, (int) $commission->base_amount);
-        $this->assertSame(3000, (int) $commission->commission_amount);
+        $this->assertSame(25000, (int) $commission->base_amount);
+        $this->assertSame(5000, (int) $commission->commission_amount);
     }
 
     public function test_pending_monthly_commission_updates_when_monthly_due_changes(): void
@@ -181,7 +181,7 @@ class SuperAdminBillingOffersTest extends TestCase
         $service = app(CommissionService::class);
         $service->applyPricingToTenant($tenant);
         $tenant->update([
-            'setup_paid_at' => now(),
+            'setup_paid_at' => now()->subYear(),
             'billing_status' => 'active',
         ]);
 
@@ -205,7 +205,7 @@ class SuperAdminBillingOffersTest extends TestCase
         $this->assertSame(275, (int) $commission->commission_amount);
     }
 
-    public function test_confirm_year_prepaid_creates_twelve_owed_monthly_rows(): void
+    public function test_confirm_year_prepaid_creates_twelve_months_and_a_year_lump(): void
     {
         $tenant = $this->maestroTenant();
         $service = app(CommissionService::class);
@@ -222,19 +222,19 @@ class SuperAdminBillingOffersTest extends TestCase
             ->where('tenant_id', $tenant->id)
             ->where('type', BillingPayment::TYPE_MONTHLY)
             ->count());
-        $this->assertSame(12, Commission::query()
+        $this->assertSame(0, Commission::query()
             ->where('tenant_id', $tenant->id)
             ->where('type', Commission::TYPE_MONTHLY)
             ->where('status', Commission::STATUS_OWED)
             ->count());
+        $this->assertSame(7200, (int) Commission::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('type', Commission::TYPE_YEAR_PREPAID)
+            ->sum('commission_amount'));
         $this->assertSame(36000, (int) BillingPayment::query()
             ->where('tenant_id', $tenant->id)
             ->where('type', BillingPayment::TYPE_MONTHLY)
             ->sum('amount_paid'));
-        $this->assertSame(3600, (int) Commission::query()
-            ->where('tenant_id', $tenant->id)
-            ->where('type', Commission::TYPE_MONTHLY)
-            ->sum('commission_amount'));
     }
 
     public function test_confirm_year_prepaid_skips_already_confirmed_months(): void
@@ -271,7 +271,8 @@ class SuperAdminBillingOffersTest extends TestCase
         Livewire::test(EditTenant::class, ['record' => $tenant->getKey()])
             ->assertSee('Maestro')
             ->assertSee('Prescription free for life')
-            ->assertSee('Prepaid year')
+            ->assertSee('Paying one-time')
+            ->assertDontSee('50% off setup')
             ->fillForm([
                 'offer_prescription_lifetime_free' => true,
             ])
@@ -280,7 +281,7 @@ class SuperAdminBillingOffersTest extends TestCase
 
         $tenant->refresh();
         $this->assertTrue((bool) $tenant->offer_prescription_lifetime_free);
-        $this->assertSame(12500, (int) $tenant->setup_amount_due);
+        $this->assertSame(20500, (int) $tenant->setup_amount_due);
         $this->assertSame(2750, (int) $tenant->monthly_amount_due);
     }
 

@@ -69,6 +69,7 @@ class BackupTableMap
         'users',
         'patient_accounts',
         'marketers',
+        'medical_representatives',
         'discount_codes',
         'tenants',
         'domains',

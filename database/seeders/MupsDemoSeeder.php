@@ -192,6 +192,7 @@ class MupsDemoSeeder extends Seeder
     private function seedLabs(int $chamberId): void
     {
         $tests = [
+            ['name' => 'MSK ultrasound', 'price' => 2200, 'sample_type' => 'Scan', 'turnaround_time' => 'Same sitting', 'display_order' => 0, 'preparation_instructions' => 'Wear loose clothing. Tell staff if you have had surgery in the area.'],
             ['name' => 'CRP (C-reactive protein)', 'price' => 800, 'sample_type' => 'Blood', 'turnaround_time' => 'Same day', 'display_order' => 1, 'preparation_instructions' => 'No fasting needed.'],
             ['name' => 'ESR', 'price' => 300, 'sample_type' => 'Blood', 'turnaround_time' => 'Same day', 'display_order' => 2, 'preparation_instructions' => 'No special preparation.'],
             ['name' => 'Vitamin D (25-OH)', 'price' => 1800, 'sample_type' => 'Blood', 'turnaround_time' => '48 hours', 'display_order' => 3, 'preparation_instructions' => 'No fasting needed.'],

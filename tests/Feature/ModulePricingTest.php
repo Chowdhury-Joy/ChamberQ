@@ -12,7 +12,7 @@ class ModulePricingTest extends TestCase
     {
         $prices = app(PlanPricingService::class)->listPricesForModules('solo', Tenant::productModules());
 
-        $this->assertSame(15000, $prices['setup']);
+        $this->assertSame(25000, $prices['setup']);
         $this->assertSame(3000, $prices['monthly']);
     }
 
@@ -22,7 +22,7 @@ class ModulePricingTest extends TestCase
             Tenant::MODULE_FRONT_DOOR,
         ]);
 
-        $this->assertSame(3000, $prices['setup']);
+        $this->assertSame(5000, $prices['setup']);
         $this->assertSame(1000, $prices['monthly']);
     }
 
@@ -32,7 +32,7 @@ class ModulePricingTest extends TestCase
             Tenant::MODULE_PRESCRIPTION,
         ]);
 
-        $this->assertSame(2500, $prices['setup']);
+        $this->assertSame(4500, $prices['setup']);
         $this->assertSame(250, $prices['monthly']);
     }
 
@@ -42,7 +42,7 @@ class ModulePricingTest extends TestCase
             Tenant::MODULE_LIVE_QUEUE,
         ]);
 
-        $this->assertSame(12000, $prices['setup']);
+        $this->assertSame(18000, $prices['setup']);
         $this->assertSame(2000, $prices['monthly']);
     }
 
@@ -53,7 +53,7 @@ class ModulePricingTest extends TestCase
             Tenant::MODULE_LIVE_QUEUE,
         ]);
 
-        $this->assertSame(15000, $prices['setup']);
+        $this->assertSame(23000, $prices['setup']);
         $this->assertSame(3000, $prices['monthly']);
     }
 
@@ -64,7 +64,7 @@ class ModulePricingTest extends TestCase
             Tenant::MODULE_PRESCRIPTION,
         ]);
 
-        $this->assertSame(5500, $prices['setup']);
+        $this->assertSame(9500, $prices['setup']);
         $this->assertSame(1250, $prices['monthly']);
     }
 
@@ -89,7 +89,7 @@ class ModulePricingTest extends TestCase
 
         $prices = app(PlanPricingService::class)->listPricesForTenant($tenant);
 
-        $this->assertSame(2500, $prices['setup']);
+        $this->assertSame(4500, $prices['setup']);
         $this->assertSame(250, $prices['monthly']);
     }
 
@@ -101,9 +101,9 @@ class ModulePricingTest extends TestCase
             prescriptionLifetimeFree: true,
         );
 
-        $this->assertSame(5500, $quote['list_setup']);
+        $this->assertSame(9500, $quote['list_setup']);
         $this->assertSame(1250, $quote['list_monthly']);
-        $this->assertSame(3000, $quote['setup_due']);
+        $this->assertSame(5000, $quote['setup_due']);
         $this->assertSame(1000, $quote['monthly_due']);
     }
 
@@ -115,36 +115,38 @@ class ModulePricingTest extends TestCase
             prescriptionLifetimeFree: true,
         );
 
-        $this->assertSame(15000, $quote['list_setup']);
+        $this->assertSame(25000, $quote['list_setup']);
         $this->assertSame(3000, $quote['list_monthly']);
-        $this->assertSame(12500, $quote['setup_due']);
+        $this->assertSame(20500, $quote['setup_due']);
         $this->assertSame(2750, $quote['monthly_due']);
     }
 
-    public function test_prepaid_year_halves_setup_after_rx_free(): void
+    public function test_paying_override_wins_after_rx_free(): void
     {
         $quote = app(PlanPricingService::class)->quote(
             'solo',
             Tenant::productModules(),
             prescriptionLifetimeFree: true,
-            prepaidYearSetup: true,
+            payingSetup: 20000,
+            payingMonthly: 2400,
         );
 
-        $this->assertSame(15000, $quote['list_setup']);
-        $this->assertSame(6250, $quote['setup_due']);
-        $this->assertSame(2750, $quote['monthly_due']);
+        $this->assertSame(25000, $quote['list_setup']);
+        $this->assertSame(20000, $quote['setup_due']);
+        $this->assertSame(2400, $quote['monthly_due']);
     }
 
-    public function test_prepaid_year_halves_maestro_setup_without_rx_offer(): void
+    public function test_module_mix_paying_override(): void
     {
         $quote = app(PlanPricingService::class)->quote(
             'solo',
-            Tenant::productModules(),
-            prepaidYearSetup: true,
+            [Tenant::MODULE_FRONT_DOOR],
+            payingSetup: 2000,
         );
 
-        $this->assertSame(7500, $quote['setup_due']);
-        $this->assertSame(3000, $quote['monthly_due']);
+        $this->assertSame(5000, $quote['list_setup']);
+        $this->assertSame(2000, $quote['setup_due']);
+        $this->assertSame(1000, $quote['monthly_due']);
     }
 
     public function test_clinic_rx_free_does_not_change_clinic_list(): void
@@ -157,18 +159,6 @@ class ModulePricingTest extends TestCase
 
         $this->assertSame(75000, $quote['list_setup']);
         $this->assertSame(75000, $quote['setup_due']);
-        $this->assertSame(7500, $quote['monthly_due']);
-    }
-
-    public function test_clinic_prepaid_year_halves_setup(): void
-    {
-        $quote = app(PlanPricingService::class)->quote(
-            'clinic',
-            Tenant::productModules(),
-            prepaidYearSetup: true,
-        );
-
-        $this->assertSame(37500, $quote['setup_due']);
         $this->assertSame(7500, $quote['monthly_due']);
     }
 }

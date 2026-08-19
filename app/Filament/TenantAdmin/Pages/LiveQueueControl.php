@@ -4,11 +4,12 @@ namespace App\Filament\TenantAdmin\Pages;
 
 use App\Filament\TenantAdmin\Concerns\AppliesVisitNotesDrafts;
 use App\Filament\TenantAdmin\Resources\Patients\Schemas\PatientForm;
+use App\Filament\TenantAdmin\Support\CollectFeeAction;
 use App\Filament\TenantAdmin\Support\CompleteBookingWithVisitNotes;
-use App\Filament\TenantAdmin\Support\PatientContinuityActions;
+use App\Filament\TenantAdmin\Support\DeskActionLayout;
+use App\Filament\TenantAdmin\Support\QueueRecordActions;
 use App\Filament\TenantAdmin\Support\StationsHandoffForm;
 use App\Filament\TenantAdmin\Support\VisitNotesFormSchema;
-use App\Filament\TenantAdmin\Support\VisitPaperScanForm;
 use App\Models\Patient;
 use App\Models\ScheduleSession;
 use App\Models\LiveSession;
@@ -31,6 +32,7 @@ use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
 use Filament\Tables\Contracts\HasTable;
 use Filament\Tables\Concerns\InteractsWithTable;
+use App\Exceptions\BookingUnavailableException;
 use App\Services\BookingService;
 use App\Services\VisitRecordService;
 use Filament\Tables\Table;
@@ -153,7 +155,10 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                 ->schema([
                     TextInput::make('patient_phone')
                         ->label(__('Phone number'))
-                        ->extraInputAttributes(['name' => 'patient_phone'])
+                        ->extraInputAttributes([
+                            'name' => 'patient_phone',
+                            'form' => 'cq-no-native-form',
+                        ])
                         ->autocomplete('tel')
                         ->tel()
                         ->required()
@@ -205,7 +210,10 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                         }),
                     TextInput::make('patient_name')
                         ->label(__('Patient name'))
-                        ->extraInputAttributes(['name' => 'patient_name'])
+                        ->extraInputAttributes([
+                            'name' => 'patient_name',
+                            'form' => 'cq-no-native-form',
+                        ])
                         ->autocomplete('name')
                         ->required(),
                     PatientForm::yearOfBirthInput(),
@@ -226,6 +234,18 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                         ->label(__('They have been treated here before ChamberQ'))
                         ->helperText(__('Tick if they are an old paper-file patient. The doctor will see them as returning, not a first visit. You can also tap this on their row later.'))
                         ->default(false),
+                    Select::make('referring_doctor_id')
+                        ->label(__('Referred by (outside GP)'))
+                        ->options(fn (): array => \App\Models\ReferringDoctor::query()
+                            ->where('is_active', true)
+                            ->orderBy('name')
+                            ->get()
+                            ->mapWithKeys(fn (\App\Models\ReferringDoctor $doctor) => [$doctor->id => $doctor->displayLabel()])
+                            ->all())
+                        ->placeholder(__('Walk-in / no referrer'))
+                        ->searchable()
+                        ->native(false)
+                        ->visible(fn (): bool => tenant()?->hasReferrals() ?? false),
                 ])
                 ->action(function (array $data, BookingService $bookingService) {
                     $bookable = ScheduleSession::findOrFail($this->selectedSessionId);
@@ -234,24 +254,37 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                         ? null
                         : ($data['patient_id'] ?? null);
 
-                    $bookingService->createBookingForBookable(
-                        $bookable,
-                        Carbon::today()->toDateString(),
-                        $data['patient_name'],
-                        $data['patient_phone'],
-                        [],
-                        sendSms: true,
-                        patientId: $patientId,
-                        wantsEarlierDate: false,
-                        whatsappPhone: null,
-                        shareClinicalHistory: array_key_exists('share_clinical_history', $data)
-                            ? (bool) $data['share_clinical_history']
-                            : true,
-                        nid: $data['nid'] ?? null,
-                        yearOfBirth: filled($data['year_of_birth'] ?? null) ? (int) $data['year_of_birth'] : null,
-                        allowOverflow: true,
-                        seenBeforeSoftware: ! empty($data['seen_before_software']) ? true : null,
-                    );
+                    try {
+                        $bookingService->createBookingForBookable(
+                            $bookable,
+                            Carbon::today()->toDateString(),
+                            $data['patient_name'],
+                            $data['patient_phone'],
+                            [],
+                            sendSms: true,
+                            patientId: $patientId,
+                            wantsEarlierDate: false,
+                            whatsappPhone: null,
+                            shareClinicalHistory: array_key_exists('share_clinical_history', $data)
+                                ? (bool) $data['share_clinical_history']
+                                : true,
+                            nid: $data['nid'] ?? null,
+                            yearOfBirth: filled($data['year_of_birth'] ?? null) ? (int) $data['year_of_birth'] : null,
+                            allowOverflow: true,
+                            allowEndedToday: true,
+                            seenBeforeSoftware: ! empty($data['seen_before_software']) ? true : null,
+                            allowMskWalkIn: $bookable->kind === ScheduleSession::KIND_MSK,
+                            referringDoctorId: filled($data['referring_doctor_id'] ?? null)
+                                ? (int) $data['referring_doctor_id']
+                                : null,
+                        );
+                    } catch (BookingUnavailableException $e) {
+                        Notification::make()
+                            ->title($e->getMessage())
+                            ->danger()
+                            ->send();
+                        $this->halt();
+                    }
                 })
                 ->successNotificationTitle(__('Walk-in added directly to this session\'s live queue.')),
         ];
@@ -532,7 +565,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                     }, function ($query) {
                         $query->whereRaw('1 = 0');
                     })
-                    ->with(['patient', 'visitRecord', 'bookable', 'procedureBookings.bookable', 'relatedBooking.bookable'])
+                    ->with(['patient', 'visitRecord', 'cashEntry', 'bookable', 'procedureBookings.bookable', 'relatedBooking.bookable'])
                     // The patient being called must sit at the top — an earlier
                     // version left 'called' out of this list, so the person the
                     // chamber was announcing sank below cancelled bookings.
@@ -599,44 +632,10 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                         ->whereNotNull('retry_queue_position')
                         ->count() > 0),
             ])
-            ->recordActions([
-                PatientContinuityActions::toggleSeenBeforeSoftware(
-                    \Filament\Actions\Action::make('toggleSeenBeforeSoftware'),
-                ),
-                VisitPaperScanForm::scanAction(
-                    \Filament\Actions\Action::make('scanPapers'),
-                ),
-                StationsHandoffForm::bookAction(
-                    \Filament\Actions\Action::make('bookIntervention'),
-                ),
-                StationsHandoffForm::moveAction(
-                    \Filament\Actions\Action::make('moveIntervention'),
-                ),
-                StationsHandoffForm::sendToCounselingAction(
-                    \Filament\Actions\Action::make('sendToCounseling'),
-                ),
-                \Filament\Actions\Action::make('callNow')
-                    ->label('Call now')
-                    ->icon('heroicon-m-megaphone')
-                    ->color('primary')
-                    ->requiresConfirmation()
-                    ->modalHeading(fn (Booking $record) => 'Call #'.$record->serial_number.' out of turn?')
-                    ->modalDescription(__('Anyone already called but not yet arrived goes back to waiting — they keep their place and get no skip strike.'))
-                    ->modalSubmitActionLabel('Call now')
-                    // Hidden while someone is with the doctor: a consult in
-                    // progress must never be interrupted by a queue jump.
-                    ->visible(fn (Booking $record) => in_array($record->status, ['waiting', 'skipped'], true)
-                        && $this->activeLiveSession?->status === 'active'
-                        && $this->activeLiveSession?->currentBooking?->status !== 'in_chamber')
-                    ->action(fn (Booking $record) => $this->callPatientNow($record->id)),
-
-                \Filament\Actions\Action::make('reinstate')
-                    ->label('Reinstate')
-                    ->icon('heroicon-m-arrow-path')
-                    ->color('gray')
-                    ->visible(fn (Booking $record) => $record->status === 'no_show')
-                    ->action(fn (Booking $record) => $this->reinstatePatient($record->id)),
-            ])
+            ->recordActions(QueueRecordActions::compact(
+                fn (Booking $record) => $this->callPatientNow($record->id),
+                fn (Booking $record) => $this->reinstatePatient($record->id),
+            ))
             ->poll('3s')
             ->paginated(false);
     }
@@ -851,6 +850,35 @@ class LiveQueueControl extends Page implements HasActions, HasTable
             Action::make('sendCurrentToCounseling'),
             fn (): ?Booking => $this->activeLiveSession?->currentBooking,
         );
+    }
+
+    public function sendCurrentToMskAction(): Action
+    {
+        return StationsHandoffForm::sendToMskAction(
+            Action::make('sendCurrentToMsk'),
+            fn (): ?Booking => $this->activeLiveSession?->currentBooking,
+        );
+    }
+
+    public function sendCurrentToReportAction(): Action
+    {
+        return StationsHandoffForm::sendToReportAction(
+            Action::make('sendCurrentToReport'),
+            fn (): ?Booking => $this->activeLiveSession?->currentBooking,
+        );
+    }
+
+    public function collectCurrentFeeAction(): Action
+    {
+        return CollectFeeAction::make(
+            Action::make('collectCurrentFee'),
+            fn (): ?Booking => $this->activeLiveSession?->currentBooking,
+        )->visible(function (): bool {
+            $booking = $this->activeLiveSession?->currentBooking;
+
+            return $booking instanceof Booking
+                && DeskActionLayout::feeIsPrimaryOnCard($booking);
+        });
     }
 
     public function completeVisitAction(): Action

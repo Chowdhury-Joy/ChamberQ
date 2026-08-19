@@ -111,7 +111,7 @@ class CreateTenant extends CreateRecord
         $commissions->applyPricingToTenant($tenant, $code, countRedemption: true);
         $tenant->save();
 
-        if ($tenant->marketer_id) {
+        if ($tenant->marketer_id || $tenant->medical_representative_id) {
             $commissions->createPendingSetupCommission($tenant);
         }
 

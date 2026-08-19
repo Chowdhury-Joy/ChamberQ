@@ -37,7 +37,11 @@ class StationsHandoffService
             return false;
         }
 
-        if (! $this->isVisitSitting($visitBooking)) {
+        if (! $this->isVisitSitting($visitBooking) && ! $this->isMskSitting($visitBooking)) {
+            return false;
+        }
+
+        if (! in_array(ScheduleSession::KIND_INTERVENTION, $this->nextRoomKinds($visitBooking), true)) {
             return false;
         }
 
@@ -69,28 +73,22 @@ class StationsHandoffService
             return false;
         }
 
+        if (! in_array(ScheduleSession::KIND_COUNSELING, $this->nextRoomKinds($procedure), true)) {
+            return false;
+        }
+
         $session = $procedure->bookable;
-        if (! $session instanceof ScheduleSession || ! $session->isInterventionKind()) {
+        if ($session instanceof ScheduleSession && $session->isInterventionKind()
+            && $procedure->procedure_status !== Booking::PROCEDURE_DONE) {
             return false;
         }
 
-        if ($procedure->procedure_status !== Booking::PROCEDURE_DONE) {
-            return false;
-        }
-
-        // Visibility has to match capability. sendToCounseling() resolves a
-        // counseling sitting for this chamber, doctor and weekday and throws
-        // when there is none, so without this the button was offered on every
-        // finished procedure and only failed after staff had confirmed the
-        // modal. The intervention actions get away without the check because
-        // their modal renders a placeholder instead of the picker; this one is
-        // a plain confirm, so there is nowhere to say why.
         $date = $procedure->booking_date?->toDateString();
-        if ($date === null || $this->findCounselingSession($session, $date) === null) {
+        if ($date === null || $this->findSession($session, ScheduleSession::KIND_COUNSELING, $date) === null) {
             return false;
         }
 
-        return $this->openCounselingFor($procedure) === null;
+        return $this->openLinkedOfKind($procedure, ScheduleSession::KIND_COUNSELING) === null;
     }
 
     public function isOpenCounseling(Booking $booking): bool
@@ -134,6 +132,91 @@ class StationsHandoffService
         return $query->get()->first(fn (Booking $row): bool => $this->isOpenCounseling($row));
     }
 
+    public function canSendToMsk(Booking $booking): bool
+    {
+        return $this->canSendToFreeRoom($booking, ScheduleSession::KIND_MSK);
+    }
+
+    public function canSendToReport(Booking $booking): bool
+    {
+        if (! tenant()?->hasStations()) {
+            return false;
+        }
+
+        if (in_array($booking->status, ['cancelled', 'no_show'], true)) {
+            return false;
+        }
+
+        if (! in_array(ScheduleSession::KIND_REPORT, $this->nextRoomKinds($booking), true)) {
+            return false;
+        }
+
+        $session = $booking->bookable;
+        if ($session instanceof ScheduleSession && $session->isInterventionKind()
+            && $booking->procedure_status !== Booking::PROCEDURE_DONE) {
+            return false;
+        }
+
+        return $this->openLinkedOfKind($booking, ScheduleSession::KIND_REPORT) === null;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function nextRoomKinds(Booking $booking): array
+    {
+        if (! tenant()?->hasStations()) {
+            return [];
+        }
+
+        if (in_array($booking->status, ['cancelled', 'no_show'], true)) {
+            return [];
+        }
+
+        $session = $booking->bookable;
+        if (! $session instanceof ScheduleSession) {
+            return [];
+        }
+
+        $date = $booking->booking_date?->toDateString();
+        if ($date === null) {
+            return [];
+        }
+
+        $path = $this->pathOf($booking);
+        $branch = $this->branchOf($booking);
+        $current = filled($session->kind) ? $session->kind : ScheduleSession::KIND_VISIT;
+
+        if ($path === CarePath::FOLLOW_UP && ! filled($branch) && $current === ScheduleSession::KIND_VISIT) {
+            $options = [];
+            if ($this->hasRoom($session, ScheduleSession::KIND_MSK, $date)) {
+                $options[] = ScheduleSession::KIND_MSK;
+            } elseif ($this->hasRoom($session, ScheduleSession::KIND_REPORT, $date)) {
+                $options[] = ScheduleSession::KIND_REPORT;
+            }
+            if ($this->hasRoom($session, ScheduleSession::KIND_INTERVENTION, $date)) {
+                $options[] = ScheduleSession::KIND_INTERVENTION;
+            }
+
+            return $options;
+        }
+
+        $seq = CarePath::sequence($path, $branch);
+        $idx = array_search($current, $seq, true);
+        if ($idx === false) {
+            return [];
+        }
+
+        $existing = [];
+        foreach (array_slice($seq, $idx + 1) as $kind) {
+            if ($this->hasRoom($session, $kind, $date)) {
+                $existing[] = $kind;
+            }
+        }
+
+        return $existing === [] ? [] : [$existing[0]];
+    }
+
     /**
      * Unfinished intervention rows whose date has already passed.
      * Nothing auto-cancels — the list is the prompt.
@@ -162,13 +245,17 @@ class StationsHandoffService
 
     public function isVisitSitting(Booking $booking): bool
     {
-        if ($booking->bookable_type !== ScheduleSession::class) {
-            return false;
-        }
+        return $this->sittingIsKind($booking, ScheduleSession::KIND_VISIT);
+    }
 
-        $session = $booking->bookable;
+    public function isMskSitting(Booking $booking): bool
+    {
+        return $this->sittingIsKind($booking, ScheduleSession::KIND_MSK);
+    }
 
-        return $session instanceof ScheduleSession && $session->kind === ScheduleSession::KIND_VISIT;
+    public function isReportSitting(Booking $booking): bool
+    {
+        return $this->sittingIsKind($booking, ScheduleSession::KIND_REPORT);
     }
 
     public function isOpenProcedure(Booking $booking): bool
@@ -194,15 +281,24 @@ class StationsHandoffService
             return $booking;
         }
 
-        if (! $this->isVisitSitting($booking)) {
-            return null;
+        $date = $booking->booking_date?->toDateString();
+        $originId = $this->originId($booking);
+
+        $query = Booking::query()
+            ->with('bookable')
+            ->where('bookable_type', ScheduleSession::class)
+            ->where('status', '!=', 'cancelled')
+            ->where(function ($q) use ($booking, $originId): void {
+                $q->where('care_origin_id', $originId)
+                    ->orWhere('related_booking_id', $booking->id)
+                    ->orWhere('id', $originId);
+            });
+
+        if (filled($date)) {
+            // Procedures may be booked for a later sitting than today's visit.
         }
 
-        $related = $booking->relationLoaded('procedureBookings')
-            ? $booking->procedureBookings
-            : $booking->procedureBookings()->with('bookable')->get();
-
-        return $related->first(fn (Booking $row): bool => $this->isOpenProcedure($row));
+        return $query->get()->first(fn (Booking $row): bool => $this->isOpenProcedure($row));
     }
 
     /**
@@ -303,20 +399,12 @@ class StationsHandoffService
             throw new InvalidArgumentException(__('Stations module is not enabled.'));
         }
 
-        if (! $this->isVisitSitting($visitBooking)) {
-            throw new InvalidArgumentException(__('Send to intervention is only available from a visit sitting.'));
+        if (! $this->canSendVisit($visitBooking)) {
+            throw new InvalidArgumentException(__('Send to intervention is only available from a visit or MSK sitting.'));
         }
 
-        if (in_array($visitBooking->status, ['cancelled', 'no_show'], true)) {
-            throw new InvalidArgumentException(__('That visit cannot be sent to intervention.'));
-        }
-
-        if ($this->openProcedureFor($visitBooking) !== null) {
-            throw new InvalidArgumentException(__('This patient already has an intervention sitting booked.'));
-        }
-
-        $visitSession = $this->visitSession($visitBooking);
-        $interventionSession = $this->resolveInterventionSession($visitSession, $bookingDate, $sessionId);
+        $fromSession = $this->sittingSession($visitBooking);
+        $interventionSession = $this->resolveInterventionSession($fromSession, $bookingDate, $sessionId);
 
         return DB::transaction(function () use ($visitBooking, $interventionSession, $bookingDate) {
             try {
@@ -335,8 +423,13 @@ class StationsHandoffService
                 throw new InvalidArgumentException($e->getMessage(), 0, $e);
             }
 
+            $branch = $this->pathOf($visitBooking) === CarePath::FOLLOW_UP
+                && $this->isVisitSitting($visitBooking)
+                ? CarePath::BRANCH_INTERVENTION
+                : null;
+
+            $this->stampLinked($procedureBooking, $visitBooking, $branch);
             $procedureBooking->update([
-                'related_booking_id' => $visitBooking->id,
                 'procedure_status' => Booking::PROCEDURE_LOGGED,
             ]);
 
@@ -350,56 +443,51 @@ class StationsHandoffService
         });
     }
 
-    public function sendToCounseling(Booking $procedure): Booking
+    public function sendToCounseling(Booking $from): Booking
     {
-        if (! tenant()?->hasStations()) {
-            throw new InvalidArgumentException(__('Stations module is not enabled.'));
+        if (! $this->canSendToCounseling($from)) {
+            throw new InvalidArgumentException(__('Send to counseling is only available from a finished procedure or a report sitting.'));
         }
 
-        $session = $procedure->bookable;
-        if (! $session instanceof ScheduleSession || ! $session->isInterventionKind()) {
-            throw new InvalidArgumentException(__('Send to counseling is only available from a finished procedure.'));
+        return $this->sendToFreeRoom(
+            $from,
+            ScheduleSession::KIND_COUNSELING,
+            __('This patient is already on today\'s counseling list.'),
+            __('No counseling sitting is scheduled for this doctor on that date.'),
+        );
+    }
+
+    public function sendToMsk(Booking $from): Booking
+    {
+        if (! $this->canSendToMsk($from)) {
+            throw new InvalidArgumentException(__('Send to MSK is only available from a visit sitting.'));
         }
 
-        if (in_array($procedure->status, ['cancelled', 'no_show'], true)) {
-            throw new InvalidArgumentException(__('That procedure cannot be sent to counseling.'));
+        $branch = $this->pathOf($from) === CarePath::FOLLOW_UP
+            ? CarePath::BRANCH_MSK
+            : null;
+
+        return $this->sendToFreeRoom(
+            $from,
+            ScheduleSession::KIND_MSK,
+            __('This patient is already on today\'s MSK list.'),
+            __('No MSK sitting is scheduled for this doctor on that date.'),
+            $branch,
+        );
+    }
+
+    public function sendToReport(Booking $from): Booking
+    {
+        if (! $this->canSendToReport($from)) {
+            throw new InvalidArgumentException(__('Send to report is only available after MSK or a finished procedure.'));
         }
 
-        if ($procedure->procedure_status !== Booking::PROCEDURE_DONE) {
-            throw new InvalidArgumentException(__('Finish the procedure before sending them to counseling.'));
-        }
-
-        if ($this->openCounselingFor($procedure) !== null) {
-            throw new InvalidArgumentException(__('This patient is already on today\'s counseling list.'));
-        }
-
-        $date = $procedure->booking_date->toDateString();
-        $counselingSession = $this->resolveCounselingSession($session, $date);
-
-        return DB::transaction(function () use ($procedure, $counselingSession, $date) {
-            try {
-                $counseling = $this->bookingService->createBookingForBookable(
-                    $counselingSession,
-                    $date,
-                    $procedure->patient_name,
-                    $procedure->patient_phone,
-                    sendSms: false,
-                    patientId: $procedure->patient_id,
-                    whatsappPhone: $procedure->whatsapp_phone,
-                    allowOverflow: true,
-                    allowEndedToday: true,
-                    allowCounselingHandoff: true,
-                );
-            } catch (BookingUnavailableException $e) {
-                throw new InvalidArgumentException($e->getMessage(), 0, $e);
-            }
-
-            $counseling->update([
-                'related_booking_id' => $procedure->id,
-            ]);
-
-            return $counseling->fresh(['bookable']);
-        });
+        return $this->sendToFreeRoom(
+            $from,
+            ScheduleSession::KIND_REPORT,
+            __('This patient is already on today\'s report list.'),
+            __('No report sitting is scheduled for this doctor on that date.'),
+        );
     }
 
     public function moveProcedure(Booking $booking, string $bookingDate, ?int $sessionId = null): Booking
@@ -422,7 +510,7 @@ class StationsHandoffService
         if ($procedure->related_booking_id) {
             $visit = $procedure->relatedBooking;
             if ($visit && $this->isVisitSitting($visit)) {
-                $visitSession = $this->visitSession($visit);
+                $visitSession = $this->sittingSession($visit);
             }
         }
 
@@ -541,14 +629,19 @@ class StationsHandoffService
         ];
     }
 
-    private function visitSession(Booking $visitBooking): ScheduleSession
+    private function sittingSession(Booking $booking): ScheduleSession
     {
-        $session = $visitBooking->bookable;
+        $session = $booking->bookable;
         if (! $session instanceof ScheduleSession) {
             throw new InvalidArgumentException(__('Only sitting bookings can be sent to intervention.'));
         }
 
         return $session;
+    }
+
+    private function visitSession(Booking $visitBooking): ScheduleSession
+    {
+        return $this->sittingSession($visitBooking);
     }
 
     /**
@@ -597,33 +690,228 @@ class StationsHandoffService
      */
     private function findCounselingSession(ScheduleSession $procedureSession, string $bookingDate): ?ScheduleSession
     {
-        $date = Carbon::parse($bookingDate);
-
-        return ScheduleSession::query()
-            ->where('chamber_id', $procedureSession->chamber_id)
-            ->where('doctor_id', $procedureSession->doctor_id)
-            ->where('kind', ScheduleSession::KIND_COUNSELING)
-            ->where('day_of_week', $date->dayOfWeek)
-            ->orderBy('start_time')
-            ->first();
+        return $this->findSession($procedureSession, ScheduleSession::KIND_COUNSELING, $bookingDate);
     }
 
     private function resolveCounselingSession(ScheduleSession $procedureSession, string $bookingDate): ScheduleSession
     {
-        $date = Carbon::parse($bookingDate);
-        $match = ScheduleSession::query()
-            ->where('chamber_id', $procedureSession->chamber_id)
-            ->where('doctor_id', $procedureSession->doctor_id)
-            ->where('kind', ScheduleSession::KIND_COUNSELING)
-            ->where('day_of_week', $date->dayOfWeek)
-            ->orderBy('start_time')
-            ->first();
-
+        $match = $this->findSession($procedureSession, ScheduleSession::KIND_COUNSELING, $bookingDate);
         if (! $match) {
             throw new InvalidArgumentException(__('No counseling sitting is scheduled for this doctor on that date.'));
         }
 
         return $match;
+    }
+
+    private function findSession(ScheduleSession $from, string $kind, string $bookingDate): ?ScheduleSession
+    {
+        $date = Carbon::parse($bookingDate);
+
+        return ScheduleSession::query()
+            ->where('chamber_id', $from->chamber_id)
+            ->where('doctor_id', $from->doctor_id)
+            ->where('kind', $kind)
+            ->where('day_of_week', $date->dayOfWeek)
+            ->orderBy('start_time')
+            ->first();
+    }
+
+    private function hasRoom(ScheduleSession $from, string $kind, string $date): bool
+    {
+        if ($kind === ScheduleSession::KIND_INTERVENTION) {
+            $weekday = Carbon::parse($date)->dayOfWeek;
+
+            return $this->interventionSessions($from)
+                ->contains(fn (ScheduleSession $session): bool => (int) $session->day_of_week === $weekday);
+        }
+
+        return $this->findSession($from, $kind, $date) !== null;
+    }
+
+    private function sittingIsKind(Booking $booking, string $kind): bool
+    {
+        if ($booking->bookable_type !== ScheduleSession::class) {
+            return false;
+        }
+
+        $session = $booking->bookable;
+
+        return $session instanceof ScheduleSession && $session->kind === $kind;
+    }
+
+    private function canSendToFreeRoom(Booking $booking, string $kind): bool
+    {
+        if (! tenant()?->hasStations()) {
+            return false;
+        }
+
+        if (in_array($booking->status, ['cancelled', 'no_show'], true)) {
+            return false;
+        }
+
+        if (! in_array($kind, $this->nextRoomKinds($booking), true)) {
+            return false;
+        }
+
+        return $this->openLinkedOfKind($booking, $kind) === null;
+    }
+
+    private function sendToFreeRoom(
+        Booking $from,
+        string $kind,
+        string $alreadyMessage,
+        string $missingMessage,
+        ?string $branch = null,
+    ): Booking {
+        if (! tenant()?->hasStations()) {
+            throw new InvalidArgumentException(__('Stations module is not enabled.'));
+        }
+
+        $session = $from->bookable;
+        if (! $session instanceof ScheduleSession) {
+            throw new InvalidArgumentException(__('Only sitting bookings can be handed off.'));
+        }
+
+        if ($this->openLinkedOfKind($from, $kind) !== null) {
+            throw new InvalidArgumentException($alreadyMessage);
+        }
+
+        $date = $from->booking_date->toDateString();
+        $target = $this->findSession($session, $kind, $date);
+        if (! $target) {
+            throw new InvalidArgumentException($missingMessage);
+        }
+
+        return DB::transaction(function () use ($from, $target, $date, $branch) {
+            try {
+                $row = $this->bookingService->createBookingForBookable(
+                    $target,
+                    $date,
+                    $from->patient_name,
+                    $from->patient_phone,
+                    sendSms: false,
+                    patientId: $from->patient_id,
+                    whatsappPhone: $from->whatsapp_phone,
+                    allowOverflow: true,
+                    allowEndedToday: true,
+                    allowStaffHandoff: true,
+                );
+            } catch (BookingUnavailableException $e) {
+                throw new InvalidArgumentException($e->getMessage(), 0, $e);
+            }
+
+            $this->stampLinked($row, $from, $branch);
+
+            return $row->fresh(['bookable']);
+        });
+    }
+
+    private function stampLinked(Booking $child, Booking $from, ?string $branch = null): void
+    {
+        $originId = $this->originId($from);
+
+        if ($from->care_origin_id === null) {
+            $from->update([
+                'care_origin_id' => $originId,
+                'care_path' => $from->care_path ?: CarePath::VISIT,
+            ]);
+        }
+
+        if ($branch !== null) {
+            Booking::query()
+                ->where(function ($q) use ($originId): void {
+                    $q->where('id', $originId)->orWhere('care_origin_id', $originId);
+                })
+                ->update(['care_branch' => $branch]);
+        }
+
+        $origin = Booking::query()->find($originId);
+        $child->update([
+            'related_booking_id' => $from->id,
+            'care_path' => $origin?->care_path ?? $from->care_path ?? CarePath::VISIT,
+            'care_branch' => $branch ?? $origin?->care_branch ?? $from->care_branch,
+            'care_origin_id' => $originId,
+        ]);
+    }
+
+    private function originId(Booking $booking): string
+    {
+        if (filled($booking->care_origin_id)) {
+            return (string) $booking->care_origin_id;
+        }
+
+        $walk = $booking;
+        $guard = 0;
+        while (filled($walk->related_booking_id) && $guard < 8) {
+            $parent = $walk->relatedBooking;
+            if (! $parent) {
+                break;
+            }
+            $walk = $parent;
+            $guard++;
+        }
+
+        return (string) $walk->id;
+    }
+
+    private function pathOf(Booking $booking): string
+    {
+        if (filled($booking->care_path)) {
+            return $booking->care_path;
+        }
+
+        $origin = $booking->careOrigin ?? ($booking->care_origin_id ? Booking::query()->find($booking->care_origin_id) : null);
+        if ($origin && filled($origin->care_path)) {
+            return $origin->care_path;
+        }
+
+        $session = $booking->bookable;
+
+        return $session instanceof ScheduleSession && $session->isInterventionKind()
+            ? CarePath::INTERVENTION
+            : ($session instanceof ScheduleSession && $session->kind === ScheduleSession::KIND_MSK
+                ? CarePath::MSK
+                : CarePath::VISIT);
+    }
+
+    private function branchOf(Booking $booking): ?string
+    {
+        if (filled($booking->care_branch)) {
+            return $booking->care_branch;
+        }
+
+        $origin = $booking->careOrigin ?? ($booking->care_origin_id ? Booking::query()->find($booking->care_origin_id) : null);
+
+        return $origin?->care_branch;
+    }
+
+    private function openLinkedOfKind(Booking $booking, string $kind): ?Booking
+    {
+        $originId = $this->originId($booking);
+        $date = $booking->booking_date?->toDateString();
+
+        $query = Booking::query()
+            ->with('bookable')
+            ->where('bookable_type', ScheduleSession::class)
+            ->where(function ($q) use ($originId, $booking): void {
+                    $q->where('care_origin_id', $originId)
+                    ->orWhere('related_booking_id', $booking->id)
+                    ->orWhere('id', $originId);
+            });
+
+        if ($date !== null) {
+            $query->where('booking_date', $date);
+        }
+
+        return $query->get()->first(function (Booking $row) use ($kind): bool {
+            if (in_array($row->status, ['cancelled', 'no_show'], true)) {
+                return false;
+            }
+
+            $session = $row->bookable;
+
+            return $session instanceof ScheduleSession && $session->kind === $kind;
+        });
     }
 
     /**

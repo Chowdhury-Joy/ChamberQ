@@ -37,6 +37,8 @@ class ChamberCashEntry extends Model
 
     public const CATEGORY_REFERRAL_PAYOUT = 'referral_payout';
 
+    public const CATEGORY_PATIENT_REFUND = 'patient_refund';
+
     public const METHOD_CASH = 'cash';
 
     public const METHOD_BKASH = 'bkash';
@@ -106,6 +108,7 @@ class ChamberCashEntry extends Model
             self::CATEGORY_SALARY => __('Salary'),
             self::CATEGORY_TRANSPORT => __('Transport'),
             self::CATEGORY_REFERRAL_PAYOUT => __('Referral payout'),
+            self::CATEGORY_PATIENT_REFUND => __('Patient refund'),
             self::CATEGORY_OTHER_EXPENSE => __('Other expense'),
         ];
     }

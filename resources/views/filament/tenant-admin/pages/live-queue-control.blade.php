@@ -385,6 +385,11 @@
                                                     && $handoff->canMove($current);
                                                 $canSendToCounseling = $handoff->actorMaySend(auth()->user())
                                                     && $handoff->canSendToCounseling($current);
+                                                $canSendToMsk = $handoff->actorMaySend(auth()->user())
+                                                    && $handoff->canSendToMsk($current);
+                                                $canSendToReport = $handoff->actorMaySend(auth()->user())
+                                                    && $handoff->canSendToReport($current);
+                                                $collectFeePrimary = \App\Filament\TenantAdmin\Support\DeskActionLayout::feeIsPrimaryOnCard($current);
                                             @endphp
                                             @if($current->status === 'called')
                                                 <x-filament::button wire:click="patientArrived" color="success" icon="heroicon-m-check" size="lg" class="cq-offline-queue-allowed" data-cq-queue-action="patient_arrived">
@@ -403,6 +408,11 @@
                                                         {{ 'No response — skip ('.($current->skip_count + 1).' of 2)' }}
                                                     @endif
                                                 </x-filament::button>
+                                                @if($collectFeePrimary)
+                                                    <x-filament::button wire:click="mountAction('collectCurrentFee')" color="success" icon="heroicon-o-banknotes">
+                                                        {{ $current->cashEntry ? __('Edit fee') : __('Collect fee') }}
+                                                    </x-filament::button>
+                                                @endif
                                                 <p class="lqc-xs">
                                                     @if($current->skip_count >= 2)
                                                         {{ __('They have missed both calls — this removes them from today\'s queue.') }}
@@ -418,19 +428,34 @@
                                                     'booking' => $current,
                                                     'prescription' => $current->visitRecord?->prescription,
                                                 ])
+                                                @if($collectFeePrimary)
+                                                    <x-filament::button wire:click="mountAction('collectCurrentFee')" color="success" icon="heroicon-o-banknotes" size="lg">
+                                                        {{ $current->cashEntry ? __('Edit fee') : __('Collect fee') }}
+                                                    </x-filament::button>
+                                                @endif
                                                 <x-filament::button wire:click="callNextPatientOnly" color="primary" icon="heroicon-m-megaphone" size="lg" class="cq-offline-queue-allowed" data-cq-queue-action="call_next">
                                                     {{ 'Call next patient' }}
                                                 </x-filament::button>
-                                                @if($canBookIntervention)
+                                                @if(! $collectFeePrimary && $canBookIntervention)
                                                     <x-filament::button wire:click="mountAction('bookCurrentIntervention')" color="warning" icon="heroicon-m-arrow-right-circle">
                                                         {{ __('Book intervention') }}
                                                     </x-filament::button>
-                                                @elseif($canMoveIntervention)
+                                                @elseif(! $collectFeePrimary && $canMoveIntervention)
                                                     <x-filament::button wire:click="mountAction('moveCurrentIntervention')" color="gray" icon="heroicon-m-calendar-days">
                                                         {{ __('Move intervention') }}
                                                     </x-filament::button>
                                                 @endif
-                                                @if($canSendToCounseling)
+                                                @if(! $collectFeePrimary && $canSendToMsk)
+                                                    <x-filament::button wire:click="mountAction('sendCurrentToMsk')" color="success" icon="heroicon-m-arrow-right-circle">
+                                                        {{ __('Send to MSK') }}
+                                                    </x-filament::button>
+                                                @endif
+                                                @if(! $collectFeePrimary && $canSendToReport)
+                                                    <x-filament::button wire:click="mountAction('sendCurrentToReport')" color="success" icon="heroicon-m-arrow-right-circle">
+                                                        {{ __('Send to report') }}
+                                                    </x-filament::button>
+                                                @endif
+                                                @if(! $collectFeePrimary && $canSendToCounseling)
                                                     <x-filament::button wire:click="mountAction('sendCurrentToCounseling')" color="success" icon="heroicon-m-chat-bubble-left-right">
                                                         {{ __('Send to counseling') }}
                                                     </x-filament::button>
@@ -446,6 +471,16 @@
                                                 @elseif($canMoveIntervention)
                                                     <x-filament::button wire:click="mountAction('moveCurrentIntervention')" color="gray" icon="heroicon-m-calendar-days">
                                                         {{ __('Move intervention') }}
+                                                    </x-filament::button>
+                                                @endif
+                                                @if($canSendToMsk)
+                                                    <x-filament::button wire:click="mountAction('sendCurrentToMsk')" color="success" icon="heroicon-m-arrow-right-circle">
+                                                        {{ __('Send to MSK') }}
+                                                    </x-filament::button>
+                                                @endif
+                                                @if($canSendToReport)
+                                                    <x-filament::button wire:click="mountAction('sendCurrentToReport')" color="success" icon="heroicon-m-arrow-right-circle">
+                                                        {{ __('Send to report') }}
                                                     </x-filament::button>
                                                 @endif
                                                 @if($canSendToCounseling)

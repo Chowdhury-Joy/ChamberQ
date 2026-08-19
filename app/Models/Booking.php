@@ -39,6 +39,9 @@ class Booking extends Model
         'voucher_number',
         'related_booking_id',
         'procedure_status',
+        'care_path',
+        'care_branch',
+        'care_origin_id',
         'referring_doctor_id',
         'is_overflow',
         'status',
@@ -65,6 +68,19 @@ class Booking extends Model
         'in_chamber_at' => 'datetime',
         'completed_at' => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::updated(function (self $booking): void {
+            if (! $booking->wasChanged('status')) {
+                return;
+            }
+
+            if (in_array($booking->status, ['no_show', 'cancelled'], true)) {
+                app(\App\Services\PatientFeeRefundService::class)->refundIfMissed($booking);
+            }
+        });
+    }
 
     /**
      * A `wa.me` deep link staff can tap to message this patient.
@@ -133,12 +149,18 @@ class Booking extends Model
 
     public function cashEntry()
     {
-        return $this->hasOne(ChamberCashEntry::class);
+        return $this->hasOne(ChamberCashEntry::class)
+            ->where('direction', ChamberCashEntry::DIRECTION_INCOME);
     }
 
     public function relatedBooking()
     {
         return $this->belongsTo(Booking::class, 'related_booking_id');
+    }
+
+    public function careOrigin()
+    {
+        return $this->belongsTo(Booking::class, 'care_origin_id');
     }
 
     public function referringDoctor()

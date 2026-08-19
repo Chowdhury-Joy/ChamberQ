@@ -20,6 +20,8 @@ class Doctor extends Model
         'practice_type',
         'staff_may_enter_prescriptions',
         'allows_repeat_serials',
+        'collect_fee_at_checkin',
+        'practice_rules',
         'qualifications',
         'registration_number',
         'default_fee_taka',
@@ -38,6 +40,7 @@ class Doctor extends Model
         'allows_repeat_serials' => 'boolean',
         'default_fee_taka' => 'integer',
         'extra_fees' => 'array',
+        'practice_rules' => 'array',
         'show_on_website' => 'boolean',
         'website_sort_order' => 'integer',
         'notify_channels' => 'array',
@@ -123,6 +126,20 @@ class Doctor extends Model
         }
 
         return static::query()->orderBy('id')->first();
+    }
+
+    /**
+     * Null on the doctor row means inherit Branding → Desk.
+     */
+    public function collectsFeeAtCheckin(?bool $clinicDefault = null): bool
+    {
+        $raw = $this->attributes['collect_fee_at_checkin'] ?? null;
+
+        if ($raw === null || $raw === '') {
+            return (bool) ($clinicDefault ?? tenant()?->collectsFeeAtCheckin());
+        }
+
+        return filter_var($raw, FILTER_VALIDATE_BOOLEAN);
     }
 
     /**

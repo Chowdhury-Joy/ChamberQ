@@ -148,6 +148,13 @@ class VisitRecord extends Model
         return $this->bp_systolic.'/'.$this->bp_diastolic;
     }
 
+    /** Outdoor desk capture: weight or a complete BP pair. */
+    public function hasOutdoorVitals(): bool
+    {
+        return $this->weight_kg !== null
+            || ($this->bp_systolic !== null && $this->bp_diastolic !== null);
+    }
+
     /**
      * "78 /min" — or null when pulse was not recorded this visit.
      */

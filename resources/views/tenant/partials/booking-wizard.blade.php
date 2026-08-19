@@ -1179,6 +1179,10 @@
                 state.chamberName = session.chamber?.name;
             }
         }
+        const chamberParam = prefill.chamber;
+        if (!state.chamberId && chamberParam && config.chamberIds.includes(String(chamberParam))) {
+            state.chamberId = String(chamberParam);
+        }
         if (doctorParam && config.doctorIds.includes(String(doctorParam))) {
             state.type = 'session';
             state.typeLocked = true;

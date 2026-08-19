@@ -1444,6 +1444,33 @@
   <prevention_rule>Lead hire must validate branch picks (`assertLeadHireChamberIds`), reject out-of-scope intersections, and never list or edit staff without overlapping chamber rows when the lead is branch-locked.</prevention_rule>
 </bug>
 
+## 2026-08-18T17:36:15+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>The MUPS homepage hero showed white text on a blank white band — the surgery photo was in the HTML but never painted.</symptom>
+ <root_cause>A QA form fill wrote “QA sweep” into `theme_color`. CSS `--brand` became that string, so `color-mix(..., var(--ink-deep))` inside `background-image` was invalid and the browser dropped the whole stack, including `url(/images/mups/mups-hero-surgery.jpg)`.</root_cause>
+ <prevention_rule>Never emit `theme_color` into CSS unless it is `#rgb`/`#rrggbb` (`Tenant::cssThemeColor()`). Keep the hero photo on its own `background-image` (`--hero-photo`); put the overlay on `::after`. ColorPickers must regex-reject non-hex.</prevention_rule>
+</bug>
+
+## 2026-08-18T17:43:15+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>The clinic homepage hero let a Dhaka patient book a Chittagong serial — one mixed session list, no city question, and picking a sitting skipped “Pick location” in the wizard.</symptom>
+ <root_cause>The hero asked doctor/date/session only. Session labels were `Visit · Saturday…` with no chamber. Prefill locked the sitting’s chamber. Intervention sittings were also listed because the homepage loaded every schedule row.</root_cause>
+ <prevention_rule>A multi-branch clinic hero must collect the centre first, list only `publiclyBookable()` sittings for that chamber, and drop a posted sitting that does not belong to the chosen chamber.</prevention_rule>
+</bug>
+
+## 2026-08-18T17:50:11+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>The hero Date field looked like 18/08/2026 was already chosen, so patients skipped it or thought the clinic had picked today for them.</symptom>
+ <root_cause>Browser `<input type="date">` paints today’s date in a muted colour when the value is blank, especially with `min` set to today.</root_cause>
+ <prevention_rule>Patient-facing date fields that start empty must show an explicit empty prompt (e.g. Select date), never a native date input whose blank state looks filled.</prevention_rule>
+</bug>
+
 ## 2026-08-18T18:24:32+0600
 
 <bug>
@@ -1451,4 +1478,76 @@
  <symptom>Storing a patient's age as a whole-year number (42) made the file wrong every birthday — the software either left 42 forever or quietly added a year on the anniversary of the booking, never on the real birthday.</symptom>
  <root_cause>The public wizard asked for age in years and `PatientService` stored `age` + `age_recorded_at`, with `displayAge()` adding elapsed years. That number is not identity; a birth year is.</root_cause>
  <prevention_rule>Ask for year of birth (জন্মসাল) on booking and walk-in. Store `patients.year_of_birth`. Compute display age as this calendar year minus that year. Never store a ticking age as the source of truth. A leftover `age` POST from an old client may be converted once.</prevention_rule>
+</bug>
+
+## 2026-08-19T19:22:45+0600
+
+<bug>
+ <category>CRO</category>
+ <symptom>Submitting from a clinic homepage showed MethodNotAllowedHttpException: method not supported for route `/` (GET, HEAD only).</symptom>
+ <root_cause>The homepage catch-all is GET-only. The Book card correctly POSTs to `/book`, but a request that POSTs `/` (browser posting the current URL) never reached `prefill()`.</root_cause>
+ <prevention_rule>Clinic `POST /` must share `BookingController::prefill()` with `POST /book`. Pin the hero `action` to `tenant_web_url('/book')`. Do not treat ChamberQ marketing `POST /` as a booking.</prevention_rule>
+</bug>
+
+## 2026-08-19T19:33:18+0600
+
+<bug>
+ <category>Code</category>
+ <symptom>Opening Live Queue Control at `/{tenant}/admin/live-queue-control` showed MethodNotAllowedHttpException on route `/` (GET, HEAD, POST).</symptom>
+ <root_cause>The patient service worker is scoped to `/{tenant}/`, which includes the Filament desk. Combined with `APP_URL=http://localhost` vs a tab on `127.0.0.1:8000`, Livewire/desk traffic could hit `/` with a method the homepage does not allow. The earlier `POST /` booking safety net made the error list POST as allowed without fixing the desk.</root_cause>
+ <prevention_rule>Patient `sw.js` must not intercept `/admin` or `/livewire/`. Generated URLs on a request must use that request’s host and port (`ForceRequestRootUrl`). `prefill()` must ignore `X-Livewire`. Pin Live Queue HTML `data-update-uri` to `/livewire/update`.</prevention_rule>
+</bug>
+
+## 2026-08-19T20:05:04+0600
+
+<bug>
+ <category>Code</category>
+ <symptom>After the Live Queue `/` Method Not Allowed fix, the red Ignition overlay still appeared on Live Queue in every browser that had opened a clinic homepage. Desk login worked; the queue board loaded underneath the overlay.</symptom>
+ <root_cause>Skipping `/admin` in a *new* `sw.js` does not remove an already-installed worker. Path-tenant PWA scope is `/{tenant}/`, which includes the Filament desk. Several tenants (`mups`, `demo`, …) each left a worker on `127.0.0.1:8000`.</root_cause>
+ <prevention_rule>Filament pages must unregister service workers on this origin (`drop-patient-service-workers`). `sw.js` must `registration.unregister()` on `/admin` or `/livewire/`, not only `return` from fetch. Pin both in `LiveQueueLivewireUriTest`.</prevention_rule>
+</bug>
+
+## 2026-08-19T21:41:39+0600
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>Submit on Live Queue **New Walk-In** showed Method Not Allowed on route `/` after the sitting's published end time (e.g. Uttara Intervention 17:00–18:00, walk-in at 21:36).</symptom>
+ <root_cause>`sessionAlreadyEndedToday()` treats a past `end_time` as "clinic closed". Desk walk-in did not pass `allowEndedToday`. The exception's `render()` called `back()` on the Livewire POST, which Laravel then rejected as the wrong method for `/`.</root_cause>
+ <prevention_rule>Live Queue and Daily Roster walk-in must pass `allowEndedToday: true` (same as Book intervention). `BookingUnavailableException::render()` must not `back()` when `X-Livewire` is set — 422 JSON, and the action must catch and notify. Pin with a walk-in after `end_time` and a Livewire render test.</prevention_rule>
+</bug>
+
+## 2026-08-19T21:45:32+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>Phone admin sidebar clipped the practice name through the middle of the letters and cut off later Operations items such as Follow-up reminders.</symptom>
+ <root_cause>Filament’s logo row is a fixed 4rem with `overflow-x-clip` (which also clips vertically) and `leading-5` on a flex logo that will not wrap. The nav is a flex child without `min-height: 0`, so it cannot scroll inside `h-dvh`. Safe-area insets were unused because the viewport meta lacked `viewport-fit=cover`.</root_cause>
+ <prevention_rule>Tenant admin sidebar header must wrap the brand name at `height: auto`; `.fi-sidebar-nav` must set `min-height: 0` and bottom safe-area padding; Filament head must include `viewport-fit=cover`. Pin in `TenantAdminShellTest`.</prevention_rule>
+</bug>
+
+## 2026-08-19T22:05:02+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>On Live Queue on a phone, opening the menu left Session Actions and New Walk-In sitting on top of the drawer. The page title “LIVE QUEUE CONTROL” stacked over the hamburger and the clinic name.</symptom>
+ <root_cause>The sticky content header is z-index 40 so it stays above the Rx patient strip. Filament’s sidebar/overlay are z-index 30. On a phone the drawer is a full-screen overlay, so the lower z-index lost. The no-topbar hamburger also stayed in document flow, sharing the same band.</root_cause>
+ <prevention_rule>Below `lg`, the sidebar must be z-index 50 and the close overlay 45 — never below the content header’s 40. Do not lower the content header to fix the drawer. Pin in `TenantAdminShellTest`.</prevention_rule>
+</bug>
+
+## 2026-08-19T22:08:01+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>On a phone, Live Queue’s title “LIVE QUEUE CONTROL” stacked on three lines under the hamburger while Session Actions and New Walk-In stayed on the same row and overlapped the title.</symptom>
+ <root_cause>The content header is `flex-row` at every width. Two wide buttons left almost no room for an uppercase mono title, and `padding-inline` after a mobile `padding-left` cancelled the hamburger gutter.</root_cause>
+ <prevention_rule>Below `lg`, `.fi-header.fi-content-shell-header` must be `flex-direction: column` with actions on a full-width second row, and that rule must come after the desktop `flex-row` block. Pin in `TenantAdminShellTest`.</prevention_rule>
+</bug>
+
+## 2026-08-19T22:12:45+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>On Live Queue in dark mode, “Buzz this phone when a sitting needs you” sat on a pale card with near-white type — unreadable.</symptom>
+ <root_cause>The card used an inline `background:rgb(250 250 250)` that always won, while the heading inherited Filament’s dark-mode light text. `text-muted` did not set a dark-mode colour either.</root_cause>
+ <prevention_rule>Never pin Filament desk cards to a light fill with inline `background`. Paint `.staff-buzz-card` in `tenantAdmin/theme.css` with an explicit `color` and an `html.dark` surface. Pin in `LiveQueueControlPageTest`.</prevention_rule>
 </bug>

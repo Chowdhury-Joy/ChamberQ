@@ -18,17 +18,23 @@ class CommissionsTable
     {
         return $table
             ->columns([
-                TextColumn::make('marketer.display_name')
-                    ->label(__('Marketer'))
-                    ->searchable()
-                    ->sortable(),
+                TextColumn::make('payee')
+                    ->label(__('Payee'))
+                    ->state(fn (Commission $record): string => $record->payeeName())
+                    ->searchable(query: function ($query, string $search): void {
+                        $query->whereHas('marketer', fn ($q) => $q->where('display_name', 'like', "%{$search}%"))
+                            ->orWhereHas('medicalRepresentative', fn ($q) => $q->where('name', 'like', "%{$search}%"));
+                    }),
                 TextColumn::make('tenant.name')
                     ->label(__('Doctor / tenant'))
                     ->placeholder(fn (Commission $record) => $record->tenant_id)
                     ->searchable(),
                 TextColumn::make('type')
                     ->badge()
-                    ->formatStateUsing(fn (string $state) => ucfirst($state)),
+                    ->formatStateUsing(fn (string $state) => match ($state) {
+                        Commission::TYPE_YEAR_PREPAID => 'Year prepaid',
+                        default => ucfirst($state),
+                    }),
                 TextColumn::make('period')
                     ->placeholder('—'),
                 TextColumn::make('base_amount')

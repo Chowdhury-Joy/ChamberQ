@@ -145,6 +145,27 @@ class LiveQueueControlPageTest extends TestCase
         $this->assertSame($called->id, $records->first()->id);
     }
 
+    public function test_header_walk_in_adds_the_patient_to_the_live_queue(): void
+    {
+        $this->queuePage()
+            ->mountAction('newWalkIn')
+            ->fillForm([
+                'patient_phone' => '01711112222',
+                'patient_name' => 'Joy Walk-In',
+                'share_clinical_history' => true,
+            ])
+            ->callMountedAction()
+            ->assertHasNoErrors()
+            ->assertSuccessful();
+
+        $this->assertDatabaseHas('bookings', [
+            'patient_name' => 'Joy Walk-In',
+            'patient_phone' => '01711112222',
+            'bookable_id' => $this->session->id,
+            'status' => 'waiting',
+        ]);
+    }
+
     public function test_summary_counts_waiting_seen_and_measured_pace(): void
     {
         $this->makeWaitingBooking('Seen One', 1)->update([
@@ -340,6 +361,31 @@ class LiveQueueControlPageTest extends TestCase
         $this->liveSession->update(['status' => 'scheduled']);
 
         $this->assertSame('', $this->mountedMarkLateDescription());
+    }
+
+    public function test_pocket_buzz_card_is_readable_in_dark_mode(): void
+    {
+        $blade = file_get_contents(resource_path('views/filament/tenant-admin/components/staff-buzz-card.blade.php'));
+        $this->assertStringNotContainsString(
+            'background:rgb(250 250 250)',
+            $blade,
+            'Inline light fill wins over the theme and leaves Filament’s dark-mode type white-on-white.',
+        );
+
+        $css = file_get_contents(resource_path('css/filament/tenantAdmin/theme.css'));
+        $this->assertMatchesRegularExpression(
+            '/html\.dark\s+\.staff-buzz-card\s*\{[^}]*background:/',
+            $css,
+            'Dark mode must paint a dark card surface, not inherit page type onto a white box.',
+        );
+        $this->assertMatchesRegularExpression(
+            '/html\.dark\s+\.staff-buzz-card\s*\{[^}]*color:/',
+            $css,
+        );
+
+        $html = $this->queuePage()->assertSuccessful()->html();
+        $this->assertStringContainsString('staff-buzz-card', $html);
+        $this->assertStringContainsString('Buzz this phone when a sitting needs you', $html);
     }
 
     /** The cost warning as staff actually see it, resolved off the mounted action. */

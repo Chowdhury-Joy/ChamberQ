@@ -114,7 +114,11 @@ class StationsTillService
         ];
 
         return DB::transaction(function () use ($booking, $user, $catalogItem, $cashTaka, $mobileTaka, $mobileMethod, $note, $occurredOn, $waived, $split, $session, $category, $values): ChamberCashEntry {
-            $existing = ChamberCashEntry::query()->where('booking_id', $booking->id)->lockForUpdate()->first();
+            $existing = ChamberCashEntry::query()
+                ->where('booking_id', $booking->id)
+                ->where('direction', ChamberCashEntry::DIRECTION_INCOME)
+                ->lockForUpdate()
+                ->first();
 
             if ($existing) {
                 $existing->fill($values)->save();
@@ -126,13 +130,21 @@ class StationsTillService
                         'booking_id' => $booking->id,
                     ]);
                 } catch (UniqueConstraintViolationException) {
-                    $entry = ChamberCashEntry::query()->where('booking_id', $booking->id)->lockForUpdate()->firstOrFail();
+                    $entry = ChamberCashEntry::query()
+                        ->where('booking_id', $booking->id)
+                        ->where('direction', ChamberCashEntry::DIRECTION_INCOME)
+                        ->lockForUpdate()
+                        ->firstOrFail();
                     $entry->fill($values)->save();
                 }
             }
 
             if (tenant()?->hasReferrals() && $booking->referring_doctor_id) {
                 app(ReferralCommissionService::class)->syncForBookingIncome($booking, $entry, $catalogItem);
+            }
+
+            if (! $waived && $split['collected'] > 0) {
+                app(PatientFeeRefundService::class)->discardRefundOnRecollect($booking);
             }
 
             return $entry;

@@ -29,6 +29,7 @@ class BookingController extends Controller
      * `prefill()`. The rest are safe to deep-link.
      */
     private const PREFILL_KEYS = [
+        'chamber' => ['chamber', 'chamber_id'],
         'doctor' => ['doctor', 'doctor_id'],
         'test' => ['test'],
         'session' => ['session', 'bookable_id'],
@@ -49,6 +50,10 @@ class BookingController extends Controller
      */
     public function prefill(Request $request)
     {
+        if ($request->headers->has('X-Livewire')) {
+            abort(404);
+        }
+
         session()->flash('booking_prefill', $this->prefillFrom($request));
 
         return redirect()->to(tenant_web_url('/book'));
@@ -131,6 +136,39 @@ class BookingController extends Controller
                     break;
                 }
             }
+        }
+
+        return $this->sanitizePrefill($prefill);
+    }
+
+    /**
+     * Hero and query prefills must not mix a Dhaka centre with a Chittagong
+     * sitting. Trust the patient's chosen chamber; drop a sitting that belongs
+     * to another room (or is staff-only).
+     *
+     * @param  array<string, string>  $prefill
+     * @return array<string, string>
+     */
+    private function sanitizePrefill(array $prefill): array
+    {
+        if (filled($prefill['chamber'] ?? null) && ! Chamber::query()->whereKey($prefill['chamber'])->exists()) {
+            unset($prefill['chamber']);
+        }
+
+        if (! filled($prefill['session'] ?? null)) {
+            return $prefill;
+        }
+
+        $session = ScheduleSession::query()->find($prefill['session']);
+
+        if (! $session || ! $session->isPubliclyBookable()) {
+            unset($prefill['session']);
+
+            return $prefill;
+        }
+
+        if (filled($prefill['chamber'] ?? null) && (string) $session->chamber_id !== (string) $prefill['chamber']) {
+            unset($prefill['session']);
         }
 
         return $prefill;

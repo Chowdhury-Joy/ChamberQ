@@ -99,7 +99,7 @@ trait ConfiguresTenantAdminPanel
                 'panels::head.end',
                 fn (): string => (App::getLocale() === 'bn'
                     ? '<link rel="stylesheet" href="'.asset('css/chamberq-screen-fonts.css').'">'
-                    : '').'<style>
+                    : '').'<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">'.'<style>
                     '.(App::getLocale() === 'bn' ? "
                     :root {
                         --fi-font-sans: 'Hind Siliguri', 'Geist Sans', ui-sans-serif, system-ui, sans-serif;

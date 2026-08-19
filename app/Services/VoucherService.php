@@ -17,7 +17,7 @@ class VoucherService
 
         $booking->loadMissing('bookable');
         $session = $booking->bookable;
-        if ($session instanceof ScheduleSession && $session->isFreeKind()) {
+        if ($session instanceof ScheduleSession && PracticeRules::bookingIsFeeExempt($booking)) {
             return;
         }
 

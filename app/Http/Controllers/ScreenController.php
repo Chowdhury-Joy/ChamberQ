@@ -20,6 +20,8 @@ class ScreenController extends Controller
      */
     public const TV_NEXT_ETA_LEAD_MINUTES = 5;
 
+    public const CHAMBER_TV_MAX_ROOMS = 6;
+
     public function __construct(
         private LiveSessionService $liveSessionService,
     ) {}
@@ -89,7 +91,7 @@ class ScreenController extends Controller
 
             $rooms[] = $this->roomTileState($session, $liveSession);
 
-            if (count($rooms) >= 4) {
+            if (count($rooms) >= self::CHAMBER_TV_MAX_ROOMS) {
                 break;
             }
         }

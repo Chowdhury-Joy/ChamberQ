@@ -15,7 +15,7 @@
     $hasLabTests = $tenant->hasFeature('lab_tests');
     $hasMultipleDoctors = $tenant->hasFeature('multiple_doctors');
     $hasMultipleChambers = $tenant->hasFeature('multiple_chambers');
-    $themeColor = $tenant->theme_color ?: \App\Models\Tenant::DEFAULT_THEME_COLOR;
+    $themeColor = $tenant->cssThemeColor();
     $locale = app()->getLocale();
 @endphp
 <!DOCTYPE html>

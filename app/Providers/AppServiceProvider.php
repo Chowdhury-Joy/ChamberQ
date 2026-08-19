@@ -79,6 +79,7 @@ class AppServiceProvider extends ServiceProvider
             'livewire.temporary_file_upload.rules' => ['required', 'file', 'max:20480'],
         ]);
 
+        $this->dropPatientServiceWorkersOnDesk();
         $this->recoverExpiredGuestPagesSilently();
 
         \Illuminate\Support\Facades\View::composer(
@@ -88,6 +89,19 @@ class AppServiceProvider extends ServiceProvider
                 // the doctor is using the English admin panel on this request.
                 \Illuminate\Support\Facades\App::setLocale('bn');
             }
+        );
+    }
+
+    /**
+     * Path-tenant PWAs register at `/{tenant}/`, which includes `/{tenant}/admin`.
+     * Drop every worker on this origin when Filament loads so Live Queue is not
+     * intercepted. The patient site registers again on the next public visit.
+     */
+    private function dropPatientServiceWorkersOnDesk(): void
+    {
+        FilamentView::registerRenderHook(
+            PanelsRenderHook::HEAD_START,
+            fn (): string => view('filament.drop-patient-service-workers')->render(),
         );
     }
 

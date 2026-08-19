@@ -16,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // is fine only when PHP is unreachable except through that proxy.
         $trusted = env('TRUSTED_PROXIES', '*');
         $middleware->trustProxies(at: $trusted === '*' ? '*' : array_map('trim', explode(',', (string) $trusted)));
+        $middleware->prependToGroup('web', \App\Http\Middleware\ForceRequestRootUrl::class);
         $middleware->prependToGroup('web', \App\Http\Middleware\InitializeTenancyForTenantHosts::class);
         // Sign-out diagnostics, off unless AUTH_DEBUG=true (config/diagnostics.php).
         $middleware->appendToGroup('web', \App\Http\Middleware\SessionProbe::class);

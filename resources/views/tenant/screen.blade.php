@@ -8,7 +8,7 @@
     @php
         $tenant = tenant();
         $isBn = app()->getLocale() === 'bn';
-        $themeColor = $tenant->theme_color ?? '#0ea5e9';
+        $themeColor = $tenant->cssThemeColor();
         $fontFamily = $tenant->font_family ?? 'Inter';
         if ($isBn && ! in_array($fontFamily, ['Hind Siliguri'], true)) {
             $fontFamily = 'Hind Siliguri';

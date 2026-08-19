@@ -5,9 +5,9 @@
     $csrfToken = csrf_token();
 @endphp
 
-<div class="staff-buzz-card no-print" id="staffBuzzCard" style="margin-bottom:1rem;padding:1rem;border:1px solid rgb(228 228 231);border-radius:0.75rem;background:rgb(250 250 250);">
-    <p style="font-weight:700;margin:0 0 0.35rem;">{{ __('Buzz this phone when a sitting needs you') }}</p>
-    <p class="text-muted" style="margin:0 0 0.75rem;font-size:0.9rem;">
+<div class="staff-buzz-card no-print" id="staffBuzzCard">
+    <p class="staff-buzz-card__title">{{ __('Buzz this phone when a sitting needs you') }}</p>
+    <p class="staff-buzz-card__hint">
         @if ($vapidPublicKey !== '')
             {{ __('One tap — we ping you when a sticky note appears or changes, even if this tab is closed.') }}
         @else
@@ -15,11 +15,11 @@
         @endif
     </p>
   @if ($vapidPublicKey !== '')
-    <div id="staffBuzzActions" style="display:flex;flex-wrap:wrap;gap:0.5rem;">
+    <div id="staffBuzzActions" class="staff-buzz-card__actions">
         <button type="button" id="staffBuzzAllow" class="fi-btn fi-btn-size-sm fi-color-primary">Allow once</button>
         <button type="button" id="staffBuzzLater" class="fi-btn fi-btn-size-sm fi-color-gray">Not now</button>
     </div>
-    <p id="staffBuzzDenied" hidden style="margin:0.75rem 0 0;font-size:0.875rem;color:rgb(185 28 28);">{{ __('Notifications blocked — check browser settings.') }}</p>
+    <p id="staffBuzzDenied" class="staff-buzz-card__denied" hidden>{{ __('Notifications blocked — check browser settings.') }}</p>
   @endif
 </div>
 

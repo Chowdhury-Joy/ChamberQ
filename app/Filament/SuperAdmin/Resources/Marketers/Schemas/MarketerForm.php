@@ -71,21 +71,21 @@ class MarketerForm
                             ->label(__('bKash / payout number'))
                             ->maxLength(100),
                         TextInput::make('setup_commission_rate')
-                            ->label(__('Setup commission rate'))
+                            ->label(__('Setup commission rate (legacy)'))
                             ->numeric()
                             ->default(0.20)
                             ->minValue(0)
                             ->maxValue(1)
                             ->step(0.01)
-                            ->helperText(__('0.20 = 20%')),
+                            ->helperText(__('Not used for new deals. Per-doctor %s live on the tenant.')),
                         TextInput::make('monthly_commission_rate')
-                            ->label(__('Monthly commission rate'))
+                            ->label(__('Monthly commission rate (legacy)'))
                             ->numeric()
                             ->default(0.10)
                             ->minValue(0)
                             ->maxValue(1)
                             ->step(0.01)
-                            ->helperText(__('0.10 = 10%')),
+                            ->helperText(__('Not used for new deals. Year 2 defaults are 5% / 10% on the doctor file.')),
                         Toggle::make('is_active')
                             ->label(__('Active'))
                             ->default(true),

@@ -21,7 +21,7 @@ class VisitPaperScanForm
             ->label('Scan papers')
             ->icon('heroicon-o-document-plus')
             ->color('gray')
-            ->visible(fn (Booking $record): bool => static::actorMayScan($record))
+            ->visible(fn (Booking $record): bool => static::mayScan($record))
             ->fillForm(fn (Booking $record): array => [
                 'prescription_photo' => filled($record->visitRecord?->photo_path)
                     ? [$record->visitRecord->photo_path]
@@ -47,7 +47,7 @@ class VisitPaperScanForm
             });
     }
 
-    private static function actorMayScan(Booking $record): bool
+    public static function mayScan(Booking $record): bool
     {
         if (! tenant()?->hasPrescription()) {
             return false;

@@ -137,6 +137,9 @@ class BookingService
         bool $allowEndedToday = false,
         ?bool $seenBeforeSoftware = null,
         bool $allowCounselingHandoff = false,
+        bool $allowStaffHandoff = false,
+        bool $allowMskWalkIn = false,
+        ?int $referringDoctorId = null,
     ): Booking {
         $patientPhone = $this->normalizeBdPhone($patientPhone);
         $whatsappPhone = filled($whatsappPhone) ? $this->normalizeBdPhone($whatsappPhone) : null;
@@ -144,7 +147,7 @@ class BookingService
             $whatsappPhone = null;
         }
 
-        $booking = DB::transaction(function () use ($bookable, $bookingDate, $patientName, $patientPhone, $labTestIds, $patientId, $wantsEarlierDate, $whatsappPhone, $shareClinicalHistory, $nid, $yearOfBirth, $allowOverflow, $repeatSeriesId, $allowEndedToday, $seenBeforeSoftware, $allowCounselingHandoff) {
+        $booking = DB::transaction(function () use ($bookable, $bookingDate, $patientName, $patientPhone, $labTestIds, $patientId, $wantsEarlierDate, $whatsappPhone, $shareClinicalHistory, $nid, $yearOfBirth, $allowOverflow, $repeatSeriesId, $allowEndedToday, $seenBeforeSoftware, $allowCounselingHandoff, $allowStaffHandoff, $allowMskWalkIn, $referringDoctorId) {
             $tenant = tenant();
             $capMode = $tenant->slot_cap_mode ?? 'per_session';
             if ($capMode === 'per_day') {
@@ -163,12 +166,18 @@ class BookingService
                 throw BookingUnavailableException::bookableUnavailable();
             }
 
+            $staffHandoff = $allowStaffHandoff || $allowCounselingHandoff;
+            $mskDeskWalkIn = $allowMskWalkIn
+                && $lockedBookable instanceof ScheduleSession
+                && $lockedBookable->kind === ScheduleSession::KIND_MSK;
+
             if (
                 $lockedBookable instanceof ScheduleSession
-                && $lockedBookable->kind === ScheduleSession::KIND_COUNSELING
-                && ! $allowCounselingHandoff
+                && $lockedBookable->isStaffPushedKind()
+                && ! $staffHandoff
+                && ! $mskDeskWalkIn
             ) {
-                throw BookingUnavailableException::counselingWalkIn();
+                throw BookingUnavailableException::staffHandoffWalkIn();
             }
 
             $date = Carbon::parse($bookingDate);
@@ -252,7 +261,15 @@ class BookingService
                 'status' => 'waiting',
                 'wants_earlier_date' => $wantsEarlierDate,
                 'repeat_series_id' => $repeatSeriesId,
+                'referring_doctor_id' => $referringDoctorId,
             ]);
+
+            if ($tenant?->hasStations() && $lockedBookable instanceof ScheduleSession && (! $staffHandoff || $mskDeskWalkIn)) {
+                $booking->update([
+                    'care_path' => CarePath::forNewSitting($lockedBookable, $patient),
+                    'care_origin_id' => $booking->id,
+                ]);
+            }
 
             if ($labTestIds !== []) {
                 $this->attachLabTests($booking, $labTestIds);

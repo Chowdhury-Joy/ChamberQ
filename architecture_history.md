@@ -749,7 +749,56 @@
 ## 2026-08-18T14:53:25+0600
 - Portal prescription password is opt-in: pads stay phone-open until the patient chooses a lock; doctor shared-history paths do not use `PortalPrescriptionLock`.
 
+## 2026-08-18T17:36:15+0600
+- Clinic hero photo is `--hero-photo` on `.hero-bg` (overlay on `::after`); `Tenant::cssThemeColor()` sanitises `--brand` to a hex so a bad `theme_color` cannot blank the MUPS (and other clinic) homepage hero.
 
+## 2026-08-18T17:43:15+0600
+- Clinic hero on multi-branch sites asks Which centre? first; homepage sittings are publicly bookable only; `POST /book` drops a sitting that is not at the chosen chamber.
+
+## 2026-08-18T17:50:11+0600
+- Clinic hero date control is a Select date list of sitting days (empty until chosen), not a native calendar that paints today as if selected.
 
 ## 2026-08-18T18:24:32+0600
 - Patients store `year_of_birth`; booking / walk-in ask for birth year instead of a ticking age in years. `YearOfBirth` converts leftover `age` posts once; `displayAge()` is this calendar year minus the stored year (exact DOB still wins).
+
+## 2026-08-18T18:41:39+0600
+- Clinic hero booking card asks phone before name (doctor is its own field). Homepage and `/doctors` team grids (`.doc-grid--team`) are a 3-column 3-row window that scrolls; one doctor occupies one of three columns.
+
+## 2026-08-19T13:52:07+0600
+- Desk row compact (`DeskActionLayout`, `RosterRecordActions`, `QueueRecordActions`, shared `CollectFeeAction` / `OutdoorVitalsAction`): max two primaries plus More; Live Queue is the during-sitting counter (Collect fee after checkup); Daily Roster is open/close leftover; `tenants.collect_fee_at_checkin` Branding Desk toggle (default off).
+
+## 2026-08-19T14:39:32+0600
+- Maestro list ৳25,000 / ৳3,000; module units ৳5,000 / ৳18,000 / ৳4,500. Medical representatives, paying-price override, per-deal % overrides. Commission clock: join 50/20 (direct 20%), year 1 monthly 0%, year 1 prepaid 15/5 (direct 20%), year 2+ 5/5 (direct 10%). Prepaid year no longer halves setup. `DealCommissionRates` + `commissions.payee_key`.
+
+## 2026-08-19T19:22:45+0600
+- Clinic `POST /` (and `POST /{tenant}/`) is the same hero prefill as `POST /book`, so a homepage form submit no longer 405s; marketing `POST /` stays refused.
+
+## 2026-08-19T19:33:18+0600
+- `ForceRequestRootUrl` on the `web` group; patient `sw.js` (clinic-shell-v9) skips `/admin` and `/livewire/`; hero `prefill()` ignores Livewire requests.
+
+## 2026-08-19T19:35:46+0600
+- Stations care path: `CarePath` + `bookings.care_path` / `care_branch` / `care_origin_id`; room kinds `msk` and `report`; MUPS seed Visit/MSK/Intervention/Report/Counseling; All-rooms TV cap 6.
+
+## 2026-08-19T20:05:04+0600
+- Filament `drop-patient-service-workers` HEAD hook; `sw.js` clinic-shell-v10 unregisters on `/admin` or `/livewire/` so leftover path-tenant PWAs cannot own the desk.
+
+## 2026-08-19T21:41:39+0600
+- Live Queue / Daily Roster walk-in pass `allowEndedToday`; `BookingUnavailableException` no longer `back()`s on Livewire (422 JSON + desk notification).
+
+## 2026-08-19T21:43:57+0600
+- Door pay + missed-visit refund (`PatientFeeRefundService`, `patient_refund` cashbook category, unique booking cash-row dropped); per-doctor `collect_fee_at_checkin`; MSK is a ৳2,200 priced scan with desk-only walk-in and optional GP cut via `referral_msk_commission_taka`.
+
+## 2026-08-19T21:45:32+0600
+- Tenant admin mobile sidebar: wrapping brand name, scrollable nav (`min-height: 0`), safe-area padding, `viewport-fit=cover`.
+
+## 2026-08-19T22:05:02+0600
+- Phone admin drawer z-index 50 / overlay 45 so the sticky content header (z-index 40) cannot paint Session Actions over the menu; page hamburger is `position: fixed`.
+
+## 2026-08-19T22:08:01+0600
+- Phone content header stacks: page title on row one, header actions (Session Actions / New Walk-In) on a full-width second row.
+
+## 2026-08-19T22:12:45+0600
+- Staff pocket-buzz card (`.staff-buzz-card`) uses theme surfaces in `tenantAdmin/theme.css` so dark mode is not white-on-white.
+
+
+

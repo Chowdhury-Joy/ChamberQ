@@ -28,7 +28,7 @@
             </a>
         </div>
 
-        <div class="doc-grid grid-cards" data-card-count="{{ $cards->count() }}" data-reveal-block data-reveal-kind="fade">
+        <div class="doc-grid doc-grid--team grid-cards" data-card-count="{{ $cards->count() }}" data-reveal-block data-reveal-kind="fade">
             @foreach($cards as $card)
                 <a class="doc-card @if(empty($card['image_url'])) doc-card--initial @endif" href="{{ $card['detail_url'] ?? $bookHref }}">
                     @if(!empty($card['image_url']))

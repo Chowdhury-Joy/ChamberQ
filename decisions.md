@@ -2893,6 +2893,32 @@
  <reason>A lock nobody asked for is worse than an open phone lookup they already lived with. The doctor's other-clinic history is a clinical handshake between practices, not the patient portal locker.</reason>
 </decision>
 
+## 2026-08-18T17:36:15+0600
+
+<decision>
+ <category>Code</category>
+ <context>The MUPS hero photo sat in the page HTML but a non-colour `theme_color` made the combined CSS `background-image` invalid, so patients saw a blank band.</context>
+ <action>Emit `--brand` only via `Tenant::cssThemeColor()`. Paint the clinic hero photo with `--hero-photo` on `.hero-bg` and the dark wash on `::after`. Reject non-hex colours in Branding Settings and Super Admin tenant forms.</action>
+ <reason>A shop-window photo should not vanish because a colour picker was filled with the clinic name. Two CSS layers mean a broken overlay still leaves the picture.</reason>
+</decision>
+
+## 2026-08-18T17:43:15+0600
+
+<decision>
+ <category>CRO</category>
+ <context>MUPS patients book from the homepage hero card. That card mixed Panchlaish (Chittagong) and Uttara (Dhaka) sittings in one session list with no city field, so a Dhaka patient could grab Saturday and land in Chittagong.</context>
+ <action>On a clinic with two or more chambers, the hero asks **Which centre?** first. Date and session then only that centre’s publicly bookable sittings. `POST /book` keeps the chosen chamber and drops a sitting that belongs to another room. One-chamber clinics stay a hidden chamber field.</action>
+ <reason>Like a cinema chain poster that asks which hall before showing times — the street form must name the city the same way the indoor wizard already did.</reason>
+</decision>
+
+## 2026-08-18T17:50:11+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The clinic hero’s native date box showed today’s date in grey (`18 / 08 / 2026`) even when empty, so patients thought a day was already booked for them.</context>
+ <action>Replace it with a **Select date** dropdown, empty until they pick. Options are sitting days in the booking window; after a centre is chosen, only that centre’s weekdays stay. Session also stays on **Select session** until a date is chosen.</action>
+ <reason>A grey “today” in a calendar field looks like a filled answer. A dropdown that says Select date matches Select centre and Select session on the same card.</reason>
+</decision>
 
 ## 2026-08-18T18:24:32+0600
 
@@ -2902,3 +2928,162 @@
  <action>Booking, desk walk-in, visiting-day walk-in, and the Patients form ask for **year of birth**. Stored on `patients.year_of_birth` (backfilled from date of birth or leftover age). `displayAge()` is this calendar year minus that year (exact `date_of_birth` still wins when present). Public wizard no longer asks age in years; an old client posting `age` is converted once. Fill a missing year, never overwrite one. Cross-chamber match uses `yearOfBirth()` with the same ±1 year tolerance.</action>
  <reason>Like writing 1984 on the paper file instead of 42 — the year never needs editing. Age on today's pad is just subtraction. Exact date of birth remains optional for chambers that collect it.</reason>
 </decision>
+
+## 2026-08-18T18:41:39+0600
+
+<decision>
+ <category>CRO</category>
+ <context>The clinic homepage booking card asked for Full Name first, then Phone sharing a row with Doctor. Patients here know their mobile first, and the wizard already looks people up by phone.</context>
+ <action>Hero form order is centre (when needed) → phone → full name → doctor → date and session. Phone and doctor are no longer one combined row.</action>
+ <reason>Same as a paper serial book: you take the phone number first, then write the name. Sharing the row with Doctor made the number feel like a side note.</reason>
+</decision>
+
+<decision>
+ <category>UI/UX</category>
+ <context>One published doctor stretched across the Our doctors block (and `/doctors`) like a poster. A clinic with a full team needs a 3×3 board that can scroll, and a single doctor should still sit in one of those three seats.</context>
+ <action>Homepage `doctor_grid` and the `/doctors` listing use `.doc-grid--team`: always three columns, max three rows visible, extra cards scroll inside the board. One card does not expand to full width. The individual doctor profile page stays a stacked portrait. This supersedes the 2026-08-17 founder two-column / full-width portrait layout for the team section.</action>
+ <reason>Like a staff photo board on the wall: nine faces in a grid, you scroll if there are more, and one new hire does not get a billboard.</reason>
+</decision>
+
+## 2026-08-19T08:51:19+0600
+
+<decision>
+ <category>Code</category>
+ <context>Owner-side v2 work on this machine is finished. Developers will run and change the live product. The owner still needs to ask how things work and how to brief a developer, without this copy of the repo being edited.</context>
+ <action>Always-on Cursor rule `.cursor/rules/owner-advisory-only.mdc`: read and explain only. Feature requests become a step-by-step developer brief (suggested code in chat is fine). Do not apply patches or run changing commands here unless the owner says `build locally` or `change local code`.</action>
+ <reason>Like handing the workshop keys to the builders while keeping a catalog at home — you can point at what to change, but you do not take the catalog copy apart.</reason>
+</decision>
+
+## 2026-08-19T13:52:07+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Daily Roster and Live Queue row bars were a pile of buttons (Call, vitals, Collect fee, Scan papers, Stations steps). Staff could not see the next job at a glance, especially on a phone at the counter.</context>
+ <action>Shared `DeskActionLayout`: at most two open buttons plus **More**. Live Queue is the counter during the sitting; Daily Roster is the start-of-day board and the leftover list after. Outdoor vitals is first for waiting patients when Stations and the prep job are on. Collect fee is a primary after checkup (and on Live Queue’s current-patient card). Consult Screen never collects the fee.</action>
+ <reason>Like a tea stall counter: three things in reach, the rest in a drawer. The queue screen is the till while patients are being called; the roster is the morning attendance sheet and the evening leftover pile.</reason>
+</decision>
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Chambers here usually take the fee after the doctor has seen the patient. A few want money at arrival. Collect fee used to live only on Daily Roster, so midday staff on Live Queue had no till button.</context>
+ <action>Default: Collect fee after checkup (`completed` and still Due) on Live Queue (card + table) and Daily Roster leftovers. Optional Branding **Desk → Collect fee at check-in** (`tenants.collect_fee_at_checkin`, off by default, owner/helper) also shows it for waiting / called / skipped. Same modal as the old roster till.</action>
+ <reason>Most desks are “see the doctor, then pay at the window.” The toggle is for clinics that take a token fee at the door. Putting the till on Live Queue matches where staff actually stand at midday.</reason>
+</decision>
+
+## 2026-08-19T14:39:32+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Dhaka (then national) Maestro sales needed a one-time price that funds a medical representative plus the ChamberQ marketer who briefed that MR, a courtesy price per doctor, and a residual from year 2 — without the old 10%/month forever or half-price setup for paying a year up front.</context>
+ <action>Maestro sticker ৳25,000 / ৳3,000 everywhere; pieces ৳5,000 / ৳18,000 / ৳4,500 (monthlies unchanged) so the box stays ৳2,500 cheaper. Optional paying one-time/monthly on the tenant (Maestro or à la carte); commission always on amount paid. Defaults: join 50% MR / 20% marketer (direct: 20% marketer); year 1 month-by-month 0%; year 1 prepaid 15%/5% with MR, 20% marketer direct; year 2+ 5%/5% or 10% marketer direct. Super Admin can override %s per doctor; ChamberQ is leftover; snapshot rate on confirm. Existing ৳15,000 snapshots stay until that tenant is re-priced. Removed prepaid-year 50% off setup.</action>
+ <reason>The MR who walks the doctor in gets the joining thank-you; the marketer who recruited that MR gets a smaller overlay; a year cash-down is a close bonus; after a year both still care that the doctor stays, at 10% total. A typed paying price is how you discount one doctor without inventing a coupon. Direct sales give the marketer both jobs on join and year-1 prepaid, then 10% from year 2.</reason>
+</decision>
+
+## 2026-08-19T14:54:16+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>The joining thank-you for the medical representative was too large next to the marketer’s 20% overlay: on a ৳25,000 join the MR took ৳12,500 and ChamberQ kept ৳7,500.</context>
+ <action>Default join cut with an MR is 20% MR / 20% marketer (`config/commissions.php` `setup.with_mr.mr` 0.20). Direct stay 20% marketer. Year 1 prepaid 15/5, year 1 monthly 0%, and year 2+ 5/5 or 10% are unchanged. Per-doctor % overrides still win. Already owed or paid rows stay at the rate snapshotted when they were confirmed; pending rows pick up 20% on the next save.</action>
+ <reason>Same share for the person who walked the doctor in and the person who briefed that MR, with ChamberQ keeping 60% of the joining fee. A 50% join made the MR the largest cheque on day one.</reason>
+</decision>
+
+## 2026-08-19T19:22:45+0600
+
+<decision>
+ <category>Code</category>
+ <context>A POST to the clinic homepage (`/`) returned Method Not Allowed because the homepage is GET-only, while the Book card is meant to POST to `/book`. A browser that posts the current page (missing or empty form action) left the patient on a red error screen.</context>
+ <action>Keep the hero form’s action as `tenant_web_url('/book')`. Add tenant `POST /` as the same `BookingController::prefill()` (flash + redirect to `/book`, throttled). ChamberQ marketing `POST /` is still refused.</action>
+ <reason>Patients must not see a 405 when the counter they meant was `/book`. Handling POST on `/` only as a redirect does not put name or phone in the URL, and does not turn the homepage into a booking API.</reason>
+</decision>
+
+## 2026-08-19T19:33:18+0600
+
+<decision>
+ <category>Code</category>
+ <context>Live Queue Control at `/{tenant}/admin/live-queue-control` showed Method Not Allowed on route `/` (GET, HEAD, POST). The board talks to Livewire every few seconds. The patient PWA scope is `/{tenant}/`, which also covers the staff desk; `APP_URL` is often `http://localhost` while the tab is `http://127.0.0.1:8000`.</context>
+ <action>`ForceRequestRootUrl` makes generated URLs match the tab’s host and port. `sw.js` (clinic-shell-v9) does not intercept `/admin` or `/livewire/`. Hero `prefill()` returns 404 for `X-Livewire` so a desk poll is never treated as a booking.</action>
+ <reason>The queue walkie-talkie must stay on `/livewire/update`, not the shop front door. A patient service worker must not own the staff desk.</reason>
+</decision>
+
+## 2026-08-19T19:35:46+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>MUPS paper floor map: Entry splits to Visit, Follow-up (max 3 months), or Intervention. New visits go Visit → MSK → Intervention → Report → Counseling. Follow-up forks to MSK → Report or Intervention → Counseling. Direct intervention goes Intervention → Counseling. ChamberQ only had Visit / Intervention / Counseling rooms and no 3-month gate.</context>
+ <action>Stations care path: `CarePath` plus `bookings.care_path` / `care_branch` / `care_origin_id`. Room kinds `msk` and `report` (free, staff-pushed). Follow-up if a completed visit exists on a previous day within 3 months. Missing rooms are skipped so Pain Solution keeps Visit → Intervention → Counseling. MUPS seed adds MSK and Report sittings. Combined waiting-room TV cap is 6 live tiles.</action>
+ <reason>The queue should match the paper path the chamber already runs, without forcing extra rooms on clinics that never added them.</reason>
+</decision>
+
+## 2026-08-19T19:51:30+0600
+
+<decision>
+ <category>Code</category>
+ <context>The 2026-08-19 owner-machine freeze required `build locally` / `change local code` before any local edit. That blocked fixing this copy of ChamberQ while the owner was using it.</context>
+ <action>Delete `.cursor/rules/owner-advisory-only.mdc`. Agents may edit, test, and run artisan on this clone without an unlock phrase. This supersedes the 2026-08-19T08:51:19+0600 advisory-only decision. Do not add a GitHub remote unless the owner asks — that clone still has none.</action>
+ <reason>The catalog-at-home rule was getting in the way of the desk in front of you. Local work is allowed again; shipping to GitHub stays an explicit ask.</reason>
+</decision>
+
+## 2026-08-19T20:05:04+0600
+
+<decision>
+ <category>Code</category>
+ <context>Patient PWAs register at `/{tenant}/`, which includes the staff desk. Telling an old worker to ignore `/admin` does not uninstall it, so Live Queue kept a red Method Not Allowed overlay in every browser that had opened a clinic homepage.</context>
+ <action>Filament `HEAD_START` unregisters every service worker on this origin and deletes `clinic-shell-*` caches. `sw.js` (`clinic-shell-v10`) calls `registration.unregister()` on `/admin` or `/livewire/` fetch. Patient pages register again on the next public visit.</action>
+ <reason>The counter computer should not keep a patient offline helper that also covers the till. A ticket phone can pick the helper up again on the public site.</reason>
+</decision>
+
+## 2026-08-19T21:41:39+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Staff add walk-ins on Live Queue after the sitting's published end time. The door sign says 18:00; people are still being seen at 21:30. The app treated that as "clinic closed" and `back()` from Livewire produced a Method Not Allowed overlay.</context>
+ <action>Live Queue and Daily Roster walk-in pass `allowEndedToday: true` (online booking still cannot). Failures notify on the modal instead of `back()`. Livewire `X-Livewire` gets a 422 JSON from `BookingUnavailableException::render()`.</action>
+ <reason>The published end time is for the public serial book, not for the desk while a live sitting is still on the board.</reason>
+</decision>
+
+## 2026-08-19T21:43:57+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>MUPS takes money at the door, refunds a miss, and treats MSK as a priced scan other doctors can send a patient for — not a free queue room and not an online gateway.</context>
+ <action>Door pay is the Branding check-in toggle (on for MUPS) with an optional per-doctor override. A collected fee that later becomes no-show or cancelled posts a cashbook Patient refund and voids unpaid GP commission. MSK is ৳2,200 in the MUPS catalogue and lab list (placeholder). Desk may walk a referred patient onto today's MSK list without a visit. GP cut for MSK stays ৳0 until Super Admin sets referral_msk_commission_taka. No bKash/SSLCommerz pre-pay from home.</action>
+ <reason>Matches how the chamber actually takes cash, and keeps MSK as a scan product GPs can send people to, without guessing the referring doctor's cut.</reason>
+</decision>
+
+## 2026-08-19T21:45:32+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>On a phone, the chamber admin menu cut the practice name in half at the top and hid later items (Follow-up reminders and everything under it) with no way to scroll. Long names such as MUPS do not fit Filament’s 64px single-line logo row.</context>
+ <action>Let the sidebar header grow and wrap the brand name, make the nav a shrinking flex child so it scrolls, add iPhone safe-area padding, set `viewport-fit=cover`, and show the in-menu close control on small screens.</action>
+ <reason>Staff on a phone need to read the clinic name and reach Cashbook / Follow-up without guessing that a thin overlay strip closes the drawer. Same idea as a restaurant menu that is too long for the window — you add a scrollbar instead of chopping the last dishes off.</reason>
+</decision>
+
+## 2026-08-19T22:05:02+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Opening the admin menu on a phone still showed the Live Queue top bar (Session Actions, New Walk-In) on top of the clinic name and the Live Queue Control item. Staff could not tell which layer to tap.</context>
+ <action>Keep the sticky page header at z-index 40 (it must stay above the consult patient strip). On viewports below 1024px raise the dim overlay to 45 and the drawer to 50, and pin the page hamburger to the header band with `position: fixed` so the open menu covers the page chrome completely.</action>
+ <reason>Like a paper menu laid over the counter — you should not still see the cash register buttons through the menu. Lowering the page header would hide Complete visit under the patient strip on the consult desk, so the drawer moves up instead.</reason>
+</decision>
+
+## 2026-08-19T22:08:01+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>On a phone, Live Queue put the page title and Session Actions / New Walk-In on one row. The title wrapped onto the hamburger; the buttons were too wide to share the line.</context>
+ <action>Below 1024px stack the sticky header: title on the first row (with space for the hamburger), action buttons on a second full-width row, each button sharing the row.</action>
+ <reason>Same idea as a shop receipt — the heading is the shop name, the buttons are the two big stamps underneath, not squeezed into the name line.</reason>
+</decision>
+
+## 2026-08-19T22:12:45+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>In dark mode on Live Queue, the pocket-buzz card was a white box with white letters. Staff could not read that pocket buzz is not set up.</context>
+ <action>Drop the inline pale fill. Style `.staff-buzz-card` in the tenant admin theme: light grey card with dark type, dark grey card with light type under `html.dark`. Same card on Daily Roster.</action>
+ <reason>Like writing in chalk on a whiteboard — the board stayed white while the chalk stayed white. The card has to change colour with the room, not only the words.</reason>
+</decision>
+

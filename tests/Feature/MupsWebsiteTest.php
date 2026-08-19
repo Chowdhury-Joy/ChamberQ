@@ -28,6 +28,7 @@ class MupsWebsiteTest extends TestCase
                 'The founder',
                 'Dr. Mohammad Moin Uddin',
             ])
+            ->assertSee('--hero-photo: url(', false)
             ->assertSee('/images/mups/mups-hero-surgery.jpg', false)
             ->assertSee('/images/mups/favicon.svg', false)
             ->assertSee('Spine &amp; Back', false)
@@ -36,6 +37,64 @@ class MupsWebsiteTest extends TestCase
             ->assertSee('Rina S.')
             ->assertSee('data-review-scroll', false)
             ->assertSee('Book appointment');
+    }
+
+    public function test_hero_form_submits_to_the_book_counter_not_the_homepage(): void
+    {
+        $domainHome = $this->get('http://mups.localhost/')->assertOk()->getContent();
+        $this->assertMatchesRegularExpression('/<form[^>]*id="book"[^>]*action="\/book"/', $domainHome);
+        $this->assertDoesNotMatchRegularExpression('/<form[^>]*id="book"[^>]*action="\/"/', $domainHome);
+
+        $pathHome = $this->get('http://localhost/mups/')->assertOk()->getContent();
+        $this->assertMatchesRegularExpression('/<form[^>]*id="book"[^>]*action="\/mups\/book"/', $pathHome);
+        $this->assertDoesNotMatchRegularExpression('/<form[^>]*id="book"[^>]*action="\/mups\/"/', $pathHome);
+    }
+
+    public function test_hero_asks_for_phone_before_name(): void
+    {
+        $html = $this->get('http://mups.localhost/')
+            ->assertOk()
+            ->getContent();
+
+        $phone = strpos($html, 'id="hero-phone"');
+        $name = strpos($html, 'id="hero-patient-name"');
+
+        $this->assertNotFalse($phone);
+        $this->assertNotFalse($name);
+        $this->assertLessThan($name, $phone);
+    }
+
+    public function test_team_doctor_grid_does_not_stretch_a_single_card(): void
+    {
+        $this->get('http://mups.localhost/')
+            ->assertOk()
+            ->assertSee('doc-grid--team', false)
+            ->assertSee('data-card-count="1"', false);
+
+        $this->get('http://mups.localhost/doctors')
+            ->assertOk()
+            ->assertSee('doc-grid--team', false);
+
+        $css = file_get_contents(public_path('css/clinic-clireo.css'));
+        $this->assertStringContainsString('repeat(3, minmax(0, 1fr))', $css);
+        $this->assertDoesNotMatchRegularExpression(
+            '/\.doc-grid--team\.grid-cards\[data-card-count="1"\]\s*\{[^}]*grid-template-columns:\s*1fr/',
+            $css
+        );
+    }
+
+    public function test_a_non_hex_theme_color_cannot_blank_the_hero_photo(): void
+    {
+        \App\Models\Tenant::query()->whereKey(MupsSeeder::TENANT_ID)->update([
+            'theme_color' => 'QA sweep',
+        ]);
+
+        $this->get('http://mups.localhost/')
+            ->assertOk()
+            ->assertSee('--hero-photo: url(', false)
+            ->assertSee('/images/mups/mups-hero-surgery.jpg', false)
+            ->assertDontSee('--brand: QA sweep', false)
+            ->assertSee('--brand: '.\App\Models\Tenant::DEFAULT_THEME_COLOR, false);
     }
 
     public function test_inner_pages_from_drmups_are_published(): void
@@ -103,6 +162,93 @@ class MupsWebsiteTest extends TestCase
             ->assertOk()
             ->assertSee('data-card-count="1"', false)
             ->assertSee('The founder');
+    }
+
+    public function test_hero_asks_which_centre_before_listing_sittings(): void
+    {
+        $html = $this->get('http://mups.localhost/')
+            ->assertOk()
+            ->assertSee('id="hero-chamber"', false)
+            ->assertSee('Which centre?')
+            ->assertSee('Panchlaish')
+            ->assertSee('Uttara')
+            ->getContent();
+
+        $this->assertTrue(
+            (bool) preg_match('/id="hero-date"[^>]*>.*?<\/select>/s', $html, $dateMatch),
+            'Hero date dropdown missing'
+        );
+        $this->assertStringContainsString('Select date', $dateMatch[0]);
+        $this->assertStringContainsString('disabled selected', $dateMatch[0]);
+        $this->assertStringNotContainsString('type="date"', $dateMatch[0]);
+
+        $this->assertTrue(
+            (bool) preg_match('/id="hero-session"[^>]*>.*?<\/select>/s', $html, $match),
+            'Hero session dropdown missing'
+        );
+        $this->assertStringContainsString('data-chamber=', $match[0]);
+        $this->assertStringContainsString('Visit', $match[0]);
+        $this->assertStringNotContainsString('Intervention', $match[0]);
+        $this->assertStringNotContainsString('Counseling', $match[0]);
+    }
+
+    public function test_hero_prefers_the_chosen_centre_when_session_belongs_elsewhere(): void
+    {
+        $tenant = \App\Models\Tenant::find(MupsSeeder::TENANT_ID);
+        tenancy()->initialize($tenant);
+        $panchlaish = \App\Models\Chamber::query()->where('name', 'like', '%Panchlaish%')->first();
+        $uttara = \App\Models\Chamber::query()->where('name', 'like', '%Uttara%')->first();
+        $panchSession = \App\Models\ScheduleSession::query()
+            ->publiclyBookable()
+            ->where('chamber_id', $panchlaish->id)
+            ->first();
+        $doctorId = (string) $panchSession->doctor_id;
+        tenancy()->end();
+
+        $this->followingRedirects()
+            ->post('http://mups.localhost/book', [
+                'name' => 'Fatima Rahman',
+                'phone' => '01712345678',
+                'doctor' => $doctorId,
+                'chamber' => (string) $uttara->id,
+                'session' => (string) $panchSession->id,
+                'date' => now()->toDateString(),
+            ])
+            ->assertOk()
+            ->assertSee('"chamber":"'.$uttara->id.'"', false)
+            ->assertDontSee('"session":"'.$panchSession->id.'"', false);
+    }
+
+    public function test_homepage_post_with_hero_fields_still_reaches_the_wizard(): void
+    {
+        $tenant = \App\Models\Tenant::find(MupsSeeder::TENANT_ID);
+        tenancy()->initialize($tenant);
+        $panchlaish = \App\Models\Chamber::query()->where('name', 'like', '%Panchlaish%')->first();
+        $session = \App\Models\ScheduleSession::query()
+            ->publiclyBookable()
+            ->where('chamber_id', $panchlaish->id)
+            ->first();
+        $payload = [
+            'name' => 'Fatima Rahman',
+            'phone' => '01712345678',
+            'doctor' => (string) $session->doctor_id,
+            'chamber' => (string) $panchlaish->id,
+            'session' => (string) $session->id,
+            'date' => now()->next($session->day_of_week)->toDateString(),
+        ];
+        tenancy()->end();
+
+        $this->post('http://mups.localhost/', $payload)
+            ->assertRedirect('http://mups.localhost/book');
+
+        $this->post('http://localhost/mups/', $payload)
+            ->assertRedirect('/mups/book');
+
+        $this->followingRedirects()
+            ->post('http://mups.localhost/', $payload)
+            ->assertOk()
+            ->assertSee('Fatima Rahman', false)
+            ->assertSee('01712345678', false);
     }
 
     public function test_booking_wizard_is_open(): void

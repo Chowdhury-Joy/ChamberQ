@@ -65,7 +65,7 @@ return [
             'name' => 'Maestro',
             'tagline' => 'For one doctor, up to 5 chambers — full package',
             // Full Solo/Maestro bundle (= all three modules). À la carte lives under `modules`.
-            'setup' => (int) env('MARKETING_SOLO_SETUP', 15000),
+            'setup' => (int) env('MARKETING_SOLO_SETUP', 25000),
             'monthly' => (int) env('MARKETING_SOLO_MONTHLY', 3000),
             'featured' => true,
             'features' => [
@@ -98,26 +98,26 @@ return [
     |--------------------------------------------------------------------------
     |
     | Unit prices when a client buys a subset. Selecting all three uses the
-    | bundle amounts (setup ৳2,500 off vs ৳17,500 unit sum; monthly ৳250
+    | bundle amounts (setup ৳2,500 off vs ৳27,500 unit sum; monthly ৳250
     | below the ৳3,250 unit sum).
     | Clinic tier still uses `plans.clinic` list prices.
     |
     */
     'modules' => [
         'front_door' => [
-            'setup' => (int) env('MARKETING_MODULE_FRONT_DOOR_SETUP', 3000),
+            'setup' => (int) env('MARKETING_MODULE_FRONT_DOOR_SETUP', 5000),
             'monthly' => (int) env('MARKETING_MODULE_FRONT_DOOR_MONTHLY', 1000),
         ],
         'prescription' => [
-            'setup' => (int) env('MARKETING_MODULE_PRESCRIPTION_SETUP', 2500),
+            'setup' => (int) env('MARKETING_MODULE_PRESCRIPTION_SETUP', 4500),
             'monthly' => (int) env('MARKETING_MODULE_PRESCRIPTION_MONTHLY', 250),
         ],
         'live_queue' => [
-            'setup' => (int) env('MARKETING_MODULE_LIVE_QUEUE_SETUP', 12000),
+            'setup' => (int) env('MARKETING_MODULE_LIVE_QUEUE_SETUP', 18000),
             'monthly' => (int) env('MARKETING_MODULE_LIVE_QUEUE_MONTHLY', 2000),
         ],
         'bundle_all' => [
-            'setup' => (int) env('MARKETING_SOLO_SETUP', 15000),
+            'setup' => (int) env('MARKETING_SOLO_SETUP', 25000),
             'monthly' => (int) env('MARKETING_SOLO_MONTHLY', 3000),
         ],
     ],

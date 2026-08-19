@@ -60,6 +60,12 @@ $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
     Route::post('/book', [BookingController::class, 'prefill'])
         ->middleware(['throttle:20,1', 'tenant.module:front_door']);
 
+    // Safety net: a browser that posts the homepage (empty/missing form
+    // action) would 405 because GET /{slug?} is GET-only. Same handler as
+    // POST /book — flash + redirect to the wizard; PII never stays on /.
+    Route::post('/', [BookingController::class, 'prefill'])
+        ->middleware(['throttle:20,1', 'tenant.module:front_door']);
+
     Route::post('/api/bookings', [BookingController::class, 'store'])
         ->middleware(['throttle:10,1', 'tenant.module:front_door', EnsureTenantAcceptsBookings::class]);
 

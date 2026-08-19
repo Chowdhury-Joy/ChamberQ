@@ -34,12 +34,19 @@ class WebPageController extends Controller
             : 'tenant.webpage';
 
         $doctors = Doctor::orderBy('name')->get();
+        $chambers = tenant()?->isSoloDoctor()
+            ? collect()
+            : Chamber::query()->orderBy('id')->get();
         $sessions = tenant()?->isSoloDoctor()
             ? collect()
-            : ScheduleSession::with(['doctor', 'chamber'])->orderBy('session_name')->get();
+            : ScheduleSession::query()
+                ->publiclyBookable()
+                ->with(['doctor', 'chamber'])
+                ->orderBy('session_name')
+                ->get();
 
         $bookingAvailable = ! tenant()?->isSoloDoctor()
-            && Chamber::exists()
+            && $chambers->isNotEmpty()
             && $doctors->isNotEmpty()
             && $sessions->isNotEmpty();
 
@@ -59,6 +66,7 @@ class WebPageController extends Controller
             'page' => $page,
             // Loaded here rather than queried from inside section blades.
             'doctors' => $doctors,
+            'chambers' => $chambers,
             'sessions' => $sessions,
             'bookingAvailable' => $bookingAvailable,
             'departments' => $departments,

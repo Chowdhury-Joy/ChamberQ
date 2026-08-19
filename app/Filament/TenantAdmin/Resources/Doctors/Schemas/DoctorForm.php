@@ -2,6 +2,7 @@
 
 namespace App\Filament\TenantAdmin\Resources\Doctors\Schemas;
 
+use App\Filament\TenantAdmin\Support\PracticeRulesForm;
 use App\Filament\TenantAdmin\Support\PublicMediaFields;
 use App\Models\Doctor;
 use App\Models\User;
@@ -10,6 +11,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Fieldset;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Illuminate\Validation\Rules\Unique;
 
@@ -59,6 +61,41 @@ class DoctorForm
                     ->label(__('Staff may book repeating serials'))
                     ->helperText(__('For courses such as physio or dressings. Staff can put this patient on this sitting for later weeks. Off by default. Not an online membership.'))
                     ->default(false),
+                Select::make('collect_fee_at_checkin')
+                    ->label(__('When to collect this doctor\'s fee'))
+                    ->helperText(__('Clinic default is Branding → Desk. Use this only when one doctor takes money at the door and another after checkup.'))
+                    ->options([
+                        'inherit' => __('Same as clinic default'),
+                        '1' => __('At the door (before they see the doctor)'),
+                        '0' => __('After the visit'),
+                    ])
+                    ->default('inherit')
+                    ->formatStateUsing(function (mixed $state): string {
+                        if ($state === null || $state === '') {
+                            return 'inherit';
+                        }
+
+                        return ((int) $state) === 1 ? '1' : '0';
+                    })
+                    ->dehydrateStateUsing(function (?string $state): ?int {
+                        if ($state === null || $state === '' || $state === 'inherit') {
+                            return null;
+                        }
+
+                        return $state === '1' ? 1 : 0;
+                    })
+                    ->native(false),
+                Toggle::make('inherit_practice_rules')
+                    ->label(__('Use clinic follow-up and room-fee rules'))
+                    ->helperText(__('Clinic defaults are in Branding Settings. Turn this off to set different months or report/counseling prices for this doctor only.'))
+                    ->default(true)
+                    ->live()
+                    ->visible(fn (): bool => tenant()?->hasStations() ?? false),
+                ...PracticeRulesForm::fieldsets(
+                    '',
+                    fn (Get $get): bool => (tenant()?->hasStations() ?? false)
+                        && ! (bool) $get('inherit_practice_rules'),
+                ),
                 TextInput::make('qualifications')
                     ->label(__('Qualifications'))
                     ->placeholder(__('e.g. MBBS, FCPS (Medicine)'))

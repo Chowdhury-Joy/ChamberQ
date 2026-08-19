@@ -88,10 +88,18 @@ class EditTenant extends EditRecord
             'discount_code_id',
             'feature_flags',
             'offer_prescription_lifetime_free',
-            'offer_prepaid_year_setup',
+            'paying_setup_amount',
+            'paying_monthly_amount',
+            'commission_setup_mr_rate',
+            'commission_setup_marketer_rate',
+            'commission_year1_prepaid_mr_rate',
+            'commission_year1_prepaid_marketer_rate',
+            'commission_year2_mr_rate',
+            'commission_year2_marketer_rate',
         ]);
         $discountChanged = $tenant->wasChanged('discount_code_id');
         $marketerChanged = $tenant->wasChanged('marketer_id');
+        $mrChanged = $tenant->wasChanged('medical_representative_id');
 
         if ($pricingChanged) {
             $code = $tenant->discount_code_id
@@ -107,7 +115,7 @@ class EditTenant extends EditRecord
             $tenant->save();
         }
 
-        if ($marketerChanged && $tenant->marketer_id) {
+        if (($marketerChanged || $mrChanged) && ($tenant->marketer_id || $tenant->medical_representative_id)) {
             app(CommissionService::class)->createPendingSetupCommission($tenant);
         }
     }
@@ -231,7 +239,7 @@ class EditTenant extends EditRecord
 
                     Notification::make()
                         ->title(__('Year prepaid confirmed'))
-                        ->body(__(':count months marked paid. Partner commission is owed on those months.', [
+                        ->body(__(':count months marked paid. Partner cuts (if any) are a year lump, not 10% each month.', [
                             'count' => $count,
                         ]))
                         ->success()

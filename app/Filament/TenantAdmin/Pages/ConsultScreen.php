@@ -308,6 +308,18 @@ class ConsultScreen extends Page implements HasActions
                     Action::make('moveIntervention'),
                     fn (): ?Booking => $this->currentBooking,
                 ),
+                StationsHandoffForm::sendToMskAction(
+                    Action::make('sendToMsk'),
+                    fn (): ?Booking => $this->currentBooking,
+                ),
+                StationsHandoffForm::sendToReportAction(
+                    Action::make('sendToReport'),
+                    fn (): ?Booking => $this->currentBooking,
+                ),
+                StationsHandoffForm::sendToCounselingAction(
+                    Action::make('sendToCounseling'),
+                    fn (): ?Booking => $this->currentBooking,
+                ),
             ];
         }
 

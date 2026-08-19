@@ -23,6 +23,7 @@ class CashCategory extends Model
     public const AUTO_EXPENSE_CODES = [
         ChamberCashEntry::CATEGORY_SALARY,
         ChamberCashEntry::CATEGORY_REFERRAL_PAYOUT,
+        ChamberCashEntry::CATEGORY_PATIENT_REFUND,
     ];
 
     protected $fillable = [

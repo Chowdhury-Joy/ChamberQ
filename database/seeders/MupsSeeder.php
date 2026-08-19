@@ -56,6 +56,13 @@ class MupsSeeder extends Seeder
             'sms_balance' => 200,
             'billing_status' => 'active',
             'queue_runner' => Tenant::QUEUE_RUNNER_STAFF,
+            'collect_fee_at_checkin' => true,
+            'practice_rules' => \App\Services\PracticeRules::normalize([
+                'follow_up_window' => \App\Services\PracticeRules::FOLLOW_UP_MONTHS,
+                'follow_up_months' => 3,
+                'report_pricing' => \App\Services\PracticeRules::PRICING_ALWAYS_FREE,
+                'counseling_pricing' => \App\Services\PracticeRules::PRICING_ALWAYS_FREE,
+            ]),
             'eta_model' => Tenant::ETA_LIVE_AVERAGE,
             'call_announce_mode' => Tenant::ANNOUNCE_CHIME_AND_VOICE,
             'call_announce_locale' => 'bn',
@@ -251,6 +258,30 @@ class MupsSeeder extends Seeder
             'chamber_id' => $chamber->id,
             'doctor_id' => $doctor->id,
             'day_of_week' => $dayOfWeek,
+            'session_name' => 'MSK',
+            'kind' => ScheduleSession::KIND_MSK,
+            'start_time' => $visitStart,
+            'end_time' => $visitEnd,
+            'slot_cap' => 20,
+            'walk_in_overflow_cap' => 0,
+        ]);
+
+        ScheduleSession::create([
+            'chamber_id' => $chamber->id,
+            'doctor_id' => $doctor->id,
+            'day_of_week' => $dayOfWeek,
+            'session_name' => 'Report',
+            'kind' => ScheduleSession::KIND_REPORT,
+            'start_time' => $interventionStart,
+            'end_time' => $visitEnd,
+            'slot_cap' => 40,
+            'walk_in_overflow_cap' => 0,
+        ]);
+
+        ScheduleSession::create([
+            'chamber_id' => $chamber->id,
+            'doctor_id' => $doctor->id,
+            'day_of_week' => $dayOfWeek,
             'session_name' => 'Counseling',
             'kind' => ScheduleSession::KIND_COUNSELING,
             'start_time' => $interventionStart,
@@ -265,6 +296,9 @@ class MupsSeeder extends Seeder
         $rows = [
             ['label' => 'Visit (new)', 'list_price_taka' => 1000, 'house_share_taka' => 200, 'sitting_kind' => ScheduleSession::KIND_VISIT, 'sort_order' => 10],
             ['label' => 'Follow-up', 'list_price_taka' => 800, 'house_share_taka' => 100, 'sitting_kind' => ScheduleSession::KIND_VISIT, 'sort_order' => 20],
+            ['label' => 'MSK ultrasound', 'list_price_taka' => 2200, 'house_share_taka' => 0, 'sitting_kind' => ScheduleSession::KIND_MSK, 'sort_order' => 30],
+            ['label' => 'Report review', 'list_price_taka' => 0, 'house_share_taka' => 0, 'sitting_kind' => ScheduleSession::KIND_REPORT, 'sort_order' => 40],
+            ['label' => 'Report review (after window)', 'list_price_taka' => 500, 'house_share_taka' => 0, 'sitting_kind' => ScheduleSession::KIND_REPORT, 'sort_order' => 41],
             ['label' => 'Epidural (caudal / TF)', 'list_price_taka' => 8000, 'house_share_taka' => 1000, 'sitting_kind' => ScheduleSession::KIND_INTERVENTION, 'sort_order' => 100],
             ['label' => 'Facet / RFA', 'list_price_taka' => 12000, 'house_share_taka' => 1000, 'sitting_kind' => ScheduleSession::KIND_INTERVENTION, 'sort_order' => 110],
             ['label' => 'Knee HA / cortisone', 'list_price_taka' => 5000, 'house_share_taka' => 800, 'sitting_kind' => ScheduleSession::KIND_INTERVENTION, 'sort_order' => 120],

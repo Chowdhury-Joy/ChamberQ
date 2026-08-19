@@ -3,8 +3,10 @@
 namespace App\Filament\SuperAdmin\Resources\Tenants\Schemas;
 
 use App\Models\DiscountCode;
+use App\Models\MedicalRepresentative;
 use App\Models\Tenant;
 use App\Services\CommissionService;
+use App\Services\DealCommissionRates;
 use App\Services\PlanPricingService;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\CheckboxList;
@@ -184,11 +186,6 @@ class TenantForm
                             ->helperText(__('Deadline 31 August — tick only if you are honouring it. Waives Prescription setup and monthly whenever Prescription is included. Super Admin can still tick after the date.'))
                             ->default(false)
                             ->live(),
-                        Checkbox::make('offer_prepaid_year_setup')
-                            ->label(__('Prepaid year — 50% off setup'))
-                            ->helperText(__('Deadline 30 September — tick only if they confirmed a year. Halves setup after other discounts. Confirm the twelve months with the header action after setup is paid.'))
-                            ->default(false)
-                            ->live(),
                     ]),
 
                 Fieldset::make(__('Referral & Discount'))
@@ -204,6 +201,19 @@ class TenantForm
                             ->preload()
                             ->nullable()
                             ->live(),
+                        Select::make('medical_representative_id')
+                            ->label(__('Medical representative'))
+                            ->relationship(
+                                'medicalRepresentative',
+                                'name',
+                                fn ($query) => $query->where('is_active', true)
+                            )
+                            ->getOptionLabelFromRecordUsing(fn ($record) => $record->displayLabel())
+                            ->searchable()
+                            ->preload()
+                            ->nullable()
+                            ->live()
+                            ->helperText(__('The pharma rep who brought this doctor. Leave empty for a direct sale.')),
                         Select::make('discount_code_id')
                             ->label(__('Discount code'))
                             ->relationship('discountCode', 'code')
@@ -211,6 +221,21 @@ class TenantForm
                             ->preload()
                             ->nullable()
                             ->live(),
+                        TextInput::make('paying_setup_amount')
+                            ->label(__('Paying one-time (৳)'))
+                            ->numeric()
+                            ->minValue(0)
+                            ->nullable()
+                            ->live()
+                            ->dehydrateStateUsing(fn ($state) => $state === null || $state === '' ? null : (int) $state)
+                            ->helperText(__('Courtesy price for this doctor. Empty = sticker after any coupon. Works for Maestro or modules.')),
+                        TextInput::make('paying_monthly_amount')
+                            ->label(__('Paying monthly (৳)'))
+                            ->numeric()
+                            ->minValue(0)
+                            ->nullable()
+                            ->live()
+                            ->dehydrateStateUsing(fn ($state) => $state === null || $state === '' ? null : (int) $state),
                         Textarea::make('referral_note')
                             ->label(__('Referral note'))
                             ->helperText(__('e.g. Dr. Karim – Dhanmondi chamber'))
@@ -242,11 +267,92 @@ class TenantForm
                             ->visible(fn (string $operation): bool => $operation === 'edit'),
                     ]),
 
+                Fieldset::make(__('Commission % (optional overrides)'))
+                    ->schema([
+                        TextInput::make('commission_setup_mr_rate')
+                            ->label(__('Join — MR %'))
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(100)
+                            ->suffix('%')
+                            ->nullable()
+                            ->live()
+                            ->helperText(__('Empty = 20% with an MR, 0% direct.'))
+                            ->formatStateUsing(fn ($state) => DealCommissionRates::rateToPercent($state))
+                            ->dehydrateStateUsing(fn ($state) => DealCommissionRates::percentToRate($state)),
+                        TextInput::make('commission_setup_marketer_rate')
+                            ->label(__('Join — marketer %'))
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(100)
+                            ->suffix('%')
+                            ->nullable()
+                            ->live()
+                            ->helperText(__('Empty = 20%.'))
+                            ->formatStateUsing(fn ($state) => DealCommissionRates::rateToPercent($state))
+                            ->dehydrateStateUsing(fn ($state) => DealCommissionRates::percentToRate($state))
+                            ->rules([
+                                fn (Get $get): \Closure => function (string $attribute, $value, \Closure $fail) use ($get): void {
+                                    $mr = (float) (DealCommissionRates::percentToRate($get('commission_setup_mr_rate')) ?? 0);
+                                    $mk = (float) (DealCommissionRates::percentToRate($value) ?? 0);
+                                    if (round($mr + $mk, 4) > 1) {
+                                        $fail(__('MR and marketer join cuts cannot exceed 100%.'));
+                                    }
+                                },
+                            ]),
+                        TextInput::make('commission_year1_prepaid_mr_rate')
+                            ->label(__('Year 1 prepaid — MR %'))
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(100)
+                            ->suffix('%')
+                            ->nullable()
+                            ->live()
+                            ->helperText(__('Empty = 15% with an MR, 0% direct.'))
+                            ->formatStateUsing(fn ($state) => DealCommissionRates::rateToPercent($state))
+                            ->dehydrateStateUsing(fn ($state) => DealCommissionRates::percentToRate($state)),
+                        TextInput::make('commission_year1_prepaid_marketer_rate')
+                            ->label(__('Year 1 prepaid — marketer %'))
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(100)
+                            ->suffix('%')
+                            ->nullable()
+                            ->live()
+                            ->helperText(__('Empty = 5% with an MR, 20% direct.'))
+                            ->formatStateUsing(fn ($state) => DealCommissionRates::rateToPercent($state))
+                            ->dehydrateStateUsing(fn ($state) => DealCommissionRates::percentToRate($state)),
+                        TextInput::make('commission_year2_mr_rate')
+                            ->label(__('Year 2+ — MR %'))
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(100)
+                            ->suffix('%')
+                            ->nullable()
+                            ->live()
+                            ->helperText(__('Empty = 5% with an MR, 0% direct. Year 1 month-by-month is always 0%.'))
+                            ->formatStateUsing(fn ($state) => DealCommissionRates::rateToPercent($state))
+                            ->dehydrateStateUsing(fn ($state) => DealCommissionRates::percentToRate($state)),
+                        TextInput::make('commission_year2_marketer_rate')
+                            ->label(__('Year 2+ — marketer %'))
+                            ->numeric()
+                            ->minValue(0)
+                            ->maxValue(100)
+                            ->suffix('%')
+                            ->nullable()
+                            ->live()
+                            ->helperText(__('Empty = 5% with an MR, 10% direct.'))
+                            ->formatStateUsing(fn ($state) => DealCommissionRates::rateToPercent($state))
+                            ->dehydrateStateUsing(fn ($state) => DealCommissionRates::percentToRate($state)),
+                    ])
+                    ->columns(2),
+
                 Fieldset::make(__('Appearance & Locale'))
                     ->schema([
                         ColorPicker::make('theme_color')
                             ->label(__('Theme Color'))
-                            ->default(Tenant::DEFAULT_THEME_COLOR),
+                            ->default(Tenant::DEFAULT_THEME_COLOR)
+                            ->regex('/^#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/'),
                         Select::make('default_locale')
                             ->label(__('Default Locale'))
                             ->helperText(__('System UI default (book/ticket/portal). Homepage Bangla requires the bangla_homepage feature flag.'))
@@ -295,18 +401,22 @@ class TenantForm
             ? DiscountCode::find($get('discount_code_id'))
             : null;
 
+        $payingSetup = $get('paying_setup_amount');
+        $payingMonthly = $get('paying_monthly_amount');
+
         $commissions = app(CommissionService::class);
         $amounts = $commissions->quoteAmounts(
             $tier,
             $modules,
             $code,
             filter_var($get('offer_prescription_lifetime_free'), FILTER_VALIDATE_BOOLEAN),
-            filter_var($get('offer_prepaid_year_setup'), FILTER_VALIDATE_BOOLEAN),
+            $payingSetup !== null && $payingSetup !== '' ? (int) $payingSetup : null,
+            $payingMonthly !== null && $payingMonthly !== '' ? (int) $payingMonthly : null,
         );
 
         $lines = [
             sprintf(
-                'List: setup ৳%s / monthly ৳%s → Due: setup ৳%s / monthly ৳%s',
+                'List: setup ৳%s / monthly ৳%s → Paying: setup ৳%s / monthly ৳%s',
                 number_format($amounts['list_setup']),
                 number_format($amounts['list_monthly']),
                 number_format($amounts['setup_due']),
@@ -314,23 +424,64 @@ class TenantForm
             ),
         ];
 
-        $marketerId = $get('marketer_id');
+        $scratch = new Tenant([
+            'marketer_id' => $get('marketer_id') ?: null,
+            'medical_representative_id' => $get('medical_representative_id') ?: null,
+            'commission_setup_mr_rate' => DealCommissionRates::percentToRate($get('commission_setup_mr_rate')),
+            'commission_setup_marketer_rate' => DealCommissionRates::percentToRate($get('commission_setup_marketer_rate')),
+            'commission_year1_prepaid_mr_rate' => DealCommissionRates::percentToRate($get('commission_year1_prepaid_mr_rate')),
+            'commission_year1_prepaid_marketer_rate' => DealCommissionRates::percentToRate($get('commission_year1_prepaid_marketer_rate')),
+            'commission_year2_mr_rate' => DealCommissionRates::percentToRate($get('commission_year2_mr_rate')),
+            'commission_year2_marketer_rate' => DealCommissionRates::percentToRate($get('commission_year2_marketer_rate')),
+        ]);
+
         $preview = $commissions->previewCommission(
-            $marketerId !== null && $marketerId !== '' ? (int) $marketerId : null,
+            $scratch->marketer_id ? (int) $scratch->marketer_id : null,
             $amounts['setup_due'],
             $amounts['monthly_due'],
+            $scratch->medical_representative_id ? (int) $scratch->medical_representative_id : null,
+            $scratch,
         );
 
         if ($preview === null) {
             $lines[] = 'No partner attached — no commission.';
         } else {
+            $mrName = $scratch->medical_representative_id
+                ? (MedicalRepresentative::find($scratch->medical_representative_id)?->name ?? 'MR')
+                : null;
+            $joinBits = [];
+            if ($mrName && $preview['mr_setup_commission'] > 0) {
+                $joinBits[] = sprintf(
+                    'MR %s ৳%s (%s%%)',
+                    $mrName,
+                    number_format($preview['mr_setup_commission']),
+                    round($preview['mr_setup_rate'] * 100),
+                );
+            }
+            if ($scratch->marketer_id) {
+                $joinBits[] = sprintf(
+                    'Marketer %s ৳%s (%s%%)',
+                    $preview['display_name'],
+                    number_format($preview['setup_commission']),
+                    round($preview['setup_rate'] * 100),
+                );
+            }
+            $chamberqJoin = $amounts['setup_due'] - $preview['setup_commission'] - $preview['mr_setup_commission'];
+            $joinBits[] = 'ChamberQ ৳'.number_format(max(0, $chamberqJoin));
+            $lines[] = 'Join: '.implode(' · ', $joinBits);
+
+            $yearBits = [];
+            if ($preview['year1_prepaid_mr_commission'] > 0) {
+                $yearBits[] = sprintf('MR ৳%s', number_format($preview['year1_prepaid_mr_commission']));
+            }
+            if ($preview['year1_prepaid_marketer_commission'] > 0) {
+                $yearBits[] = sprintf('Marketer ৳%s', number_format($preview['year1_prepaid_marketer_commission']));
+            }
+            $lines[] = 'Year 1 month-by-month: no partner cut. Year 1 if paid now: '.($yearBits !== [] ? implode(' · ', $yearBits) : 'none').'.';
             $lines[] = sprintf(
-                'Partner %s (%s%% / %s%%): setup commission ৳%s · monthly ৳%s',
-                $preview['display_name'],
-                round($preview['setup_rate'] * 100),
-                round($preview['monthly_rate'] * 100),
-                number_format($preview['setup_commission']),
-                number_format($preview['monthly_commission']),
+                'Year 2+ each month: MR ৳%s · marketer ৳%s',
+                number_format($preview['year2_mr_commission']),
+                number_format($preview['year2_marketer_commission']),
             );
         }
 

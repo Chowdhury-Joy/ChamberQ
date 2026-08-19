@@ -69,7 +69,7 @@ Think of a busy bakery that used to shout numbers and leave people standing for 
 
 | Plan | Who it’s for | Setup | Monthly |
 |------|----------------|--------|---------|
-| **Maestro** (featured) | One doctor, all three modules | ৳15,000 | ৳3,000 / month |
+| **Maestro** (featured) | One doctor, all three modules | ৳25,000 | ৳3,000 / month |
 | **Clinic** | Multi-doctor clinics & labs | ৳75,000 | ৳7,500 / month |
 
 ### Maestro includes
@@ -82,10 +82,10 @@ Think of a busy bakery that used to shout numbers and leave people standing for 
 ### Or pick modules (one doctor)
 | What they want | Setup | Monthly |
 |----------------|--------|---------|
-| Website + booking | ৳3,000 | ৳1,000 |
-| + Prescription | +৳2,500 | +৳250 |
-| + Live queue | +৳12,000 | +৳2,000 |
-| All three = Maestro | ৳15,000 | ৳3,000 |
+| Website + booking | ৳5,000 | ৳1,000 |
+| + Prescription | +৳4,500 | +৳250 |
+| + Live queue | +৳18,000 | +৳2,000 |
+| All three = Maestro | ৳25,000 | ৳3,000 |
 
 ### Clinic includes
 - Multiple doctors & chambers
@@ -106,7 +106,7 @@ Think of a busy bakery that used to shout numbers and leave people standing for 
 ### Billing reality (say this clearly)
 - Billing is **manual** (bKash / bank) — no card gateway for the doctor’s subscription
 - Monthly plan after setup; they can pause by messaging us
-- Launch offers are not automatic: Super Admin must tick **Prescription free for life** and/or **Prepaid year — 50% off setup** on that doctor’s account so the due amount and partner commission match the WhatsApp quote. After setup is paid, **Confirm 12 months prepaid** records the year in one click. Do not type a custom “amount paid” and hope the next monthly invoice remembers.
+- Launch offers are not automatic: Super Admin must tick **Prescription free for life** on that doctor’s account when honouring it. Type a **paying** one-time/monthly if this doctor gets a courtesy price. After setup is paid, **Confirm 12 months prepaid** records the year in one click. Paying a year up front does **not** cut setup in half.
 
 ---
 
@@ -129,8 +129,10 @@ If you are a sales partner:
 
 | Commission type | Typical idea | Notes |
 |-----------------|--------------|--------|
-| Setup | e.g. **20%** of what the doctor actually paid after discount | When setup payment is confirmed |
-| Monthly | e.g. **10%** of monthly fee forever (while referred tenant stays active) | Confirmed after doctor’s monthly payment |
+| Join (one-time) | **20%** MR / **20%** marketer when an MR brought them; **20%** marketer on a direct sale | Of the **paying** amount |
+| Year 1, month by month | **0%** | Unless Super Admin overrides |
+| Year 1, whole year at the start | **15%** MR + **5%** marketer; **20%** marketer if direct | Of the year they paid |
+| Year 2+ | **5%** MR + **5%** marketer; **10%** marketer if direct | Of each month (or the year lump) |
 
 **Not commissionable:** SMS credit packs.
 
@@ -283,7 +285,7 @@ If they only have a pretty website but never run the queue, the wait-time promis
 
 **Product:** ChamberQ  
 **Primary CTA:** WhatsApp  
-**Solo:** ৳15,000 setup + ৳3,000/mo · 1 doctor · up to 5 locations  
+**Maestro:** ৳25,000 setup + ৳3,000/mo · 1 doctor · up to 5 locations  
 **Clinic:** ৳75,000 setup + ৳7,500/mo · multi-doctor + labs  
 **Payment model (patients):** Pay at chamber  
 **SMS:** Prepaid ~৳0.50 · not free · not commissionable  

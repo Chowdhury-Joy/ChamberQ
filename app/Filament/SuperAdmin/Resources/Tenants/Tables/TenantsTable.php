@@ -49,6 +49,10 @@ class TenantsTable
                     ->label(__('Marketer'))
                     ->placeholder('—')
                     ->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('medicalRepresentative.name')
+                    ->label(__('MR'))
+                    ->placeholder('—')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('setup_amount_due')
                     ->label(__('Setup due'))
                     ->formatStateUsing(fn ($state) => $state ? '৳'.number_format((int) $state) : '—')

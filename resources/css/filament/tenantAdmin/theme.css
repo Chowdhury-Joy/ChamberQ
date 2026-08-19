@@ -91,7 +91,15 @@ html.dark {
     border-right: 1px solid var(--fi-shell-sidebar-stroke);
 }
 
+.fi-sidebar-header-ctn {
+    overflow: visible;
+    flex-shrink: 0;
+}
+
 .fi-sidebar-header {
+    height: auto;
+    min-height: 4rem;
+    padding-block: 0.75rem;
     border-bottom: 1px solid var(--fi-shell-header-stroke);
 }
 
@@ -99,13 +107,64 @@ html.dark {
     background-color: var(--fi-shell-content-bg);
 }
 
+.staff-buzz-card {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border: 1px solid var(--gray-200);
+    border-radius: 0.75rem;
+    background: var(--gray-50);
+    color: var(--gray-950);
+}
+
+.staff-buzz-card__title {
+    font-weight: 700;
+    margin: 0 0 0.35rem;
+    color: inherit;
+}
+
+.staff-buzz-card__hint {
+    margin: 0 0 0.75rem;
+    font-size: 0.9rem;
+    color: var(--gray-600);
+}
+
+.staff-buzz-card__actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.staff-buzz-card__denied {
+    margin: 0.75rem 0 0;
+    font-size: 0.875rem;
+    color: var(--danger-600);
+}
+
+html.dark .staff-buzz-card {
+    border-color: var(--gray-700);
+    background: var(--gray-900);
+    color: var(--gray-100);
+}
+
+html.dark .staff-buzz-card__hint {
+    color: var(--gray-400);
+}
+
+html.dark .staff-buzz-card__denied {
+    color: var(--danger-400);
+}
+
 .fi-logo {
+    display: block !important;
     font-family: var(--fi-font-mono) !important;
     font-size: var(--fi-text-title-size) !important;
     font-weight: 600 !important;
-    line-height: var(--fi-text-title-leading) !important;
+    line-height: 1.35 !important;
     letter-spacing: var(--fi-text-title-tracking) !important;
     color: var(--fi-shell-logo-color) !important;
+    white-space: normal;
+    overflow: visible;
+    text-wrap: pretty;
 }
 
 .fi-sidebar-item-label,
@@ -115,6 +174,54 @@ html.dark {
     font-weight: 400;
     line-height: var(--fi-text-sm-leading);
     letter-spacing: var(--fi-text-sm-tracking);
+}
+
+.fi-sidebar-nav {
+    min-height: 0;
+    overscroll-behavior: contain;
+    padding-top: 1.25rem;
+    padding-bottom: max(2rem, calc(1.25rem + env(safe-area-inset-bottom, 0px)));
+}
+
+.fi-sidebar-footer {
+    flex-shrink: 0;
+    padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+}
+
+@media (max-width: 1023px) {
+    /* Sticky page header is z-index 40 (above the Rx patient strip). Filament’s
+       drawer is z-30, so Session Actions / New Walk-In paint on top of the menu.
+       Keep the header at 40; raise only the overlay + drawer on phones. */
+    .fi-sidebar-close-overlay {
+        z-index: 45;
+    }
+
+    .fi-sidebar {
+        z-index: 50;
+        isolation: isolate;
+        padding-top: env(safe-area-inset-top, 0px);
+        height: 100dvh;
+        max-height: 100dvh;
+        box-sizing: border-box;
+    }
+
+    .fi-sidebar-close-collapse-sidebar-btn {
+        display: flex !important;
+    }
+
+    /* Without a topbar Filament leaves this hamburger in document flow, so it
+       sits in a row with the drawer instead of on the page. Pin it to the
+       header band (41 > 40) and let the open drawer (50) cover it. */
+    .fi-body > .fi-layout-sidebar-toggle-btn-ctn {
+        position: fixed;
+        top: 0;
+        left: 0;
+        z-index: 41;
+        padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+        padding-left: 0.75rem;
+        padding-right: 0.5rem;
+        padding-bottom: 0.5rem;
+    }
 }
 
 .fi-main:has(.fi-content-shell-header) {
@@ -181,6 +288,46 @@ html.dark {
 
 .fi-content-shell-header .fi-header-actions-ctn {
     @apply shrink-0;
+}
+
+@media (max-width: 1023px) {
+    .fi-header.fi-content-shell-header {
+        flex-direction: column;
+        align-items: stretch;
+        justify-content: flex-start;
+        gap: 0.75rem;
+        height: auto;
+        min-height: calc(4rem + env(safe-area-inset-top, 0px));
+        padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+        padding-bottom: 0.75rem;
+        padding-inline: var(--fi-shell-inline);
+    }
+
+    .fi-content-shell-header .fi-page-header-title-row {
+        padding-left: 2.5rem;
+        min-height: 2.5rem;
+        align-items: center;
+    }
+
+    .fi-content-shell-header .fi-header-heading {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .fi-content-shell-header .fi-header-actions-ctn,
+    .fi-content-shell-header .fi-header-actions-ctn .fi-ac {
+        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: stretch;
+        gap: 0.5rem;
+    }
+
+    .fi-content-shell-header .fi-header-actions-ctn .fi-btn {
+        flex: 1 1 calc(50% - 0.25rem);
+        justify-content: center;
+    }
 }
 
 .fi-btn.fi-color-primary:not(.fi-outlined):not(label) {

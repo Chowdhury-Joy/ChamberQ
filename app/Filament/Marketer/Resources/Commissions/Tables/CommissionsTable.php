@@ -18,7 +18,10 @@ class CommissionsTable
                     ->placeholder(fn (Commission $record) => $record->tenant_id),
                 TextColumn::make('type')
                     ->badge()
-                    ->formatStateUsing(fn (string $state) => ucfirst($state)),
+                    ->formatStateUsing(fn (string $state) => match ($state) {
+                        Commission::TYPE_YEAR_PREPAID => 'Year prepaid',
+                        default => ucfirst($state),
+                    }),
                 TextColumn::make('period')
                     ->placeholder('—'),
                 TextColumn::make('base_amount')

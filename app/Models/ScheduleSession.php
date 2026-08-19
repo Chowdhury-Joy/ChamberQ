@@ -15,15 +15,24 @@ class ScheduleSession extends Model
 
     public const KIND_INTERVENTION = 'intervention';
 
+    public const KIND_MSK = 'msk';
+
+    public const KIND_REPORT = 'report';
+
     /**
      * Kinds a patient may book themselves onto from the public website.
-     * Intervention and counseling are staff-pushed only.
+     * Intervention, MSK, report and counseling are staff-pushed only.
      *
      * @var list<string>
      */
     public const PUBLICLY_BOOKABLE_KINDS = [self::KIND_VISIT, self::KIND_CONSULT];
 
     public const KIND_COUNSELING = 'counseling';
+
+    /**
+     * @var list<string>
+     */
+    public const STAFF_PUSHED_KINDS = [self::KIND_MSK, self::KIND_REPORT, self::KIND_COUNSELING];
 
     protected $fillable = [
         'chamber_id',
@@ -59,6 +68,8 @@ class ScheduleSession extends Model
             self::KIND_CONSULT => __('Consult (free)'),
             self::KIND_VISIT => __('Visit'),
             self::KIND_INTERVENTION => __('Intervention'),
+            self::KIND_MSK => __('MSK scan'),
+            self::KIND_REPORT => __('Report'),
             self::KIND_COUNSELING => __('Counseling (free)'),
         ];
     }
@@ -84,7 +95,16 @@ class ScheduleSession extends Model
 
     public function isFreeKind(): bool
     {
-        return in_array($this->kind, [self::KIND_CONSULT, self::KIND_COUNSELING], true);
+        return in_array($this->kind, [
+            self::KIND_CONSULT,
+            self::KIND_REPORT,
+            self::KIND_COUNSELING,
+        ], true);
+    }
+
+    public function isStaffPushedKind(): bool
+    {
+        return in_array($this->kind, self::STAFF_PUSHED_KINDS, true);
     }
 
     /**

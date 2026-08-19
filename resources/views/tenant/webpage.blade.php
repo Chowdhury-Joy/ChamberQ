@@ -1,6 +1,6 @@
 @php
     $tenant = tenant();
-    $themeColor = $tenant->theme_color ?: '#1B2978';
+    $themeColor = $tenant->cssThemeColor();
     $banglaHomepage = $tenant->hasFeature('bangla_homepage');
     $locale = app()->getLocale();
     $brand = $tenant->displayName();
@@ -40,6 +40,7 @@
                 @include('tenant.sections.' . $blockType, [
                     'data' => $block['data'] ?? [],
                     'doctors' => $doctors ?? [],
+                    'chambers' => $chambers ?? collect(),
                     'sessions' => $sessions ?? [],
                     'bookingAvailable' => $bookingAvailable ?? false,
                     'departments' => $departments ?? collect(),
