@@ -117,25 +117,35 @@ class StationsCollectFeeForm
             if (filled($kind)) {
                 $preferFollowUp = $kind === \App\Models\ScheduleSession::KIND_VISIT
                     && $record->care_path === \App\Services\CarePath::FOLLOW_UP;
+                $suggested = \App\Services\PracticeRules::suggestedRoomFeeTaka($record);
 
                 $query = FeeCatalogItem::query()
                     ->where('is_active', true)
-                    ->where('sitting_kind', $kind)
-                    ->orderBy('sort_order');
+                    ->where('sitting_kind', $kind);
 
                 if ($preferFollowUp) {
-                    $itemId = (clone $query)->where('label', 'like', '%ollow-up%')->value('id')
-                        ?: $query->value('id');
+                    $itemId = (clone $query)->where('label', 'like', '%ollow-up%')->orderBy('sort_order')->value('id')
+                        ?: (clone $query)->orderBy('sort_order')->value('id');
+                } elseif (in_array($kind, [
+                    \App\Models\ScheduleSession::KIND_REPORT,
+                    \App\Models\ScheduleSession::KIND_COUNSELING,
+                ], true)) {
+                    $itemId = (clone $query)
+                        ->orderByRaw('abs(list_price_taka - ?)', [$suggested])
+                        ->orderBy('sort_order')
+                        ->value('id');
                 } else {
-                    $itemId = $query->value('id');
+                    $itemId = $query->orderBy('sort_order')->value('id');
                 }
             }
         }
 
+        $suggestedCash = $entry?->cash_taka ?? \App\Services\PracticeRules::suggestedRoomFeeTaka($record);
+
         return [
             'referring_doctor_id' => $record->referring_doctor_id,
             'fee_catalog_item_id' => $itemId,
-            'cash_taka' => $entry?->cash_taka ?? 0,
+            'cash_taka' => $suggestedCash,
             'mobile_taka' => $entry?->mobile_taka ?? 0,
             'mobile_method' => $entry?->mobile_method ?? ChamberCashEntry::METHOD_BKASH,
             'waived' => $entry?->isWaived() ?? false,

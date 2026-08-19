@@ -421,6 +421,8 @@
     "Tick if they are an old paper-file patient. The doctor will see them as returning, not a first visit. You can also tap this on their row later.": "পুরনো কাগজের ফাইলের রোগী হলে টিক দিন। ডাক্তার তাঁকে নতুন না দেখে পুরনো রোগী হিসেবে দেখবেন। পরে সারির সারিতেও চাপা যায়।",
     "Marked as seen here before ChamberQ": "ChamberQ-এর আগের রোগী হিসেবে চিহ্নিত",
     "Follow-up path (within 3 months).": "ফলো-আপ পথ (৩ মাসের মধ্যে)।",
+    "Follow-up path (clinic rules).": "ফলো-আপ পথ (ক্লিনিকের নিয়ম)।",
+    "Clinic rules still treat this as a new visit path.": "ক্লিনিকের নিয়ম অনুযায়ী এটি এখনও নতুন ভিজিট পথ।",
     "Last visit was more than 3 months ago — this stays a new visit path.": "শেষ ভিজিট ৩ মাসের বেশি আগে — এটি নতুন ভিজিট পথই থাকবে।",
     "Marked as a first visit in ChamberQ": "ChamberQ-এ প্রথম ভিজিট হিসেবে চিহ্নিত",
     "First visit — no history": "প্রথম ভিজিট — কোনো ইতিহাস নেই",

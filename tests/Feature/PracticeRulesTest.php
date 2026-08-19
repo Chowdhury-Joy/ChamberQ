@@ -123,6 +123,18 @@ class PracticeRulesTest extends TestCase
         $this->assertTrue(PracticeRules::isFollowUpEligible($patient, $this->doctor->fresh()));
     }
 
+    public function test_paper_file_alone_does_not_unlock_a_timed_follow_up(): void
+    {
+        $patient = Patient::create([
+            'name' => 'Paper timed',
+            'phone' => '01715552015',
+            'seen_before_software' => true,
+        ]);
+
+        $this->assertFalse(PracticeRules::isFollowUpEligible($patient, $this->doctor));
+        $this->assertSame(CarePath::VISIT, $this->bookVisit($patient)->care_path);
+    }
+
     public function test_timed_report_is_free_inside_the_window_and_due_after(): void
     {
         $this->doctor->update([
