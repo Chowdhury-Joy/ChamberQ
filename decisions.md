@@ -3213,3 +3213,12 @@
  <reason>Like putting a cashier at the till and a caller at the queue board — they start the shift where they work, not at a noticeboard they do not use.</reason>
 </decision>
 
+## 2026-08-20T00:58:50+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Phone admin fixes (menu under the header, two-line title+buttons, readable dark cards) lived on the chamber desk only. Central ChamberQ Super Admin at `/admin` was still stock Filament, so the same phone problems would show there.</context>
+ <action>Point Super Admin at the same tenant admin Vite theme, drop the global topbar, make the sidebar collapsible with the hamburger, set `viewport-fit=cover`, and outline ungrouped table row actions. Marketer `/partner` stays stock Filament.</action>
+ <reason>One phone pattern for both desks. ChamberQ’s own admin should not feel like a different app than MUPS when opened on a phone.</reason>
+</decision>
+

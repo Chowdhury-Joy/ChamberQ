@@ -98,6 +98,17 @@ class SuperAdminPanelUxTest extends TestCase
         $this->assertArrayHasKey('sky', $colors);
     }
 
+    public function test_super_admin_uses_the_same_phone_admin_chrome_as_the_chamber_desk(): void
+    {
+        $provider = file_get_contents(app_path('Providers/Filament/SuperAdminPanelProvider.php'));
+
+        $this->assertStringContainsString("viteTheme('resources/css/filament/tenantAdmin/theme.css')", $provider);
+        $this->assertStringContainsString('->topbar(false)', $provider);
+        $this->assertStringContainsString('sidebarCollapsibleOnDesktop()', $provider);
+        $this->assertStringContainsString('viewport-fit=cover', $provider);
+        $this->assertStringContainsString('UsesHamburgerSidebarToggle', $provider);
+    }
+
     public function test_dashboard_shows_platform_totals_before_the_tenant_table_and_omits_the_account_widget(): void
     {
         $this->assertSame(-3, AccountWidget::getSort());

@@ -836,5 +836,8 @@
 ## 2026-08-20T00:39:34+0600
 - Daily Roster and Live Queue **New Walk-In** share `StaffBookingForm` visit types (today, overflow, ended-today); Follow-up replaces the walk-in paper-file checkbox. Single-job staff login home is Live Queue / Cashbook / Daily Roster.
 
+## 2026-08-20T00:58:50+0600
+- Super Admin `/admin` uses the same `tenantAdmin/theme.css` phone chrome (no topbar, collapsible sidebar, `viewport-fit=cover`) as the chamber desk.
+
 
 

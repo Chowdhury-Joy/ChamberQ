@@ -1551,3 +1551,12 @@
  <root_cause>The card used an inline `background:rgb(250 250 250)` that always won, while the heading inherited Filament’s dark-mode light text. `text-muted` did not set a dark-mode colour either.</root_cause>
  <prevention_rule>Never pin Filament desk cards to a light fill with inline `background`. Paint `.staff-buzz-card` in `tenantAdmin/theme.css` with an explicit `color` and an `html.dark` surface. Pin in `LiveQueueControlPageTest`.</prevention_rule>
 </bug>
+
+## 2026-08-20T00:58:50+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>Chamber desks on a phone got the stacked header and drawer-above-buttons fix; central ChamberQ Super Admin at `/admin` still used Filament’s default topbar and theme, so the same overlap would return there.</symptom>
+ <root_cause>`SuperAdminPanelProvider` had the hamburger icon mapping but no `viteTheme`, `topbar(false)`, or `viewport-fit=cover`. Architecture claimed a `superAdmin/theme.css` that does not exist.</root_cause>
+ <prevention_rule>Super Admin must register the same `tenantAdmin/theme.css`, `topbar(false)`, collapsible sidebar, and `viewport-fit=cover` as the chamber desk. Pin in `SuperAdminPanelUxTest`.</prevention_rule>
+</bug>

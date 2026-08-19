@@ -6,6 +6,7 @@ use App\Filament\SuperAdmin\Widgets\PlatformFinanceOverview;
 use App\Filament\SuperAdmin\Widgets\RecentTenantsWidget;
 use App\Filament\SuperAdmin\Widgets\SuperAdminStatsOverview;
 use App\Providers\Filament\Concerns\UsesHamburgerSidebarToggle;
+use Filament\Actions\Action;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -14,6 +15,9 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Support\Enums\Width;
+use Filament\Tables\Table;
+use Filament\View\PanelsRenderHook;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -31,14 +35,22 @@ class SuperAdminPanelProvider extends PanelProvider
             ->id('superAdmin')
             ->path('admin')
             ->brandName('ChamberQ')
+            ->viteTheme('resources/css/filament/tenantAdmin/theme.css')
             ->login()
             ->passwordReset()
+            ->topbar(false)
+            ->maxContentWidth(Width::Full)
+            ->sidebarCollapsibleOnDesktop()
             ->domains(config('tenancy.central_domains') ?? [])
             ->colors([
                 'primary' => Color::Blue,
                 'amber' => Color::Amber,
                 'sky' => Color::Sky,
             ])
+            ->renderHook(
+                PanelsRenderHook::HEAD_END,
+                fn (): string => '<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">',
+            )
             ->discoverResources(in: app_path('Filament/SuperAdmin/Resources'), for: 'App\Filament\SuperAdmin\Resources')
             ->discoverPages(in: app_path('Filament/SuperAdmin/Pages'), for: 'App\Filament\SuperAdmin\Pages')
             ->pages([
@@ -63,6 +75,13 @@ class SuperAdminPanelProvider extends PanelProvider
             ])
             ->authMiddleware([
                 Authenticate::class,
-            ]);
+            ])
+            ->bootUsing(function (): void {
+                Table::configureUsing(function (Table $table): void {
+                    $table->modifyUngroupedRecordActionsUsing(
+                        fn (Action $action): Action => $action->button()->outlined(),
+                    );
+                });
+            });
     }
 }
