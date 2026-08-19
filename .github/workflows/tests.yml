@@ -167,7 +167,7 @@ jobs:
       - name: Require architecture.md when files are added, deleted, or renamed
         run: |
           BASE="origin/${{ github.base_ref }}"
-          git fetch --no-tags --depth=0 origin "${{ github.base_ref }}"
+          git fetch --no-tags origin "${{ github.base_ref }}"
 
           STRUCTURAL=$(git diff --name-status "$BASE...HEAD" -- \
             app routes config database resources/views public \
