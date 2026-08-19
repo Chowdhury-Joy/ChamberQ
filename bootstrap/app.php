@@ -14,8 +14,8 @@ return Application::configure(basePath: dirname(__DIR__))
         // Production sits behind nginx/caddy → PHP on 127.0.0.1. Restrict in
         // production to your reverse-proxy IPs/CIDRs via TRUSTED_PROXIES; *
         // is fine only when PHP is unreachable except through that proxy.
-        $trusted = env('TRUSTED_PROXIES', '*');
-        $middleware->trustProxies(at: $trusted === '*' ? '*' : array_map('trim', explode(',', (string) $trusted)));
+        $trusted = (string) config('app.trusted_proxies', '*');
+        $middleware->trustProxies(at: $trusted === '*' ? '*' : array_map('trim', explode(',', $trusted)));
         $middleware->prependToGroup('web', \App\Http\Middleware\ForceRequestRootUrl::class);
         $middleware->prependToGroup('web', \App\Http\Middleware\InitializeTenancyForTenantHosts::class);
         // Sign-out diagnostics, off unless AUTH_DEBUG=true (config/diagnostics.php).

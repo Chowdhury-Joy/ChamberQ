@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Contracts\SmsGateway;
 use App\Models\Booking;
 use App\Models\Chamber;
 use App\Models\Condition;
@@ -18,6 +19,8 @@ use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Testing\TestResponse;
+use Mockery;
 use Tests\TestCase;
 
 /**
@@ -38,6 +41,8 @@ class PortalPrescriptionTest extends TestCase
     {
         parent::setUp();
 
+        config(['sms.enabled' => true, 'sms.driver' => 'log']);
+
         $this->tenant = Tenant::create(['id' => 'portal-rx', 'plan_tier' => 'solo']);
         Domain::create(['domain' => 'portal-rx.localhost', 'tenant_id' => $this->tenant->id]);
 
@@ -56,6 +61,7 @@ class PortalPrescriptionTest extends TestCase
 
     protected function tearDown(): void
     {
+        Mockery::close();
         tenancy()->end();
 
         parent::tearDown();
@@ -159,6 +165,56 @@ class PortalPrescriptionTest extends TestCase
         return $prescription->fresh();
     }
 
+    private function lookupPortal(?string $phone = null): TestResponse
+    {
+        return $this->post('http://portal-rx.localhost/portal', [
+            'phone' => $phone ?? $this->phone,
+        ])->assertRedirect('http://portal-rx.localhost/portal');
+    }
+
+    private function bindPortalOtpGateway(?string &$sent = null): void
+    {
+        $gateway = Mockery::mock(SmsGateway::class);
+        $gateway->shouldReceive('send')
+            ->andReturnUsing(function (string $to, string $message) use (&$sent) {
+                $sent = $message;
+            });
+        $this->app->instance(SmsGateway::class, $gateway);
+    }
+
+    private function sendAndVerifyPortalOtp(?string &$sent = null): void
+    {
+        $this->bindPortalOtpGateway($sent);
+
+        $this->post('http://portal-rx.localhost/portal/rx-otp/send', [
+            'phone' => $this->phone,
+        ])->assertRedirect('http://portal-rx.localhost/portal');
+
+        $this->assertNotNull($sent);
+        $this->assertMatchesRegularExpression('/\b(\d{6})\b/', $sent);
+        preg_match('/\b(\d{6})\b/', $sent, $matches);
+
+        $this->post('http://portal-rx.localhost/portal/rx-otp/verify', [
+            'phone' => $this->phone,
+            'code' => $matches[1],
+        ])->assertRedirect('http://portal-rx.localhost/portal');
+    }
+
+    private function flushSession(): void
+    {
+        $this->app['session']->flush();
+    }
+
+    public function test_portal_lookup_stores_phone_in_session_not_the_url(): void
+    {
+        $this->lookupPortal();
+
+        $this->get('http://portal-rx.localhost/portal')
+            ->assertOk()
+            ->assertDontSee('phone='.$this->phone, false)
+            ->assertSee('017****5699', false);
+    }
+
     public function test_waiting_serial_does_not_ask_for_a_prescription_password(): void
     {
         tenancy()->initialize($this->tenant);
@@ -187,7 +243,9 @@ class PortalPrescriptionTest extends TestCase
 
         tenancy()->end();
 
-        $this->get('http://portal-rx.localhost/portal?phone='.$this->phone)
+        $this->lookupPortal();
+
+        $this->get('http://portal-rx.localhost/portal')
             ->assertOk()
             ->assertSee('Waiting Patient', false)
             ->assertDontSee('Set a password for your prescriptions', false)
@@ -201,39 +259,63 @@ class PortalPrescriptionTest extends TestCase
         $second = $this->makePrescription('SECOND', 'Second Diagnosis', now()->subDays(2));
         $newest = $this->makePrescription('NEWEST', 'Newest Diagnosis', now()->subDay());
 
-        $this->get('http://portal-rx.localhost/portal?phone='.$this->phone)
+        $this->lookupPortal();
+
+        $this->get('http://portal-rx.localhost/portal')
             ->assertOk()
-            ->assertSee('Set a password for your prescriptions', false)
+            ->assertSee('Verify your mobile', false)
             ->assertSee('Optional. Skip this if you like', false)
             ->assertSee('View prescription', false)
             ->assertSee('/portal/prescriptions/'.$newest->id, false)
             ->assertSee('/portal/prescriptions/'.$second->id, false)
-            ->assertSee('/portal/prescriptions/'.$oldest->id, false);
+            ->assertSee('/portal/prescriptions/'.$oldest->id, false)
+            ->assertDontSee('phone=', false);
 
-        $this->get('http://portal-rx.localhost/portal/prescriptions/'.$newest->id.'?phone='.$this->phone)
+        $this->get('http://portal-rx.localhost/portal/prescriptions/'.$newest->id)
             ->assertOk()
             ->assertSee('NEWEST', false);
+    }
+
+    public function test_setting_a_password_requires_sms_otp_first(): void
+    {
+        $this->makePrescription('NAPA');
+
+        $this->lookupPortal();
+
+        $this->post('http://portal-rx.localhost/portal/rx-password', [
+            'phone' => $this->phone,
+            'password' => 'gate-one',
+            'password_confirmation' => 'gate-one',
+        ])
+            ->assertRedirect()
+            ->assertSessionHasErrors('code');
     }
 
     public function test_later_visits_need_the_password_to_open_old_prescriptions(): void
     {
         $prescription = $this->makePrescription('NAPA', 'SECRETDIAGNOSISNAME');
 
+        $this->lookupPortal();
+        $this->sendAndVerifyPortalOtp();
+
         $this->post('http://portal-rx.localhost/portal/rx-password', [
             'phone' => $this->phone,
             'password' => 'gate-one',
             'password_confirmation' => 'gate-one',
-        ]);
+        ])->assertRedirect('http://portal-rx.localhost/portal');
 
         $this->flushSession();
+        $this->lookupPortal();
 
-        $this->get('http://portal-rx.localhost/portal?phone='.$this->phone)
+        $this->get('http://portal-rx.localhost/portal')
             ->assertOk()
-            ->assertSee('Enter your prescription password', false)
+            ->assertSee('Verify your mobile', false)
             ->assertDontSee('View prescription', false)
             ->assertDontSee('SECRETDIAGNOSISNAME', false);
 
-        $this->from('http://portal-rx.localhost/portal?phone='.$this->phone)
+        $this->sendAndVerifyPortalOtp();
+
+        $this->from('http://portal-rx.localhost/portal')
             ->post('http://portal-rx.localhost/portal/rx-unlock', [
                 'phone' => $this->phone,
                 'password' => 'wrong-gate',
@@ -241,30 +323,35 @@ class PortalPrescriptionTest extends TestCase
             ->assertRedirect()
             ->assertSessionHasErrors('password');
 
-        $this->from('http://portal-rx.localhost/portal?phone='.$this->phone)
+        $this->from('http://portal-rx.localhost/portal')
             ->post('http://portal-rx.localhost/portal/rx-unlock', [
                 'phone' => $this->phone,
                 'password' => 'gate-one',
             ])
-            ->assertRedirect('http://portal-rx.localhost/portal?phone='.$this->phone);
+            ->assertRedirect('http://portal-rx.localhost/portal');
 
-        $this->get('http://portal-rx.localhost/portal?phone='.$this->phone)
+        $this->get('http://portal-rx.localhost/portal')
             ->assertOk()
             ->assertSee('View prescription', false)
-            ->assertSee('/portal/prescriptions/'.$prescription->id, false);
+            ->assertSee('/portal/prescriptions/'.$prescription->id, false)
+            ->assertDontSee('phone=', false);
     }
 
     public function test_portal_prescription_view_requires_matching_phone_and_stays_open_until_they_choose_a_password(): void
     {
         $prescription = $this->makePrescription('NAPA', 'SECRETDIAGNOSISNAME');
 
-        $this->get('http://portal-rx.localhost/portal/prescriptions/'.$prescription->id.'?phone=01700000000')
+        $this->get('http://portal-rx.localhost/portal/prescriptions/'.$prescription->id)
             ->assertNotFound();
+
+        $this->lookupPortal('01700000000');
 
         $this->get('http://portal-rx.localhost/portal/prescriptions/'.$prescription->id)
             ->assertNotFound();
 
-        $this->get('http://portal-rx.localhost/portal/prescriptions/'.$prescription->id.'?phone='.$this->phone)
+        $this->lookupPortal();
+
+        $this->get('http://portal-rx.localhost/portal/prescriptions/'.$prescription->id)
             ->assertOk()
             ->assertSee('NAPA')
             ->assertSee('SECRETDIAGNOSISNAME')
@@ -293,7 +380,10 @@ class PortalPrescriptionTest extends TestCase
 
     public function test_cannot_set_prescription_password_before_a_completed_visit(): void
     {
-        $this->from('http://portal-rx.localhost/portal?phone='.$this->phone)
+        $this->lookupPortal();
+        $this->sendAndVerifyPortalOtp();
+
+        $this->from('http://portal-rx.localhost/portal')
             ->post('http://portal-rx.localhost/portal/rx-password', [
                 'phone' => $this->phone,
                 'password' => 'gate-one',
@@ -307,6 +397,9 @@ class PortalPrescriptionTest extends TestCase
     {
         $this->makePrescription('NAPA');
 
+        $this->lookupPortal();
+        $this->sendAndVerifyPortalOtp();
+
         $this->post('http://portal-rx.localhost/portal/rx-password', [
             'phone' => $this->phone,
             'password' => 'gate-one',
@@ -314,9 +407,11 @@ class PortalPrescriptionTest extends TestCase
         ]);
 
         $this->flushSession();
+        $this->lookupPortal();
+        $this->sendAndVerifyPortalOtp();
 
         for ($attempt = 0; $attempt < 5; $attempt++) {
-            $this->from('http://portal-rx.localhost/portal?phone='.$this->phone)
+            $this->from('http://portal-rx.localhost/portal')
                 ->post('http://portal-rx.localhost/portal/rx-unlock', [
                     'phone' => $this->phone,
                     'password' => 'wrong-gate',
@@ -325,7 +420,7 @@ class PortalPrescriptionTest extends TestCase
                 ->assertSessionHasErrors('password');
         }
 
-        $this->from('http://portal-rx.localhost/portal?phone='.$this->phone)
+        $this->from('http://portal-rx.localhost/portal')
             ->post('http://portal-rx.localhost/portal/rx-unlock', [
                 'phone' => $this->phone,
                 'password' => 'wrong-gate',
@@ -344,7 +439,9 @@ class PortalPrescriptionTest extends TestCase
         Storage::disk('local')->put('visit-audio/portal-rx/secret.webm', 'secret');
         $this->makePrescription('SERGEL', 'Gastritis');
 
-        $this->get('http://portal-rx.localhost/portal?phone='.$this->phone)
+        $this->lookupPortal();
+
+        $this->get('http://portal-rx.localhost/portal')
             ->assertOk()
             ->assertDontSee('Secret transcript must stay off')
             ->assertDontSee('visit-audio')

@@ -13,8 +13,10 @@ use App\Models\PlatformSetting;
 use App\Models\Prescription;
 use App\Models\ScheduleSession;
 use App\Services\BookingService;
+use App\Services\PortalOtpService;
 use App\Services\PortalPrescriptionLock;
-use App\Support\BdNid;
+use App\Support\BdPhone;
+use App\Support\PortalSession;
 use App\Support\YearOfBirth;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -480,59 +482,109 @@ class BookingController extends Controller
         ]);
     }
 
+    public function portalLookup(Request $request): RedirectResponse
+    {
+        $validated = $request->validate([
+            'phone' => ['required', 'string', 'regex:/^(?:\+?88)?01[3-9]\d{8}$/'],
+        ], [
+            'phone.regex' => __('Please enter a valid Bangladeshi mobile number, for example 01712345678.'),
+        ]);
+
+        $normalized = BdPhone::normalize($validated['phone']);
+
+        if (! BdPhone::isValid($normalized)) {
+            throw ValidationException::withMessages([
+                'phone' => __('Please enter a valid Bangladeshi mobile number, for example 01712345678.'),
+            ]);
+        }
+
+        PortalSession::storePhone($request, $normalized);
+
+        return redirect(PortalSession::portalUrl());
+    }
+
     public function portal(Request $request)
     {
-        $phone = $request->query('phone');
-        $bookings = collect();
-        $prescriptions = collect();
-        $error = null;
-
-        if (filled($phone)) {
-            $validator = validator(
-                ['phone' => $phone],
+        if ($request->query('phone')) {
+            $validated = validator(
+                ['phone' => $request->query('phone')],
                 ['phone' => ['required', 'string', 'regex:/^(?:\+?88)?01[3-9]\d{8}$/']],
-                ['phone.regex' => __('Please enter a valid Bangladeshi mobile number, for example 01712345678.')]
             );
 
-            if ($validator->fails()) {
-                $error = $validator->errors()->first('phone');
-            } else {
-                $variants = $this->phoneLookupVariants((string) $phone);
+            if (! $validated->fails()) {
+                $normalized = BdPhone::normalize((string) $request->query('phone'));
+                if (BdPhone::isValid($normalized)) {
+                    PortalSession::storePhone($request, $normalized);
 
-                $bookings = Booking::whereIn('patient_phone', $variants)
-                    ->with(['bookable'])
-                    ->latest()
-                    ->take(10)
-                    ->get();
-
-                $rxLock = app(PortalPrescriptionLock::class);
-                $rxGate = $rxLock->gate($request, (string) $phone);
-
-                // Pads stay listed unless this phone chose a password and has
-                // not unlocked it this session. Doctor consult / shared
-                // history never uses this gate.
-                if (tenant()?->hasPrescription() && $rxLock->prescriptionsVisible($request, (string) $phone)) {
-                    $prescriptions = Prescription::query()
-                        ->whereHas('items')
-                        ->whereHas('visitRecord.booking', function ($query) use ($variants) {
-                            $query->whereIn('patient_phone', $variants);
-                        })
-                        ->with(['items', 'visitRecord.booking', 'patient'])
-                        ->latest()
-                        ->get();
+                    return redirect(PortalSession::portalUrl());
                 }
             }
         }
 
-        // Per-tier view, same split as index() and show(): the clinic portal
-        // follows the Clireo design, solo keeps its own locked look.
+        $phone = PortalSession::phone($request);
+        $bookings = collect();
+        $prescriptions = collect();
+        $error = null;
+        $rxOtpVerified = false;
+
+        if (filled($phone)) {
+            $variants = $this->phoneLookupVariants($phone);
+
+            $bookings = Booking::whereIn('patient_phone', $variants)
+                ->with(['bookable'])
+                ->latest()
+                ->take(10)
+                ->get();
+
+            $rxLock = app(PortalPrescriptionLock::class);
+            $rxGate = $rxLock->gate($request, $phone);
+            $rxOtpVerified = PortalSession::isOtpVerified($request, $phone);
+
+            if (tenant()?->hasPrescription() && $rxLock->prescriptionsVisible($request, $phone)) {
+                $prescriptions = Prescription::query()
+                    ->whereHas('items')
+                    ->whereHas('visitRecord.booking', function ($query) use ($variants) {
+                        $query->whereIn('patient_phone', $variants);
+                    })
+                    ->with(['items', 'visitRecord.booking', 'patient'])
+                    ->latest()
+                    ->get();
+            }
+        }
+
         return view(tenant()?->isSoloDoctor() ? 'tenant.solo.portal.index' : 'tenant.portal.index', [
             'bookings' => $bookings,
             'prescriptions' => $prescriptions,
             'phone' => $phone,
+            'phoneDisplay' => filled($phone) ? BdPhone::maskForDisplay($phone) : null,
             'error' => $error,
             'rxGate' => $rxGate ?? PortalPrescriptionLock::GATE_NONE,
+            'rxOtpVerified' => $rxOtpVerified,
         ]);
+    }
+
+    public function sendPortalRxOtp(Request $request, PortalOtpService $otp): RedirectResponse
+    {
+        $validated = $request->validate([
+            'phone' => ['required', 'string', 'regex:/^(?:\+?88)?01[3-9]\d{8}$/'],
+        ]);
+
+        $otp->send($request, $validated['phone']);
+
+        return redirect(PortalSession::portalUrl())
+            ->with('portal_otp_sent', true);
+    }
+
+    public function verifyPortalRxOtp(Request $request, PortalOtpService $otp): RedirectResponse
+    {
+        $validated = $request->validate([
+            'phone' => ['required', 'string', 'regex:/^(?:\+?88)?01[3-9]\d{8}$/'],
+            'code' => ['required', 'string', 'max:12'],
+        ]);
+
+        $otp->verify($request, $validated['phone'], $validated['code']);
+
+        return redirect(PortalSession::portalUrl());
     }
 
     public function setPortalPrescriptionPassword(Request $request, PortalPrescriptionLock $lock): RedirectResponse
@@ -541,7 +593,7 @@ class BookingController extends Controller
 
         $lock->setPassword($request, $validated['phone'], $validated['password']);
 
-        return redirect($lock->portalRedirect($validated['phone']));
+        return redirect($lock->portalRedirect());
     }
 
     public function unlockPortalPrescriptions(Request $request, PortalPrescriptionLock $lock): RedirectResponse
@@ -550,18 +602,20 @@ class BookingController extends Controller
 
         $lock->unlock($request, $validated['phone'], $validated['password']);
 
-        return redirect($lock->portalRedirect($validated['phone']));
+        return redirect($lock->portalRedirect());
     }
 
     public function lockPortalPrescriptions(Request $request, PortalPrescriptionLock $lock): RedirectResponse
     {
-        $validated = $request->validate([
-            'phone' => ['required', 'string', 'regex:/^(?:\+?88)?01[3-9]\d{8}$/'],
-        ]);
+        $phone = PortalSession::phone($request);
 
-        $lock->lock($request, $validated['phone']);
+        if ($phone === null) {
+            return redirect(PortalSession::portalUrl());
+        }
 
-        return redirect($lock->portalRedirect($validated['phone']));
+        $lock->lock($request, $phone);
+
+        return redirect($lock->portalRedirect());
     }
 
     /**
@@ -569,6 +623,8 @@ class BookingController extends Controller
      */
     private function validatePortalRxPasswordForm(Request $request, bool $confirming): array
     {
+        $sessionPhone = PortalSession::phone($request);
+
         $rules = [
             'phone' => ['required', 'string', 'regex:/^(?:\+?88)?01[3-9]\d{8}$/'],
             'password' => [
@@ -583,7 +639,17 @@ class BookingController extends Controller
             $rules['password'][] = 'confirmed';
         }
 
-        return $request->validate($rules);
+        $validated = $request->validate($rules);
+
+        $normalized = BdPhone::normalize($validated['phone']);
+
+        if ($sessionPhone === null || ! hash_equals($sessionPhone, $normalized)) {
+            throw ValidationException::withMessages([
+                'phone' => __('Look up your number on the portal first.'),
+            ]);
+        }
+
+        return $validated;
     }
 
     /**

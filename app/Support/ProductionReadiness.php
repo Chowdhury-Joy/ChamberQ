@@ -180,6 +180,14 @@ class ProductionReadiness
             ],
             [
                 'severity' => self::SEVERITY_WARNING,
+                'key' => 'TRUSTED_PROXIES',
+                'fix' => 'TRUSTED_PROXIES=your load-balancer IP or CIDR (not *)',
+                'detect' => fn (): ?string => config('app.trusted_proxies') === '*'
+                    ? 'TRUSTED_PROXIES is "*", so any client can spoof X-Forwarded-For and bypass IP throttles. Set the real reverse-proxy IPs unless PHP is unreachable except through that proxy.'
+                    : null,
+            ],
+            [
+                'severity' => self::SEVERITY_WARNING,
                 'key' => 'VAPID',
                 'fix' => 'Generate a key pair with php -r \'require "vendor/autoload.php"; echo json_encode(Minishlink\\WebPush\\VAPID::createVapidKeys()), PHP_EOL;\' and set VAPID_PUBLIC_KEY / VAPID_PRIVATE_KEY',
                 'detect' => function (): ?string {

@@ -7,8 +7,10 @@ use App\Models\Chamber;
 use App\Models\LiveSession;
 use App\Models\ScheduleSession;
 use App\Services\LiveSessionService;
+use App\Support\ScreenPollToken;
 use Carbon\Carbon;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class ScreenController extends Controller
@@ -35,8 +37,12 @@ class ScreenController extends Controller
         return $this->renderScreen($session, $this->today(), liveToday: true);
     }
 
-    public function apiToday(ScheduleSession $session): JsonResponse
+    public function apiToday(Request $request, ScheduleSession $session): JsonResponse
     {
+        if (! ScreenPollToken::matchesSession($session->id, $request->query('token'))) {
+            abort(404);
+        }
+
         return response()->json($this->sessionScreenState($session, $this->today()));
     }
 
@@ -48,8 +54,12 @@ class ScreenController extends Controller
         return $this->renderScreen($session, $this->normalizeDate($date), liveToday: false);
     }
 
-    public function api(ScheduleSession $session, string $date): JsonResponse
+    public function api(Request $request, ScheduleSession $session, string $date): JsonResponse
     {
+        if (! ScreenPollToken::matchesSession($session->id, $request->query('token'))) {
+            abort(404);
+        }
+
         return response()->json($this->sessionScreenState($session, $this->normalizeDate($date)));
     }
 
@@ -58,11 +68,16 @@ class ScreenController extends Controller
         return view('tenant.screen-chamber', [
             'chamber' => $chamber,
             'sessionDate' => $this->today(),
+            'screenPollToken' => ScreenPollToken::forChamber($chamber->id),
         ]);
     }
 
-    public function apiChamberToday(Chamber $chamber): JsonResponse
+    public function apiChamberToday(Request $request, Chamber $chamber): JsonResponse
     {
+        if (! ScreenPollToken::matchesChamber($chamber->id, $request->query('token'))) {
+            abort(404);
+        }
+
         $date = $this->today();
         $sessions = ScheduleSession::with(['chamber', 'doctor'])
             ->where('chamber_id', $chamber->id)
@@ -113,6 +128,7 @@ class ScreenController extends Controller
             'sessionDate' => $date,
             'liveSession' => $liveSession,
             'liveToday' => $liveToday,
+            'screenPollToken' => ScreenPollToken::forSession($session->id),
         ]);
     }
 

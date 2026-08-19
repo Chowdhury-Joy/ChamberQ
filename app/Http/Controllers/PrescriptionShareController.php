@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Prescription;
 use App\Services\PortalPrescriptionLock;
 use App\Support\BdPhone;
+use App\Support\PortalSession;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -51,14 +52,9 @@ class PrescriptionShareController extends Controller
      */
     public function showFromPortal(Request $request, Prescription $prescription): View|RedirectResponse
     {
-        $phone = $request->query('phone');
+        $phone = PortalSession::phone($request);
 
-        $validator = validator(
-            ['phone' => $phone],
-            ['phone' => ['required', 'string', 'regex:/^(?:\+?88)?01[3-9]\d{8}$/']],
-        );
-
-        if ($validator->fails()) {
+        if ($phone === null) {
             abort(404);
         }
 
@@ -72,9 +68,8 @@ class PrescriptionShareController extends Controller
         // Same gate as portal lookup: any common BD prefix spelling of the
         // number that booked this visit is enough.
         $normalizedBooking = BdPhone::normalize($bookingPhone);
-        $allowed = collect(BdPhone::lookupVariants((string) $phone))
+        $allowed = collect(BdPhone::lookupVariants($phone))
             ->map(fn (string $v) => BdPhone::normalize($v))
-            ->push(BdPhone::normalize((string) $phone))
             ->filter()
             ->unique()
             ->all();
@@ -88,8 +83,8 @@ class PrescriptionShareController extends Controller
         }
 
         $lock = app(PortalPrescriptionLock::class);
-        if ($lock->gate($request, (string) $phone) === PortalPrescriptionLock::GATE_UNLOCK) {
-            return redirect($lock->portalRedirect((string) $phone));
+        if ($lock->gate($request, $phone) === PortalPrescriptionLock::GATE_UNLOCK) {
+            return redirect($lock->portalRedirect());
         }
 
         return $this->render($prescription, showExpiryFootnote: false);

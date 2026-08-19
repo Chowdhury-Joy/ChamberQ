@@ -3213,6 +3213,15 @@
  <reason>Like putting a cashier at the till and a caller at the queue board — they start the shift where they work, not at a noticeboard they do not use.</reason>
 </decision>
 
+## 2026-08-19T19:45:00+0000
+
+<decision>
+ <category>Code</category>
+ <context>Production audit flagged patient phone numbers in portal URLs/query strings, prescription password set/unlock without proving phone possession, and unauthenticated outdoor-screen JSON polls keyed only on guessable session ids.</context>
+ <action>Store portal phone in session via `POST /portal` (`PortalSession`); mask display with `BdPhone::maskForDisplay()`. Require SMS OTP (`PortalOtpService`, `portal_otp_codes`) before set/unlock on `PortalPrescriptionLock`. Gate `/api/screen/*` JSON with HMAC `ScreenPollToken` embedded in the TV page. Warn on production-check when `TRUSTED_PROXIES=*`.</action>
+ <reason>Phone numbers must not leak into browser history or access logs; password changes need the same proof as `/me` login; queue JSON exposes patient names/serials and must not be enumerable by id alone.</reason>
+</decision>
+
 ## 2026-08-20T00:58:50+0600
 
 <decision>

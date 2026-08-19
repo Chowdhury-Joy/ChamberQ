@@ -153,14 +153,15 @@
                 {{ __('Enter your mobile number to look up appointments, tickets, and prescriptions. After a visit you can optionally set a password for next time.') }}
             </p>
 
-            <form action="{{ tenant_web_url('/portal') }}" method="GET" class="mt-8 flex flex-col gap-3 sm:flex-row">
+            <form action="{{ tenant_web_url('/portal') }}" method="POST" class="mt-8 flex flex-col gap-3 sm:flex-row">
+                @csrf
                 <label for="portal-phone" class="sr-only">{{ __('Mobile phone number') }}</label>
                 <input
                     id="portal-phone"
                     type="tel"
                     name="phone"
-                    value="{{ $phone ?? '' }}"
-                    placeholder="017XXXXXXXX"
+                    value=""
+                    placeholder="{{ filled($phoneDisplay ?? null) ? $phoneDisplay : '017XXXXXXXX' }}"
                     required
                     inputmode="numeric"
                     autocomplete="tel"
@@ -186,7 +187,6 @@
                         </h2>
                         <form action="{{ tenant_web_route('patient.portal.rx-lock', [], absolute: false) }}" method="POST">
                             @csrf
-                            <input type="hidden" name="phone" value="{{ $phone }}">
                             <button type="submit" class="text-sm font-semibold text-slate-500 underline">{{ __('Hide prescriptions') }}</button>
                         </form>
                     </div>
@@ -212,7 +212,7 @@
                                     </p>
                                 </div>
                                 <a
-                                    href="{{ tenant_web_route('prescriptions.portal', ['prescription' => $prescription, 'phone' => $phone], absolute: false) }}"
+                                    href="{{ tenant_web_route('prescriptions.portal', ['prescription' => $prescription], absolute: false) }}"
                                     class="solo-cta-outline text-sm"
                                 >
                                     {{ __('View prescription') }}
@@ -223,7 +223,7 @@
                 @endif
 
                 <h2 class="font-display text-2xl text-slate-900 sm:text-3xl">
-                    {{ __('Search Results for') }} “{{ $phone }}”
+                    {{ __('Search Results for') }} “{{ $phoneDisplay ?? $phone }}”
                 </h2>
 
                 @if($bookings->isEmpty())

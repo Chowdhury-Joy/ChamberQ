@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Validation\ValidationException;
+use App\Support\PortalSession;
 
 /**
  * Optional privacy lock for the *patient* portal only.
@@ -92,6 +93,8 @@ class PortalPrescriptionLock
     {
         $normalized = BdPhone::normalize($phone);
 
+        app(PortalOtpService::class)->assertVerifiedForPasswordChange($request, $normalized);
+
         if (! $this->maySetPassword($normalized)) {
             throw ValidationException::withMessages([
                 'phone' => __('You can set a prescription password after you have seen the doctor at least once.'),
@@ -115,6 +118,9 @@ class PortalPrescriptionLock
     public function unlock(Request $request, string $phone, string $password): void
     {
         $normalized = BdPhone::normalize($phone);
+
+        app(PortalOtpService::class)->assertVerifiedForPasswordChange($request, $normalized);
+
         $rateKey = $this->unlockRateKey($normalized);
 
         if (RateLimiter::tooManyAttempts($rateKey, 5)) {
@@ -154,9 +160,9 @@ class PortalPrescriptionLock
         $record?->delete();
     }
 
-    public function portalRedirect(string $phone): string
+    public function portalRedirect(): string
     {
-        return tenant_web_url('/portal?phone='.rawurlencode($phone));
+        return PortalSession::portalUrl();
     }
 
     private function recordFor(string $phone): ?PortalPhonePassword

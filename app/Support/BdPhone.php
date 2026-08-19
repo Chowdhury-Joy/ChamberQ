@@ -40,4 +40,15 @@ final class BdPhone
             trim($phone),
         ]));
     }
+
+    public static function maskForDisplay(string $phone): string
+    {
+        $normalized = self::normalize($phone);
+
+        if (strlen($normalized) < 6) {
+            return $normalized;
+        }
+
+        return substr($normalized, 0, 3).'****'.substr($normalized, -4);
+    }
 }

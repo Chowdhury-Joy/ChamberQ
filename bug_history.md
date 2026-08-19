@@ -1571,8 +1571,15 @@
 </bug>
 
 <bug>
+ <category>Code</category>
+ <symptom>Patient portal put mobile numbers in the URL (`/portal?phone=…`), prescription links carried `?phone=`, and anyone who knew a schedule session id could poll `/api/screen/{id}` for live patient names and serials.</symptom>
+ <root_cause>Portal lookup used GET; prescription portal route trusted query-string phone; screen JSON endpoints had no shared secret beyond the numeric session/chamber id.</root_cause>
+ <prevention_rule>Portal lookup must POST into session (`PortalSession`); prescription portal reads session phone only; outdoor-screen polls require `ScreenPollToken` from the rendered TV page.</prevention_rule>
+</bug>
+
+<bug>
  <category>Business_Logic</category>
- <symptom>Two patients booking the last serial at the same moment could hit a unique-key violation and return 500 instead of a clean "full" response.</symptom>
- <root_cause>`BookingService` allocated `max(serial)+1` inside a transaction but did not retry on `UniqueConstraintViolationException` like `VoucherService` already does.</root_cause>
- <prevention_rule>Retry booking serial allocation up to three times on unique violations before surfacing an unavailable response.</prevention_rule>
+ <symptom>Anyone who knew a patient's mobile could set or brute-force the optional portal prescription password without proving they held the SIM.</symptom>
+ <root_cause>`PortalPrescriptionLock` set/unlock accepted password forms keyed only on a phone number the caller typed or pasted from the URL.</root_cause>
+ <prevention_rule>Require a consumed SMS OTP (`PortalOtpService`) in session before any portal prescription password set or unlock.</prevention_rule>
 </bug>
