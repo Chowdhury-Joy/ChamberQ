@@ -30,6 +30,7 @@ class StaffDeskBanglaTest extends TestCase
         'app/Filament/TenantAdmin/Pages/BookSerial.php',
         'app/Filament/TenantAdmin/Support/StaffBookingForm.php',
         'resources/views/filament/tenant-admin/pages/book-serial.blade.php',
+        'resources/views/filament/tenant-admin/pages/book-serial-confirmed.blade.php',
         'app/Services/StationsHandoffService.php',
         'app/Models/Booking.php',
         'app/Models/ScheduleSession.php',

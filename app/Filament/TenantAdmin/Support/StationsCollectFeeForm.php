@@ -107,7 +107,7 @@ class StationsCollectFeeForm
     public static function fillFromEntry(Booking $record): array
     {
         $entry = $record->cashEntry;
-        $itemId = $entry?->fee_catalog_item_id;
+        $itemId = $entry?->fee_catalog_item_id ?: $record->fee_catalog_item_id;
 
         if (! $itemId) {
             $record->loadMissing('bookable');

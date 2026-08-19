@@ -88,6 +88,28 @@ class BookingUnavailableException extends Exception
         );
     }
 
+    public static function feeCatalogItemUnavailable(): self
+    {
+        return self::make(
+            __('That procedure is no longer on the fee list. Please pick another.'),
+            'fee_catalog'
+        );
+    }
+
+    public static function pickInterventionType(): self
+    {
+        return self::make(
+            __('Pick an intervention type.'),
+            'intervention_type'
+        );
+    }
+    {
+        return self::make(
+            __('That sitting does not match the visit type.'),
+            'visit_type'
+        );
+    }
+
     public static function duplicateBooking(): self
     {
         return self::make(

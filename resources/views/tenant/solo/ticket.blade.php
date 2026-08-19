@@ -13,6 +13,7 @@
     <meta name="theme-color" content="{{ $themeColor }}">
     <meta name="robots" content="noindex">
     <title>{{ __('Your Appointment') }} | {{ $brand }}</title>
+    @include('partials.seo', ['seo' => \App\Support\PublicSeo::tenantPage($tenant, __('Your Appointment').' | '.$brand, null, false)])
     <link rel="manifest" href="{{ tenant_web_url('/manifest.webmanifest') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

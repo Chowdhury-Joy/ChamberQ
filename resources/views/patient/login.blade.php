@@ -1,4 +1,4 @@
-<x-patient.layout :title="__('Patient login')">
+<x-patient.layout :title="__('Patient login')" :index="false">
     <section class="pf-hero pf-narrow">
         <h1>{{ __('Patient login') }}</h1>
         <p>{{ __('One login for every ChamberQ doctor. Booking itself does not need an account.') }}</p>

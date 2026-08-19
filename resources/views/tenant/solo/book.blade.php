@@ -15,6 +15,11 @@
     <meta name="color-scheme" content="light only">
     <meta name="theme-color" content="{{ $themeColor }}">
     <title>{{ __('Book Appointment') }} | {{ $brand }}</title>
+    @include('partials.seo', ['seo' => \App\Support\PublicSeo::tenantPage(
+        $tenant,
+        __('Book Appointment').' | '.$brand,
+        __('Book an appointment with :name. Choose a sitting and get your serial on your phone.', ['name' => $brand]),
+    )])
     <link rel="manifest" href="{{ tenant_web_url('/manifest.webmanifest') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

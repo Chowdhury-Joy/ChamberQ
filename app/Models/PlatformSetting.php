@@ -10,6 +10,10 @@ class PlatformSetting extends Model
 
     public const SINGLETON_ID = 1;
 
+    /**
+     * First-install fallback when the platform_settings row does not exist yet.
+     * Live windows come from Super Admin Booking window and optional per-tenant override.
+     */
     public const DEFAULT_HORIZON_DAYS = 60;
 
     public const MIN_HORIZON_DAYS = 1;
@@ -36,17 +40,30 @@ class PlatformSetting extends Model
     }
 
     /**
-     * How far ahead a patient may book online, on every Front door.
+     * How far ahead a patient may book on this Front door.
+     *
+     * A chamber may set its own window; otherwise Super Admin's platform default.
      */
-    public static function patientBookingHorizonDays(): int
+    public static function platformHorizonDays(): int
     {
         $days = (int) (static::query()->value('patient_booking_horizon_days') ?? self::DEFAULT_HORIZON_DAYS);
 
         return max(self::MIN_HORIZON_DAYS, min(self::MAX_HORIZON_DAYS, $days));
     }
 
-    public static function onlineBookingMaxDate(): string
+    public static function patientBookingHorizonDays(?Tenant $tenant = null): int
     {
-        return now()->addDays(static::patientBookingHorizonDays())->toDateString();
+        $tenant ??= tenant();
+        $override = $tenant?->patient_booking_horizon_days;
+        if ($override !== null && (int) $override >= self::MIN_HORIZON_DAYS) {
+            return max(self::MIN_HORIZON_DAYS, min(self::MAX_HORIZON_DAYS, (int) $override));
+        }
+
+        return static::platformHorizonDays();
+    }
+
+    public static function onlineBookingMaxDate(?Tenant $tenant = null): string
+    {
+        return now()->addDays(static::patientBookingHorizonDays($tenant))->toDateString();
     }
 }

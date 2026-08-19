@@ -3114,3 +3114,84 @@
  <reason>Like a cinema box office versus the door on the night — phone bookings take a reserved seat on a future show; walk-in is for someone already in the lobby. Mixing them would either block the website when staff add an extra stool, or send a call-centre booking into rooms patients cannot book themselves.</reason>
 </decision>
 
+## 2026-08-19T23:23:45+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Daily Roster only showed today, so staff could not check Saturday’s list after booking a serial without opening the website.</context>
+ <action>Add a date picker at the top of Daily Roster (default today, Today button to jump back). New Walk-In, Mark Late, and Live Queue links stay on today. Adding a future serial is still Book serial.</action>
+ <reason>Like a paper diary — you can open next Saturday’s page to see who is coming, but you do not run today’s queue from that page.</reason>
+</decision>
+
+## 2026-08-19T23:30:11+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>After Book serial, the only proof was a toast. Call-centre staff need to read the serial aloud before they hang up.</context>
+ <action>Show a confirmation modal with a large serial, name, phone, sitting, SMS note, WhatsApp, Open ticket, and Done. The form resets behind it so the next caller can be typed after Done.</action>
+ <reason>Like a cinema ticket window — the clerk holds up the ticket number before the customer walks away. A toast in the corner is too easy to miss on a phone call.</reason>
+</decision>
+
+## 2026-08-19T23:34:20+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Solid yellow (Filament warning) buttons such as Mark Late used dark amber label text on a yellow fill, which was hard to read.</context>
+ <action>Force filled warning buttons in the tenant admin theme to use #ffffff for label, icon, and hover text. Outlined yellow buttons are unchanged.</action>
+ <reason>Same treatment as the solid blue primary buttons — white type on a strong fill.</reason>
+</decision>
+
+## 2026-08-19T23:45:02+0600
+
+<decision>
+ <category>CRO</category>
+ <context>Chamber websites and the ChamberQ sales page had almost no search tags — no descriptions, no Open Graph, no sitemap — so Google could not show a proper result for “Dr X Chittagong” or ChamberQ itself. Adding CMS SEO fields would have asked every doctor to write meta copy they will not maintain.</context>
+ <action>Auto-build titles, descriptions, canonical URLs, Open Graph, and JSON-LD from name, tagline, hero, and blog excerpts. Serve robots.txt and sitemap.xml from Laravel (not a single static file). Index public pages; noindex tickets, portal, TV, and patient login. Do not add SEO fields to the page builder.</action>
+ <reason>Like putting the clinic’s existing visiting card into Google’s envelope, instead of asking the doctor to fill a second form. Private pages (a serial ticket is someone’s phone number) stay out of search.</reason>
+</decision>
+
+## 2026-08-19T23:48:20+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Call-centre Book serial only stored the ringing phone. Many patients take the call on one SIM and keep WhatsApp on another device, so staff WhatsApp after booking went to the wrong number.</context>
+ <action>Add the same Different WhatsApp tick as the website. When checked, staff enter a second BD mobile; it is stored as bookings.whatsapp_phone and the confirmation modal WhatsApp link uses it. SMS still goes to the call number.</action>
+ <reason>Same as a household with two phones: you ring the landline, you message the phone that has WhatsApp.</reason>
+</decision>
+
+## 2026-08-19T23:57:28+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Book serial asked “treated here before ChamberQ” — a paper-file tick — while call-centre staff actually need to say what kind of visit they are booking: new, follow-up, procedure, or lab/scan.</context>
+ <action>Replace that checkbox with Visit type: Usual, Follow-up, Intervention (Stations), Lab (then MSK / named lab test / collection window). Follow-up marks the paper-file returning flag and Stations follow-up path. The public website still only offers visit sittings. Report and counseling stay floor handoffs. Daily Roster walk-in still has the paper-file tick for today.</action>
+ <reason>Like a receptionist asking “new, follow-up, OT, or scan?” before opening the right diary page — not “were they a paper patient years ago?”</reason>
+</decision>
+
+## 2026-08-20T00:03:55+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>MUPS patients should only be able to take a serial three days ahead, not the platform default of about two months, without shrinking every other chamber’s diary.</context>
+ <action>Add nullable `tenants.patient_booking_horizon_days`. Public booking, hero dates, and Book serial use that when set; otherwise Super Admin **Booking window** (60). MUPS is seeded and backfilled to 3. Stations OT handoff still uses the platform window so a procedure can be placed further out. Desk walk-ins stay today only.</action>
+ <reason>Like a clinic that only opens next week’s diary three days before — MUPS keeps a short public book, other doctors keep two months.</reason>
+</decision>
+
+## 2026-08-20T00:11:53+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Call-centre Book serial treated “Intervention” as one OT diary. MUPS (and other Stations clinics) actually book named procedures — PRP, epidural, facet, nerve block — which already live on the fee catalogue.</context>
+ <action>After Intervention, staff pick **Intervention type** from active fee-catalogue rows of sitting kind intervention. Store `bookings.fee_catalog_item_id` so Collect fee opens on that procedure and Daily Roster Room shows “Intervention · PRP…”. The same picker is on **Book intervention** from the floor. Clinics with an empty intervention catalogue skip the extra step.</action>
+ <reason>Same as Lab already asking MSK vs a named test: the room is OT, the product is PRP vs epidural.</reason>
+</decision>
+
+## 2026-08-20T00:20:55+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>The booking window was documented and seeded as “everyone 60, MUPS 3”, which is the same mistake as hard-coding 60 in the wizard.</context>
+ <action>No clinic id is written into migrations or seeders for this field. Super Admin **Booking window** is the fallback; a chamber types its own days on Branding or tenant edit when it wants a different window. Helper text shows the live platform number, not “usually 60”.</action>
+ <reason>MUPS wanting three days is a setting on that clinic, like their phone number — not a rule in the product named after them.</reason>
+</decision>
+

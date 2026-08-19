@@ -58,8 +58,55 @@ class DailyRoster extends Page implements HasTable, HasForms
     /** Minutes from the last Mark Late, used in WhatsApp copy. */
     public int $delayedNotifyMinutes = 0;
 
+    /** Day the table lists. Walk-in / Mark Late / Live Queue stay on today. */
+    public string $rosterDate = '';
+
+    public function mount(): void
+    {
+        $this->rosterDate = Carbon::today()->toDateString();
+    }
+
+    public function updatedRosterDate(): void
+    {
+        $this->rosterDate = $this->rosterDateString();
+        $this->resetTable();
+    }
+
+    public function jumpToToday(): void
+    {
+        $this->rosterDate = Carbon::today()->toDateString();
+        $this->resetTable();
+    }
+
+    public function rosterDateString(): string
+    {
+        $raw = trim($this->rosterDate);
+
+        try {
+            return filled($raw)
+                ? Carbon::parse($raw)->toDateString()
+                : Carbon::today()->toDateString();
+        } catch (\Throwable) {
+            return Carbon::today()->toDateString();
+        }
+    }
+
+    public function isViewingToday(): bool
+    {
+        return $this->rosterDateString() === Carbon::today()->toDateString();
+    }
+
+    public function rosterDateLabel(): string
+    {
+        return Carbon::parse($this->rosterDateString())->translatedFormat('l, j F Y');
+    }
+
     public function getSittingPromptsProperty(): \Illuminate\Support\Collection
     {
+        if (! $this->isViewingToday()) {
+            return collect();
+        }
+
         return app(SittingPrompt::class)->promptsForToday();
     }
 
@@ -74,20 +121,22 @@ class DailyRoster extends Page implements HasTable, HasForms
 
     public function table(Table $table): Table
     {
-        $user = auth()->user();
-
-        $bookingQuery = Booking::query()
-            ->where('booking_date', today()->toDateString())
-            ->with(['visitRecord.prescription', 'cashEntry.feeCatalogItem', 'bookable.doctor', 'bookable', 'labTests', 'procedureBookings.bookable', 'patient'])
-            ->orderByRaw("CASE WHEN status = 'in_chamber' THEN 1 WHEN status = 'waiting' THEN 2 WHEN status = 'completed' THEN 3 WHEN status = 'cancelled' THEN 4 ELSE 5 END")
-            ->orderBy('serial_number');
-
-        if ($user instanceof \App\Models\User) {
-            StaffDeskScope::constrainBookings($bookingQuery, $user);
-        }
-
         return $table
-            ->query($bookingQuery)
+            ->query(function () {
+                $user = auth()->user();
+
+                $bookingQuery = Booking::query()
+                    ->where('booking_date', $this->rosterDateString())
+                    ->with(['visitRecord.prescription', 'cashEntry.feeCatalogItem', 'feeCatalogItem', 'bookable.doctor', 'bookable', 'labTests', 'procedureBookings.bookable', 'patient'])
+                    ->orderByRaw("CASE WHEN status = 'in_chamber' THEN 1 WHEN status = 'waiting' THEN 2 WHEN status = 'completed' THEN 3 WHEN status = 'cancelled' THEN 4 ELSE 5 END")
+                    ->orderBy('serial_number');
+
+                if ($user instanceof \App\Models\User) {
+                    StaffDeskScope::constrainBookings($bookingQuery, $user);
+                }
+
+                return $bookingQuery;
+            })
             ->columns([
                 TextColumn::make('serial_number')->label(__('Serial')),
                 TextColumn::make('voucher_number')
@@ -103,7 +152,10 @@ class DailyRoster extends Page implements HasTable, HasForms
                             return '—';
                         }
 
-                        return $record->bookable?->kindLabel() ?? '—';
+                        $kind = $record->bookable?->kindLabel() ?? '—';
+                        $procedure = $record->feeCatalogItem?->label;
+
+                        return filled($procedure) ? $kind.' · '.$procedure : $kind;
                     }),
                 TextColumn::make('procedure_status')
                     ->label(__('Procedure'))
@@ -166,7 +218,8 @@ class DailyRoster extends Page implements HasTable, HasForms
                     ->label('Mark Late')
                     ->color('warning')
                     ->icon('heroicon-o-clock')
-                    ->visible(fn (): bool => (auth()->user() instanceof \App\Models\User
+                    ->visible(fn (): bool => $this->isViewingToday()
+                        && (auth()->user() instanceof \App\Models\User
                             && StaffDeskJobs::canRunQueue(auth()->user()))
                         && static::markableSessionOptions() !== [])
                     ->form([
@@ -257,7 +310,8 @@ class DailyRoster extends Page implements HasTable, HasForms
                     ->icon('heroicon-o-queue-list')
                     ->url(LiveQueueControl::getUrl())
                     ->color('primary')
-                    ->visible(fn (): bool => (auth()->user()?->canAccessLiveQueueControl() ?? false)
+                    ->visible(fn (): bool => $this->isViewingToday()
+                        && (auth()->user()?->canAccessLiveQueueControl() ?? false)
                         && static::markableSessionOptions() === []),
 
                 ActionGroup::make([
@@ -265,7 +319,8 @@ class DailyRoster extends Page implements HasTable, HasForms
                         ->label('Manage Live Queue')
                         ->icon('heroicon-o-queue-list')
                         ->url(LiveQueueControl::getUrl())
-                        ->visible(fn (): bool => (auth()->user()?->canAccessLiveQueueControl() ?? false)
+                        ->visible(fn (): bool => $this->isViewingToday()
+                            && (auth()->user()?->canAccessLiveQueueControl() ?? false)
                             && static::markableSessionOptions() !== []),
                     Action::make('notifyDelayed')
                         ->label('Tell waiting patients')
@@ -292,16 +347,22 @@ class DailyRoster extends Page implements HasTable, HasForms
                                 ])->all(),
                             ]);
                         })
-                        ->visible(fn (): bool => $this->delayedNotifyBookingIds !== []),
+                        ->visible(fn (): bool => $this->isViewingToday()
+                            && $this->delayedNotifyBookingIds !== []),
                 ])
                     ->label(__('More'))
                     ->icon('heroicon-m-ellipsis-horizontal')
                     ->color('gray')
-                    ->button(),
+                    ->button()
+                    ->visible(fn (): bool => $this->isViewingToday()
+                        && ($this->delayedNotifyBookingIds !== []
+                            || ((auth()->user()?->canAccessLiveQueueControl() ?? false)
+                                && static::markableSessionOptions() !== []))),
 
                 Action::make('newWalkIn')
                     ->label('New Walk-In')
                     ->icon('heroicon-o-user-plus')
+                    ->visible(fn (): bool => $this->isViewingToday())
                     ->schema([
                         TextInput::make('patient_phone')
                             ->label(__('Phone number'))

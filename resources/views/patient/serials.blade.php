@@ -1,4 +1,4 @@
-<x-patient.layout :title="__('My serials')">
+<x-patient.layout :title="__('My serials')" :index="false">
     <section class="pf-hero">
         <h1>{{ __('My serials') }}</h1>
         <p>{{ __('Upcoming visits across every ChamberQ doctor for :phone', ['phone' => $account->phone]) }}</p>

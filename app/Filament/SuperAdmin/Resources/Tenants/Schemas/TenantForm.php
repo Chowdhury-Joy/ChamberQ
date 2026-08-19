@@ -133,6 +133,16 @@ class TenantForm
                                 'per_doctor_chamber' => 'Per Doctor & Chamber',
                             ])
                             ->default('per_session'),
+                        TextInput::make('patient_booking_horizon_days')
+                            ->label(__('Patient booking window (days)'))
+                            ->helperText(fn (): string => __('How far ahead this Front door lets patients book. Leave empty to use the platform Booking window (:days days).', [
+                                'days' => \App\Models\PlatformSetting::platformHorizonDays(),
+                            ]))
+                            ->numeric()
+                            ->integer()
+                            ->minValue(\App\Models\PlatformSetting::MIN_HORIZON_DAYS)
+                            ->maxValue(\App\Models\PlatformSetting::MAX_HORIZON_DAYS)
+                            ->nullable(),
                         Select::make('billing_status')
                             ->label(__('Billing Status'))
                             ->helperText(__('Past due, suspended, and read only close online booking. Site and admin stay open.'))

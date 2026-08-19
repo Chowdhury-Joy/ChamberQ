@@ -3,11 +3,13 @@
 namespace App\Filament\TenantAdmin\Support;
 
 use App\Models\Booking;
+use App\Models\FeeCatalogItem;
 use App\Services\StationsHandoffService;
 use Closure;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Radio;
+use Filament\Forms\Components\Select;
 use Filament\Notifications\Notification;
 use InvalidArgumentException;
 
@@ -43,7 +45,7 @@ class StationsHandoffForm
             ->schema(function (...$args) use ($booking): array {
                 $target = self::resolveBooking($booking, $args);
 
-                return self::sittingFields($target);
+                return array_merge(self::sittingFields($target), self::interventionTypeFields());
             })
             ->action(function (array $data, ...$args) use ($booking): void {
                 $target = self::resolveBooking($booking, $args);
@@ -57,6 +59,9 @@ class StationsHandoffForm
                         $target,
                         $choice['date'],
                         $choice['session_id'],
+                        filled($data['fee_catalog_item_id'] ?? null)
+                            ? (int) $data['fee_catalog_item_id']
+                            : null,
                     );
                 } catch (InvalidArgumentException $e) {
                     Notification::make()
@@ -358,6 +363,27 @@ class StationsHandoffForm
                     fn (array $option): array => [$option['key'] => $option['description']],
                 )->all())
                 ->required(),
+        ];
+    }
+
+    /**
+     * @return list<\Filament\Forms\Components\Component>
+     */
+    private static function interventionTypeFields(): array
+    {
+        $options = FeeCatalogItem::interventionTypeOptions();
+        if ($options === []) {
+            return [];
+        }
+
+        return [
+            Select::make('fee_catalog_item_id')
+                ->label(__('Intervention type'))
+                ->helperText(__('PRP, epidural, nerve block — whatever is on this clinic’s fee list.'))
+                ->options($options)
+                ->required()
+                ->native(false)
+                ->searchable(),
         ];
     }
 }

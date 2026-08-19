@@ -68,6 +68,7 @@ class BrandingSettings extends Page implements HasForms
                 'call_announce_locale' => $tenant->call_announce_locale ?? 'en',
                 'queue_runner' => $tenant->queue_runner ?? \App\Models\Tenant::QUEUE_RUNNER_STAFF,
                 'collect_fee_at_checkin' => (bool) $tenant->collect_fee_at_checkin,
+                'patient_booking_horizon_days' => $tenant->patient_booking_horizon_days,
             ] + \App\Services\PracticeRules::normalize($tenant->practice_rules));
         }
     }
@@ -151,6 +152,16 @@ class BrandingSettings extends Page implements HasForms
                         Toggle::make('collect_fee_at_checkin')
                             ->label(__('Collect fee at check-in'))
                             ->helperText(__('When off (usual), staff take the fee after the visit. When on, Collect fee shows for waiting patients on Daily Roster and Live Queue. Each doctor can override this on their profile. No-shows get an automatic cashbook refund if they already paid at the door.')),
+                        TextInput::make('patient_booking_horizon_days')
+                            ->label(__('How many days ahead patients can book'))
+                            ->helperText(fn (): string => __('Website, hero date list, and Book serial. Empty uses the platform Booking window (:days days). Walk-ins at the desk stay today only.', [
+                                'days' => \App\Models\PlatformSetting::platformHorizonDays(),
+                            ]))
+                            ->numeric()
+                            ->integer()
+                            ->minValue(\App\Models\PlatformSetting::MIN_HORIZON_DAYS)
+                            ->maxValue(\App\Models\PlatformSetting::MAX_HORIZON_DAYS)
+                            ->nullable(),
                     ]),
 
                 ...\App\Filament\TenantAdmin\Support\PracticeRulesForm::fieldsets(
@@ -298,6 +309,9 @@ class BrandingSettings extends Page implements HasForms
                 'whatsapp_number' => $data['whatsapp_number'],
                 'default_locale' => $data['default_locale'],
                 'collect_fee_at_checkin' => (bool) ($data['collect_fee_at_checkin'] ?? false),
+                'patient_booking_horizon_days' => filled($data['patient_booking_horizon_days'] ?? null)
+                    ? (int) $data['patient_booking_horizon_days']
+                    : null,
                 'practice_rules' => \App\Services\PracticeRules::normalize($data),
             ];
 

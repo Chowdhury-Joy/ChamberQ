@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="color-scheme" content="light only">
     <meta name="theme-color" content="#0c3a3b">
-    <meta name="description" content="ChamberQ for solo doctors: clearer serials, a live queue you control, and fewer interruptions in the consult. We set it up with you.">
-    <title>{{ $product }} — For your chamber practice</title>
+    @php $seo = \App\Support\PublicSeo::marketingHome($product); @endphp
+    <title>{{ $seo['title'] }}</title>
+    @include('partials.seo', ['seo' => $seo])
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">

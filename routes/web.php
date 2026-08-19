@@ -5,6 +5,7 @@ use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\MarketingController;
 use App\Http\Controllers\PatientAccountController;
 use App\Http\Controllers\PatientAuthController;
+use App\Http\Controllers\SeoController;
 use App\Http\Middleware\CaptureReferralParams;
 use App\Http\Middleware\Localization;
 use Illuminate\Support\Facades\Route;
@@ -18,6 +19,9 @@ if (blank($centralDomains)) {
 foreach ($centralDomains as $domain) {
     Route::domain($domain)->middleware([CaptureReferralParams::class, Localization::class])->group(function () {
         Route::get('/', [MarketingController::class, 'home']);
+
+        Route::get('/robots.txt', [SeoController::class, 'robots']);
+        Route::get('/sitemap.xml', [SeoController::class, 'sitemap']);
 
         Route::get('/lang/{locale}', [LocaleController::class, 'switch']);
 

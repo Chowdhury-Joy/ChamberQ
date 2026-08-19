@@ -341,6 +341,20 @@ html.dark .staff-buzz-card__denied {
     color: #ffffff;
 }
 
+.fi-btn.fi-color-warning:not(.fi-outlined):not(label) {
+    --text: #ffffff;
+    --hover-text: #ffffff;
+    --dark-text: #ffffff;
+    --dark-hover-text: #ffffff;
+    color: #ffffff;
+}
+
+.fi-btn.fi-color-warning:not(.fi-outlined):not(label) > .fi-icon,
+.fi-btn.fi-color-warning:not(.fi-outlined):not(label) .fi-btn-label,
+.fi-btn.fi-color-warning:not(.fi-outlined):not(label) svg {
+    color: #ffffff;
+}
+
 .fi-content-shell-header .fi-btn {
     font-family: var(--fi-font-sans);
     font-size: var(--fi-text-sm-size);

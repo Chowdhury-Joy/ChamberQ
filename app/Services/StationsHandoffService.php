@@ -331,7 +331,7 @@ class StationsHandoffService
             return [];
         }
 
-        $horizon = PlatformSetting::patientBookingHorizonDays();
+        $horizon = PlatformSetting::platformHorizonDays();
         $startDate = Carbon::today();
         $endDate = $startDate->copy()->addDays($horizon);
         $overrides = ScheduleSessionOverride::query()
@@ -393,7 +393,7 @@ class StationsHandoffService
         return $options;
     }
 
-    public function sendVisitToIntervention(Booking $visitBooking, string $bookingDate, ?int $sessionId = null): Booking
+    public function sendVisitToIntervention(Booking $visitBooking, string $bookingDate, ?int $sessionId = null, ?int $feeCatalogItemId = null): Booking
     {
         if (! tenant()?->hasStations()) {
             throw new InvalidArgumentException(__('Stations module is not enabled.'));
@@ -406,7 +406,7 @@ class StationsHandoffService
         $fromSession = $this->sittingSession($visitBooking);
         $interventionSession = $this->resolveInterventionSession($fromSession, $bookingDate, $sessionId);
 
-        return DB::transaction(function () use ($visitBooking, $interventionSession, $bookingDate) {
+        return DB::transaction(function () use ($visitBooking, $interventionSession, $bookingDate, $feeCatalogItemId) {
             try {
                 $procedureBooking = $this->bookingService->createBookingForBookable(
                     $interventionSession,
@@ -418,6 +418,7 @@ class StationsHandoffService
                     whatsappPhone: $visitBooking->whatsapp_phone,
                     allowOverflow: true,
                     allowEndedToday: Carbon::parse($bookingDate)->isToday(),
+                    feeCatalogItemId: $feeCatalogItemId,
                 );
             } catch (BookingUnavailableException $e) {
                 throw new InvalidArgumentException($e->getMessage(), 0, $e);

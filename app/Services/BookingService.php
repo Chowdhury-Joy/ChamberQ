@@ -6,6 +6,7 @@ use App\Exceptions\BookingUnavailableException;
 use App\Jobs\SendBookingConfirmation;
 use App\Models\Booking;
 use App\Models\Doctor;
+use App\Models\FeeCatalogItem;
 use App\Models\LabCollectionSlot;
 use App\Models\LabTest;
 use App\Models\PlatformSetting;
@@ -37,7 +38,7 @@ class BookingService
     }
 
     /**
-     * Open bookable+date pairs within the platform booking window, soonest first.
+     * Open bookable+date pairs within the patient booking window, soonest first.
      *
      * Uses three queries (bookings grouped, slot blocks, bookables already loaded)
      * rather than one availability check per candidate date.
@@ -140,6 +141,8 @@ class BookingService
         bool $allowStaffHandoff = false,
         bool $allowMskWalkIn = false,
         ?int $referringDoctorId = null,
+        ?string $forcedCarePath = null,
+        ?int $feeCatalogItemId = null,
     ): Booking {
         $patientPhone = $this->normalizeBdPhone($patientPhone);
         $whatsappPhone = filled($whatsappPhone) ? $this->normalizeBdPhone($whatsappPhone) : null;
@@ -147,7 +150,7 @@ class BookingService
             $whatsappPhone = null;
         }
 
-        $booking = DB::transaction(function () use ($bookable, $bookingDate, $patientName, $patientPhone, $labTestIds, $patientId, $wantsEarlierDate, $whatsappPhone, $shareClinicalHistory, $nid, $yearOfBirth, $allowOverflow, $repeatSeriesId, $allowEndedToday, $seenBeforeSoftware, $allowCounselingHandoff, $allowStaffHandoff, $allowMskWalkIn, $referringDoctorId) {
+        $booking = DB::transaction(function () use ($bookable, $bookingDate, $patientName, $patientPhone, $labTestIds, $patientId, $wantsEarlierDate, $whatsappPhone, $shareClinicalHistory, $nid, $yearOfBirth, $allowOverflow, $repeatSeriesId, $allowEndedToday, $seenBeforeSoftware, $allowCounselingHandoff, $allowStaffHandoff, $allowMskWalkIn, $referringDoctorId, $forcedCarePath, $feeCatalogItemId) {
             $tenant = tenant();
             $capMode = $tenant->slot_cap_mode ?? 'per_session';
             if ($capMode === 'per_day') {
@@ -244,6 +247,23 @@ class BookingService
                 : PHP_INT_MAX;
             $isOverflow = $lockedBookable instanceof ScheduleSession && $nextSerial > $publishedCap;
 
+            $resolvedCatalogItemId = null;
+            if ($feeCatalogItemId !== null) {
+                $catalogItem = FeeCatalogItem::query()
+                    ->whereKey($feeCatalogItemId)
+                    ->where('is_active', true)
+                    ->first();
+                if (! $catalogItem) {
+                    throw BookingUnavailableException::feeCatalogItemUnavailable();
+                }
+                if ($lockedBookable instanceof ScheduleSession
+                    && filled($catalogItem->sitting_kind)
+                    && $catalogItem->sitting_kind !== $lockedBookable->kind) {
+                    throw BookingUnavailableException::feeCatalogItemUnavailable();
+                }
+                $resolvedCatalogItemId = (int) $catalogItem->id;
+            }
+
             $booking = Booking::create([
                 'bookable_type' => get_class($lockedBookable),
                 'bookable_id' => $lockedBookable->id,
@@ -262,11 +282,23 @@ class BookingService
                 'wants_earlier_date' => $wantsEarlierDate,
                 'repeat_series_id' => $repeatSeriesId,
                 'referring_doctor_id' => $referringDoctorId,
+                'fee_catalog_item_id' => $resolvedCatalogItemId,
             ]);
 
             if ($tenant?->hasStations() && $lockedBookable instanceof ScheduleSession && (! $staffHandoff || $mskDeskWalkIn)) {
+                $path = CarePath::forNewSitting($lockedBookable, $patient);
+                $visitLike = in_array($lockedBookable->kind, [
+                    ScheduleSession::KIND_VISIT,
+                    ScheduleSession::KIND_CONSULT,
+                    null,
+                    '',
+                ], true);
+                if ($visitLike && in_array($forcedCarePath, [CarePath::FOLLOW_UP, CarePath::VISIT], true)) {
+                    $path = $forcedCarePath;
+                }
+
                 $booking->update([
-                    'care_path' => CarePath::forNewSitting($lockedBookable, $patient),
+                    'care_path' => $path,
                     'care_origin_id' => $booking->id,
                 ]);
             }

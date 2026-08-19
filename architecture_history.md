@@ -809,5 +809,29 @@
 ## 2026-08-19T22:32:01+0600
 - Tenant admin **Book serial** (`Pages/BookSerial` + `StaffBookingForm`): staff book a public sitting on a chosen date without using the patient website.
 
+## 2026-08-19T23:23:45+0600
+- Daily Roster lists a chosen date (`rosterDate`); walk-in / Mark Late / Live Queue remain today-only.
+
+## 2026-08-19T23:30:11+0600
+- Book serial shows a confirmation modal (`book-serial-confirmed`) with serial, WhatsApp, and ticket after a successful book.
+
+## 2026-08-19T23:45:02+0600
+- Public SEO: `PublicSeo` / `PublicSitemap` / `SeoController`, `partials/seo.blade.php`, Laravel `robots.txt` + `sitemap.xml` (removed static `public/robots.txt`).
+
+## 2026-08-19T23:48:20+0600
+- Book serial: optional Different WhatsApp (`bookings.whatsapp_phone`), same as the public wizard.
+
+## 2026-08-19T23:57:28+0600
+- Book serial visit type (Usual / Follow-up / Intervention / Lab with MSK and lab-test subtypes); paper-file checkbox removed from this page.
+
+## 2026-08-20T00:03:55+0600
+- Per-chamber patient booking window (`tenants.patient_booking_horizon_days`); MUPS set to 3 days; platform default remains 60.
+
+## 2026-08-20T00:11:53+0600
+- Book serial / Book intervention pick fee-catalogue procedure type (PRP, epidural, …); `bookings.fee_catalog_item_id`.
+
+## 2026-08-20T00:20:55+0600
+- Booking window is only platform_settings plus optional per-tenant days — no MUPS/60 special case in seed or copy.
+
 
 

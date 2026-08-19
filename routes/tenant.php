@@ -16,6 +16,7 @@ use App\Http\Controllers\PWAController;
 use App\Http\Controllers\QueuePushController;
 use App\Http\Controllers\QueueStatusController;
 use App\Http\Controllers\ScreenController;
+use App\Http\Controllers\SeoController;
 use App\Http\Controllers\StaffPushController;
 use App\Http\Controllers\VisitMediaController;
 use App\Http\Controllers\WebPageController;
@@ -50,6 +51,9 @@ $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
     // origin linking here would bounce the visitor straight back off the
     // clinic's domain, which is exactly the shape a phishing link wants.
     Route::get('/lang/{locale}', [LocaleController::class, 'switch']);
+
+    Route::get('/robots.txt', [SeoController::class, 'robots']);
+    Route::get('/sitemap.xml', [SeoController::class, 'sitemap']);
 
     Route::get('/book', [BookingController::class, 'create'])
         ->middleware(['tenant.module:front_door']);
@@ -259,7 +263,7 @@ $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
     Route::get('/{slug?}', [WebPageController::class, 'show'])
         ->middleware(['tenant.module:front_door'])
         // Exact-segment negative lookahead — (?!foo|bar$) only anchors the last alt.
-        ->where('slug', '^(?!(?:tenant|admin|api|lang|bookings|portal|departments|blog|doctors)$).*$');
+        ->where('slug', '^(?!(?:tenant|admin|api|lang|bookings|portal|departments|blog|doctors|robots\\.txt|sitemap\\.xml)$).*$');
 };
 
 foreach (config('tenancy.central_domains', []) as $centralDomain) {

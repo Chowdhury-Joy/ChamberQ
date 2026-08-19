@@ -18,6 +18,7 @@
     <meta name="color-scheme" content="light only">
     <meta name="theme-color" content="{{ $themeColor }}">
     <title>{{ __('Patient Portal') }} | {{ $brand }}</title>
+    @include('partials.seo', ['seo' => \App\Support\PublicSeo::tenantPage($tenant, __('Patient Portal').' | '.$brand, null, false)])
     <link rel="manifest" href="{{ tenant_web_url('/manifest.webmanifest') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

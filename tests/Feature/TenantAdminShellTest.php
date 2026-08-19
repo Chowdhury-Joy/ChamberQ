@@ -182,4 +182,19 @@ class TenantAdminShellTest extends TestCase
         $provider = file_get_contents(app_path('Providers/Filament/Concerns/ConfiguresTenantAdminPanel.php'));
         $this->assertStringContainsString('viewport-fit=cover', $provider);
     }
+
+    public function test_solid_warning_buttons_use_white_label_text(): void
+    {
+        $css = file_get_contents(resource_path('css/filament/tenantAdmin/theme.css'));
+
+        $this->assertStringContainsString(
+            '.fi-btn.fi-color-warning:not(.fi-outlined):not(label)',
+            $css,
+        );
+        $this->assertMatchesRegularExpression(
+            '/\.fi-btn\.fi-color-warning:not\(\.fi-outlined\):not\(label\)\s*\{[^}]*--text:\s*#ffffff/',
+            $css,
+            'Yellow (warning) filled buttons must use white label text, not dark amber.',
+        );
+    }
 }

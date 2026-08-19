@@ -4,6 +4,7 @@
     $brand = $brand ?? $tenant->displayName();
     $locale = $locale ?? app()->getLocale();
     $banglaHomepage = $banglaHomepage ?? $tenant->hasFeature('bangla_homepage');
+    $seo = $seo ?? \App\Support\PublicSeo::tenantPage($tenant, ($pageTitle ?? $brand).' | '.$brand);
 @endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', $locale) }}" style="color-scheme: light;">
@@ -12,7 +13,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="color-scheme" content="light only">
     <meta name="theme-color" content="{{ $themeColor }}">
-    <title>{{ $pageTitle }} | {{ $brand }}</title>
+    <title>{{ $seo['title'] }}</title>
+    @include('partials.seo', ['seo' => $seo])
     <link rel="manifest" href="{{ tenant_web_url('/manifest.webmanifest') }}">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

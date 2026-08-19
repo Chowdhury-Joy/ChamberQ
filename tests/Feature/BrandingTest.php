@@ -127,6 +127,28 @@ class BrandingTest extends TestCase
         tenancy()->end();
     }
 
+    public function test_owner_can_set_patient_booking_horizon(): void
+    {
+        tenancy()->initialize($this->soloTenant);
+        $this->actingAs($this->soloAdmin);
+        \Filament\Facades\Filament::setCurrentPanel(\Filament\Facades\Filament::getPanel('tenantAdmin'));
+
+        Livewire::test(BrandingSettings::class)
+            ->fillForm([
+                'name' => 'Dr. Custom Branding',
+                'theme_color' => '#8b5cf6',
+                'font_family' => 'Outfit',
+                'default_locale' => 'en',
+                'patient_booking_horizon_days' => 3,
+            ])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame(3, $this->soloTenant->fresh()->patient_booking_horizon_days);
+
+        tenancy()->end();
+    }
+
     public function test_branding_settings_reject_a_non_hex_theme_color(): void
     {
         tenancy()->initialize($this->soloTenant);

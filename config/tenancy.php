@@ -39,6 +39,8 @@ return [
         'partner',
         'find',
         'me',
+        'robots.txt',
+        'sitemap.xml',
         'up',
         'api',
         'lang',

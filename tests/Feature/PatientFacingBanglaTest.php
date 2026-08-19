@@ -38,6 +38,7 @@ class PatientFacingBanglaTest extends TestCase
         'resources/views/tenant/webpage.blade.php',
         'resources/views/tenant/sections/hero.blade.php',
         'app/helpers.php',
+        'app/Support/PublicSeo.php',
     ];
 
     public function test_every_patient_facing_string_has_a_bangla_translation(): void

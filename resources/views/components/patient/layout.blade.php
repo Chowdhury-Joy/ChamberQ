@@ -1,8 +1,19 @@
-@props(['title' => null])
+@props(['title' => null, 'index' => true, 'description' => null])
 @php
     $product = $product ?? config('marketing.product_name');
     $locale = app()->getLocale();
     $patient = auth('patient')->user();
+    $seo = $index
+        ? \App\Support\PublicSeo::findPage()
+        : \App\Support\PublicSeo::tags(
+            title: ($title ?? __('Find a doctor')).' — '.$product,
+            description: $description,
+            index: false,
+            siteName: $product,
+        );
+    if ($title && $index) {
+        $seo['title'] = $title.' — '.$product;
+    }
 @endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', $locale) }}">
@@ -10,7 +21,8 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="color-scheme" content="light only">
-    <title>{{ $title ?? __('Find a doctor') }} — {{ $product }}</title>
+    <title>{{ $seo['title'] }}</title>
+    @include('partials.seo', ['seo' => $seo])
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">

@@ -43,7 +43,7 @@ class BookingWindow extends Page implements HasForms
     public function mount(): void
     {
         $this->form->fill([
-            'patient_booking_horizon_days' => PlatformSetting::patientBookingHorizonDays(),
+            'patient_booking_horizon_days' => PlatformSetting::platformHorizonDays(),
         ]);
     }
 
@@ -54,7 +54,7 @@ class BookingWindow extends Page implements HasForms
             ->components([
                 TextInput::make('patient_booking_horizon_days')
                     ->label('How many days ahead a patient can book')
-                    ->helperText('One number for every Maestro and Clinic Front door. Desk walk-ins are not limited. Default is 60 (about two months).')
+                    ->helperText('Fallback for every Front door that has not typed its own window (Branding → Desk, or tenant edit). Desk walk-ins are not limited. Changing this number does not overwrite a chamber that already set its own.')
                     ->numeric()
                     ->required()
                     ->integer()
@@ -74,7 +74,7 @@ class BookingWindow extends Page implements HasForms
 
         Notification::make()
             ->title('Booking window saved')
-            ->body("Patients can book up to {$days} days ahead on every Front door.")
+            ->body("Patients can book up to {$days} days ahead unless a chamber has set its own window.")
             ->success()
             ->send();
     }

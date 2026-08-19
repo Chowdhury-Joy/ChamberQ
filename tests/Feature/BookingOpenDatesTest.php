@@ -101,7 +101,7 @@ class BookingOpenDatesTest extends TestCase
         tenancy()->initialize($this->tenant);
         $service = app(BookingService::class);
         $cursor = Carbon::parse($this->firstMonday);
-        $end = Carbon::today()->addDays(60);
+        $end = Carbon::today()->addDays(\App\Models\PlatformSetting::patientBookingHorizonDays());
 
         while ($cursor->lte($end)) {
             if ($cursor->dayOfWeek === 1) {
@@ -276,5 +276,33 @@ class BookingOpenDatesTest extends TestCase
             'patient_name' => 'Horizon',
             'patient_phone' => '01712345678',
         ])->assertOk();
+    }
+
+    public function test_tenant_horizon_overrides_the_platform_booking_window(): void
+    {
+        PlatformSetting::current()->update(['patient_booking_horizon_days' => 60]);
+        $this->tenant->update(['patient_booking_horizon_days' => 3]);
+
+        $this->getJson('http://open-dates.localhost/api/bookings/open-dates?'.http_build_query([
+            'bookable_type' => 'session',
+            'bookable_ids' => [$this->session->id],
+        ]))
+            ->assertOk()
+            ->assertJsonPath('options.0.date', $this->firstMonday)
+            ->assertJsonMissing(['date' => $this->secondMonday]);
+
+        $this->postJson('http://open-dates.localhost/api/bookings', [
+            'bookable_type' => 'session',
+            'bookable_id' => $this->session->id,
+            'booking_date' => $this->secondMonday,
+            'patient_name' => 'Too Far',
+            'patient_phone' => '01712345678',
+        ])->assertStatus(422);
+
+        $this->getJson('http://open-dates.localhost/api/bookings/availability?'.http_build_query([
+            'bookable_type' => 'session',
+            'bookable_ids' => [$this->session->id],
+            'booking_date' => $this->secondMonday,
+        ]))->assertStatus(422);
     }
 }

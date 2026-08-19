@@ -43,6 +43,7 @@ class Booking extends Model
         'care_branch',
         'care_origin_id',
         'referring_doctor_id',
+        'fee_catalog_item_id',
         'is_overflow',
         'status',
         'wants_earlier_date',
@@ -166,6 +167,11 @@ class Booking extends Model
     public function referringDoctor()
     {
         return $this->belongsTo(ReferringDoctor::class);
+    }
+
+    public function feeCatalogItem()
+    {
+        return $this->belongsTo(FeeCatalogItem::class);
     }
 
     public function referralCommission()

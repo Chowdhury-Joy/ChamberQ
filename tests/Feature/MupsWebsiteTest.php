@@ -293,4 +293,19 @@ class MupsWebsiteTest extends TestCase
         $this->get('http://mups.localhost/screen/chamber/'.$chamber->id)
             ->assertOk();
     }
+
+    public function test_booking_horizon_follows_the_tenant_setting_not_a_hardcoded_clinic(): void
+    {
+        $tenant = \App\Models\Tenant::find(MupsSeeder::TENANT_ID);
+        $this->assertNull($tenant->patient_booking_horizon_days);
+
+        tenancy()->initialize($tenant);
+        $platform = \App\Models\PlatformSetting::platformHorizonDays();
+        $this->assertSame($platform, \App\Models\PlatformSetting::patientBookingHorizonDays());
+
+        $tenant->update(['patient_booking_horizon_days' => 3]);
+        $this->assertSame(3, \App\Models\PlatformSetting::patientBookingHorizonDays());
+        $this->assertSame(now()->addDays(3)->toDateString(), \App\Models\PlatformSetting::onlineBookingMaxDate());
+        tenancy()->end();
+    }
 }

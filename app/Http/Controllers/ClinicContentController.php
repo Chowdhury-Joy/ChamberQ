@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\BlogPost;
 use App\Models\Department;
 use App\Models\Doctor;
+use App\Support\PublicSeo;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -28,7 +29,10 @@ class ClinicContentController extends Controller
 
         return view('tenant.clinic.departments.show', [
             'department' => $department,
-            ...$this->layoutData($department->title),
+            ...$this->layoutData($department->title, [
+                'description' => $department->excerpt,
+                'image' => $department->image_url,
+            ]),
         ]);
     }
 
@@ -50,7 +54,12 @@ class ClinicContentController extends Controller
 
         return view('tenant.clinic.blog.show', [
             'post' => $post,
-            ...$this->layoutData($post->title),
+            ...$this->layoutData($post->title, [
+                'description' => $post->excerpt,
+                'image' => $post->image_url,
+                'ogType' => 'article',
+                'jsonLd' => [PublicSeo::articleGraph($post, tenant())],
+            ]),
         ]);
     }
 
@@ -72,7 +81,11 @@ class ClinicContentController extends Controller
 
         return view('tenant.clinic.doctors.show', [
             'doctor' => $doctor,
-            ...$this->layoutData($doctor->name),
+            ...$this->layoutData($doctor->name, [
+                'description' => PublicSeo::plain((string) $doctor->bio) ?: $doctor->websiteSpecialtyLabel(),
+                'image' => $doctor->photo_url,
+                'jsonLd' => [PublicSeo::physicianGraph($doctor, tenant())],
+            ]),
         ]);
     }
 
@@ -82,19 +95,32 @@ class ClinicContentController extends Controller
     }
 
     /**
+     * @param  array{description?: ?string, image?: ?string, ogType?: string, jsonLd?: list<array<string, mixed>>, index?: bool}  $seo
      * @return array<string, mixed>
      */
-    private function layoutData(string $pageTitle): array
+    private function layoutData(string $pageTitle, array $seo = []): array
     {
         $tenant = tenant();
+        $brand = $tenant?->displayName() ?? 'ChamberQ';
 
         return [
             'pageTitle' => $pageTitle,
             'tenant' => $tenant,
-            'brand' => $tenant?->displayName() ?? 'ChamberQ',
+            'brand' => $brand,
             'themeColor' => $tenant?->cssThemeColor() ?? \App\Models\Tenant::DEFAULT_THEME_COLOR,
             'locale' => app()->getLocale(),
             'banglaHomepage' => $tenant?->hasFeature('bangla_homepage') ?? false,
+            'seo' => $tenant
+                ? PublicSeo::tenantPage(
+                    $tenant,
+                    $pageTitle.' | '.$brand,
+                    $seo['description'] ?? null,
+                    $seo['index'] ?? true,
+                    $seo['image'] ?? null,
+                    $seo['ogType'] ?? 'website',
+                    $seo['jsonLd'] ?? [],
+                )
+                : [],
         ];
     }
 }
