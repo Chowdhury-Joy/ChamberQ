@@ -22,7 +22,7 @@ use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Utilities\Get;
-use Illuminate\Database\Eloquent\Model;
+use Filament\Schemas\Components\Utilities\Set;
 
 /**
  * Phone / call-centre booking: date, visit type, sitting, then the patient.
@@ -707,7 +707,7 @@ final class StaffBookingForm
         if ($visitType === self::TYPE_INTERVENTION
             && self::interventionTypeOptions() !== []
             && $interventionTypeId === null) {
-            throw BookingUnavailableException::visitTypeMismatch();
+            throw BookingUnavailableException::pickInterventionType();
         }
 
         if (! self::bookableMatchesVisitType($bookable, $visitType, $labType)) {

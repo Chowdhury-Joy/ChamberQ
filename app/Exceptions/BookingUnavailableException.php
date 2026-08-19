@@ -103,6 +103,8 @@ class BookingUnavailableException extends Exception
             'intervention_type'
         );
     }
+
+    public static function visitTypeMismatch(): self
     {
         return self::make(
             __('That sitting does not match the visit type.'),
