@@ -7,8 +7,6 @@ use App\Filament\TenantAdmin\Support\StaffBookingForm;
 use App\Models\Booking;
 use App\Models\LabCollectionSlot;
 use App\Models\ScheduleSession;
-use App\Services\BookingService;
-use App\Services\CarePath;
 use App\Support\TenancyUrl;
 use Carbon\Carbon;
 use Filament\Forms\Concerns\InteractsWithForms;
@@ -77,83 +75,14 @@ class BookSerial extends Page implements HasForms
     public function book(): void
     {
         $data = $this->form->getState();
-        [$type, $id] = explode(':', (string) ($data['bookable'] ?? ''), 2);
-
-        $bookable = $type === 'lab'
-            ? LabCollectionSlot::findOrFail($id)
-            : ScheduleSession::findOrFail($id);
-
-        $visitType = (string) ($data['visit_type'] ?? StaffBookingForm::TYPE_USUAL);
-        $labType = is_string($data['lab_type'] ?? null) ? $data['lab_type'] : null;
-        $interventionTypeId = filled($data['intervention_type'] ?? null)
-            ? (int) $data['intervention_type']
-            : null;
-
-        if ($visitType === StaffBookingForm::TYPE_INTERVENTION
-            && StaffBookingForm::interventionTypeOptions() !== []
-            && $interventionTypeId === null) {
-            Notification::make()
-                ->title(__('Pick an intervention type.'))
-                ->danger()
-                ->send();
-
-            return;
-        }
-
-        if (! self::bookableMatchesVisitType($bookable, $visitType, $labType)) {
-            Notification::make()
-                ->title(__('That sitting does not match the visit type.'))
-                ->danger()
-                ->send();
-
-            return;
-        }
-
-        $patientId = ($data['patient_id'] ?? null) === '__new__'
-            ? null
-            : ($data['patient_id'] ?? null);
-
-        $labTestIds = [];
-        if (is_string($labType) && str_starts_with($labType, 'test:')) {
-            $labTestIds[] = (int) substr($labType, 5);
-        }
-
-        $forcedCarePath = match ($visitType) {
-            StaffBookingForm::TYPE_FOLLOWUP => CarePath::FOLLOW_UP,
-            StaffBookingForm::TYPE_USUAL => CarePath::VISIT,
-            default => null,
-        };
 
         try {
-            $booking = app(BookingService::class)->createBookingForBookable(
-                $bookable,
+            $booking = StaffBookingForm::createFromState(
+                $data,
                 Carbon::parse($data['booking_date'])->toDateString(),
-                $data['patient_name'],
-                $data['patient_phone'],
-                $labTestIds,
-                sendSms: true,
-                patientId: $patientId,
-                wantsEarlierDate: false,
-                whatsappPhone: ! empty($data['different_whatsapp']) && filled($data['whatsapp_phone'] ?? null)
-                    ? (string) $data['whatsapp_phone']
-                    : null,
-                shareClinicalHistory: array_key_exists('share_clinical_history', $data)
-                    ? (bool) $data['share_clinical_history']
-                    : true,
-                nid: $data['nid'] ?? null,
-                yearOfBirth: filled($data['year_of_birth'] ?? null) ? (int) $data['year_of_birth'] : null,
                 allowOverflow: false,
                 allowEndedToday: false,
-                seenBeforeSoftware: $visitType === StaffBookingForm::TYPE_FOLLOWUP ? true : null,
-                allowMskWalkIn: $bookable instanceof ScheduleSession
-                    && $bookable->kind === ScheduleSession::KIND_MSK,
-                referringDoctorId: filled($data['referring_doctor_id'] ?? null)
-                    ? (int) $data['referring_doctor_id']
-                    : null,
-                forcedCarePath: $forcedCarePath,
-                feeCatalogItemId: $visitType === StaffBookingForm::TYPE_INTERVENTION
-                    ? $interventionTypeId
-                    : null,
+                sendSms: true,
             );
         } catch (BookingUnavailableException $e) {
             Notification::make()
@@ -186,8 +115,8 @@ class BookSerial extends Page implements HasForms
             'booking_date' => $data['booking_date'],
             'bookable' => $data['bookable'],
             'share_clinical_history' => true,
-            'visit_type' => $visitType,
-            'lab_type' => $labType,
+            'visit_type' => $data['visit_type'] ?? StaffBookingForm::TYPE_USUAL,
+            'lab_type' => $data['lab_type'] ?? null,
             'intervention_type' => $data['intervention_type'] ?? null,
             'patient_phone' => null,
             'patient_name' => null,
@@ -225,24 +154,5 @@ class BookSerial extends Page implements HasForms
         }
 
         return __('Sitting');
-    }
-
-    private static function bookableMatchesVisitType(
-        ScheduleSession|LabCollectionSlot $bookable,
-        string $visitType,
-        ?string $labType,
-    ): bool {
-        if ($bookable instanceof LabCollectionSlot) {
-            return $visitType === StaffBookingForm::TYPE_LAB
-                && $labType !== null
-                && $labType !== StaffBookingForm::LAB_MSK;
-        }
-
-        return match ($visitType) {
-            StaffBookingForm::TYPE_INTERVENTION => $bookable->kind === ScheduleSession::KIND_INTERVENTION,
-            StaffBookingForm::TYPE_LAB => $bookable->kind === ScheduleSession::KIND_MSK
-                && $labType === StaffBookingForm::LAB_MSK,
-            default => $bookable->isPubliclyBookable(),
-        };
     }
 }
