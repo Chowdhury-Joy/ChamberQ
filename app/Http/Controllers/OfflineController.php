@@ -91,7 +91,7 @@ class OfflineController extends Controller
             'items.*.patient_phone' => ['nullable', 'string', 'max:20'],
             'items.*.year_of_birth' => ['nullable', 'integer', 'min:'.\App\Support\YearOfBirth::minYear(), 'max:'.\App\Support\YearOfBirth::maxYear()],
             'items.*.visit_date' => ['nullable', 'date'],
-            'items.*.data' => ['nullable', 'array'],
+            'items.*.data' => ['nullable', 'array', 'max:50'],
         ]);
 
         return response()->json([

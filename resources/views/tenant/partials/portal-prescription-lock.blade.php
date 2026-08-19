@@ -19,7 +19,7 @@
                 type="password"
                 name="password"
                 required
-                minlength="4"
+                minlength="{{ \App\Services\PortalPrescriptionLock::MIN_LENGTH }}"
                 maxlength="72"
                 autocomplete="new-password"
                 placeholder="{{ __('Password') }}"
@@ -31,14 +31,14 @@
                 type="password"
                 name="password_confirmation"
                 required
-                minlength="4"
+                minlength="{{ \App\Services\PortalPrescriptionLock::MIN_LENGTH }}"
                 maxlength="72"
                 autocomplete="new-password"
                 placeholder="{{ __('Confirm password') }}"
             >
             <button type="submit" class="{{ $rxSetupButtonClass ?? 'solo-cta' }}">{{ __('Save password') }}</button>
         </form>
-        <p class="portal-rx-hint">{{ __('At least 4 characters. Pick something you will remember on this phone.') }}</p>
+        <p class="portal-rx-hint">{{ __('At least :count characters. Pick something you will remember on this phone.', ['count' => \App\Services\PortalPrescriptionLock::MIN_LENGTH]) }}</p>
         @if($rxErrors?->has('password') || $rxErrors?->has('phone'))
             <p class="portal-error" role="alert">{{ $rxErrors->first('password') ?: $rxErrors->first('phone') }}</p>
         @endif
@@ -57,7 +57,7 @@
                 type="password"
                 name="password"
                 required
-                minlength="4"
+                minlength="{{ \App\Services\PortalPrescriptionLock::MIN_LENGTH }}"
                 maxlength="72"
                 autocomplete="current-password"
                 placeholder="{{ __('Password') }}"

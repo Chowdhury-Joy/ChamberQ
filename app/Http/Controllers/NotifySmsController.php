@@ -6,6 +6,7 @@ use App\Models\Booking;
 use App\Models\Prescription;
 use App\Models\User;
 use App\Services\SmsService;
+use App\Support\StaffDeskScope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -16,7 +17,9 @@ class NotifySmsController extends Controller
      */
     public function cancellation(Request $request, Booking $booking, SmsService $sms): JsonResponse
     {
-        $this->authorizeStaffNotify($request->user());
+        $user = $request->user();
+        $this->authorizeStaffNotify($user);
+        StaffDeskScope::assertCanAccessBooking($user, $booking);
 
         $validated = $request->validate([
             'message' => ['nullable', 'string', 'max:160'],
@@ -50,6 +53,8 @@ class NotifySmsController extends Controller
         if (! $booking) {
             abort(404);
         }
+
+        StaffDeskScope::assertCanAccessBooking($request->user(), $booking);
 
         $message = $sms->sendPrescriptionNotice($booking, $prescription);
 

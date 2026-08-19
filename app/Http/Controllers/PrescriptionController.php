@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Prescription;
+use App\Support\StaffDeskScope;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
@@ -27,6 +28,10 @@ class PrescriptionController extends Controller
         ]);
 
         $booking = $prescription->visitRecord?->booking;
+
+        if ($booking !== null) {
+            StaffDeskScope::assertCanAccessBooking($user, $booking);
+        }
         $visitRecord = $prescription->visitRecord;
 
         ['doctor' => $doctor, 'chamber' => $chamber] = $prescription->resolveDoctorChamber();

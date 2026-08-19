@@ -3222,6 +3222,15 @@
  <reason>One phone pattern for both desks. ChamberQ’s own admin should not feel like a different app than MUPS when opened on a phone.</reason>
 </decision>
 
+## 2026-08-19T19:30:00+0000
+
+<decision>
+ <category>Code</category>
+ <context>Production audit found desk-scope gaps on HTTP clinical routes, serial allocation races, portal unlock brute force, and queue polling load.</context>
+ <action>Apply `StaffDeskScope` on visit media, prescription print, and staff SMS routes. Retry booking serial allocation on unique violations. Raise portal prescription password minimum to 6 characters with per-phone unlock rate limiting (5 failures → 15 minutes). Bulk-count waiting patients in `SittingPrompt`; cache staff buzz keys before dispatching push jobs. Add queue performance indexes on `live_sessions` and `bookings`.</action>
+ <reason>Closes real IDOR and patient-facing 500s without changing the phone-first portal product model; reduces desk poll cost on busy days.</reason>
+</decision>
+
 ## 2026-08-20T01:14:17+0600
 
 <decision>

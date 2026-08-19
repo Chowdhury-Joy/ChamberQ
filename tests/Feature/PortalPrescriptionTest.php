@@ -303,6 +303,42 @@ class PortalPrescriptionTest extends TestCase
             ->assertSessionHasErrors('phone');
     }
 
+    public function test_portal_unlock_rate_limits_repeated_wrong_passwords(): void
+    {
+        $this->makePrescription('NAPA');
+
+        $this->post('http://portal-rx.localhost/portal/rx-password', [
+            'phone' => $this->phone,
+            'password' => 'gate-one',
+            'password_confirmation' => 'gate-one',
+        ]);
+
+        $this->flushSession();
+
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $this->from('http://portal-rx.localhost/portal?phone='.$this->phone)
+                ->post('http://portal-rx.localhost/portal/rx-unlock', [
+                    'phone' => $this->phone,
+                    'password' => 'wrong-gate',
+                ])
+                ->assertRedirect()
+                ->assertSessionHasErrors('password');
+        }
+
+        $this->from('http://portal-rx.localhost/portal?phone='.$this->phone)
+            ->post('http://portal-rx.localhost/portal/rx-unlock', [
+                'phone' => $this->phone,
+                'password' => 'wrong-gate',
+            ])
+            ->assertRedirect()
+            ->assertSessionHasErrors('password');
+
+        $this->assertStringContainsString(
+            'Too many wrong attempts',
+            session('errors')->first('password'),
+        );
+    }
+
     public function test_portal_list_does_not_expose_visit_media_paths(): void
     {
         Storage::disk('local')->put('visit-audio/portal-rx/secret.webm', 'secret');

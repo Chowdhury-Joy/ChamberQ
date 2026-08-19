@@ -67,11 +67,14 @@ class SittingPrompt
             ->get()
             ->keyBy('schedule_session_id');
 
+        $waitingCounts = $this->bulkWaitingCounts($sessions, $now);
+
         return $sessions
             ->map(fn (ScheduleSession $session) => $this->promptForSession(
                 $session,
                 $liveBySession->get($session->id),
                 $now,
+                $waitingCounts[(int) $session->id] ?? 0,
             ))
             ->filter()
             ->values()
@@ -99,6 +102,7 @@ class SittingPrompt
         ScheduleSession $session,
         ?LiveSession $live,
         ?Carbon $now = null,
+        ?int $waitingCount = null,
     ): ?array {
         $now ??= now();
 
@@ -110,7 +114,7 @@ class SittingPrompt
             return null;
         }
 
-        $waitingCount = $this->waitingCount($session, $now);
+        $waitingCount ??= $this->waitingCount($session, $now);
         if ($waitingCount < 1) {
             return null;
         }
@@ -378,6 +382,28 @@ class SittingPrompt
             ->where('booking_date', $now->toDateString())
             ->whereIn('status', ['waiting', 'called', 'skipped'])
             ->count();
+    }
+
+    /**
+     * @param  Collection<int, ScheduleSession>  $sessions
+     * @return array<int, int>
+     */
+    private function bulkWaitingCounts(Collection $sessions, Carbon $now): array
+    {
+        if ($sessions->isEmpty()) {
+            return [];
+        }
+
+        return Booking::query()
+            ->where('bookable_type', ScheduleSession::class)
+            ->whereIn('bookable_id', $sessions->pluck('id'))
+            ->where('booking_date', $now->toDateString())
+            ->whereIn('status', ['waiting', 'called', 'skipped'])
+            ->selectRaw('bookable_id, COUNT(*) as aggregate')
+            ->groupBy('bookable_id')
+            ->pluck('aggregate', 'bookable_id')
+            ->map(fn ($count) => (int) $count)
+            ->all();
     }
 
     private function formatDelayMinutes(int $minutes): string

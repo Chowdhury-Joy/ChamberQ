@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\VisitRecord;
 use App\Services\VisitMediaService;
+use App\Support\StaffDeskScope;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\UploadedFile;
@@ -73,7 +74,7 @@ class VisitMediaController extends Controller
 
     public function voice(Request $request, VisitRecord $visitRecord): StreamedResponse
     {
-        $this->authorizeClinicalRead($request);
+        $this->authorizeClinicalRead($request, $visitRecord);
 
         $media = app(VisitMediaService::class);
 
@@ -89,7 +90,7 @@ class VisitMediaController extends Controller
 
     public function photo(Request $request, VisitRecord $visitRecord): StreamedResponse
     {
-        $this->authorizeClinicalRead($request);
+        $this->authorizeClinicalRead($request, $visitRecord);
 
         $media = app(VisitMediaService::class);
 
@@ -102,7 +103,7 @@ class VisitMediaController extends Controller
 
     public function reportPhoto(Request $request, VisitRecord $visitRecord, int $index): StreamedResponse
     {
-        $this->authorizeClinicalRead($request);
+        $this->authorizeClinicalRead($request, $visitRecord);
 
         $paths = $visitRecord->report_photo_paths ?? [];
         $path = $paths[$index] ?? null;
@@ -124,12 +125,19 @@ class VisitMediaController extends Controller
      * at one clinic holding a record URL for another could stream that
      * clinic's patient voice notes and prescription photos.
      */
-    private function authorizeClinicalRead(Request $request): void
+    private function authorizeClinicalRead(Request $request, VisitRecord $visitRecord): void
     {
         $user = $request->user();
 
         if (! $user?->canViewVisitNotes() || ! $user->belongsToCurrentTenant()) {
             abort(403);
+        }
+
+        $visitRecord->loadMissing('booking.bookable');
+        $booking = $visitRecord->booking;
+
+        if ($booking !== null) {
+            StaffDeskScope::assertCanAccessBooking($user, $booking);
         }
     }
 }

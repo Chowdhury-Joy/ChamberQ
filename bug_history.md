@@ -1560,3 +1560,19 @@
  <root_cause>`SuperAdminPanelProvider` had the hamburger icon mapping but no `viteTheme`, `topbar(false)`, or `viewport-fit=cover`. Architecture claimed a `superAdmin/theme.css` that does not exist.</root_cause>
  <prevention_rule>Super Admin must register the same `tenantAdmin/theme.css`, `topbar(false)`, collapsible sidebar, and `viewport-fit=cover` as the chamber desk. Pin in `SuperAdminPanelUxTest`.</prevention_rule>
 </bug>
+
+## 2026-08-19T19:30:00+0000
+
+<bug>
+ <category>Code</category>
+ <symptom>Branch-scoped doctors could stream visit voice/photos and print prescriptions for patients at another chamber in the same clinic; staff could tap cancellation/prescription SMS for out-of-scope bookings.</symptom>
+ <root_cause>`VisitMediaController`, `PrescriptionController`, and `NotifySmsController` checked role + tenant but not `StaffDeskScope` on the related booking.</root_cause>
+ <prevention_rule>Every HTTP path that reads clinical media, prints a prescription, or sends staff SMS must call `StaffDeskScope::assertCanAccessBooking()` after loading the booking — same rule as offline sync.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>Two patients booking the last serial at the same moment could hit a unique-key violation and return 500 instead of a clean "full" response.</symptom>
+ <root_cause>`BookingService` allocated `max(serial)+1` inside a transaction but did not retry on `UniqueConstraintViolationException` like `VoucherService` already does.</root_cause>
+ <prevention_rule>Retry booking serial allocation up to three times on unique violations before surfacing an unavailable response.</prevention_rule>
+</bug>
