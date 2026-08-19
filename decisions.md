@@ -3213,6 +3213,15 @@
  <reason>Like putting a cashier at the till and a caller at the queue board — they start the shift where they work, not at a noticeboard they do not use.</reason>
 </decision>
 
+## 2026-08-19T20:00:00+0000
+
+<decision>
+ <category>Code</category>
+ <context>Production go-live needs machine-enforceable code guards plus a clear list of server decisions developers must make (SMS vendor, backup target, monitoring channel).</context>
+ <action>Remove `role`/`tenant_id` from User mass assignment; set via `User::provision()` and Filament forceFill after `TenantPanelUserRoles` whitelist. Extend `app:production-check` for `CENTRAL_DOMAINS`, `AUTH_DEBUG`, and verbose `LOG_LEVEL`. Add `scripts/deploy.sh`, weekly platform backup schedule, and a developer go-live checklist in `architecture.md`.</action>
+ <reason>Closes role-escalation forgery and documents what code cannot decide — credentials, cron, and off-server backup copies remain explicit developer/owner choices.</reason>
+</decision>
+
 ## 2026-08-19T19:45:00+0000
 
 <decision>

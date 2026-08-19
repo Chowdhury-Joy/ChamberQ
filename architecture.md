@@ -1,5 +1,5 @@
 # Architecture Overview
-Last Updated: 2026-08-19T19:45:00+0000
+Last Updated: 2026-08-19T20:00:00+0000
 
 ## Overview
 ChamberQ (product formerly "Doctor Gemini") is a multi-tenant SaaS for Bangladesh solo doctors and clinics. Each tenant can be sold **à la carte product modules** on top of a Solo/Clinic size tier: **Front door** (branded website + online serial booking + day list), **Live queue** (outdoor TV + Call next + ticket come-around), and **Prescription** (consult pad / digital Rx). Those three default on for existing chambers. Super Admin can also tick **Stations**, **Referrals**, **HR**, and **Pharmacy** — those stay **off** until ticked. Patients book a serial and pay at the chamber — there is no payment gateway. Online pre-payment is later-stage only: do not suggest or build it unless the owner explicitly asks. **Two booking doors:** the doctor's own website (name + phone, no account) and optional ChamberQ **Find a doctor** (`/find`) plus phone-OTP **Patient login** (`/me`) for one locker of serials and history across every Front door clinic. Sales CTAs on the central marketing site use WhatsApp (`wa.me`). Patient outbound notices (booking confirmation, doctor late, cancellation, prescription link) follow each doctor's `notify_channels` mix of prepaid SMS and/or human-tapped WhatsApp; Super Admin tops up the tenant SMS wallet. Marketer partners and medical representatives earn commissions on the **paying** amount (manual bKash billing); Super Admin confirms doctor payments and partner payouts. Year 1 month-by-month is not commissionable unless a year is prepaid; year 2+ is a residual.
@@ -46,10 +46,32 @@ Shell environment variables override both `.env` and the `<env>` entries in `php
 Before serving real patients, run the readiness gate as the last step of a deploy — a non-zero exit should stop the release:
 
 ```bash
-php artisan app:production-check
+php artisan app:production-check --strict
+bash scripts/deploy.sh
 ```
 
-It checks the settings that fail *silently*: debug mode exposing stack traces, `MAIL_MAILER=log` swallowing a locked-out doctor's password reset, `SMS_DRIVER=log` meaning no patient is ever told their serial, still running on SQLite, a non-https or localhost `APP_URL` (patient ticket links in SMS are built from it), `TRUSTED_PROXIES=*` on a production host (IP throttles can be spoofed), clinical media on the server's own disk, an insecure session cookie, and empty VAPID keys (pocket buzz on a locked phone will not fire; the open ticket can still vibrate). Blockers exit non-zero; storage, cookie, VAPID, and trusted-proxy items are warnings unless `--strict`. Defined in `app/Support/ProductionReadiness.php`, and CI asserts the gate can still pass on a production-shaped config so it cannot drift into something nobody can satisfy.
+`scripts/deploy.sh` runs migrate, `catalogues:load`, asset build, config/route/view cache, then the strict production gate. It does **not** configure the server — developers still set `.env`, cron (`schedule:run` every minute), reverse proxy TLS, off-server backup copies from `storage/app/backup-temp/`, and real SMS/mail credentials.
+
+It checks the settings that fail *silently*: debug mode exposing stack traces, `MAIL_MAILER=log` swallowing a locked-out doctor's password reset, `SMS_DRIVER=log` meaning no patient is ever told their serial, still running on SQLite, a non-https or localhost `APP_URL` (patient ticket links in SMS are built from it), localhost in `CENTRAL_DOMAINS`, `AUTH_DEBUG=true`, `TRUSTED_PROXIES=*` on a production host (IP throttles can be spoofed), verbose `LOG_LEVEL`, clinical media on the server's own disk, an insecure session cookie, and empty VAPID keys (pocket buzz on a locked phone will not fire; the open ticket can still vibrate). Blockers exit non-zero; storage, cookie, VAPID, log level, and trusted-proxy items are warnings unless `--strict`. Defined in `app/Support/ProductionReadiness.php`, and CI asserts the gate can still pass on a production-shaped config so it cannot drift into something nobody can satisfy.
+
+### Production go-live checklist (developer decisions)
+
+These cannot be chosen by code alone — the owner picks vendors and credentials; developers wire them on the server:
+
+| Area | What to set | Why it matters |
+|------|-------------|----------------|
+| **Host + TLS** | nginx/caddy → PHP-FPM, HTTPS cert | Patient pages and admin over plain HTTP leak session cookies |
+| **Database** | MySQL 8, nightly off-server dump | SQLite is dev-only; chamber data must survive disk loss |
+| **`.env`** | See `.env.example` production block | Wrong `APP_URL` breaks SMS ticket links |
+| **Catalogues** | `php artisan catalogues:load` after every migrate | Empty medicine/condition tables silently break Rx |
+| **SMS** | `SMS_DRIVER=http` + gateway keys, or disable deliberately | Default `log` never texts patients their serial |
+| **Mail** | Real SMTP/SES for password reset | Default `log` never reaches a locked-out doctor |
+| **Backups** | Cron `schedule:run` + copy `storage/app/backup-temp/` weekly ZIPs | Platform backup runs Sunday 02:30; ZIPs still on-server until copied |
+| **Clinical media** | `FILESYSTEM_DISK=s3` (or backed-up disk) | Voice notes and Rx photos are irreplaceable |
+| **Monitoring** | `LOG_SLACK_WEBHOOK_URL` or host APM | No bundled Sentry — pick one channel and wire it |
+| **VAPID** | Generate keys for pocket buzz | Optional but needed for locked-phone queue alerts |
+
+**Locked product decisions** (need owner phrases, not developer choice): session idle expiry (`change session expiry`), patient homepage UI (`update patient homepage`), online payment (explicit owner ask).
 
 Scheduled tasks: `commissions:generate-monthly` runs on the 7th of each month (pending monthly commission rows for referred active tenants). `follow-ups:send-reminders` runs daily at 07:00. `stations:morning-count` runs daily at 09:05 for tenants with the **Stations** module (visit vs intervention waiting counts pinged to doctors/admins via Filament database notifications).
 
@@ -87,7 +109,7 @@ Scheduled tasks: `commissions:generate-monthly` runs on the 7th of each month (p
 - `app/Support/DataBackup/` — `BackupTableMap` (tenant + platform table lists and FK order), `BackupCsv` (UTF-8 BOM read/write, JSON column handling), `ImportOptions`, `ImportResult`
 - `app/Support/BdPhone.php` / `app/Support/BdNid.php` — shared `01…` phone normalization and optional BD NID (10/13 digit) normalize/validate for storage and matching; `BdPhone::maskForDisplay()` for portal UI
 - `app/Support/PortalSession.php` — patient portal phone and prescription OTP-verified flags live in the session (never in the URL after lookup)
-- `app/Support/ScreenPollToken.php` — HMAC tokens for outdoor-screen JSON polls (`?token=`) so session/chamber ids cannot be scraped without the page HTML
+- `app/Support/TenantPanelUserRoles.php` — whitelists tenant-panel Staff & Roles; blocks forged `super_admin` / `marketer` on create/edit
 - `app/Support/PushEndpoint.php` — the allow-rule for a Web Push subscription URL, shared by `QueuePushController` and `StaffPushController` (`PushEndpoint::rule()`). https only, no userinfo, port 443, no literal private/reserved IP, no `localhost` / `.local` / `.internal` / single-label host. `url` validation alone let the caller name any address the server would later POST to, and the patient route is unauthenticated (booking a serial is public, so a booking id is free to obtain) — a blind SSRF into cloud metadata and loopback services. Deliberately no DNS resolution: a public name pointing at a private address still passes, which needs a check at connect time rather than a race at validation time. `StaffPushController` also requires `belongsToCurrentTenant()` so a doctor of chamber A cannot register under chamber B's host.
 - `app/Support/SeedAccounts.php` — demo / client seeders (`DatabaseSeeder`, `MupsSeeder`, `PainSolutionStationsSeeder`, `NusratUrmiSeeder`) refuse `APP_ENV=production` and never overwrite an existing user's password on re-seed
 - `app/Support/PrescriptionTiming.php` — the closed timing vocabulary (after food, before food, empty stomach, at night, with food), its shorthand tokens (`af`, `bf`, `hs`…) and bilingual print labels. Stored as keys, never free text, so print can render both languages

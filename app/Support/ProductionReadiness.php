@@ -179,6 +179,40 @@ class ProductionReadiness
                 },
             ],
             [
+                'severity' => self::SEVERITY_BLOCKER,
+                'key' => 'CENTRAL_DOMAINS',
+                'fix' => 'CENTRAL_DOMAINS=yourdomain.com,www.yourdomain.com (no localhost)',
+                'detect' => function (): ?string {
+                    $domains = config('tenancy.central_domains', []);
+
+                    foreach ($domains as $domain) {
+                        $domain = strtolower((string) $domain);
+
+                        if (in_array($domain, ['127.0.0.1', 'localhost', '::1'], true)) {
+                            return 'CENTRAL_DOMAINS still includes "'.$domain.'". Marketing and Super Admin would bind to a dev host on a live server.';
+                        }
+                    }
+
+                    return null;
+                },
+            ],
+            [
+                'severity' => self::SEVERITY_BLOCKER,
+                'key' => 'AUTH_DEBUG',
+                'fix' => 'AUTH_DEBUG=false',
+                'detect' => fn (): ?string => config('diagnostics.auth')
+                    ? 'AUTH_DEBUG is on — every request is logged with session metadata. Turn it off after chasing a sign-out bug.'
+                    : null,
+            ],
+            [
+                'severity' => self::SEVERITY_WARNING,
+                'key' => 'LOG_LEVEL',
+                'fix' => 'LOG_LEVEL=warning or error in production',
+                'detect' => fn (): ?string => in_array(config('logging.channels.single.level', 'debug'), ['debug', 'info'], true)
+                    ? 'LOG_LEVEL is "'.config('logging.channels.single.level').'". Verbose logs on a live server grow quickly and may capture patient-adjacent request data.'
+                    : null,
+            ],
+            [
                 'severity' => self::SEVERITY_WARNING,
                 'key' => 'TRUSTED_PROXIES',
                 'fix' => 'TRUSTED_PROXIES=your load-balancer IP or CIDR (not *)',

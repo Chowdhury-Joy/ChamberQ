@@ -1572,7 +1572,11 @@
 
 <bug>
  <category>Code</category>
- <symptom>Patient portal put mobile numbers in the URL (`/portal?phone=…`), prescription links carried `?phone=`, and anyone who knew a schedule session id could poll `/api/screen/{id}` for live patient names and serials.</symptom>
+ <symptom>A forged Staff & Roles form could set `role=super_admin` even though the Filament select only offered owner/doctor/staff.</symptom>
+ <root_cause>`role` and `tenant_id` were in `User::$fillable`; CreateRecord passed POST data straight into `User::create()`.</root_cause>
+ <prevention_rule>Keep privileged columns off `$fillable`; whitelist tenant-panel roles in `TenantPanelUserRoles` and assign role via `forceFill` after create/edit.</prevention_rule>
+</bug>
+
  <root_cause>Portal lookup used GET; prescription portal route trusted query-string phone; screen JSON endpoints had no shared secret beyond the numeric session/chamber id.</root_cause>
  <prevention_rule>Portal lookup must POST into session (`PortalSession`); prescription portal reads session phone only; outdoor-screen polls require `ScreenPollToken` from the rendered TV page.</prevention_rule>
 </bug>

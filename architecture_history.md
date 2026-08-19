@@ -848,4 +848,7 @@
 ## 2026-08-19T19:45:00+0000
 - Security hardening: portal phone in session (`POST /portal`, `PortalSession`); SMS OTP before prescription password set/unlock (`PortalOtpService`, `portal_otp_codes`); outdoor-screen JSON polls require HMAC `ScreenPollToken`; production-check warns on `TRUSTED_PROXIES=*`; `config/app.trusted_proxies` replaces direct `env()` in `bootstrap/app.php`.
 
+## 2026-08-19T20:00:00+0000
+- Production go-live pass: `User::provision()` + `TenantPanelUserRoles`; extended production-check (`CENTRAL_DOMAINS`, `AUTH_DEBUG`, `LOG_LEVEL`); `scripts/deploy.sh`; weekly `data:backup-export --platform` schedule; developer checklist in `architecture.md`.
+
 
