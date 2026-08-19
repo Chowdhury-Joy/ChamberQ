@@ -132,6 +132,7 @@ class ReferralsAndHrModuleTest extends TestCase
 
         $this->assertFalse($plain->hasReferrals());
         $this->assertFalse($plain->hasHr());
+        $this->assertFalse($plain->hasPharmacy());
     }
 
     public function test_visit_referral_commission_is_two_hundred(): void

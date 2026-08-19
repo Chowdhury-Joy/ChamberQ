@@ -131,6 +131,15 @@ class DoctorForm
                     ->addActionLabel(__('Add fee type'))
                     ->reorderable(false)
                     ->columnSpanFull(),
+                TextInput::make('pharmacy_doctor_percent')
+                    ->label(__('Doctor pharmacy cut (%)'))
+                    ->helperText(__('Override the chamber default for this doctor. Empty = use Branding. 0 = this doctor gets no pharmacy cut. Only sales from their prescription.'))
+                    ->numeric()
+                    ->integer()
+                    ->minValue(0)
+                    ->maxValue(100)
+                    ->nullable()
+                    ->visible(fn (): bool => tenant()?->hasPharmacy() ?? false),
                 Fieldset::make(__('Website profile'))
                     ->visible(fn (): bool => ! tenant()?->isSoloDoctor())
                     ->columns(2)

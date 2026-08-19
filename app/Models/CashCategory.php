@@ -17,6 +17,8 @@ class CashCategory extends Model
     public const AUTO_INCOME_CODES = [
         ChamberCashEntry::CATEGORY_PATIENT,
         ChamberCashEntry::CATEGORY_WAIVED,
+        ChamberCashEntry::CATEGORY_PHARMACY,
+        ChamberCashEntry::CATEGORY_PHARMACY_SUPPLIER_REFUND,
     ];
 
     /** @var list<string> */
@@ -24,6 +26,9 @@ class CashCategory extends Model
         ChamberCashEntry::CATEGORY_SALARY,
         ChamberCashEntry::CATEGORY_REFERRAL_PAYOUT,
         ChamberCashEntry::CATEGORY_PATIENT_REFUND,
+        ChamberCashEntry::CATEGORY_PHARMACY_PURCHASE,
+        ChamberCashEntry::CATEGORY_PHARMACY_REFUND,
+        ChamberCashEntry::CATEGORY_PHARMACY_DOCTOR_PAYOUT,
     ];
 
     protected $fillable = [

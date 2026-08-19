@@ -249,6 +249,85 @@ class ChamberCashService
         ];
     }
 
+    /**
+     * @return array{cash_taka: ?int, online_taka: ?int, online_method: ?string}
+     */
+    public function paymentSplit(
+        string $method,
+        int $amount,
+        ?int $cashTaka = null,
+        ?int $onlineTaka = null,
+        ?string $onlineMethod = null,
+    ): array {
+        return $this->resolvePaymentSplit($method, $amount, $cashTaka, $onlineTaka, $onlineMethod);
+    }
+
+    public function recordLockedIncome(
+        User $user,
+        int $amount,
+        string $category,
+        string $method,
+        CarbonInterface $occurredOn,
+        ?string $note = null,
+        ?int $cashTaka = null,
+        ?int $onlineTaka = null,
+        ?string $onlineMethod = null,
+    ): ChamberCashEntry {
+        $this->assertMethod($method);
+
+        if ($amount < 1) {
+            throw new InvalidArgumentException('Income must be at least ৳1.');
+        }
+
+        $split = $this->resolvePaymentSplit($method, $amount, $cashTaka, $onlineTaka, $onlineMethod);
+
+        return ChamberCashEntry::create([
+            'direction' => ChamberCashEntry::DIRECTION_INCOME,
+            'amount' => $amount,
+            'cash_taka' => $split['cash_taka'],
+            'mobile_taka' => $split['online_taka'],
+            'mobile_method' => $split['online_method'],
+            'category' => $category,
+            'method' => $method,
+            'recorded_by' => $user->id,
+            'occurred_on' => $occurredOn->toDateString(),
+            'note' => $note,
+        ]);
+    }
+
+    public function recordLockedExpense(
+        User $user,
+        int $amount,
+        string $category,
+        string $method,
+        CarbonInterface $occurredOn,
+        ?string $note = null,
+        ?int $cashTaka = null,
+        ?int $onlineTaka = null,
+        ?string $onlineMethod = null,
+    ): ChamberCashEntry {
+        $this->assertMethod($method);
+
+        if ($amount < 1) {
+            throw new InvalidArgumentException('Expense must be at least ৳1.');
+        }
+
+        $split = $this->resolvePaymentSplit($method, $amount, $cashTaka, $onlineTaka, $onlineMethod);
+
+        return ChamberCashEntry::create([
+            'direction' => ChamberCashEntry::DIRECTION_EXPENSE,
+            'amount' => $amount,
+            'cash_taka' => $split['cash_taka'],
+            'mobile_taka' => $split['online_taka'],
+            'mobile_method' => $split['online_method'],
+            'category' => $category,
+            'method' => $method,
+            'recorded_by' => $user->id,
+            'occurred_on' => $occurredOn->toDateString(),
+            'note' => $note,
+        ]);
+    }
+
     private function assertMethod(string $method): void
     {
         if (! array_key_exists($method, ChamberCashEntry::methods())) {

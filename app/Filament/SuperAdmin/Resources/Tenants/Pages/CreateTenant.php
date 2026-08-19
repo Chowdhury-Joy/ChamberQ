@@ -49,7 +49,8 @@ class CreateTenant extends CreateRecord
         $stations = (bool) ($data['module_stations'] ?? false);
         $referrals = (bool) ($data['module_referrals'] ?? false);
         $hr = (bool) ($data['module_hr'] ?? false);
-        unset($data['product_modules'], $data['module_stations'], $data['module_referrals'], $data['module_hr']);
+        $pharmacy = (bool) ($data['module_pharmacy'] ?? false);
+        unset($data['product_modules'], $data['module_stations'], $data['module_referrals'], $data['module_hr'], $data['module_pharmacy']);
 
         $data['feature_flags'] = Tenant::featureFlagsWithModules(
             is_array($data['feature_flags'] ?? null) ? $data['feature_flags'] : [],
@@ -58,6 +59,7 @@ class CreateTenant extends CreateRecord
         $data['feature_flags'] = Tenant::mergeStationsFlag($data['feature_flags'], $stations);
         $data['feature_flags'] = Tenant::mergeOptInModuleFlag($data['feature_flags'], Tenant::MODULE_REFERRALS, $referrals);
         $data['feature_flags'] = Tenant::mergeOptInModuleFlag($data['feature_flags'], Tenant::MODULE_HR, $hr);
+        $data['feature_flags'] = Tenant::mergeOptInModuleFlag($data['feature_flags'], Tenant::MODULE_PHARMACY, $pharmacy);
 
         $this->loginBootstrap = [
             'owner_email' => $data['initial_owner_email'] ?? null,

@@ -3222,3 +3222,12 @@
  <reason>One phone pattern for both desks. ChamberQ’s own admin should not feel like a different app than MUPS when opened on a phone.</reason>
 </decision>
 
+## 2026-08-20T01:14:17+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>A chamber that keeps a medicine cupboard (or a small shop) needed the till and the shelf on the same system. Patients still pay at the desk — this is not an online booking gateway. The company that supplies the box is owed per delivery (pay nothing / some / full when it arrives; the rest as units sell; return unsold can create a refund if they were overpaid). The shop’s cut is leftover after the company share, not a second cashbook line. An optional doctor % of that leftover should only apply when the sale is tied to a prescription, not a walk-in.</context>
+ <action>Opt-in **Pharmacy** module (Super Admin tick, default off). Counter takes cash/bKash/Nagad/card/cash+online like Collect fee and posts the **sell price** as locked pharmacy income. Live `qty_on_hand` updates on sale/void/receive; staff type a number only for first stock, receive, or physical count (count gaps are inventory history, never cashbook). Returnable boxes owe `sold × company share`; bought-outright owe `received × share`. Doctor pharmacy % defaults 0 (off); doctor override is nullable so it can inherit. Same-day void restores stock and cancels a pending doctor cut.</action>
+ <reason>Like a chemist shop next to the waiting room, not a website checkout. Paying the company for a hundred boxes the moment they land would make a returnable unsold box look like a gift; counting every strip every evening would make the till unusable. Walk-in sales must not silently create a doctor cut the owner never agreed to.</reason>
+</decision>
+

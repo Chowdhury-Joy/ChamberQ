@@ -15,6 +15,8 @@ class CashCategoryService
     private const DEFAULTS = [
         ['type' => CashCategory::TYPE_INCOME, 'code' => ChamberCashEntry::CATEGORY_PATIENT, 'name' => 'Patient fee', 'is_locked' => true, 'sort_order' => 10],
         ['type' => CashCategory::TYPE_INCOME, 'code' => ChamberCashEntry::CATEGORY_WAIVED, 'name' => 'Waived', 'is_locked' => true, 'sort_order' => 20],
+        ['type' => CashCategory::TYPE_INCOME, 'code' => ChamberCashEntry::CATEGORY_PHARMACY, 'name' => 'Pharmacy', 'is_locked' => true, 'sort_order' => 25],
+        ['type' => CashCategory::TYPE_INCOME, 'code' => ChamberCashEntry::CATEGORY_PHARMACY_SUPPLIER_REFUND, 'name' => 'Pharmacy supplier refund', 'is_locked' => true, 'sort_order' => 26],
         ['type' => CashCategory::TYPE_INCOME, 'code' => ChamberCashEntry::CATEGORY_OTHER_INCOME, 'name' => 'Other income', 'is_locked' => false, 'sort_order' => 30],
         ['type' => CashCategory::TYPE_EXPENSE, 'code' => ChamberCashEntry::CATEGORY_RENT, 'name' => 'Rent', 'is_locked' => false, 'sort_order' => 10],
         ['type' => CashCategory::TYPE_EXPENSE, 'code' => ChamberCashEntry::CATEGORY_UTILITIES, 'name' => 'Utilities', 'is_locked' => false, 'sort_order' => 20],
@@ -23,6 +25,9 @@ class CashCategoryService
         ['type' => CashCategory::TYPE_EXPENSE, 'code' => ChamberCashEntry::CATEGORY_TRANSPORT, 'name' => 'Transport', 'is_locked' => false, 'sort_order' => 50],
         ['type' => CashCategory::TYPE_EXPENSE, 'code' => ChamberCashEntry::CATEGORY_REFERRAL_PAYOUT, 'name' => 'Referral payout', 'is_locked' => true, 'sort_order' => 60],
         ['type' => CashCategory::TYPE_EXPENSE, 'code' => ChamberCashEntry::CATEGORY_PATIENT_REFUND, 'name' => 'Patient refund', 'is_locked' => true, 'sort_order' => 65],
+        ['type' => CashCategory::TYPE_EXPENSE, 'code' => ChamberCashEntry::CATEGORY_PHARMACY_PURCHASE, 'name' => 'Pharmacy purchase', 'is_locked' => true, 'sort_order' => 66],
+        ['type' => CashCategory::TYPE_EXPENSE, 'code' => ChamberCashEntry::CATEGORY_PHARMACY_REFUND, 'name' => 'Pharmacy refund', 'is_locked' => true, 'sort_order' => 67],
+        ['type' => CashCategory::TYPE_EXPENSE, 'code' => ChamberCashEntry::CATEGORY_PHARMACY_DOCTOR_PAYOUT, 'name' => 'Doctor pharmacy payout', 'is_locked' => true, 'sort_order' => 68],
         ['type' => CashCategory::TYPE_EXPENSE, 'code' => ChamberCashEntry::CATEGORY_OTHER_EXPENSE, 'name' => 'Other expense', 'is_locked' => false, 'sort_order' => 70],
     ];
 

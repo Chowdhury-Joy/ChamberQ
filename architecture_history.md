@@ -839,5 +839,8 @@
 ## 2026-08-20T00:58:50+0600
 - Super Admin `/admin` uses the same `tenantAdmin/theme.css` phone chrome (no topbar, collapsible sidebar, `viewport-fit=cover`) as the chamber desk.
 
+## 2026-08-20T01:14:17+0600
+- Opt-in Pharmacy module (default off): counter sales, live stock, physical count, per-delivery supplier owed/refund-due, optional doctor % of shop cut on Rx-linked sales; locked cashbook categories; BackupTableMap after sms_messages.
+
 
 

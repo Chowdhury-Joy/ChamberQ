@@ -58,6 +58,15 @@ class BackupTableMap
         'prescription_templates',
         'prescription_template_items',
         'sms_messages',
+        'pharmacy_items',
+        'pharmacy_deliveries',
+        'pharmacy_stock_adjustments',
+        'pharmacy_counts',
+        'pharmacy_count_items',
+        'pharmacy_sales',
+        'pharmacy_sale_items',
+        'pharmacy_supplier_settlements',
+        'pharmacy_doctor_commissions',
     ];
 
     /**

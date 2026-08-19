@@ -69,6 +69,7 @@ class BrandingSettings extends Page implements HasForms
                 'queue_runner' => $tenant->queue_runner ?? \App\Models\Tenant::QUEUE_RUNNER_STAFF,
                 'collect_fee_at_checkin' => (bool) $tenant->collect_fee_at_checkin,
                 'patient_booking_horizon_days' => $tenant->patient_booking_horizon_days,
+                'pharmacy_doctor_percent' => (int) ($tenant->pharmacy_doctor_percent ?? 0),
             ] + \App\Services\PracticeRules::normalize($tenant->practice_rules));
         }
     }
@@ -162,6 +163,15 @@ class BrandingSettings extends Page implements HasForms
                             ->minValue(\App\Models\PlatformSetting::MIN_HORIZON_DAYS)
                             ->maxValue(\App\Models\PlatformSetting::MAX_HORIZON_DAYS)
                             ->nullable(),
+                        TextInput::make('pharmacy_doctor_percent')
+                            ->label(__('Doctor pharmacy cut (%)'))
+                            ->helperText(__('Share of the shop cut for the doctor who wrote the pad. 0 = off. A doctor profile can override this. Walk-in sales with no prescription get ৳0. Paid later from Doctor pharmacy cuts, not at the till.'))
+                            ->numeric()
+                            ->integer()
+                            ->minValue(0)
+                            ->maxValue(100)
+                            ->default(0)
+                            ->visible(fn (): bool => tenant()?->hasPharmacy() ?? false),
                     ]),
 
                 ...\App\Filament\TenantAdmin\Support\PracticeRulesForm::fieldsets(
@@ -314,6 +324,10 @@ class BrandingSettings extends Page implements HasForms
                     : null,
                 'practice_rules' => \App\Services\PracticeRules::normalize($data),
             ];
+
+            if ($tenant->hasPharmacy()) {
+                $payload['pharmacy_doctor_percent'] = max(0, min(100, (int) ($data['pharmacy_doctor_percent'] ?? 0)));
+            }
 
             if ($tenant->hasLiveQueue()) {
                 $announceMode = $data['call_announce_mode'] ?? \App\Models\Tenant::ANNOUNCE_CHIME_AND_VOICE;

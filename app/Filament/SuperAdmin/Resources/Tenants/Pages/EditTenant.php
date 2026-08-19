@@ -40,13 +40,16 @@ class EditTenant extends EditRecord
         $data['module_hr'] = $tenant instanceof Tenant
             ? $tenant->hasHr()
             : false;
+        $data['module_pharmacy'] = $tenant instanceof Tenant
+            ? $tenant->hasPharmacy()
+            : false;
 
         // Module keys are edited via product_modules — keep KeyValue for add-ons only.
         $flags = is_array($data['feature_flags'] ?? null) ? $data['feature_flags'] : [];
         foreach (Tenant::productModules() as $module) {
             unset($flags[$module]);
         }
-        unset($flags[Tenant::MODULE_STATIONS], $flags[Tenant::MODULE_REFERRALS], $flags[Tenant::MODULE_HR]);
+        unset($flags[Tenant::MODULE_STATIONS], $flags[Tenant::MODULE_REFERRALS], $flags[Tenant::MODULE_HR], $flags[Tenant::MODULE_PHARMACY]);
         $data['feature_flags'] = $flags;
 
         return $data;
@@ -62,7 +65,8 @@ class EditTenant extends EditRecord
         $stations = (bool) ($data['module_stations'] ?? false);
         $referrals = (bool) ($data['module_referrals'] ?? false);
         $hr = (bool) ($data['module_hr'] ?? false);
-        unset($data['product_modules'], $data['module_stations'], $data['module_referrals'], $data['module_hr']);
+        $pharmacy = (bool) ($data['module_pharmacy'] ?? false);
+        unset($data['product_modules'], $data['module_stations'], $data['module_referrals'], $data['module_hr'], $data['module_pharmacy']);
 
         $data['feature_flags'] = Tenant::featureFlagsWithModules(
             is_array($data['feature_flags'] ?? null) ? $data['feature_flags'] : [],
@@ -71,6 +75,7 @@ class EditTenant extends EditRecord
         $data['feature_flags'] = Tenant::mergeStationsFlag($data['feature_flags'], $stations);
         $data['feature_flags'] = Tenant::mergeOptInModuleFlag($data['feature_flags'], Tenant::MODULE_REFERRALS, $referrals);
         $data['feature_flags'] = Tenant::mergeOptInModuleFlag($data['feature_flags'], Tenant::MODULE_HR, $hr);
+        $data['feature_flags'] = Tenant::mergeOptInModuleFlag($data['feature_flags'], Tenant::MODULE_PHARMACY, $pharmacy);
 
         return $data;
     }

@@ -61,7 +61,7 @@ class CashCategoryTest extends TestCase
     {
         app(CashCategoryService::class)->ensureDefaults();
 
-        $this->assertSame(11, CashCategory::query()->count());
+        $this->assertSame(16, CashCategory::query()->count());
         $this->assertDatabaseHas('cash_categories', [
             'code' => ChamberCashEntry::CATEGORY_SALARY,
             'is_locked' => true,

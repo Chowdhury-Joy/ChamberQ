@@ -22,6 +22,7 @@ class Doctor extends Model
         'allows_repeat_serials',
         'collect_fee_at_checkin',
         'practice_rules',
+        'pharmacy_doctor_percent',
         'qualifications',
         'registration_number',
         'default_fee_taka',
@@ -295,5 +296,20 @@ class Doctor extends Model
         }
 
         return $this->practiceTypeLabel();
+    }
+
+    /**
+     * Percent of the shop cut owed to this prescribing doctor. Null on the
+     * profile means use the chamber default. 0 means off for this doctor.
+     */
+    public function pharmacyCutPercent(?Tenant $tenant = null): int
+    {
+        if ($this->pharmacy_doctor_percent !== null) {
+            return max(0, min(100, (int) $this->pharmacy_doctor_percent));
+        }
+
+        $tenant ??= tenant();
+
+        return max(0, min(100, (int) ($tenant?->pharmacy_doctor_percent ?? 0)));
     }
 }

@@ -39,6 +39,16 @@ class ChamberCashEntry extends Model
 
     public const CATEGORY_PATIENT_REFUND = 'patient_refund';
 
+    public const CATEGORY_PHARMACY = 'pharmacy';
+
+    public const CATEGORY_PHARMACY_PURCHASE = 'pharmacy_purchase';
+
+    public const CATEGORY_PHARMACY_REFUND = 'pharmacy_refund';
+
+    public const CATEGORY_PHARMACY_SUPPLIER_REFUND = 'pharmacy_supplier_refund';
+
+    public const CATEGORY_PHARMACY_DOCTOR_PAYOUT = 'pharmacy_doctor_payout';
+
     public const METHOD_CASH = 'cash';
 
     public const METHOD_BKASH = 'bkash';
@@ -94,6 +104,8 @@ class ChamberCashEntry extends Model
         return [
             self::CATEGORY_PATIENT => __('Patient fee'),
             self::CATEGORY_WAIVED => __('Waived'),
+            self::CATEGORY_PHARMACY => __('Pharmacy'),
+            self::CATEGORY_PHARMACY_SUPPLIER_REFUND => __('Pharmacy supplier refund'),
             self::CATEGORY_OTHER_INCOME => __('Other income'),
         ];
     }
@@ -109,6 +121,9 @@ class ChamberCashEntry extends Model
             self::CATEGORY_TRANSPORT => __('Transport'),
             self::CATEGORY_REFERRAL_PAYOUT => __('Referral payout'),
             self::CATEGORY_PATIENT_REFUND => __('Patient refund'),
+            self::CATEGORY_PHARMACY_PURCHASE => __('Pharmacy purchase'),
+            self::CATEGORY_PHARMACY_REFUND => __('Pharmacy refund'),
+            self::CATEGORY_PHARMACY_DOCTOR_PAYOUT => __('Doctor pharmacy payout'),
             self::CATEGORY_OTHER_EXPENSE => __('Other expense'),
         ];
     }

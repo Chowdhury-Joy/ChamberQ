@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-20T00:39:34+0600
+Last Updated: 2026-08-20T01:14:17+0600
 
 ## Full Site Map
 
@@ -19,7 +19,7 @@ Hosts: values in `CENTRAL_DOMAINS` (e.g. `localhost`).
 | `/me/history` | Past visits and prescriptions for this phone (own records; no share-flag gate; no voice/photo) | patient login |
 | `/me/prescriptions/{id}` | Full patient pad for one prescription belonging to this phone | patient login |
 | `/admin` | Super Admin Filament login | public login |
-| `/admin/*` | Super Admin: Tenants under **Platform** (incl. **Product modules**; **Maestro**/Clinic label; Prescription-free-for-life tick; **paying** one-time/monthly; MR + marketer; per-deal % overrides; live list → paying → cuts preview), Marketers, **Medical representatives**, Discount Codes, Commissions; finance dashboard then platform totals then latest 8 tenants; **Client Health** seller overview (`/admin/seller-overview`, names link to tenant edit); **Research data** aggregate view (`/admin/research`); **Booking window** (`/admin/booking-window`, platform default days ahead; a chamber may set its own shorter window); **Platform data backup** (`/admin/data-backup`, restore defaults to dry-run and confirms before a live replace); Tenants list row actions (Edit / Download chamber backup) sit in a **⋮** menu with finance columns behind the column manager; per-tenant chamber backup download plus Restore/Delete behind **Dangerous** on tenant edit; confirm doctor setup/monthly/**12 months prepaid** on tenant edit | super_admin only |
+| `/admin/*` | Super Admin: Tenants under **Platform** (incl. **Product modules**; **Maestro**/Clinic label; Prescription-free-for-life tick; **paying** one-time/monthly; MR + marketer; per-deal % overrides; live list → paying → cuts preview; opt-in **Stations / Referrals / HR / Pharmacy** ticks, default off), Marketers, **Medical representatives**, Discount Codes, Commissions; finance dashboard then platform totals then latest 8 tenants; **Client Health** seller overview (`/admin/seller-overview`, names link to tenant edit); **Research data** aggregate view (`/admin/research`); **Booking window** (`/admin/booking-window`, platform default days ahead; a chamber may set its own shorter window); **Platform data backup** (`/admin/data-backup`, restore defaults to dry-run and confirms before a live replace); Tenants list row actions (Edit / Download chamber backup) sit in a **⋮** menu with finance columns behind the column manager; per-tenant chamber backup download plus Restore/Delete behind **Dangerous** on tenant edit; confirm doctor setup/monthly/**12 months prepaid** on tenant edit | super_admin only |
 | `/partner` | Marketer partner panel login | public login |
 | `/partner/*` | Marketer: referral link, owed/paid stats, referred doctors list, commission history | marketer only |
 | `/up` | Laravel health check | public |
@@ -55,6 +55,11 @@ Same central host; tenant identified by URL slug (tenant `id`), e.g. `drkarim`.
 | `/{slug}/admin/cashbook` | Desk khata: income, expense, net, waived (day/week/month) | staff / doctor / admin |
 | `/{slug}/admin/missed-procedures` | Unfinished past-dated intervention rows (WhatsApp + Move; Stations only) | staff / doctor (`canWorkDesk`, **Stations**) |
 | `/{slug}/admin/cash-categories` | Income/expense category labels for the cashbook (add, hide, rename custom) | admin only |
+| `/{slug}/admin/pharmacy-counter` | Pharmacy till: sell from Rx or walk-in, receipt, same-day void | staff with money job / admin (**Pharmacy**) |
+| `/{slug}/admin/pharmacy-items` | Shop stock: add SKU, receive box, return unsold | admin (**Pharmacy**) |
+| `/{slug}/admin/pharmacy-physical-count` | Physical count vs system qty (inventory history, not cashbook) | admin (**Pharmacy**) |
+| `/{slug}/admin/pharmacy-pay-supplier` | Pay what is owed to the company, or record a supplier refund | staff with money job / admin (**Pharmacy**) |
+| `/{slug}/admin/pharmacy-doctor-commissions` | Pending doctor pharmacy cuts → mark paid | staff with money job / admin (**Pharmacy**) |
 | `/{slug}/admin/operational-reports` | Day / week / month booking counts | admin / doctor |
 | `/{slug}/admin/chambers` | Rooms / locations (sidebar only when multiple chambers) | staff (or doctor if no staff login; admin) |
 | `/{slug}/admin/schedule-sessions` | Sitting days and hours | staff (or doctor if no staff login; admin) |
@@ -94,6 +99,11 @@ When a doctor connects their own domain (e.g. `drkarim.com`), routes live at the
 | `/admin/cashbook` | Desk khata: income, expense, net, waived (day/week/month) | staff / doctor / admin |
 | `/admin/missed-procedures` | Unfinished past-dated intervention rows (WhatsApp + Move; Stations only) | staff / doctor (`canWorkDesk`, **Stations**) |
 | `/admin/cash-categories` | Income/expense category labels for the cashbook (add, hide, rename custom) | admin only |
+| `/admin/pharmacy-counter` | Pharmacy till: sell from Rx or walk-in, receipt, same-day void | staff with money job / admin (**Pharmacy**) |
+| `/admin/pharmacy-items` | Shop stock: add SKU, receive box, return unsold | admin (**Pharmacy**) |
+| `/admin/pharmacy-physical-count` | Physical count vs system qty (inventory history, not cashbook) | admin (**Pharmacy**) |
+| `/admin/pharmacy-pay-supplier` | Pay what is owed to the company, or record a supplier refund | staff with money job / admin (**Pharmacy**) |
+| `/admin/pharmacy-doctor-commissions` | Pending doctor pharmacy cuts → mark paid | staff with money job / admin (**Pharmacy**) |
 | `/admin/referring-doctors` | Outside GP registry (Referrals module) | staff / doctor / admin |
 | `/admin/referral-commissions` | Referral commission ledger — pending/paid, bulk payout | staff / doctor / admin |
 | `/admin/employees` | Staff roster (HR module) | admin |
@@ -280,7 +290,7 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 
 ### Staff & Roles (owner / helper / lead desk — settings)
 - **Trigger:** Owner adds a partner, doctor login, or desk staff member; a **lead desk** supervisor hires counter staff; ChamberQ helper manages logins the owner must not see.
-- **Steps:** **Settings → Staff & Roles** — list is grouped by job (Owners / Doctors / Desk staff) with filter chips. Create user → pick **Owner**, **Doctor**, or **Staff (desk + content)**. For **Staff**, optional **Desk jobs** ticks: **Money** (Collect fee + Cashbook), **Queue** (Live Queue + Call next), **Prep** (outdoor vitals + Mark prepped); leave all ticked for one person doing everything. **Lead desk** (owner/helper only) covers all counters and may add/edit **Staff** only — not owners, doctors, or helpers. On multi-branch clinics, optional **Branches** multi-select (empty = all branches; hidden when only one chamber). For desk staff, optional **Works for** one doctor (empty = hospital team at their branch(es)). ChamberQ helpers never appear for the owner; Super Admin adds/removes helpers separately. A lead with branch lock only hires staff for those branches.
+- **Steps:** **Settings → Staff & Roles** — list is grouped by job (Owners / Doctors / Desk staff) with filter chips. Create user → pick **Owner**, **Doctor**, or **Staff (desk + content)**. For **Staff**, optional **Desk jobs** ticks: **Money** (Collect fee + Cashbook + Pharmacy when that module is on), **Queue** (Live Queue + Call next), **Prep** (outdoor vitals + Mark prepped); leave all ticked for one person doing everything. **Lead desk** (owner/helper only) covers all counters and may add/edit **Staff** only — not owners, doctors, or helpers. On multi-branch clinics, optional **Branches** multi-select (empty = all branches; hidden when only one chamber). For desk staff, optional **Works for** one doctor (empty = hospital team at their branch(es)). ChamberQ helpers never appear for the owner; Super Admin adds/removes helpers separately. A lead with branch lock only hires staff for those branches.
 - **Data/systems touched:** `users`, `users.desk_jobs`, `users.desk_is_lead`, `chamber_user`, `users.assigned_doctor_id`.
 - **Success:** Owner can scan who is who at a glance; till / queue / weight counters only see their buttons; lead desk can grow the team without owner passwords; branch-locked reception only sees their roster/queue/cash; a doctor’s assistant only sees that doctor’s sittings.
 
@@ -325,6 +335,13 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 - **Steps:** Super Admin turns on **HR**. **HR → Employees** — add roster (link desk login if they have one). **Attendance** — mark present/late/absent per day. **Leave** — staff requests; owner approves or rejects on the list. **Payroll** — record monthly salary (auto-posts **Salary** expense to cashbook).
 - **Data/systems touched:** `employees`, `attendance_records`, `leave_requests`, `payroll_payments`, `HrPayrollService`.
 - **Success:** Salary and referral payouts both appear in Cashbook; no parallel Excel HR sheet required for day-to-day ops.
+
+### Pharmacy counter (when Pharmacy module on)
+
+- **Trigger:** The chamber sells medicines from a cupboard (or a small shop) and needs the till and the shelf to stay in step — without an online patient checkout.
+- **Steps:** Super Admin ticks **Pharmacy**. Owner (or admin) **Pharmacy stock** — add what this shop actually holds (search the national list, set sell price and company share, receive a box: pay ৳0 / some / full now, mark returnable or bought outright). Desk with the **Money** job opens **Operations → Pharmacy** — pick today’s prescription or a walk-in name, add lines, take cash / bKash / Nagad / card / cash+online (same as Collect fee). Receipt prints. Live qty drops. **Pay supplier** when the company should get its share of what sold (or to record a refund if a returnable box came back after an overpay). Optional **Doctor pharmacy cuts** (Branding % of shop cut, default 0 = off) only on Rx-linked sales; walk-in is ৳0. **Physical count** when the cupboard is counted: type what is on the shelf; the gap is stock history, not a cashbook line. Same-day **Void** undoes the sale.
+- **Data/systems touched:** `pharmacy_items`, `pharmacy_deliveries`, `pharmacy_sales` / `_items`, `pharmacy_counts` / `_items`, `pharmacy_stock_adjustments`, `pharmacy_supplier_settlements`, `pharmacy_doctor_commissions`, `PharmacySaleService` / `PharmacyStockService` / `PharmacySupplierService` / `PharmacyDoctorCommissionService`, cashbook `pharmacy` / `pharmacy_purchase` / `pharmacy_refund` / `pharmacy_supplier_refund` / `pharmacy_doctor_payout`.
+- **Success:** End of day the khata shows the full sell price that came in; the shelf qty matches what was sold/received/counted; the company is owed only for what the deal says (sold vs bought-outright); the doctor is not silently owed a walk-in cut.
 
 ### Stations clinic floor (staff / doctor — when module on)
 - **Trigger:** A pain clinic runs consult / visit / MSK / intervention / report / counseling rooms, outdoor vitals, procedure handoffs, or one-off sitting hours.

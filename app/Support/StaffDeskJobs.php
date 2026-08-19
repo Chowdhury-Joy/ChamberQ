@@ -119,7 +119,7 @@ final class StaffDeskJobs
     public static function jobOptions(): array
     {
         return [
-            self::JOB_MONEY => __('Money — collect fee and cashbook'),
+            self::JOB_MONEY => __('Money — collect fee, cashbook, and pharmacy'),
             self::JOB_QUEUE => __('Queue — call next and live queue'),
             self::JOB_PREP => __('Prep — outdoor vitals and room prep'),
         ];

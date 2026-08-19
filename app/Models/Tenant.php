@@ -63,6 +63,9 @@ class Tenant extends BaseTenant
     /** Opt-in: staff HR (attendance, leave, payroll). Absent flag = off. */
     public const MODULE_HR = 'hr';
 
+    /** Opt-in: in-chamber pharmacy counter + stock. Absent flag = off. */
+    public const MODULE_PHARMACY = 'pharmacy';
+
     /** @return list<string> */
     public static function productModules(): array
     {
@@ -273,6 +276,7 @@ class Tenant extends BaseTenant
             'queue_runner',
             'collect_fee_at_checkin',
             'patient_booking_horizon_days',
+            'pharmacy_doctor_percent',
             'practice_rules',
             'created_at',
             'updated_at',
@@ -327,6 +331,7 @@ class Tenant extends BaseTenant
             'setup_paid_at' => 'datetime',
             'offer_prescription_lifetime_free' => 'boolean',
             'patient_booking_horizon_days' => 'integer',
+            'pharmacy_doctor_percent' => 'integer',
             'offer_prepaid_year_setup' => 'boolean',
             'commission_setup_mr_rate' => 'float',
             'commission_setup_marketer_rate' => 'float',
@@ -391,7 +396,7 @@ class Tenant extends BaseTenant
     public function hasFeature(string $feature): bool
     {
         // Stations is opt-in only — never inherit a tier default.
-        if (in_array($feature, [self::MODULE_STATIONS, self::MODULE_REFERRALS, self::MODULE_HR], true)) {
+        if (in_array($feature, [self::MODULE_STATIONS, self::MODULE_REFERRALS, self::MODULE_HR, self::MODULE_PHARMACY], true)) {
             $flags = $this->feature_flags ?? [];
 
             if (! array_key_exists($feature, $flags)) {
@@ -462,6 +467,11 @@ class Tenant extends BaseTenant
     public function hasHr(): bool
     {
         return $this->hasFeature(self::MODULE_HR);
+    }
+
+    public function hasPharmacy(): bool
+    {
+        return $this->hasFeature(self::MODULE_PHARMACY);
     }
 
     /**
