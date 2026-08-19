@@ -14,8 +14,11 @@ use Carbon\Carbon;
  * whether report / counseling seats are free or paid.
  *
  * Stored as JSON on the tenant (default) and optionally on the doctor
- * (override). Missing keys use defaults that match today’s MUPS paper:
- * follow-up for 3 months, report and counseling free.
+ * (override). Missing follow-up / room-fee keys use a 3-month window and
+ * free report/counseling so the floor still runs before anyone opens
+ * Branding. Outside-GP cuts default to ৳0 — each clinic types its own
+ * amounts. MUPS-sized numbers belong in that clinic’s seed or Branding,
+ * not in PHP constants for every client.
  */
 class PracticeRules
 {
@@ -42,7 +45,10 @@ class PracticeRules
      *     counseling_pricing: string,
      *     counseling_free_for_months: int,
      *     counseling_price_inside_taka: int,
-     *     counseling_price_after_taka: int
+     *     counseling_price_after_taka: int,
+     *     referral_visit_taka: int,
+     *     referral_intervention_taka: int,
+     *     referral_msk_taka: int
      * }
      */
     public static function defaults(): array
@@ -58,6 +64,23 @@ class PracticeRules
             'counseling_free_for_months' => 3,
             'counseling_price_inside_taka' => 0,
             'counseling_price_after_taka' => 0,
+            'referral_visit_taka' => 0,
+            'referral_intervention_taka' => 0,
+            'referral_msk_taka' => 0,
+        ];
+    }
+
+    /**
+     * Clinic-wide money. A doctor’s follow-up override must not zero these.
+     *
+     * @return list<string>
+     */
+    public static function clinicOnlyKeys(): array
+    {
+        return [
+            'referral_visit_taka',
+            'referral_intervention_taka',
+            'referral_msk_taka',
         ];
     }
 
@@ -91,6 +114,9 @@ class PracticeRules
             'counseling_free_for_months' => max(1, (int) ($stored['counseling_free_for_months'] ?? $defaults['counseling_free_for_months'])),
             'counseling_price_inside_taka' => max(0, (int) ($stored['counseling_price_inside_taka'] ?? 0)),
             'counseling_price_after_taka' => max(0, (int) ($stored['counseling_price_after_taka'] ?? 0)),
+            'referral_visit_taka' => max(0, (int) ($stored['referral_visit_taka'] ?? 0)),
+            'referral_intervention_taka' => max(0, (int) ($stored['referral_intervention_taka'] ?? 0)),
+            'referral_msk_taka' => max(0, (int) ($stored['referral_msk_taka'] ?? 0)),
         ];
     }
 
@@ -99,7 +125,9 @@ class PracticeRules
      */
     public static function forDoctor(?Doctor $doctor, ?Tenant $tenant = null): array
     {
-        $clinic = self::normalize($tenant?->practice_rules ?? tenant()?->practice_rules);
+        $tenant = $tenant ?? tenant();
+        $rawClinic = is_array($tenant?->practice_rules) ? $tenant->practice_rules : [];
+        $clinic = self::overlayLegacyReferralFlags(self::normalize($rawClinic), $rawClinic, $tenant?->feature_flags);
 
         if ($doctor === null) {
             return $clinic;
@@ -111,7 +139,13 @@ class PracticeRules
             return $clinic;
         }
 
-        return self::normalize(array_merge($clinic, $override));
+        $merged = self::normalize(array_merge($clinic, $override));
+
+        foreach (self::clinicOnlyKeys() as $key) {
+            $merged[$key] = $clinic[$key];
+        }
+
+        return $merged;
     }
 
     public static function forBooking(Booking $booking): array
@@ -286,5 +320,41 @@ class PracticeRules
         }
 
         return self::PRICING_ALWAYS_FREE;
+    }
+
+    /**
+     * Older Super Admin flags (`referral_*_commission_taka`) still win when
+     * Branding has not stored that key yet.
+     *
+     * @param  array<string, mixed>  $normalized
+     * @param  array<string, mixed>  $rawClinic
+     * @param  array<string, mixed>|null  $flags
+     * @return array<string, mixed>
+     */
+    private static function overlayLegacyReferralFlags(array $normalized, array $rawClinic, ?array $flags): array
+    {
+        if (! is_array($flags)) {
+            return $normalized;
+        }
+
+        $map = [
+            'referral_visit_commission_taka' => 'referral_visit_taka',
+            'referral_intervention_commission_taka' => 'referral_intervention_taka',
+            'referral_msk_commission_taka' => 'referral_msk_taka',
+        ];
+
+        foreach ($map as $flag => $key) {
+            if (array_key_exists($key, $rawClinic)) {
+                continue;
+            }
+
+            if (! array_key_exists($flag, $flags) || $flags[$flag] === '' || $flags[$flag] === null) {
+                continue;
+            }
+
+            $normalized[$key] = max(0, (int) $flags[$flag]);
+        }
+
+        return $normalized;
     }
 }

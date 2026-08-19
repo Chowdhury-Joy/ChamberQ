@@ -63,6 +63,11 @@ class ReferralsAndHrModuleTest extends TestCase
                 Tenant::MODULE_HR,
                 true,
             ),
+            'practice_rules' => [
+                'referral_visit_taka' => 200,
+                'referral_intervention_taka' => 1000,
+                'referral_msk_taka' => 0,
+            ],
         ]);
         Domain::create(['domain' => 'referrals-hr.localhost', 'tenant_id' => 'referrals-hr']);
         tenancy()->initialize($this->tenant);

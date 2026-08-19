@@ -3087,3 +3087,30 @@
  <reason>Like writing in chalk on a whiteboard — the board stayed white while the chalk stayed white. The card has to change colour with the room, not only the words.</reason>
 </decision>
 
+## 2026-08-19T22:15:21+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Pain clinics disagree on when a returning patient is still a follow-up, and whether looking at an MRI or a counseling seat is free. Hard-coding “3 months then new visit” and “report is always free” would force every doctor into MUPS’s paper rule.</context>
+ <action>Store clinic defaults as JSON `tenants.practice_rules` (Branding Settings when Stations is on) and optional `doctors.practice_rules` override. Follow-up window: N months, never expires, or every return is a new visit. After a timed window, the 2nd/3rd/4th return is a new visit path. Report and counseling: always free, always paid, or one ৳ for N months then another ৳ (0 = free). Desk Collect fee and vouchers follow those amounts. Unlimited follow-up also counts a paper-file mark with no ChamberQ visit; a timed window does not. Defaults stay 3 months and always-free rooms so today’s MUPS floor does not change until the owner edits Branding.</action>
+ <reason>Like different restaurants: one gives free refills for 30 minutes, another forever, another never — the till should not bake in one kitchen’s rule. The owner changes it in admin the way they change the visit fee.</reason>
+</decision>
+
+## 2026-08-19T22:26:14+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Outside-GP cuts were ৳200 / ৳1,000 in PHP for every referrals clinic. That is MUPS’s deal, not every client’s.</context>
+ <action>Store visit / intervention / MSK GP cuts on `tenants.practice_rules` (Branding → Outside GP cut). Default ৳0. MUPS and Pain Solution seeds type 200 / 1000 / 0. A migration copies the old PHP amounts onto clinics that already had Referrals on, so live MUPS does not drop to ৳0. Legacy Super Admin feature-flag keys still work until Branding stores that key. Doctor follow-up overrides cannot wipe clinic GP cuts.</action>
+ <reason>Like rent: the software should not assume every shop pays the same landlord the same ৳200. The owner types the cut the way they type the visit fee.</reason>
+</decision>
+
+## 2026-08-19T22:32:01+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Reception and a call centre need to put a patient on next Saturday’s list without opening the public website. Daily Roster walk-in is only for people already at the door today, including extra stools and MSK/OT.</context>
+ <action>Add Operations → Book serial. Same BookingService as the website: published cap, confirmation SMS, only sittings a patient could pick online. Date first, then sitting, then name/phone. Walk-in on Daily Roster / Live Queue is unchanged.</action>
+ <reason>Like a cinema box office versus the door on the night — phone bookings take a reserved seat on a future show; walk-in is for someone already in the lobby. Mixing them would either block the website when staff add an extra stool, or send a call-centre booking into rooms patients cannot book themselves.</reason>
+</decision>
+

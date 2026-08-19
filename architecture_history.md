@@ -800,5 +800,14 @@
 ## 2026-08-19T22:12:45+0600
 - Staff pocket-buzz card (`.staff-buzz-card`) uses theme surfaces in `tenantAdmin/theme.css` so dark mode is not white-on-white.
 
+## 2026-08-19T22:15:21+0600
+- Clinic/doctor `practice_rules` JSON (`PracticeRules`, Branding + Doctors forms): configurable follow-up window and report/counseling prices; `CarePath` and till/vouchers read it instead of a hardcoded 3-month / always-free rule.
+
+## 2026-08-19T22:26:14+0600
+- Outside-GP cuts live on `practice_rules` (Branding); `ReferralCommissionService` no longer hardcodes ৳200 / ৳1,000 for every client.
+
+## 2026-08-19T22:32:01+0600
+- Tenant admin **Book serial** (`Pages/BookSerial` + `StaffBookingForm`): staff book a public sitting on a chosen date without using the patient website.
+
 
 

@@ -156,6 +156,7 @@ class BrandingSettings extends Page implements HasForms
                 ...\App\Filament\TenantAdmin\Support\PracticeRulesForm::fieldsets(
                     '',
                     fn (): bool => tenant()?->hasStations() ?? false,
+                    includeReferral: true,
                 ),
 
                 Fieldset::make(__('Live Queue Settings'))

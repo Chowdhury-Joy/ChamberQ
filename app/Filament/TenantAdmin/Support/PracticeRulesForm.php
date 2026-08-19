@@ -13,7 +13,7 @@ final class PracticeRulesForm
     /**
      * @return list<Fieldset>
      */
-    public static function fieldsets(string $prefix = '', mixed $visible = true): array
+    public static function fieldsets(string $prefix = '', mixed $visible = true, bool $includeReferral = false): array
     {
         $key = fn (string $name): string => $prefix === '' ? $name : $prefix.'.'.$name;
 
@@ -34,6 +34,7 @@ final class PracticeRulesForm
                         ->required(),
                     TextInput::make($key('follow_up_months'))
                         ->label(__('Follow-up lasts this many months'))
+                        ->helperText(__('Type this clinic’s number. Another chamber’s 3 months is not yours unless you choose it.'))
                         ->numeric()
                         ->minValue(1)
                         ->maxValue(120)
@@ -51,6 +52,31 @@ final class PracticeRulesForm
             $sets = array_map(function (Fieldset $set) use ($visible): Fieldset {
                 return $set->visible($visible);
             }, $sets);
+        }
+
+        if ($includeReferral) {
+            $sets[] = Fieldset::make(__('Outside GP cut'))
+                ->visible(fn (): bool => tenant()?->hasReferrals() ?? false)
+                ->schema([
+                    TextInput::make($key('referral_visit_taka'))
+                        ->label(__('Cut per visit (৳)'))
+                        ->helperText(__('What this clinic owes an outside GP when a referred visit fee is collected. 0 means nothing is owed. Not ChamberQ’s ৳200 unless you type 200.'))
+                        ->numeric()
+                        ->minValue(0)
+                        ->default(0),
+                    TextInput::make($key('referral_intervention_taka'))
+                        ->label(__('Cut per intervention (৳)'))
+                        ->helperText(__('Same idea for a procedure fee. Type this clinic’s amount.'))
+                        ->numeric()
+                        ->minValue(0)
+                        ->default(0),
+                    TextInput::make($key('referral_msk_taka'))
+                        ->label(__('Cut per MSK scan (৳)'))
+                        ->helperText(__('0 means the GP gets nothing for a scan. Type a number only if this clinic pays one.'))
+                        ->numeric()
+                        ->minValue(0)
+                        ->default(0),
+                ]);
         }
 
         return $sets;

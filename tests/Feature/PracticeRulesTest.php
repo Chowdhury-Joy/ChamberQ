@@ -179,6 +179,50 @@ class PracticeRulesTest extends TestCase
         $this->assertTrue(PracticeRules::isFollowUpEligible($patient, $this->doctor->fresh()));
     }
 
+    public function test_unset_outside_gp_cuts_are_zero_not_a_hidden_mups_rate(): void
+    {
+        $this->assertSame(0, PracticeRules::forDoctor($this->doctor)['referral_visit_taka']);
+        $this->assertSame(0, app(\App\Services\ReferralCommissionService::class)->visitCommissionTaka($this->tenant));
+    }
+
+    public function test_clinic_sets_outside_gp_cuts_and_a_doctor_follow_up_override_does_not_wipe_them(): void
+    {
+        $this->tenant->update([
+            'practice_rules' => [
+                'referral_visit_taka' => 150,
+                'referral_intervention_taka' => 900,
+                'referral_msk_taka' => 50,
+            ],
+        ]);
+        tenancy()->initialize($this->tenant->fresh());
+
+        $this->assertSame(150, app(\App\Services\ReferralCommissionService::class)->visitCommissionTaka($this->tenant->fresh()));
+        $this->assertSame(900, app(\App\Services\ReferralCommissionService::class)->interventionCommissionTaka($this->tenant->fresh()));
+        $this->assertSame(50, app(\App\Services\ReferralCommissionService::class)->mskCommissionTaka($this->tenant->fresh()));
+
+        $this->doctor->update([
+            'practice_rules' => [
+                'follow_up_window' => PracticeRules::FOLLOW_UP_MONTHS,
+                'follow_up_months' => 6,
+            ],
+        ]);
+
+        $this->assertSame(150, PracticeRules::forDoctor($this->doctor->fresh())['referral_visit_taka']);
+        $this->assertSame(6, PracticeRules::forDoctor($this->doctor->fresh())['follow_up_months']);
+    }
+
+    public function test_legacy_feature_flag_gp_cut_still_applies_when_branding_has_no_key(): void
+    {
+        $this->tenant->update([
+            'feature_flags' => array_merge($this->tenant->feature_flags ?? [], [
+                'referral_msk_commission_taka' => 400,
+            ]),
+        ]);
+        tenancy()->initialize($this->tenant->fresh());
+
+        $this->assertSame(400, app(\App\Services\ReferralCommissionService::class)->mskCommissionTaka($this->tenant->fresh()));
+    }
+
     private function sitting(string $kind, string $name, int $day): ScheduleSession
     {
         return ScheduleSession::create([
@@ -253,7 +297,10 @@ class PracticeRulesTest extends TestCase
             'patient_id' => $patient->id,
             'patient_name' => $patient->name,
             'patient_phone' => $patient->phone,
-            'serial_number' => 1,
+            'serial_number' => Booking::query()
+                ->where('bookable_id', $this->report->id)
+                ->where('booking_date', Carbon::today()->toDateString())
+                ->count() + 1,
             'status' => 'waiting',
             'care_path' => CarePath::VISIT,
             'care_origin_id' => $origin->id,

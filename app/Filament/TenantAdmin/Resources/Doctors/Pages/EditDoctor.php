@@ -51,7 +51,11 @@ class EditDoctor extends EditRecord
         if ($inherit) {
             $data['practice_rules'] = null;
         } else {
-            $data['practice_rules'] = \App\Services\PracticeRules::normalize($data);
+            $rules = \App\Services\PracticeRules::normalize($data);
+            foreach (\App\Services\PracticeRules::clinicOnlyKeys() as $key) {
+                unset($rules[$key]);
+            }
+            $data['practice_rules'] = $rules;
         }
 
         foreach (array_keys(\App\Services\PracticeRules::defaults()) as $key) {

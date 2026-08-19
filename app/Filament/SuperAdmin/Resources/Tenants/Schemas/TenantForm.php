@@ -171,7 +171,7 @@ class TenantForm
                             ->default(false),
                         Checkbox::make('module_referrals')
                             ->label(__('Referrals — outside GP commissions'))
-                            ->helperText(__('Track referring doctors and owe ৳200 per visit / ৳1,000 per intervention (defaults). Separate from ChamberQ marketer commissions.'))
+                            ->helperText(__('Track referring doctors. Visit / intervention / MSK cuts are set by the clinic in Branding Settings. Separate from ChamberQ marketer commissions.'))
                             ->default(false),
                         Checkbox::make('module_hr')
                             ->label(__('HR — staff attendance, leave, payroll'))

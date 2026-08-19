@@ -285,6 +285,7 @@
     "Reference only, and not a complete list — use your own judgement.": "শুধু তথ্যসূত্র, সম্পূর্ণ তালিকা নয় — নিজের বিবেচনা ব্যবহার করুন।",
     "Reg. No.": "রেজি. নং",
     "Repeat whole visit": "পুরো ভিজিট রিপিট",
+    "Report": "রিপোর্ট",
     "Report review": "রিপোর্ট দেখানো",
     "Required once so call chimes and voice announcements can play on this screen": "কলের ঘণ্টা ও কণ্ঠস্বর চালানোর জন্য একবার প্রয়োজন",
     "Rx packs": "রেসিপি প্যাক",
@@ -903,5 +904,12 @@
     "No intervention sitting is scheduled for this doctor on that date.": "সেই তারিখে এই ডাক্তারের কোনো ইন্টারভেনশন সিটিং নেই।",
     "No counseling sitting is scheduled for this doctor on that date.": "সেই তারিখে এই ডাক্তারের কোনো কাউন্সেলিং সিটিং নেই।",
     "Next": "পরবর্তী",
-    "Running late": "দেরি হচ্ছে"
+    "Running late": "দেরি হচ্ছে",
+    "Any open sitting day from today through the booking window. Same window as the public website.": "আজ থেকে বুকিং উইন্ডোর শেষ দিন পর্যন্ত যেকোনো খোলা সিটিং। পাবলিক ওয়েবসাইটের একই উইন্ডো।",
+    "Visit sittings only — same rooms a patient can pick on the website. Walk-ins onto today’s MSK or OT stay on Daily Roster.": "শুধু ভিজিট সিটিং — রোগী ওয়েবসাইটে যে রুম বেছে নিতে পারে। আজকের MSK বা OT ওয়াক-ইন Daily Roster-এই থাকবে।",
+    "That sitting is not bookable from this page.": "এই পাতা থেকে সেই সিটিং বুক করা যায় না।",
+    "Hello :name, your serial is :serial on :date.": "হ্যালো :name, :date তারিখে আপনার সিরিয়াল :serial।",
+    "Serial :n booked for :date": ":date তারিখের জন্য সিরিয়াল :n বুক হয়েছে",
+    "A confirmation SMS will go if the wallet has credit. You can also send WhatsApp or open the ticket.": "ওয়ালেটে ক্রেডিট থাকলে কনফার্মেশন এসএমএস যাবে। হোয়াটসঅ্যাপ পাঠাতে বা টিকেট খুলতে পারেন।",
+    "For a phone call or the front desk when the patient is not standing in the queue. Pick the date first. New Walk-In on Daily Roster is still for today only.": "ফোন কল বা ফ্রন্ট ডেস্কের জন্য, যখন রোগী লাইনে দাঁড়িয়ে নেই। আগে তারিখ বাছুন। Daily Roster-এর New Walk-In শুধু আজকের জন্য।"
 }

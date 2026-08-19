@@ -45,6 +45,11 @@ class PainSolutionStationsSeeder extends Seeder
             'sms_balance' => 200,
             'billing_status' => 'active',
             'queue_runner' => Tenant::QUEUE_RUNNER_STAFF,
+            'practice_rules' => \App\Services\PracticeRules::normalize([
+                'referral_visit_taka' => 200,
+                'referral_intervention_taka' => 1000,
+                'referral_msk_taka' => 0,
+            ]),
             'feature_flags' => Tenant::mergeOptInModuleFlag(
                 Tenant::mergeOptInModuleFlag(
                     Tenant::mergeStationsFlag(

@@ -17,23 +17,19 @@ use InvalidArgumentException;
 
 class ReferralCommissionService
 {
-    public const DEFAULT_VISIT_TAKA = 200;
-
-    public const DEFAULT_INTERVENTION_TAKA = 1000;
-
     public function visitCommissionTaka(?Tenant $tenant = null): int
     {
-        return $this->rateFromTenant($tenant, 'referral_visit_commission_taka', self::DEFAULT_VISIT_TAKA);
+        return (int) PracticeRules::forDoctor(null, $tenant)['referral_visit_taka'];
     }
 
     public function interventionCommissionTaka(?Tenant $tenant = null): int
     {
-        return $this->rateFromTenant($tenant, 'referral_intervention_commission_taka', self::DEFAULT_INTERVENTION_TAKA);
+        return (int) PracticeRules::forDoctor(null, $tenant)['referral_intervention_taka'];
     }
 
     public function mskCommissionTaka(?Tenant $tenant = null): int
     {
-        return $this->rateFromTenant($tenant, 'referral_msk_commission_taka', 0);
+        return (int) PracticeRules::forDoctor(null, $tenant)['referral_msk_taka'];
     }
 
     /**
@@ -231,17 +227,5 @@ class ReferralCommissionService
             ReferralCommission::KIND_MSK => $this->mskCommissionTaka($tenant),
             default => 0,
         };
-    }
-
-    private function rateFromTenant(?Tenant $tenant, string $key, int $default): int
-    {
-        $flags = $tenant?->feature_flags ?? [];
-        $value = $flags[$key] ?? null;
-
-        if ($value === null || $value === '') {
-            return $default;
-        }
-
-        return max(0, (int) $value);
     }
 }
