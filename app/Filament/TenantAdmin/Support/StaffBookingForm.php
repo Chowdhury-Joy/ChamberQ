@@ -25,7 +25,7 @@ use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 
 /**
- * Phone / call-centre booking: date, visit type, sitting, then the patient.
+ * Phone / call-centre booking and desk walk-ins: visit type, sitting, patient.
  */
 final class StaffBookingForm
 {

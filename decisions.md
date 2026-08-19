@@ -3195,3 +3195,21 @@
  <reason>MUPS wanting three days is a setting on that clinic, like their phone number — not a rule in the product named after them.</reason>
 </decision>
 
+## 2026-08-20T00:39:34+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Book serial already asked Usual / Follow-up / Intervention / Lab, but a walk-in at the door still only had name, phone, and a paper-file tick.</context>
+ <action>Daily Roster and Live Queue **New Walk-In** use the same `StaffBookingForm` visit types. Walk-in stays **today**, extra stools, and ended-today allowed. Live Queue is already on the open sitting (visit rooms → Usual/Follow-up; OT → Intervention type; MSK → Lab). Follow-up stamps the paper-file returning mark. Report and counseling stay floor handoffs. The roster row action **Old patient (paper file)** remains.</action>
+ <reason>The person at the door is asked the same “new, follow-up, procedure, or scan?” as a phone booking — not a different form because they walked in.</reason>
+</decision>
+
+## 2026-08-20T00:39:34+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>After desk jobs were split, every staff login still opened the stats dashboard. A queue-only person then had to hunt Live Queue; a money-only person had to hunt Cashbook.</context>
+ <action>`FilamentPanelUrl::home()` (login, sidebar logo, and a visit to `/admin`) sends a staff login with **exactly one** job to that page: Queue → Live Queue Control, Money → Cashbook, Prep → Daily Roster. Lead desk, all three jobs, or two jobs still open the dashboard. Doctors with Prescription still open Consult Screen first.</action>
+ <reason>Like putting a cashier at the till and a caller at the queue board — they start the shift where they work, not at a noticeboard they do not use.</reason>
+</decision>
+

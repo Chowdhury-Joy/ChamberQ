@@ -16,7 +16,6 @@ use App\Filament\TenantAdmin\Support\StaffBookingForm;
 use App\Models\Booking;
 use App\Models\Doctor;
 use App\Models\LiveSession;
-use App\Models\Patient;
 use Carbon\Carbon;
 use App\Exceptions\BookingUnavailableException;
 use App\Services\LiveSessionService;
@@ -28,7 +27,6 @@ use App\Support\StaffDeskScope;
 use Filament\Forms\Components\Placeholder;
 use Filament\Forms\Components\Select;
 use Filament\Schemas\Components\Utilities\Get;
-use Filament\Schemas\Components\Utilities\Set;
 
 class DailyRoster extends Page implements HasTable, HasForms
 {
@@ -382,67 +380,6 @@ class DailyRoster extends Page implements HasTable, HasForms
                     })
                     ->successNotificationTitle(__('Walk-in added to today\'s queue.'))
             ]);
-    }
-
-    /**
-     * Today's bookable sessions and lab windows, labelled so staff can tell two
-     * identically-named sessions apart.
-     *
-     * @return array<string, string>
-     */
-    protected static function todaysBookableOptions(): array
-    {
-        $today = today()->dayOfWeek;
-        $options = [];
-
-        $sessionsQuery = ScheduleSession::with(['doctor', 'chamber'])
-            ->where('day_of_week', $today);
-
-        $user = auth()->user();
-        if ($user instanceof \App\Models\User) {
-            StaffDeskScope::constrainScheduleSessions($sessionsQuery, $user);
-        }
-
-        $sessions = $sessionsQuery->get();
-
-        foreach ($sessions as $session) {
-            $kindSuffix = (tenant()?->hasStations() && filled($session->kind))
-                ? ' · '.($session->kindLabel() ?? $session->kind)
-                : '';
-
-            $options['session:' . $session->id] = sprintf(
-                '%s — %s (%s, %s–%s)%s',
-                $session->doctor?->name ?? __('Unknown doctor'),
-                $session->chamber?->name ?? __('Unknown chamber'),
-                $session->session_name,
-                Carbon::parse($session->start_time)->format('g:i A'),
-                Carbon::parse($session->end_time)->format('g:i A'),
-                $kindSuffix,
-            );
-        }
-
-        if (tenant()?->hasFeature('lab_tests')) {
-            $labQuery = LabCollectionSlot::with('chamber')->where('day_of_week', $today);
-            if ($user instanceof \App\Models\User) {
-                $chamberIds = StaffDeskScope::chamberIdsFor($user);
-                if ($chamberIds !== null) {
-                    $labQuery->whereIn('chamber_id', $chamberIds);
-                }
-            }
-            $slots = $labQuery->get();
-
-            foreach ($slots as $slot) {
-                $options['lab:' . $slot->id] = sprintf(
-                    '%s — %s (%s–%s)',
-                    __('Lab collection'),
-                    $slot->chamber?->name ?? __('Main lab'),
-                    Carbon::parse($slot->start_time)->format('g:i A'),
-                    Carbon::parse($slot->end_time)->format('g:i A'),
-                );
-            }
-        }
-
-        return $options;
     }
 
     /**

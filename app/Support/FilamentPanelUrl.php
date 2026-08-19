@@ -21,8 +21,10 @@ use Illuminate\Support\Facades\Route;
  * multi-domain panels put in their route names stays correct.
  *
  * Doctors with the Prescription module land on Consult Screen — that is their
- * working surface, not the stats dashboard. Staff and the account owner still
- * land on the dashboard. Super Admin and Marketer are unchanged.
+ * working surface, not the stats dashboard. Staff with exactly one desk job
+ * land on that job's page (Live Queue, Cashbook, or Daily Roster). Lead desk,
+ * undivided staff, the account owner, and Super Admin / Marketer still land
+ * on the dashboard.
  */
 class FilamentPanelUrl
 {
@@ -34,12 +36,25 @@ class FilamentPanelUrl
         $panel ??= Filament::getCurrentOrDefaultPanel();
         $tenant ??= self::currentTenantSlug();
 
+        return self::workingSurface($panel, $tenant)
+            ?? self::pageUrl($panel, 'pages.dashboard', $tenant)
+            ?? $panel->getUrl();
+    }
+
+    /**
+     * Consult Screen or a single-job desk page; null means the dashboard.
+     */
+    public static function workingSurface(?Panel $panel = null, ?string $tenant = null): ?string
+    {
+        $panel ??= Filament::getCurrentOrDefaultPanel();
+        $tenant ??= self::currentTenantSlug();
+
         $consult = self::consultScreen($panel, $tenant);
         if ($consult !== null) {
             return $consult;
         }
 
-        return self::pageUrl($panel, 'pages.dashboard', $tenant) ?? $panel->getUrl();
+        return self::staffDeskHome($panel, $tenant);
     }
 
     /**
@@ -67,6 +82,25 @@ class FilamentPanelUrl
         $user = auth()->user();
 
         return $user instanceof User && $user->landsOnConsultScreen();
+    }
+
+    private static function staffDeskHome(Panel $panel, ?string $tenant): ?string
+    {
+        if (! in_array($panel->getId(), self::TENANT_ADMIN_PANEL_IDS, true)) {
+            return null;
+        }
+
+        $user = auth()->user();
+        if (! $user instanceof User) {
+            return null;
+        }
+
+        $relative = StaffDeskJobs::loginPageRelativeName($user);
+        if ($relative === null) {
+            return null;
+        }
+
+        return self::pageUrl($panel, $relative, $tenant);
     }
 
     private static function pageUrl(Panel $panel, string $relativeName, ?string $tenant): ?string

@@ -152,6 +152,7 @@ class LiveQueueControlPageTest extends TestCase
             ->fillForm([
                 'patient_phone' => '01711112222',
                 'patient_name' => 'Joy Walk-In',
+                'visit_type' => 'usual',
                 'share_clinical_history' => true,
             ])
             ->callMountedAction()

@@ -122,7 +122,7 @@ class PatientSeenBeforeSoftwareTest extends TestCase
         $this->assertSame('visits_no_notes', $patient->fresh()->consultHistoryState());
     }
 
-    public function test_walk_in_checkbox_stamps_the_paper_mark_on_a_new_file(): void
+    public function test_walk_in_follow_up_stamps_the_paper_mark_on_a_new_file(): void
     {
         Filament::setCurrentPanel('tenantAdmin');
         $this->actingAs($this->staff);
@@ -130,10 +130,10 @@ class PatientSeenBeforeSoftwareTest extends TestCase
         Livewire::test(DailyRoster::class)
             ->mountTableAction('newWalkIn')
             ->fillForm([
+                'visit_type' => 'followup',
+                'bookable' => 'session:'.$this->session->id,
                 'patient_phone' => '01711112222',
                 'patient_name' => 'Fatima Rahman',
-                'bookable' => 'session:'.$this->session->id,
-                'seen_before_software' => true,
             ])
             ->callMountedAction()
             ->assertHasNoActionErrors();

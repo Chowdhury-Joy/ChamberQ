@@ -833,5 +833,8 @@
 ## 2026-08-20T00:20:55+0600
 - Booking window is only platform_settings plus optional per-tenant days — no MUPS/60 special case in seed or copy.
 
+## 2026-08-20T00:39:34+0600
+- Daily Roster and Live Queue **New Walk-In** share `StaffBookingForm` visit types (today, overflow, ended-today); Follow-up replaces the walk-in paper-file checkbox. Single-job staff login home is Live Queue / Cashbook / Daily Roster.
+
 
 

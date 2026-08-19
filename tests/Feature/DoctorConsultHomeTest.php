@@ -119,6 +119,65 @@ class DoctorConsultHomeTest extends TestCase
 
         $this->assertStringContainsString('/solo/admin', $home);
         $this->assertStringNotContainsString('consult-screen', $home);
+        $this->assertStringNotContainsString('live-queue-control', $home);
+        $this->assertStringNotContainsString('cashbook', $home);
+    }
+
+    public function test_queue_only_staff_land_on_live_queue(): void
+    {
+        $this->onPathPanel();
+        $staff = $this->makeUser(User::ROLE_STAFF, 'queue@solo.com');
+        $staff->update(['desk_jobs' => [\App\Support\StaffDeskJobs::JOB_QUEUE]]);
+        $this->actingAs($staff->fresh());
+
+        $home = FilamentPanelUrl::home(Filament::getPanel('tenantAdminPath'));
+
+        $this->assertStringContainsString('/solo/admin/live-queue-control', $home);
+    }
+
+    public function test_money_only_staff_land_on_cashbook(): void
+    {
+        $this->onPathPanel();
+        $staff = $this->makeUser(User::ROLE_STAFF, 'money@solo.com');
+        $staff->update(['desk_jobs' => [\App\Support\StaffDeskJobs::JOB_MONEY]]);
+        $this->actingAs($staff->fresh());
+
+        $home = FilamentPanelUrl::home(Filament::getPanel('tenantAdminPath'));
+
+        $this->assertStringContainsString('/solo/admin/cashbook', $home);
+    }
+
+    public function test_prep_only_staff_land_on_daily_roster(): void
+    {
+        $this->onPathPanel();
+        $staff = $this->makeUser(User::ROLE_STAFF, 'prep@solo.com');
+        $staff->update(['desk_jobs' => [\App\Support\StaffDeskJobs::JOB_PREP]]);
+        $this->actingAs($staff->fresh());
+
+        $home = FilamentPanelUrl::home(Filament::getPanel('tenantAdminPath'));
+
+        $this->assertStringContainsString('/solo/admin/daily-roster', $home);
+    }
+
+    public function test_signing_in_as_queue_staff_lands_on_live_queue(): void
+    {
+        $this->onPathPanel();
+        $staff = $this->makeUser(User::ROLE_STAFF, 'queue-login@solo.com');
+        $staff->update(['desk_jobs' => [\App\Support\StaffDeskJobs::JOB_QUEUE]]);
+
+        $response = Livewire::test(Login::class)
+            ->fillForm([
+                'email' => 'queue-login@solo.com',
+                'password' => 'password',
+            ])
+            ->call('authenticate');
+
+        $response->assertHasNoFormErrors();
+
+        $target = $response->effects['redirect'] ?? null;
+
+        $this->assertNotNull($target, 'Login did not redirect anywhere.');
+        $this->assertStringContainsString('/solo/admin/live-queue-control', $target);
     }
 
     public function test_doctor_without_prescription_module_stays_on_the_dashboard(): void

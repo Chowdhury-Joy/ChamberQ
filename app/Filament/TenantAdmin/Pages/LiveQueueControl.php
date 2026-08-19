@@ -3,29 +3,24 @@
 namespace App\Filament\TenantAdmin\Pages;
 
 use App\Filament\TenantAdmin\Concerns\AppliesVisitNotesDrafts;
-use App\Filament\TenantAdmin\Resources\Patients\Schemas\PatientForm;
 use App\Filament\TenantAdmin\Support\CollectFeeAction;
+use App\Filament\TenantAdmin\Support\StaffBookingForm;
 use App\Filament\TenantAdmin\Support\CompleteBookingWithVisitNotes;
 use App\Filament\TenantAdmin\Support\DeskActionLayout;
 use App\Filament\TenantAdmin\Support\QueueRecordActions;
 use App\Filament\TenantAdmin\Support\StationsHandoffForm;
 use App\Filament\TenantAdmin\Support\VisitNotesFormSchema;
-use App\Models\Patient;
 use App\Models\ScheduleSession;
 use App\Models\LiveSession;
 use App\Models\User;
 use App\Support\StaffDeskScope;
 use App\Services\LiveSessionService;
-use App\Services\PatientService;
 use App\Services\SittingPrompt;
 use Carbon\Carbon;
 use Filament\Pages\Page;
 use Filament\Actions\Action;
-use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
-use Filament\Schemas\Components\Utilities\Get;
-use Filament\Schemas\Components\Utilities\Set;
 use Filament\Notifications\Notification;
 use Filament\Support\Colors\Color;
 use Filament\Actions\Concerns\InteractsWithActions;
@@ -152,131 +147,32 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                 ->label('New Walk-In')
                 ->icon('heroicon-o-user-plus')
                 ->visible(fn () => $this->selectedSessionId !== null)
-                ->schema([
-                    TextInput::make('patient_phone')
-                        ->label(__('Phone number'))
-                        ->extraInputAttributes([
-                            'name' => 'patient_phone',
-                            'form' => 'cq-no-native-form',
-                        ])
-                        ->autocomplete('tel')
-                        ->tel()
-                        ->required()
-                        ->live(debounce: 400)
-                        ->afterStateUpdated(function (?string $state, Set $set): void {
-                            $set('patient_id', null);
-                            $set('patient_name', '');
-                        })
-                        ->rule('regex:/^(?:\+?88)?01[3-9]\d{8}$/')
-                        ->validationMessages([
-                            'regex' => __('Please enter a valid Bangladeshi mobile number, for example 01712345678.'),
-                        ]),
-                    Select::make('patient_id')
-                        ->label(__('Who is this for?'))
-                        ->options(function (Get $get): array {
-                            $phone = $get('patient_phone');
+                ->schema(fn (): array => StaffBookingForm::liveQueueWalkInComponents(
+                    ScheduleSession::find($this->selectedSessionId),
+                ))
+                ->fillForm(function (): array {
+                    $session = ScheduleSession::find($this->selectedSessionId);
+                    $types = StaffBookingForm::visitTypeOptionsForSitting($session);
 
-                            if (blank($phone)) {
-                                return [];
-                            }
-
-                            $patients = app(PatientService::class)->patientsForPhone($phone);
-
-                            if ($patients->isEmpty()) {
-                                return [];
-                            }
-
-                            return $patients
-                                ->mapWithKeys(fn (Patient $patient) => [$patient->id => $patient->pickerLabel()])
-                                ->put('__new__', __('Someone new'))
-                                ->all();
-                        })
-                        ->visible(function (Get $get): bool {
-                            $phone = $get('patient_phone');
-
-                            if (blank($phone)) {
-                                return false;
-                            }
-
-                            return app(PatientService::class)->patientsForPhone($phone)->isNotEmpty();
-                        })
-                        ->native(false)
-                        ->live()
-                        ->afterStateUpdated(function (?string $state, Set $set): void {
-                            if ($state && $state !== '__new__') {
-                                $patient = Patient::find($state);
-                                $set('patient_name', $patient?->name ?? '');
-                            }
-                        }),
-                    TextInput::make('patient_name')
-                        ->label(__('Patient name'))
-                        ->extraInputAttributes([
-                            'name' => 'patient_name',
-                            'form' => 'cq-no-native-form',
-                        ])
-                        ->autocomplete('name')
-                        ->required(),
-                    PatientForm::yearOfBirthInput(),
-                    TextInput::make('nid')
-                        ->label(__('NID number (optional)'))
-                        ->helperText(__('From the national ID card — helps reconnect records if the phone number changes.'))
-                        ->maxLength(17)
-                        ->rule(fn () => function (string $attribute, mixed $value, \Closure $fail): void {
-                            if (filled($value) && ! \App\Support\BdNid::isValid((string) $value)) {
-                                $fail(__('Please enter a valid NID (10 or 13 digits), or leave it blank.'));
-                            }
-                        }),
-                    Checkbox::make('share_clinical_history')
-                        ->label(__('Share health records with other ChamberQ doctors'))
-                        ->helperText(__('Visit notes and prescriptions can help the next ChamberQ doctor treat this patient safely. Voice notes and photos stay in this clinic.'))
-                        ->default(true),
-                    Checkbox::make('seen_before_software')
-                        ->label(__('They have been treated here before ChamberQ'))
-                        ->helperText(__('Tick if they are an old paper-file patient. The doctor will see them as returning, not a first visit. You can also tap this on their row later.'))
-                        ->default(false),
-                    Select::make('referring_doctor_id')
-                        ->label(__('Referred by (outside GP)'))
-                        ->options(fn (): array => \App\Models\ReferringDoctor::query()
-                            ->where('is_active', true)
-                            ->orderBy('name')
-                            ->get()
-                            ->mapWithKeys(fn (\App\Models\ReferringDoctor $doctor) => [$doctor->id => $doctor->displayLabel()])
-                            ->all())
-                        ->placeholder(__('Walk-in / no referrer'))
-                        ->searchable()
-                        ->native(false)
-                        ->visible(fn (): bool => tenant()?->hasReferrals() ?? false),
-                ])
-                ->action(function (array $data, BookingService $bookingService) {
+                    return [
+                        'visit_type' => array_key_first($types) ?? StaffBookingForm::TYPE_USUAL,
+                        'lab_type' => $session?->kind === ScheduleSession::KIND_MSK
+                            ? StaffBookingForm::LAB_MSK
+                            : null,
+                        'share_clinical_history' => true,
+                    ];
+                })
+                ->action(function (array $data) {
                     $bookable = ScheduleSession::findOrFail($this->selectedSessionId);
 
-                    $patientId = ($data['patient_id'] ?? null) === '__new__'
-                        ? null
-                        : ($data['patient_id'] ?? null);
-
                     try {
-                        $bookingService->createBookingForBookable(
-                            $bookable,
+                        StaffBookingForm::createFromState(
+                            $data,
                             Carbon::today()->toDateString(),
-                            $data['patient_name'],
-                            $data['patient_phone'],
-                            [],
-                            sendSms: true,
-                            patientId: $patientId,
-                            wantsEarlierDate: false,
-                            whatsappPhone: null,
-                            shareClinicalHistory: array_key_exists('share_clinical_history', $data)
-                                ? (bool) $data['share_clinical_history']
-                                : true,
-                            nid: $data['nid'] ?? null,
-                            yearOfBirth: filled($data['year_of_birth'] ?? null) ? (int) $data['year_of_birth'] : null,
                             allowOverflow: true,
                             allowEndedToday: true,
-                            seenBeforeSoftware: ! empty($data['seen_before_software']) ? true : null,
-                            allowMskWalkIn: $bookable->kind === ScheduleSession::KIND_MSK,
-                            referringDoctorId: filled($data['referring_doctor_id'] ?? null)
-                                ? (int) $data['referring_doctor_id']
-                                : null,
+                            sendSms: true,
+                            forcedBookable: $bookable,
                         );
                     } catch (BookingUnavailableException $e) {
                         Notification::make()

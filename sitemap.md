@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-20T00:20:55+0600
+Last Updated: 2026-08-20T00:39:34+0600
 
 ## Full Site Map
 
@@ -49,7 +49,7 @@ Same central host; tenant identified by URL slug (tenant `id`), e.g. `drkarim`.
 | `/{slug}/blog/{slug}` | Single blog article | public |
 | `/{slug}/doctors` | Clinic doctor profiles listing (clinic tier only) | public |
 | `/{slug}/doctors/{slug}` | Single doctor public profile | public |
-| `/{slug}/admin` | Tenant staff Filament panel (staff/admin land on the dashboard; a doctor with **Prescription** is sent to Consult Screen) | staff / doctor / admin login |
+| `/{slug}/admin` | Tenant staff Filament panel (owner and undivided staff land on the dashboard; a doctor with **Prescription** is sent to Consult Screen; queue-only / money-only / prep-only staff land on Live Queue / Cashbook / Daily Roster) | staff / doctor / admin login |
 | `/{slug}/admin/consult-screen` | Doctor's working pad — auto-follows the patient in the chamber | doctor login (**Prescription**) |
 | `/{slug}/admin/book-serial` | Book a patient onto a chosen date (same seats as the website) | staff / admin (`canWorkDesk` or owner; **Front door**) |
 | `/{slug}/admin/cashbook` | Desk khata: income, expense, net, waived (day/week/month) | staff / doctor / admin |
@@ -88,7 +88,7 @@ When a doctor connects their own domain (e.g. `drkarim.com`), routes live at the
 | `/screen/{session}/{date}` | Outdoor waiting-room display for a specific date (legacy) | public (throttled) |
 | `/lang/{locale}` | Switch session locale `en` / `bn`. Same-host Referer only (off-site Referer is ignored). Signed-in chamber staff with no Referer return to `/admin`; guests stay on the public site | public |
 | `/manifest.webmanifest`, `/sw.js`, `/pwa-icon-{192\|512}.svg` | PWA bits (`sw.js` does not intercept `/admin` or `/livewire/`) | public |
-| `/admin` | Tenant staff Filament panel (staff/admin land on the dashboard; a doctor with **Prescription** is sent to Consult Screen) | staff / doctor / admin login |
+| `/admin` | Tenant staff Filament panel (owner and undivided staff land on the dashboard; a doctor with **Prescription** is sent to Consult Screen; queue-only / money-only / prep-only staff land on Live Queue / Cashbook / Daily Roster) | staff / doctor / admin login |
 | `/admin/consult-screen` | Doctor's working pad — auto-follows the patient in the chamber | doctor login (**Prescription**) |
 | `/admin/book-serial` | Book a patient onto a chosen date (same seats as the website) | staff / admin (`canWorkDesk` or owner; **Front door**) |
 | `/admin/cashbook` | Desk khata: income, expense, net, waived (day/week/month) | staff / doctor / admin |
@@ -224,7 +224,7 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 
 ### Book a serial from the desk or call centre (chosen date)
 - **Trigger:** Someone phones (or a receptionist books for a relative) for a sitting that is **not** “already standing at the door today.”
-- **Steps:** Staff or owner → **Operations → Book serial** → pick **date** → pick **visit type** (Usual, Follow-up, Intervention if Stations is on, Lab if Stations or lab tests) → if Intervention and the fee list has procedures, pick **intervention type** (PRP, epidural, …) → if Lab, pick **lab type** (MSK, a named test, or collection window) → pick the matching **sitting** → name and phone → optional Different WhatsApp → Book. Confirmation modal (WhatsApp / Open ticket / Done). SMS uses the call number. Report / counseling stay on the floor handoff, not this page. **New Walk-In** on Daily Roster / Live Queue stays for people already at the chamber **today**.
+- **Steps:** Staff or owner → **Operations → Book serial** → pick **date** → pick **visit type** (Usual, Follow-up, Intervention if Stations is on, Lab if Stations or lab tests) → if Intervention and the fee list has procedures, pick **intervention type** (PRP, epidural, …) → if Lab, pick **lab type** (MSK, a named test, or collection window) → pick the matching **sitting** → name and phone → optional Different WhatsApp → Book. Confirmation modal (WhatsApp / Open ticket / Done). SMS uses the call number. Report / counseling stay on the floor handoff, not this page. **New Walk-In** on Daily Roster / Live Queue is the same visit types for people already at the chamber **today** (overflow stools; Live Queue is already on that sitting).
 - **Data/systems touched:** `BookingService::createBookingForBookable` (`allowOverflow` false, `sendSms` true), `schedule_sessions`, `bookings` (optional `fee_catalog_item_id`), optional `SendBookingConfirmation`.
 - **Success:** The serial appears on Daily Roster when staff pick that date; the published cap is full when the website would also say full.
 
@@ -246,6 +246,12 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 - **Key CTA:** Save (desk) or Write prescription (phone) → Complete visit → Print / Send via WhatsApp → Call next patient.
 - **Note:** Everything the pad fills is a proposal on a document the doctor signs — visible, editable, cleared in one keystroke, and never committed until Save. Nothing is learned from what he prescribes: packs and My medicines entries only ever come from an explicit tap. If the internet drops mid-consult, Save & print still work on this computer; Call next stays frozen until the line is back.
 - **Success:** Doctor sees correct person and honest history state; visit notes saved when provided; the prescription can be printed or sent before the next patient is called; the shared link and portal show the full clinical pad for that prescription (voice/photo stay doctor-only); ticket itself still shows no clinical data.
+
+### Desk staff sign-in (divided jobs)
+- **Trigger:** Owner ticked only Money, only Queue, or only Prep on a Staff login.
+- **Steps:** That person signs in (or taps the sidebar logo, or opens `/{slug}/admin`). They land on **Cashbook**, **Live Queue Control**, or **Daily Roster** — the page they were hired for. Lead desk and staff with every job (or more than one job) still open the stats dashboard.
+- **Data/systems touched:** `users.desk_jobs`, `FilamentPanelUrl::home()`, `StaffDeskJobs::loginPageRelativeName()`.
+- **Success:** A queue-only login is not dumped on the dashboard they never use.
 
 ### Visiting day / camp (doctor — bad internet away from the chamber)
 - **Trigger:** Doctor will sit somewhere with unstable internet (village camp, second chamber, outreach), or the main chamber line is expected to drop.
@@ -367,6 +373,6 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 
 ### Patient records — lookup and corrections (admin/doctor)
 - **Trigger:** Staff need to see who has visited, fix a duplicate person, move a visit to the right household member, or mark someone treated on paper before ChamberQ as a returning patient.
-- **Steps:** Tenant admin → **Patients** (search by name/phone) → edit demographics including **Seen here before ChamberQ**, or use **Join two records** / **Move a visit**. Desk staff (who cannot open Patients) tick **They have been treated here before ChamberQ** on a walk-in, or tap **For follow up** / **Mark as first visit** on Daily Roster or Live Queue. Run `php artisan patients:backfill` once per environment to link legacy bookings (use `--dry-run` first).
+- **Steps:** Tenant admin → **Patients** (search by name/phone) → edit demographics including **Seen here before ChamberQ**, or use **Join two records** / **Move a visit**. Desk staff (who cannot open Patients) pick **Follow-up** on a walk-in, or tap **For follow up** / **Mark as first visit** on Daily Roster or Live Queue. Run `php artisan patients:backfill` once per environment to link legacy bookings (use `--dry-run` first).
 - **Data/systems touched:** `patients`, `patients.seen_before_software`, `bookings.patient_id`.
 - **Success:** Each person has one record; family members on one phone can each book the same day; staff can merge mistaken duplicates; a paper-file patient is not labelled a first visit.

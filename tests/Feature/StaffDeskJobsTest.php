@@ -276,4 +276,29 @@ class StaffDeskJobsTest extends TestCase
 
         tenancy()->end();
     }
+
+    public function test_a_single_desk_job_picks_that_page_as_login_home(): void
+    {
+        tenancy()->initialize($this->tenant);
+
+        $this->assertSame(
+            'pages.live-queue-control',
+            StaffDeskJobs::loginPageRelativeName($this->makeStaff('q@desk.test', [StaffDeskJobs::JOB_QUEUE])),
+        );
+        $this->assertSame(
+            'pages.cashbook',
+            StaffDeskJobs::loginPageRelativeName($this->makeStaff('m@desk.test', [StaffDeskJobs::JOB_MONEY])),
+        );
+        $this->assertSame(
+            'pages.daily-roster',
+            StaffDeskJobs::loginPageRelativeName($this->makeStaff('p@desk.test', [StaffDeskJobs::JOB_PREP])),
+        );
+        $this->assertNull(StaffDeskJobs::loginPageRelativeName($this->makeStaff('all@desk.test')));
+        $this->assertNull(StaffDeskJobs::loginPageRelativeName($this->makeStaff('lead@desk.test', lead: true)));
+        $this->assertNull(StaffDeskJobs::loginPageRelativeName(
+            $this->makeStaff('two@desk.test', [StaffDeskJobs::JOB_MONEY, StaffDeskJobs::JOB_QUEUE]),
+        ));
+
+        tenancy()->end();
+    }
 }

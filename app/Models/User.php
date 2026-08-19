@@ -310,8 +310,8 @@ class User extends Authenticatable implements FilamentUser, CanResetPasswordCont
 
     /**
      * After login, open Consult Screen instead of the stats dashboard.
-     * Doctors with Prescription land there; staff and the account owner stay
-     * on the dashboard.
+     * Doctors with Prescription land there. Staff with one desk job land on
+     * that job's page via FilamentPanelUrl; everyone else stays on the dashboard.
      */
     public function landsOnConsultScreen(): bool
     {

@@ -7,6 +7,7 @@ use App\Models\User;
 /**
  * Which desk buttons a Staff login may use — money, queue, prep — plus lead
  * desk hiring. Null/empty desk_jobs means all three (legacy one-desk behaviour).
+ * A login with exactly one job opens that page after sign-in.
  */
 final class StaffDeskJobs
 {
@@ -87,6 +88,29 @@ final class StaffDeskJobs
         }
 
         return self::hasJob($user, self::JOB_PREP) && $user->canWorkDesk();
+    }
+
+    /**
+     * Filament page relative name for a staff login that has exactly one desk
+     * job. Null means the stats dashboard (all three jobs, lead, or mixed).
+     */
+    public static function loginPageRelativeName(User $user): ?string
+    {
+        if (! $user->isStaff() || $user->desk_is_lead) {
+            return null;
+        }
+
+        $jobs = self::jobsFor($user);
+        if (count($jobs) !== 1) {
+            return null;
+        }
+
+        return match ($jobs[0]) {
+            self::JOB_QUEUE => 'pages.live-queue-control',
+            self::JOB_MONEY => 'pages.cashbook',
+            self::JOB_PREP => 'pages.daily-roster',
+            default => null,
+        };
     }
 
     /**

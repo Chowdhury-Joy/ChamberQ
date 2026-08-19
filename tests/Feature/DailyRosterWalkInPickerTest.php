@@ -79,7 +79,61 @@ class DailyRosterWalkInPickerTest extends TestCase
             ->mountTableAction('newWalkIn')
             ->fillForm([
                 'patient_phone' => '01711112222',
+                'visit_type' => 'usual',
             ])
             ->assertSuccessful();
+    }
+
+    public function test_walk_in_intervention_stores_the_procedure_from_the_catalogue(): void
+    {
+        $this->tenant->update([
+            'feature_flags' => Tenant::mergeStationsFlag(
+                $this->tenant->feature_flags ?? [],
+                true,
+            ),
+        ]);
+        $this->tenant->refresh();
+        tenancy()->initialize($this->tenant);
+
+        $chamber = Chamber::query()->first();
+        $doctor = Doctor::query()->first();
+        $ot = ScheduleSession::create([
+            'chamber_id' => $chamber->id,
+            'doctor_id' => $doctor->id,
+            'kind' => ScheduleSession::KIND_INTERVENTION,
+            'day_of_week' => Carbon::today()->dayOfWeek,
+            'session_name' => 'OT',
+            'start_time' => '14:00',
+            'end_time' => '16:00',
+            'slot_cap' => 8,
+        ]);
+        $prp = \App\Models\FeeCatalogItem::create([
+            'label' => 'PRP knee (single)',
+            'list_price_taka' => 8000,
+            'house_share_taka' => 1000,
+            'sitting_kind' => ScheduleSession::KIND_INTERVENTION,
+            'sort_order' => 1,
+            'is_active' => true,
+        ]);
+
+        Filament::setCurrentPanel('tenantAdmin');
+        $this->actingAs($this->staff);
+
+        Livewire::test(DailyRoster::class)
+            ->mountTableAction('newWalkIn')
+            ->fillForm([
+                'visit_type' => 'intervention',
+                'intervention_type' => (string) $prp->id,
+                'bookable' => 'session:'.$ot->id,
+                'patient_phone' => '01715553099',
+                'patient_name' => 'Walk-in PRP',
+            ])
+            ->callMountedAction()
+            ->assertHasNoActionErrors();
+
+        $booking = \App\Models\Booking::query()->where('patient_phone', '01715553099')->first();
+        $this->assertNotNull($booking);
+        $this->assertSame($ot->id, $booking->bookable_id);
+        $this->assertSame($prp->id, $booking->fee_catalog_item_id);
     }
 }

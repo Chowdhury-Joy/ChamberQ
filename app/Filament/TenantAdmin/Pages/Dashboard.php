@@ -16,12 +16,12 @@ class Dashboard extends BaseDashboard
 
     public function mount(): void
     {
-        $consult = FilamentPanelUrl::consultScreen();
+        $surface = FilamentPanelUrl::workingSurface();
 
-        if ($consult === null) {
+        if ($surface === null) {
             return;
         }
 
-        $this->redirect($consult);
+        $this->redirect($surface);
     }
 }
