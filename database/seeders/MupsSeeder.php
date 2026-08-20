@@ -12,6 +12,15 @@ use App\Models\Employee;
 use App\Models\FeeCatalogItem;
 use App\Models\LeaveRequest;
 use App\Models\PayrollPayment;
+use App\Models\PharmacyCount;
+use App\Models\PharmacyCountItem;
+use App\Models\PharmacyDelivery;
+use App\Models\PharmacyDoctorCommission;
+use App\Models\PharmacyItem;
+use App\Models\PharmacySale;
+use App\Models\PharmacySaleItem;
+use App\Models\PharmacyStockAdjustment;
+use App\Models\PharmacySupplierSettlement;
 use App\Models\ReferralCommission;
 use App\Models\ReferringDoctor;
 use App\Models\ScheduleSession;
@@ -26,7 +35,7 @@ use Illuminate\Database\Seeder;
  * Clinic Front door + full floor for MUPS (Dr. Moin Uddin Pain Solution).
  *
  * Two branches: Mehedibag (Chattogram) and Uttara (Dhaka). Super Admin
- * modules all on (website, live queue, Rx, Stations, Referrals, HR).
+ * modules all on (website, live queue, Rx, Stations, Referrals, HR, Pharmacy).
  * Copy from https://www.drmups.com; visual shell is the Clireo clinic look.
  *
  * Run: php artisan db:seed --class=MupsSeeder
@@ -39,7 +48,7 @@ class MupsSeeder extends Seeder
 
     /**
      * Chamber shop from the MUPS pharmacy price pad (S.P = sell, B.P = company share).
-     * Stock starts at 0 — the pad had no quantities; desk receives boxes later.
+     * Catalogue qty starts at 0; `MupsDemoSeeder` then receives a small cupboard.
      *
      * @return list<array{name: string, sell_price_taka: int, company_share_taka: int}>
      */
@@ -97,26 +106,30 @@ class MupsSeeder extends Seeder
             'call_audio_preset' => 'chime',
             'feature_flags' => Tenant::mergeOptInModuleFlag(
                 Tenant::mergeOptInModuleFlag(
-                    Tenant::mergeStationsFlag(
-                        array_merge(
-                            Tenant::featureFlagsWithModules([], [
-                                Tenant::MODULE_FRONT_DOOR,
-                                Tenant::MODULE_LIVE_QUEUE,
-                                Tenant::MODULE_PRESCRIPTION,
-                            ]),
-                            [
-                                'bangla_homepage' => true,
-                                'lab_tests' => true,
-                                'multiple_chambers' => true,
-                                'multiple_doctors' => true,
-                            ],
+                    Tenant::mergeOptInModuleFlag(
+                        Tenant::mergeStationsFlag(
+                            array_merge(
+                                Tenant::featureFlagsWithModules([], [
+                                    Tenant::MODULE_FRONT_DOOR,
+                                    Tenant::MODULE_LIVE_QUEUE,
+                                    Tenant::MODULE_PRESCRIPTION,
+                                ]),
+                                [
+                                    'bangla_homepage' => true,
+                                    'lab_tests' => true,
+                                    'multiple_chambers' => true,
+                                    'multiple_doctors' => true,
+                                ],
+                            ),
+                            true,
                         ),
+                        Tenant::MODULE_REFERRALS,
                         true,
                     ),
-                    Tenant::MODULE_REFERRALS,
+                    Tenant::MODULE_HR,
                     true,
                 ),
-                Tenant::MODULE_HR,
+                Tenant::MODULE_PHARMACY,
                 true,
             ),
         ]);
@@ -161,6 +174,16 @@ class MupsSeeder extends Seeder
             'pass',
         );
 
+        SeedAccounts::upsert(
+            ['email' => 'lead@mups.local', 'tenant_id' => self::TENANT_ID],
+            [
+                'name' => 'MUPS Lead desk',
+                'role' => User::ROLE_STAFF,
+                'desk_is_lead' => true,
+            ],
+            'pass',
+        );
+
         tenancy()->initialize($tenant);
 
         MupsDemoSeeder::wipeTenantOperationalData();
@@ -171,6 +194,7 @@ class MupsSeeder extends Seeder
         Employee::query()->delete();
         ReferringDoctor::query()->delete();
         FeeCatalogItem::query()->delete();
+        $this->wipePharmacyShop();
         ScheduleSession::query()->delete();
         Chamber::query()->delete();
         Doctor::query()->delete();
@@ -231,6 +255,7 @@ class MupsSeeder extends Seeder
         $this->seedBranchDay($uttara, $doctor, 4, '17:00', '18:00', '18:00', '21:00');
 
         $this->seedFeeCatalogue();
+        $this->seedPharmacyShop();
         $this->seedReferringDoctors();
         $this->seedHr();
 
@@ -336,6 +361,34 @@ class MupsSeeder extends Seeder
         }
     }
 
+    private function wipePharmacyShop(): void
+    {
+        PharmacyDoctorCommission::query()->delete();
+        PharmacySaleItem::query()->delete();
+        PharmacySale::query()->delete();
+        PharmacyCountItem::query()->delete();
+        PharmacyCount::query()->delete();
+        PharmacyStockAdjustment::query()->delete();
+        PharmacySupplierSettlement::query()->delete();
+        PharmacyDelivery::query()->delete();
+        PharmacyItem::query()->delete();
+    }
+
+    private function seedPharmacyShop(): void
+    {
+        foreach (self::pharmacyShopRows() as $index => $row) {
+            PharmacyItem::create([
+                'name' => $row['name'],
+                'sell_price_taka' => $row['sell_price_taka'],
+                'company_share_taka' => $row['company_share_taka'],
+                'unit_label' => PharmacyItem::UNIT_BOTTLE,
+                'qty_on_hand' => 0,
+                'is_active' => true,
+                'sort_order' => ($index + 1) * 10,
+            ]);
+        }
+    }
+
     private function seedReferringDoctors(): void
     {
         ReferringDoctor::create([
@@ -356,6 +409,19 @@ class MupsSeeder extends Seeder
         $staff = User::withoutGlobalScope(TenantScope::class)
             ->where('email', 'staff@mups.local')
             ->first();
+
+        $lead = User::withoutGlobalScope(TenantScope::class)
+            ->where('email', 'lead@mups.local')
+            ->first();
+
+        Employee::create([
+            'user_id' => $lead?->id,
+            'name' => 'MUPS Lead desk',
+            'phone' => '01822000010',
+            'job_title' => 'Lead desk — both centres',
+            'monthly_salary_taka' => 25000,
+            'joined_on' => now()->subYear()->toDateString(),
+        ]);
 
         Employee::create([
             'user_id' => $staff?->id,

@@ -869,11 +869,20 @@
 ## 2026-08-20T17:32:20+0600
 - Floor handoff is destination then type: **Send to lab** (`sendToLab` + lab type, today MSK) and **Send to intervention**; a first visit may pick either path. `StationsHandoffService::nextRoomKinds()` offers both from a visit sitting.
 
+## 2026-08-20T17:55:16+0600
+- MUPS Chittagong branch display name is Mehedibag (was Panchlaish) in `MupsSeeder` / `MupsDemoSeeder`; sitting days unchanged.
+
 ## 2026-08-20T17:59:22+0600
 - Pharmacy shop stock and physical count are a Money-desk staff job (owner/helper still can); `PharmacyAccess::canManageStock` is no longer admin-only.
 
-## 2026-08-20T18:05:38+0600
-- Desk **Referred by** dropdown (`ReferringDoctorPicker`) no longer appends “(outside GP)” to the label.
+## 2026-08-20T18:15:24+0600
+- MUPS seed ticks **Pharmacy** (shop list from the chamber price pad) and keeps Lead desk `lead@mups.local` so money-desk staff see Operations → Pharmacy.
+
+## 2026-08-20T18:17:51+0600
+- MUPS pharmacy pad: nine `pharmacy_items` with S.P as sell price and B.P as company share; qty 0 until Receive (`MupsSeeder::pharmacyShopRows()`).
+
+## 2026-08-20T18:22:57+0600
+- MUPS demo cupboard: `MupsDemoSeeder` receives a handful of bottles per pad SKU via `PharmacyStockService` (paid ৳0, returnable) so Pharmacy till is not empty.
 
 
 

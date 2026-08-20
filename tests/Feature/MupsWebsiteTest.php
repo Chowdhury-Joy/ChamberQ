@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Models\PharmacyItem;
+use Database\Seeders\MupsDemoSeeder;
 use Database\Seeders\MupsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -270,7 +271,6 @@ class MupsWebsiteTest extends TestCase
         $this->assertTrue($tenant->hasReferrals());
         $this->assertTrue($tenant->hasHr());
         $this->assertTrue($tenant->hasPharmacy());
-        $this->assertTrue($tenant->hasPharmacy());
         $this->assertTrue($tenant->hasFeature('bangla_homepage'));
         $this->assertSame(\App\Models\Tenant::ETA_LIVE_AVERAGE, $tenant->eta_model);
         $this->assertSame(\App\Models\Tenant::ANNOUNCE_CHIME_AND_VOICE, $tenant->call_announce_mode);
@@ -297,6 +297,36 @@ class MupsWebsiteTest extends TestCase
             ->assertOk();
     }
 
+    public function test_pharmacy_shop_matches_the_desk_price_list(): void
+    {
+        $tenant = \App\Models\Tenant::find(MupsSeeder::TENANT_ID);
+        $this->assertTrue($tenant->hasPharmacy());
+
+        tenancy()->initialize($tenant);
+
+        $expected = MupsSeeder::pharmacyShopRows();
+        $this->assertCount(9, $expected);
+
+        $items = PharmacyItem::query()->orderBy('sort_order')->get();
+        $this->assertCount(9, $items);
+
+        foreach ($expected as $index => $row) {
+            $item = $items[$index];
+            $this->assertSame($row['name'], $item->name);
+            $this->assertSame($row['sell_price_taka'], $item->sell_price_taka);
+            $this->assertSame($row['company_share_taka'], $item->company_share_taka);
+            $this->assertSame(MupsDemoSeeder::demoStockQty($row['name']), $item->qty_on_hand);
+            $this->assertTrue($item->is_active);
+            $this->assertSame(
+                $row['sell_price_taka'] - $row['company_share_taka'],
+                $item->shopCutTaka(),
+            );
+            $this->assertTrue($item->deliveries()->exists());
+        }
+
+        tenancy()->end();
+    }
+
     public function test_booking_horizon_follows_the_tenant_setting_not_a_hardcoded_clinic(): void
     {
         $tenant = \App\Models\Tenant::find(MupsSeeder::TENANT_ID);
@@ -309,6 +339,44 @@ class MupsWebsiteTest extends TestCase
         $tenant->update(['patient_booking_horizon_days' => 3]);
         $this->assertSame(3, \App\Models\PlatformSetting::patientBookingHorizonDays());
         $this->assertSame(now()->addDays(3)->toDateString(), \App\Models\PlatformSetting::onlineBookingMaxDate());
+        tenancy()->end();
+    }
+
+    public function test_seed_includes_a_lead_desk_login_separate_from_counter_staff(): void
+    {
+        $lead = \App\Models\User::withoutGlobalScope(\App\Scopes\TenantScope::class)
+            ->where('email', 'lead@mups.local')
+            ->first();
+
+        $this->assertNotNull($lead);
+        $this->assertTrue($lead->isStaff());
+        $this->assertTrue(\App\Support\StaffDeskJobs::isLeadDesk($lead));
+        $this->assertTrue($lead->canManageDeskStaff());
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('pass', $lead->password));
+
+        $desk = \App\Models\User::withoutGlobalScope(\App\Scopes\TenantScope::class)
+            ->where('email', 'staff@mups.local')
+            ->first();
+
+        $this->assertNotNull($desk);
+        $this->assertFalse(\App\Support\StaffDeskJobs::isLeadDesk($desk));
+    }
+
+    public function test_lead_desk_can_open_pharmacy_till_and_stock(): void
+    {
+        $tenant = \App\Models\Tenant::find(MupsSeeder::TENANT_ID);
+        tenancy()->initialize($tenant);
+
+        $lead = \App\Models\User::withoutGlobalScope(\App\Scopes\TenantScope::class)
+            ->where('email', 'lead@mups.local')
+            ->first();
+
+        $this->actingAs($lead);
+        $this->assertTrue(\App\Support\PharmacyAccess::canRunCounter($lead));
+        $this->assertTrue(\App\Support\PharmacyAccess::canManageStock($lead));
+        $this->assertTrue(\App\Filament\TenantAdmin\Pages\PharmacyCounter::canAccess());
+        $this->assertTrue(\App\Filament\TenantAdmin\Resources\PharmacyItems\PharmacyItemResource::canViewAny());
+
         tenancy()->end();
     }
 }

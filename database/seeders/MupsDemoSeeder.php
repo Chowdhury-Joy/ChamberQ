@@ -9,6 +9,15 @@ use App\Models\LabCollectionSlot;
 use App\Models\LabTest;
 use App\Models\LiveSession;
 use App\Models\Patient;
+use App\Models\PharmacyCount;
+use App\Models\PharmacyCountItem;
+use App\Models\PharmacyDelivery;
+use App\Models\PharmacyDoctorCommission;
+use App\Models\PharmacyItem;
+use App\Models\PharmacySale;
+use App\Models\PharmacySaleItem;
+use App\Models\PharmacyStockAdjustment;
+use App\Models\PharmacySupplierSettlement;
 use App\Models\Prescription;
 use App\Models\PrescriptionItem;
 use App\Models\ScheduleSession;
@@ -20,18 +29,44 @@ use App\Models\User;
 use App\Models\VisitRecord;
 use App\Scopes\TenantScope;
 use App\Services\ChamberCashService;
+use App\Services\PharmacyStockService;
 use App\Support\PrescriptionTiming;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 
 /**
- * Operational demo data for the MUPS clinic admin (queue, patients, cashbook, labs).
+ * Operational demo data for the MUPS clinic admin (queue, patients, cashbook, labs, pharmacy cupboard).
  *
  * Run after MupsSeeder: php artisan db:seed --class=MupsDemoSeeder
  */
 class MupsDemoSeeder extends Seeder
 {
     private const DEMO_PHONE_PREFIX = '01899001';
+
+    /**
+     * Opening cupboard for the demo till — a few bottles each, not a warehouse.
+     *
+     * @return array<string, int>
+     */
+    public static function demoStockByName(): array
+    {
+        return [
+            'Coral D Max' => 12,
+            'MH Vitamin' => 10,
+            'Joint Pro' => 8,
+            'Nervafix' => 6,
+            'Vitafix' => 6,
+            'Flexactive Extra' => 4,
+            'Calcimax' => 10,
+            'Neumax' => 8,
+            'Slim Herb' => 5,
+        ];
+    }
+
+    public static function demoStockQty(string $name): int
+    {
+        return self::demoStockByName()[$name] ?? 0;
+    }
 
     public function run(): void
     {
@@ -169,6 +204,7 @@ class MupsDemoSeeder extends Seeder
         $this->seedSlotBlocks($primarySession);
         $this->seedSittingOverride($primarySession);
         $this->seedExpenses($staff, $primarySession->chamber_id);
+        $this->seedPharmacyStock($tenant, $staff);
 
         $tenant->update(['sms_balance' => 42]);
 
@@ -514,6 +550,45 @@ class MupsDemoSeeder extends Seeder
         }
     }
 
+    private function seedPharmacyStock(Tenant $tenant, User $staff): void
+    {
+        if (! $tenant->hasPharmacy()) {
+            return;
+        }
+
+        $stock = app(PharmacyStockService::class);
+
+        foreach (self::demoStockByName() as $name => $qty) {
+            $item = PharmacyItem::query()->where('name', $name)->first();
+            if (! $item || $qty < 1) {
+                continue;
+            }
+
+            $stock->receive(
+                $item,
+                $staff,
+                $qty,
+                0,
+                true,
+                $item->company_share_taka,
+                '[demo] Opening cupboard',
+            );
+        }
+    }
+
+    private function resetPharmacyDemoStock(): void
+    {
+        PharmacyDoctorCommission::query()->delete();
+        PharmacySaleItem::query()->delete();
+        PharmacySale::query()->delete();
+        PharmacyCountItem::query()->delete();
+        PharmacyCount::query()->delete();
+        PharmacyStockAdjustment::query()->delete();
+        PharmacySupplierSettlement::query()->delete();
+        PharmacyDelivery::query()->delete();
+        PharmacyItem::query()->update(['qty_on_hand' => 0]);
+    }
+
     private function clearPreviousDemoData(): void
     {
         $phones = collect(range(1, 12))
@@ -539,5 +614,6 @@ class MupsDemoSeeder extends Seeder
             })
             ->delete();
         Patient::whereIn('phone', $phones)->delete();
+        $this->resetPharmacyDemoStock();
     }
 }

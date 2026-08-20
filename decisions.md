@@ -3330,6 +3330,15 @@
  <reason>Same as a hospital desk: first choose the department (lab or OT), then which test or procedure. Naming the button MSK hid the other door and fought the walk-in form.</reason>
 </decision>
 
+## 2026-08-20T17:55:16+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The MUPS Chittagong branch was labelled Panchlaish, but the chamber is at Neurosense near Chittagong Medical College, which patients know as Mehedibag.</context>
+ <action>Rename the seeded chamber, centres-page card, map query, homepage review label, referring GP, procedure-nurse job title, and demo cashbook note from Panchlaish to Mehedibag. Sitting days stay Sun–Tue morning and evening. Uttara is unchanged. CBPH, Belle Vue, and the Pain Solution sample keep their real Panchlaish addresses.</action>
+ <reason>Like reprinting the shop sign for the neighbourhood people actually search for — same building, same hours, the name on the ticket now matches the area.</reason>
+</decision>
+
 ## 2026-08-20T17:59:22+0600
 
 <decision>
@@ -3339,11 +3348,29 @@
  <reason>Like a chemist counter next to reception: the person at the till updates the shelf list. Locking that behind the owner meant the list never got maintained. The queue caller should not be able to change sell prices.</reason>
 </decision>
 
-## 2026-08-20T18:05:38+0600
+## 2026-08-20T18:15:24+0600
 
 <decision>
- <category>UI/UX</category>
- <context>The till field for who sent the patient was labelled “Referred by (outside GP)”. Desk staff already know this list is outside doctors; the extra words made the field look like a technical filter.</context>
- <action>Rename the Collect fee / New Walk-In / Book serial dropdown to **Referred by**. Bangla is now just “রেফার করেছেন”. Super Admin still calls the module “Referrals — outside GP commissions”; Branding still says “Outside GP cut”.</action>
- <reason>Like a receipt that just says “Referred by: Dr Karim” — the clerk does not need a reminder that Karim is not on staff. Shorter label, same list.</reason>
+ <category>Business_Logic</category>
+ <context>MUPS seed had the shop module off, so Lead desk (who runs money, queue, and hiring) had no Pharmacy menu — it looked like a missing permission.</context>
+ <action>Turn **Pharmacy** on for tenant `mups` in `MupsSeeder`, same as Stations / Referrals / HR. Seed the nine bottles from the chamber price pad at qty 0. Lead desk `lead@mups.local` keeps all money jobs, so Operations → Pharmacy and Pharmacy stock show for that login.</action>
+ <reason>Other Super Admin opt-ins stay default-off for new clinics. MUPS is a live-shaped pain clinic that already runs an in-house shop, so the seed should match the floor the Lead desk actually works.</reason>
+</decision>
+
+## 2026-08-20T18:17:51+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>MUPS sent a handwritten shop pad with S.P and B.P for nine supplements. The till needs those numbers on Pharmacy stock, not a blank list staff re-type at the counter.</context>
+ <action>Seed those nine names onto `pharmacy_items` for tenant `mups`. S.P becomes `sell_price_taka` (what the patient pays). B.P becomes `company_share_taka` (what the company is owed per unit). Counted as bottle. Quantity stays 0 — the pad had no stock counts — so the desk still uses Receive when a box arrives. Shop cut is leftover (S.P − B.P), not a second till line.</action>
+ <reason>Like copying the chemist’s laminated price card onto the computer: selling and buying prices are already decided; how many bottles are on the shelf is a later count, not guessed from the card.</reason>
+</decision>
+
+## 2026-08-20T18:22:57+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>The MUPS shop list had prices but 0 on the shelf, so Pharmacy till had nothing to sell in the demo.</context>
+ <action>`MupsDemoSeeder` receives a small cupboard through `PharmacyStockService::receive` (returnable, paid ৳0 on credit): Coral D Max 12, MH Vitamin 10, Joint Pro 8, Nervafix 6, Vitafix 6, Flexactive Extra 4, Calcimax 10, Neumax 8, Slim Herb 5. Re-running demo resets those deliveries so stock does not double. Catalogue prices stay on `MupsSeeder`.</action>
+ <reason>Like putting a few bottles in the glass cabinet so the first walk-in can actually buy one — not guessing a warehouse, and not typing qty by hand, which would skip the delivery record the till needs.</reason>
 </decision>
