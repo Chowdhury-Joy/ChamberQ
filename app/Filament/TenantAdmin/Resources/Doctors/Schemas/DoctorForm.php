@@ -199,12 +199,12 @@ class DoctorForm
                             ->helperText(__('Shows tap-to-send WhatsApp links. Free; staff must tap.'))
                             ->default(true),
                         Toggle::make('notify_channels.'.Doctor::NOTIFY_PRESCRIPTION.'.sms')
-                            ->label(__('Prescription — SMS'))
-                            ->helperText(__('Staff tap Send SMS with the 48h prescription link. 1 credit.'))
+                            ->label(__('After visit — SMS'))
+                            ->helperText(__('Staff tap Send SMS after the visit: ChamberQ prescription link when you use it, plus the Google review link when one is saved. Uses prepaid credits.'))
                             ->default(false),
                         Toggle::make('notify_channels.'.Doctor::NOTIFY_PRESCRIPTION.'.whatsapp')
-                            ->label(__('Prescription — WhatsApp'))
-                            ->helperText(__('Shows Send via WhatsApp after the visit. Free; staff must tap.'))
+                            ->label(__('After visit — WhatsApp'))
+                            ->helperText(__('Shows Send via WhatsApp after the visit (prescription and/or Google review). Free; staff must tap.'))
                             ->default(true),
                         Toggle::make('notify_channels.'.Doctor::NOTIFY_FOLLOW_UP.'.sms')
                             ->label(__('Follow-up reminder — SMS'))

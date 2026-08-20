@@ -55,17 +55,21 @@ class SmsService
      *
      * @return Collection<int, SmsMessage>
      */
-    public function sendDoctorLateNotices(Booking $booking, int $delayMinutes): ?SmsMessage
+    public function sendDoctorLateNotices(Booking $booking, int $delayMinutes, bool $staffTap = false): ?SmsMessage
     {
         $doctor = Doctor::resolveForBooking($booking);
 
-        if ($doctor && ! $doctor->wantsSms(Doctor::NOTIFY_DOCTOR_LATE)) {
+        if (! $this->smsPrefAllows($doctor, Doctor::NOTIFY_DOCTOR_LATE, $staffTap)) {
             return $this->record(
                 $booking,
                 SmsMessage::STATUS_SKIPPED_PREF_OFF,
                 body: $this->doctorLateBody($booking, $delayMinutes),
                 purpose: SmsMessage::PURPOSE_DOCTOR_LATE,
             );
+        }
+
+        if ($already = $this->alreadySent($booking, SmsMessage::PURPOSE_DOCTOR_LATE)) {
+            return $already;
         }
 
         return $this->send(
