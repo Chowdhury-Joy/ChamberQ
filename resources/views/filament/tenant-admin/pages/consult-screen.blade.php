@@ -320,6 +320,9 @@
             $canBookIntervention = tenant()?->hasStations()
                 && $handoff->actorMaySend(auth()->user())
                 && $handoff->canSendVisit($booking);
+            $canSendToLab = tenant()?->hasStations()
+                && $handoff->actorMaySend(auth()->user())
+                && $handoff->canSendToLab($booking);
             $canMoveIntervention = tenant()?->hasStations()
                 && $handoff->actorMaySend(auth()->user())
                 && $handoff->canMove($booking);
@@ -764,7 +767,7 @@
             </div>
         </div>
 
-        @if (auth()->user()?->canOperateQueueControls() || $canBookIntervention || $canMoveIntervention)
+        @if (auth()->user()?->canOperateQueueControls() || $canBookIntervention || $canMoveIntervention || $canSendToLab)
             <div class="cs-sticky-actions cq-freeze-queue {{ $showRxDesk ? 'is-desk-active' : '' }}">
                 @if (auth()->user()?->canOperateQueueControls() && $booking->status === 'called')
                     <x-filament::button class="cs-sticky-actions__btn" color="success" wire:click="mountAction('patientArrived')">
@@ -779,9 +782,14 @@
                         {{ 'Call next patient' }}
                     </x-filament::button>
                 @endif
+                @if ($canSendToLab)
+                    <x-filament::button class="cs-sticky-actions__btn" color="success" icon="heroicon-m-arrow-right-circle" wire:click="mountAction('sendToLab')">
+                        {{ __('Send to lab') }}
+                    </x-filament::button>
+                @endif
                 @if ($canBookIntervention)
                     <x-filament::button class="cs-sticky-actions__btn" color="warning" icon="heroicon-m-arrow-right-circle" wire:click="mountAction('bookIntervention')">
-                        {{ __('Book intervention') }}
+                        {{ __('Send to intervention') }}
                     </x-filament::button>
                 @elseif ($canMoveIntervention)
                     <x-filament::button class="cs-sticky-actions__btn" color="gray" icon="heroicon-m-calendar-days" wire:click="mountAction('moveIntervention')">

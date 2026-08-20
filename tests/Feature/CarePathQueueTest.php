@@ -70,16 +70,60 @@ class CarePathQueueTest extends TestCase
         parent::tearDown();
     }
 
+    public function test_a_new_visit_offers_lab_and_intervention_then_the_type(): void
+    {
+        $visit = $this->bookVisit('Jamal Uddin', '01715550009');
+        $handoff = app(StationsHandoffService::class);
+
+        $this->assertSame(CarePath::VISIT, $visit->care_path);
+        $this->assertTrue($handoff->canSendToLab($visit));
+        $this->assertTrue($handoff->canSendVisit($visit));
+        $this->assertSame(
+            [ScheduleSession::KIND_MSK => 'MSK scan'],
+            $handoff->labTypeOptions($visit),
+        );
+
+        $msk = $handoff->sendToLab($visit->fresh(['bookable']), ScheduleSession::KIND_MSK);
+        $this->assertSame($this->msk->id, $msk->bookable_id);
+        $this->assertTrue($handoff->canSendVisit($visit->fresh(['bookable'])));
+        $this->assertFalse($handoff->canSendToLab($visit->fresh(['bookable'])));
+    }
+
+    public function test_a_new_visit_can_skip_lab_and_go_straight_to_intervention(): void
+    {
+        $visit = $this->bookVisit('Skip Lab', '01715550010');
+        $handoff = app(StationsHandoffService::class);
+
+        $procedure = $handoff->sendVisitToIntervention(
+            $visit->fresh(['bookable']),
+            Carbon::today()->toDateString(),
+        );
+        $procedure->update(['procedure_status' => Booking::PROCEDURE_DONE]);
+
+        $this->assertTrue($handoff->canSendToReport($procedure->fresh(['bookable'])));
+        $this->assertFalse($handoff->canSendToCounseling($procedure->fresh(['bookable'])));
+    }
+
+    public function test_send_to_lab_refuses_an_unknown_type(): void
+    {
+        $visit = $this->bookVisit('Bad Type', '01715550011');
+        $handoff = app(StationsHandoffService::class);
+
+        $this->expectException(\InvalidArgumentException::class);
+        $this->expectExceptionMessage('Choose a lab type.');
+        $handoff->sendToLab($visit->fresh(['bookable']), 'not-a-lab');
+    }
+
     public function test_a_new_visit_must_go_msk_then_intervention_then_report_then_counseling(): void
     {
         $visit = $this->bookVisit('Fatima New', '01715550001');
         $handoff = app(StationsHandoffService::class);
 
         $this->assertSame(CarePath::VISIT, $visit->care_path);
-        $this->assertTrue($handoff->canSendToMsk($visit));
-        $this->assertFalse($handoff->canSendVisit($visit));
+        $this->assertTrue($handoff->canSendToLab($visit));
+        $this->assertTrue($handoff->canSendVisit($visit));
 
-        $msk = $handoff->sendToMsk($visit->fresh(['bookable']));
+        $msk = $handoff->sendToLab($visit->fresh(['bookable']), ScheduleSession::KIND_MSK);
         $this->assertSame($this->msk->id, $msk->bookable_id);
         $this->assertSame(CarePath::VISIT, $msk->care_path);
         $this->assertTrue($handoff->canSendVisit($msk->fresh(['bookable'])));
@@ -111,10 +155,10 @@ class CarePathQueueTest extends TestCase
         $handoff = app(StationsHandoffService::class);
 
         $this->assertSame(CarePath::FOLLOW_UP, $visit->fresh()->care_path);
-        $this->assertTrue($handoff->canSendToMsk($visit->fresh(['bookable'])));
+        $this->assertTrue($handoff->canSendToLab($visit->fresh(['bookable'])));
         $this->assertTrue($handoff->canSendVisit($visit->fresh(['bookable'])));
 
-        $msk = $handoff->sendToMsk($visit->fresh(['bookable']));
+        $msk = $handoff->sendToLab($visit->fresh(['bookable']), ScheduleSession::KIND_MSK);
         $this->assertSame(CarePath::BRANCH_MSK, $msk->care_branch);
         $this->assertFalse($handoff->canSendVisit($msk->fresh(['bookable'])));
         $this->assertTrue($handoff->canSendToReport($msk->fresh(['bookable'])));
@@ -213,7 +257,7 @@ class CarePathQueueTest extends TestCase
         $visit = $this->bookVisit('Short Path', '01715550008');
         $handoff = app(StationsHandoffService::class);
 
-        $this->assertFalse($handoff->canSendToMsk($visit->fresh(['bookable'])));
+        $this->assertFalse($handoff->canSendToLab($visit->fresh(['bookable'])));
         $this->assertTrue($handoff->canSendVisit($visit->fresh(['bookable'])));
 
         $procedure = $handoff->sendVisitToIntervention(

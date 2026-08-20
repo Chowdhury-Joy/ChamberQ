@@ -866,4 +866,9 @@
 ## 2026-08-20T17:22:16+0600
 - Desk can add an outside GP from **Referred by**: `ReferringDoctorPicker` (+ create on Collect fee / walk-in / Book serial) and `ReferringDoctor::findOrCreateFromDesk()`.
 
+## 2026-08-20T17:32:20+0600
+- Floor handoff is destination then type: **Send to lab** (`sendToLab` + lab type, today MSK) and **Send to intervention**; a first visit may pick either path. `StationsHandoffService::nextRoomKinds()` offers both from a visit sitting.
+
+
+
 

@@ -8,8 +8,10 @@ use App\Models\ScheduleSession;
 /**
  * Which floor path a Stations patient is on.
  *
- * Visit (new): Visit → MSK → Intervention → Report → Counseling
- * Follow-up (clinic/doctor PracticeRules): Visit → MSK → Report
+ * Visit (new): from Visit, staff pick Lab or Intervention, then the type.
+ *   Lab still continues to Intervention → Report → Counseling.
+ *   Skipping lab goes Visit → Intervention → Report → Counseling.
+ * Follow-up (clinic/doctor PracticeRules): Visit → Lab → Report
  *   or Visit → Intervention → Counseling
  * Direct intervention: Intervention → Counseling
  * MSK-only (referred scan): MSK → Report

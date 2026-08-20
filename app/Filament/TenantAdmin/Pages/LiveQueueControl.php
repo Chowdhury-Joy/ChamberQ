@@ -757,10 +757,10 @@ class LiveQueueControl extends Page implements HasActions, HasTable
         );
     }
 
-    public function sendCurrentToMskAction(): Action
+    public function sendCurrentToLabAction(): Action
     {
-        return StationsHandoffForm::sendToMskAction(
-            Action::make('sendCurrentToMsk'),
+        return StationsHandoffForm::sendToLabAction(
+            Action::make('sendCurrentToLab'),
             fn (): ?Booking => $this->activeLiveSession?->currentBooking,
         );
     }

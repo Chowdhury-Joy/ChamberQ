@@ -132,9 +132,39 @@ class StationsHandoffService
         return $query->get()->first(fn (Booking $row): bool => $this->isOpenCounseling($row));
     }
 
+    public function canSendToLab(Booking $booking): bool
+    {
+        return $this->labTypeOptions($booking) !== [];
+    }
+
     public function canSendToMsk(Booking $booking): bool
     {
         return $this->canSendToFreeRoom($booking, ScheduleSession::KIND_MSK);
+    }
+
+    /**
+     * Floor lab destinations this visit can still be sent to.
+     *
+     * @return array<string, string>
+     */
+    public function labTypeOptions(Booking $booking): array
+    {
+        $options = [];
+
+        if ($this->canSendToMsk($booking)) {
+            $options[ScheduleSession::KIND_MSK] = __('MSK scan');
+        }
+
+        return $options;
+    }
+
+    public function sendToLab(Booking $from, string $labType): Booking
+    {
+        if ($labType !== ScheduleSession::KIND_MSK) {
+            throw new InvalidArgumentException(__('Choose a lab type.'));
+        }
+
+        return $this->sendToMsk($from);
     }
 
     public function canSendToReport(Booking $booking): bool
@@ -187,18 +217,20 @@ class StationsHandoffService
         $branch = $this->branchOf($booking);
         $current = filled($session->kind) ? $session->kind : ScheduleSession::KIND_VISIT;
 
-        if ($path === CarePath::FOLLOW_UP && ! filled($branch) && $current === ScheduleSession::KIND_VISIT) {
+        if ($this->isVisitSitting($booking) && ! filled($branch)) {
             $options = [];
             if ($this->hasRoom($session, ScheduleSession::KIND_MSK, $date)) {
                 $options[] = ScheduleSession::KIND_MSK;
-            } elseif ($this->hasRoom($session, ScheduleSession::KIND_REPORT, $date)) {
+            } elseif ($path === CarePath::FOLLOW_UP && $this->hasRoom($session, ScheduleSession::KIND_REPORT, $date)) {
                 $options[] = ScheduleSession::KIND_REPORT;
             }
             if ($this->hasRoom($session, ScheduleSession::KIND_INTERVENTION, $date)) {
                 $options[] = ScheduleSession::KIND_INTERVENTION;
             }
 
-            return $options;
+            if ($options !== []) {
+                return $options;
+            }
         }
 
         $seq = CarePath::sequence($path, $branch);
@@ -462,7 +494,7 @@ class StationsHandoffService
     public function sendToMsk(Booking $from): Booking
     {
         if (! $this->canSendToMsk($from)) {
-            throw new InvalidArgumentException(__('Send to MSK is only available from a visit sitting.'));
+            throw new InvalidArgumentException(__('Send to lab is only available from a visit sitting.'));
         }
 
         $branch = $this->pathOf($from) === CarePath::FOLLOW_UP

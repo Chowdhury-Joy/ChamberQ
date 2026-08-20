@@ -3320,3 +3320,12 @@
  <action>The Referred by dropdown now has a + like the medicine picker. Staff type a name (phone and specialty optional). `ReferringDoctor::findOrCreateFromDesk()` saves them onto this clinic’s list, reuses the same name ignoring capitalisation, and turns an inactive GP back on so monthly payouts do not split. Same control on Collect fee, New Walk-In, and Book serial. Operations → Referring doctors stays the place to edit notes or switch someone off.</action>
  <reason>Same as adding a new contact while sending a WhatsApp instead of closing the chat to open Contacts first. The patient is at the desk with money in hand; the GP’s name only has to be saved once.</reason>
 </decision>
+
+## 2026-08-20T17:32:20+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>After a visit, the floor only showed **Send to MSK**. Book serial already asked Lab vs Intervention first, then the type. Staff expected the same two destinations on the now-serving card and under More, not a button named after one scan.</context>
+ <action>Rename the floor actions to **Send to lab** and **Send to intervention**. Lab opens a type picker (MSK today) then puts them on today's list. Intervention still asks when and the procedure type. A first visit may pick either path (skipping lab is allowed); follow-up still forks lab→report vs intervention→counseling. Supersedes “new visits must go Visit → MSK first” from 2026-08-18 for the desk handoff only.</action>
+ <reason>Same as a hospital desk: first choose the department (lab or OT), then which test or procedure. Naming the button MSK hid the other door and fought the walk-in form.</reason>
+</decision>

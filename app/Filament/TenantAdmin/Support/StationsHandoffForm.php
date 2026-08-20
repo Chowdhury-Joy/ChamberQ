@@ -18,12 +18,12 @@ class StationsHandoffForm
     public static function bookAction(Action $action, ?Closure $booking = null): Action
     {
         return $action
-            ->label(__('Book intervention'))
+            ->label(__('Send to intervention'))
             ->icon('heroicon-o-arrow-right-circle')
             ->color('warning')
-            ->modalHeading(__('Book intervention'))
+            ->modalHeading(__('Send to intervention'))
             ->modalDescription(__('Intervention hours are often in the morning, before visiting hours. Choose Same day only if they will stay or come back today.'))
-            ->modalSubmitActionLabel(__('Book'))
+            ->modalSubmitActionLabel(__('Send'))
             ->visible(function (...$args) use ($booking): bool {
                 $target = self::resolveBooking($booking, $args);
 
@@ -221,18 +221,88 @@ class StationsHandoffForm
             });
     }
 
+    public static function sendToLabAction(Action $action, ?Closure $booking = null): Action
+    {
+        return $action
+            ->label(__('Send to lab'))
+            ->icon('heroicon-o-arrow-right-circle')
+            ->color('success')
+            ->modalHeading(__('Send to lab'))
+            ->modalDescription(__('Choose the lab type. They go on today\'s list. Collect the scan fee at the door.'))
+            ->modalSubmitActionLabel(__('Send'))
+            ->visible(function (...$args) use ($booking): bool {
+                $target = self::resolveBooking($booking, $args);
+
+                return $target !== null
+                    && self::actorMaySend()
+                    && app(StationsHandoffService::class)->canSendToLab($target);
+            })
+            ->fillForm(function (...$args) use ($booking): array {
+                $target = self::resolveBooking($booking, $args);
+                if (! $target) {
+                    return [];
+                }
+
+                $options = app(StationsHandoffService::class)->labTypeOptions($target);
+
+                return ['lab_type' => array_key_first($options)];
+            })
+            ->schema(function (...$args) use ($booking): array {
+                $target = self::resolveBooking($booking, $args);
+                $options = $target
+                    ? app(StationsHandoffService::class)->labTypeOptions($target)
+                    : [];
+
+                if ($options === []) {
+                    return [
+                        Placeholder::make('no_lab')
+                            ->hiddenLabel()
+                            ->content(__('No lab sitting is scheduled for this doctor today.')),
+                    ];
+                }
+
+                return [
+                    Radio::make('lab_type')
+                        ->label(__('Lab type'))
+                        ->options($options)
+                        ->required(),
+                ];
+            })
+            ->action(function (array $data, ...$args) use ($booking): void {
+                $target = self::resolveBooking($booking, $args);
+                if (! $target) {
+                    return;
+                }
+
+                $handoff = app(StationsHandoffService::class);
+                $labType = (string) ($data['lab_type'] ?? '');
+                $typeLabel = $handoff->labTypeOptions($target)[$labType] ?? __('Lab');
+
+                try {
+                    $row = $handoff->sendToLab($target, $labType);
+                } catch (InvalidArgumentException $e) {
+                    Notification::make()
+                        ->title($e->getMessage())
+                        ->danger()
+                        ->send();
+
+                    return;
+                }
+
+                Notification::make()
+                    ->title(__('Sent to lab'))
+                    ->body(__('Serial :n on today\'s :type list.', [
+                        'n' => $row->serial_number,
+                        'type' => $typeLabel,
+                    ]))
+                    ->success()
+                    ->send();
+            });
+    }
+
     public static function sendToMskAction(Action $action, ?Closure $booking = null): Action
     {
-        return self::freeRoomAction(
-            $action,
-            $booking,
-            __('Send to MSK'),
-            __('Puts this patient on today\'s MSK list. Collect the scan fee at the door.'),
-            __('Sent to MSK'),
-            __('Serial :n on today\'s MSK list.'),
-            fn (StationsHandoffService $handoff, Booking $target): bool => $handoff->canSendToMsk($target),
-            fn (StationsHandoffService $handoff, Booking $target): Booking => $handoff->sendToMsk($target),
-        );
+        return self::sendToLabAction($action, $booking);
     }
 
     public static function sendToReportAction(Action $action, ?Closure $booking = null): Action

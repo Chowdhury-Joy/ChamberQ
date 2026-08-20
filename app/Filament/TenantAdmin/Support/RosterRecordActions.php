@@ -180,11 +180,11 @@ final class RosterRecordActions
                     && $shown(DeskActionLayout::KEY_BOOK_INTERVENTION)($record);
             }),
 
-            StationsHandoffForm::sendToMskAction(
+            StationsHandoffForm::sendToLabAction(
                 Action::make($name(DeskActionLayout::KEY_SEND_MSK)),
             )->visible(function (Booking $record) use ($shown): bool {
                 return StationsHandoffForm::actorMaySend()
-                    && app(StationsHandoffService::class)->canSendToMsk($record)
+                    && app(StationsHandoffService::class)->canSendToLab($record)
                     && $shown(DeskActionLayout::KEY_SEND_MSK)($record);
             }),
 
