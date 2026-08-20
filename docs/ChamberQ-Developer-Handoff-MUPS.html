@@ -159,7 +159,7 @@
       <tr><td>Rooms + split till</td><td>Yes</td><td>Consultation / Intervention / Counseling, fee catalogue, vouchers, Send to counseling</td></tr>
       <tr><td>Referring GPs</td><td>Yes</td><td>Pick referring doctor at Collect fee; ৳200 consultation / ৳1,000 intervention owed</td></tr>
       <tr><td>HR</td><td>Yes</td><td>Employees, attendance, leave, payroll → cashbook salary</td></tr>
-      <tr><td>Pharmacy shop</td><td>Yes</td><td>Till + stock under Operations. Seed lists 9 bottles from the chamber price pad (qty 0 until desk receives a box)</td></tr>
+      <tr><td>Pharmacy shop</td><td>Yes</td><td>Till + stock under Operations. Each centre has its own cupboard of the 9 pad bottles. Selling in Uttara does not empty Mehedibag.</td></tr>
       <tr><td>Labs</td><td>Yes</td><td>Lab rows in the tenant (demo seeder fills a few tests)</td></tr>
       <tr><td>Bangla homepage</td><td>Yes</td><td>Public header shows EN | BN</td></tr>
       <tr><td>More than one doctor</td><td>Yes (sized)</td><td>Doctors menu on. Seed has one profile. Add another without a Super Admin revisit.</td></tr>
@@ -193,10 +193,12 @@
   <table>
     <thead><tr><th>Role</th><th>Email</th><th>What they do</th></tr></thead>
     <tbody>
-      <tr><td>Admin</td><td><code>admin@mups.local</code></td><td>Branding, cash categories, backup, HR, referrals, website</td></tr>
-      <tr><td>Doctor</td><td><code>doctor@mups.local</code></td><td>Consult Screen, Rx, consultation notes</td></tr>
-      <tr><td>Lead desk</td><td><code>lead@mups.local</code></td><td>All counters including Pharmacy till and stock, plus hire Staff (not owners/doctors/helpers)</td></tr>
-      <tr><td>Desk</td><td><code>staff@mups.local</code></td><td>Daily Roster, Call next, Collect fee, walk-ins, TV</td></tr>
+      <tr><td>Admin</td><td><code>admin@mups.local</code></td><td>Both cities. Branding, cash categories, backup, HR, referrals, website</td></tr>
+      <tr><td>Doctor</td><td><code>doctor@mups.local</code></td><td>Both cities. Consult Screen, Rx, consultation notes</td></tr>
+      <tr><td>Lead desk — Mehedibag</td><td><code>lead@mups.local</code></td><td>Mehedibag counters including Pharmacy till and stock, plus hire Staff for that centre</td></tr>
+      <tr><td>Desk — Mehedibag</td><td><code>staff@mups.local</code></td><td>Mehedibag Daily Roster, Call next, Collect fee, walk-ins, TV</td></tr>
+      <tr><td>Lead desk — Uttara</td><td><code>lead.uttara@mups.local</code></td><td>Uttara counters including Pharmacy till and stock, plus hire Staff for that centre</td></tr>
+      <tr><td>Desk — Uttara</td><td><code>staff.uttara@mups.local</code></td><td>Uttara Daily Roster, Call next, Collect fee, walk-ins, TV</td></tr>
     </tbody>
   </table>
   <div class="callout callout-warn">
@@ -340,7 +342,7 @@
   <h2>Referrals</h2>
   <p>Seeded GPs: Dr. Karim (Mehedibag) and Dr. Sultana (Uttara ortho). At Collect fee, pick “Referred by.” End of month: Referral ledger → Mark selected as paid. Default owed: ৳200 per consultation, ৳1,000 per intervention. A waived fee voids the commission.</p>
   <h2>HR</h2>
-  <p>Four people: lead desk (linked to <code>lead@mups.local</code>, ৳25,000), desk (linked to <code>staff@mups.local</code>, ৳18,000), procedure nurse Mehedibag (Nurse Rina, ৳22,000), procedure nurse Uttara (Nurse Farhana, ৳22,000). Paying salary writes a cashbook expense in the same breath as the payroll row — a double-click cannot leave an orphan expense.</p>
+  <p>Six people on the HR list: Mehedibag lead desk (<code>lead@mups.local</code>, ৳25,000), Mehedibag reception (<code>staff@mups.local</code>, ৳18,000), Uttara lead desk (<code>lead.uttara@mups.local</code>, ৳25,000), Uttara reception (<code>staff.uttara@mups.local</code>, ৳18,000), procedure nurse Mehedibag (Nurse Rina, ৳22,000), procedure nurse Uttara (Nurse Farhana, ৳22,000). Paying salary writes a cashbook expense in the same breath as the payroll row — a double-click cannot leave an orphan expense.</p>
   <h2>Offline</h2>
   <p>Pack bag (Rx) and queue snapshot work on this computer if the ISP dies. There is no separate queue worker to install — that is deliberate for a chamber laptop.</p>
 </section>

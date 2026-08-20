@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-20T18:22:57+0600
+Last Updated: 2026-08-20T18:34:31+0600
 
 ## Full Site Map
 
@@ -55,7 +55,7 @@ Same central host; tenant identified by URL slug (tenant `id`), e.g. `drkarim`.
 | `/{slug}/admin/cashbook` | Desk khata: income, expense, net, waived (day/week/month) | staff / doctor / admin |
 | `/{slug}/admin/missed-procedures` | Unfinished past-dated intervention rows (WhatsApp + Move; Stations only) | staff / doctor (`canWorkDesk`, **Stations**) |
 | `/{slug}/admin/cash-categories` | Income/expense category labels for the cashbook (add, hide, rename custom) | admin only |
-| `/{slug}/admin/pharmacy-counter` | Pharmacy till: sell from Rx or walk-in, receipt, same-day void | staff with money job / admin (**Pharmacy**) |
+| `/{slug}/admin/pharmacy-counter` | Pharmacy till: sell from Rx or walk-in, receipt, same-day return | staff with money job / admin (**Pharmacy**) |
 | `/{slug}/admin/pharmacy-items` | Shop stock: add SKU, receive box, return unsold | staff with money job / admin (**Pharmacy**) |
 | `/{slug}/admin/pharmacy-physical-count` | Physical count vs system qty (inventory history, not cashbook) | staff with money job / admin (**Pharmacy**) |
 | `/{slug}/admin/pharmacy-pay-supplier` | Pay what is owed to the company, or record a supplier refund | staff with money job / admin (**Pharmacy**) |
@@ -100,7 +100,7 @@ When a doctor connects their own domain (e.g. `drkarim.com`), routes live at the
 | `/admin/cashbook` | Desk khata: income, expense, net, waived (day/week/month) | staff / doctor / admin |
 | `/admin/missed-procedures` | Unfinished past-dated intervention rows (WhatsApp + Move; Stations only) | staff / doctor (`canWorkDesk`, **Stations**) |
 | `/admin/cash-categories` | Income/expense category labels for the cashbook (add, hide, rename custom) | admin only |
-| `/admin/pharmacy-counter` | Pharmacy till: sell from Rx or walk-in, receipt, same-day void | staff with money job / admin (**Pharmacy**) |
+| `/admin/pharmacy-counter` | Pharmacy till: sell from Rx or walk-in, receipt, same-day return | staff with money job / admin (**Pharmacy**) |
 | `/admin/pharmacy-items` | Shop stock: add SKU, receive box, return unsold | staff with money job / admin (**Pharmacy**) |
 | `/admin/pharmacy-physical-count` | Physical count vs system qty (inventory history, not cashbook) | staff with money job / admin (**Pharmacy**) |
 | `/admin/pharmacy-pay-supplier` | Pay what is owed to the company, or record a supplier refund | staff with money job / admin (**Pharmacy**) |
@@ -351,8 +351,8 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 ### Pharmacy counter (when Pharmacy module on)
 
 - **Trigger:** The chamber sells medicines from a cupboard (or a small shop) and needs the till and the shelf to stay in step — without an online patient checkout.
-- **Steps:** Super Admin ticks **Pharmacy**. Desk with the **Money** job (or owner) **Pharmacy stock** — add what this shop actually holds (search the national list, set sell price and company share, receive a box: pay ৳0 / some / full now, mark returnable or bought outright). **MUPS** already has the nine pad SKUs (Coral D Max through Slim Herb); the demo seed receives a small cupboard (a handful of bottles each, on credit) so the till can sell without a first Receive. Same desk opens **Operations → Pharmacy** — pick today’s prescription or a walk-in name, add lines, take cash / bKash / Nagad / card / cash+online (same as Collect fee). Receipt prints. Live qty drops. **Pay supplier** when the company should get its share of what sold (or to record a refund if a returnable box came back after an overpay). Optional **Doctor pharmacy cuts** (Branding % of shop cut, default 0 = off) only on Rx-linked sales; walk-in is ৳0. **Physical count** when the cupboard is counted: type what is on the shelf; the gap is stock history, not a cashbook line. Same-day **Void** undoes the sale. A later dedicated chemist staff login can take stock without a new till role — not split yet.
-- **Data/systems touched:** `pharmacy_items`, `pharmacy_deliveries`, `pharmacy_sales` / `_items`, `pharmacy_counts` / `_items`, `pharmacy_stock_adjustments`, `pharmacy_supplier_settlements`, `pharmacy_doctor_commissions`, `PharmacySaleService` / `PharmacyStockService` / `PharmacySupplierService` / `PharmacyDoctorCommissionService`, cashbook `pharmacy` / `pharmacy_purchase` / `pharmacy_refund` / `pharmacy_supplier_refund` / `pharmacy_doctor_payout`.
+- **Steps:** Super Admin ticks **Pharmacy**. Desk with the **Money** job (or owner) **Pharmacy stock** — add what this shop actually holds (search the national list, set sell price and company share, pick **Centre** when the clinic has more than one building, receive a box: pay ৳0 / some / full now, mark returnable or bought outright). **MUPS** already has the nine pad SKUs at **each** centre (Coral D Max through Slim Herb); the demo seed receives a small cupboard at both (a handful of bottles each, on credit) so the till can sell without a first Receive. A Mehedibag login does not see Uttara bottles. Same desk opens **Operations → Pharmacy** — pick today’s prescription (that centre’s sittings) or a walk-in (name optional, no phone — unlike Daily Roster walk-in), add lines from this cupboard only (one sale cannot mix two centres), take cash / bKash / Nagad / card / cash+online (same as Collect fee). Receipt prints. Live qty drops **at that centre**. **Pay supplier** when the company should get its share of what sold at the cupboards this login can see (or to record a refund if a returnable box came back after an overpay). Optional **Doctor pharmacy cuts** (Branding % of shop cut, default 0 = off) only on Rx-linked sales; walk-in is ৳0. **Physical count** when **that** cupboard is counted (owner picks which centre if both are open); the gap is stock history, not a cashbook line. Same-day **Return** undoes the sale. A later dedicated chemist staff login can take stock without a new till role — not split yet.
+- **Data/systems touched:** `pharmacy_items.chamber_id`, `pharmacy_counts.chamber_id`, `pharmacy_deliveries`, `pharmacy_sales` / `_items`, `pharmacy_count_items`, `pharmacy_stock_adjustments`, `pharmacy_supplier_settlements`, `pharmacy_doctor_commissions`, `PharmacySaleService` / `PharmacyStockService` / `PharmacySupplierService` / `PharmacyDoctorCommissionService` / `StaffDeskScope`, cashbook `pharmacy` / `pharmacy_purchase` / `pharmacy_refund` / `pharmacy_supplier_refund` / `pharmacy_doctor_payout`.
 - **Success:** End of day the khata shows the full sell price that came in; the shelf qty matches what was sold/received/counted; the company is owed only for what the deal says (sold vs bought-outright); the doctor is not silently owed a walk-in cut.
 
 ### Stations clinic floor (staff / doctor — when module on)

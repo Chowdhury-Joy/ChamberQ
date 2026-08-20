@@ -272,6 +272,7 @@ class ChamberCashService
         ?int $cashTaka = null,
         ?int $onlineTaka = null,
         ?string $onlineMethod = null,
+        ?int $chamberId = null,
     ): ChamberCashEntry {
         $this->assertMethod($method);
 
@@ -289,6 +290,7 @@ class ChamberCashService
             'mobile_method' => $split['online_method'],
             'category' => $category,
             'method' => $method,
+            'chamber_id' => $chamberId,
             'recorded_by' => $user->id,
             'occurred_on' => $occurredOn->toDateString(),
             'note' => $note,
@@ -305,6 +307,7 @@ class ChamberCashService
         ?int $cashTaka = null,
         ?int $onlineTaka = null,
         ?string $onlineMethod = null,
+        ?int $chamberId = null,
     ): ChamberCashEntry {
         $this->assertMethod($method);
 
@@ -322,6 +325,7 @@ class ChamberCashService
             'mobile_method' => $split['online_method'],
             'category' => $category,
             'method' => $method,
+            'chamber_id' => $chamberId,
             'recorded_by' => $user->id,
             'occurred_on' => $occurredOn->toDateString(),
             'note' => $note,

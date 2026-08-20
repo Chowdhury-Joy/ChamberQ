@@ -43,7 +43,7 @@ class PharmacyPaySupplier extends Page
 
     public function refreshBalance(): void
     {
-        $this->balance = app(PharmacySupplierService::class)->shopBalance();
+        $this->balance = app(PharmacySupplierService::class)->shopBalance(auth()->user());
     }
 
     protected function getHeaderActions(): array
@@ -117,10 +117,11 @@ class PharmacyPaySupplier extends Page
                 ->form([
                     Select::make('pharmacy_item_id')
                         ->label(__('Medicine'))
-                        ->options(fn (): array => PharmacyItem::query()
+                        ->options(fn (): array => PharmacyAccess::scopedItems(auth()->user())
                             ->where('qty_on_hand', '>', 0)
                             ->orderBy('name')
-                            ->pluck('name', 'id')
+                            ->get()
+                            ->mapWithKeys(fn (PharmacyItem $item): array => [$item->id => $item->displayLabel()])
                             ->all())
                         ->required()
                         ->searchable()
@@ -133,7 +134,7 @@ class PharmacyPaySupplier extends Page
                     TextInput::make('note')->label(__('Note')),
                 ])
                 ->action(function (array $data): void {
-                    $item = PharmacyItem::query()->find($data['pharmacy_item_id']);
+                    $item = PharmacyAccess::scopedItems(auth()->user())->find($data['pharmacy_item_id']);
                     if (! $item) {
                         return;
                     }

@@ -23,6 +23,7 @@ class PharmacyItem extends Model
 
     protected $fillable = [
         'medicine_id',
+        'chamber_id',
         'name',
         'generic_name',
         'sell_price_taka',
@@ -58,6 +59,24 @@ class PharmacyItem extends Model
         return $this->belongsTo(Medicine::class);
     }
 
+    public function chamber(): BelongsTo
+    {
+        return $this->belongsTo(Chamber::class);
+    }
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $item): void {
+            if ($item->chamber_id) {
+                return;
+            }
+
+            if (Chamber::query()->count() === 1) {
+                $item->chamber_id = Chamber::query()->value('id');
+            }
+        });
+    }
+
     public function deliveries(): HasMany
     {
         return $this->hasMany(PharmacyDelivery::class);
@@ -71,11 +90,16 @@ class PharmacyItem extends Model
     public function displayLabel(): string
     {
         $stock = __(' :qty in stock', ['qty' => $this->qty_on_hand]);
+        $label = $this->name.' — ৳'.number_format($this->sell_price_taka).$stock;
 
-        return $this->name.' — ৳'.number_format($this->sell_price_taka).$stock;
+        if (\App\Support\StaffDeskScope::tenantHasMultipleChambers() && $this->chamber) {
+            $label = $this->chamber->name.' · '.$label;
+        }
+
+        return $label;
     }
 
-    public static function matchByBrand(?string $brand): ?self
+    public static function matchByBrand(?string $brand, ?int $chamberId = null): ?self
     {
         $needle = mb_strtolower(trim((string) $brand));
 
@@ -83,9 +107,15 @@ class PharmacyItem extends Model
             return null;
         }
 
-        return static::query()
+        $query = static::query()
             ->where('is_active', true)
-            ->whereRaw('LOWER(name) = ?', [$needle])
+            ->whereRaw('LOWER(name) = ?', [$needle]);
+
+        if ($chamberId !== null) {
+            $query->where('chamber_id', $chamberId);
+        }
+
+        return $query
             ->orderByDesc('qty_on_hand')
             ->first();
     }

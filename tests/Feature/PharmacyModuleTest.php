@@ -26,10 +26,13 @@ use App\Services\PharmacyStockService;
 use App\Services\PharmacySupplierService;
 use App\Support\PharmacyAccess;
 use App\Support\StaffDeskJobs;
+use App\Support\StaffDeskScope;
 use Carbon\Carbon;
+use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use InvalidArgumentException;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class PharmacyModuleTest extends TestCase
@@ -173,6 +176,67 @@ class PharmacyModuleTest extends TestCase
 
         $this->assertSame(0, PharmacyDoctorCommission::query()->count());
         $this->assertSame(300, app(PharmacySupplierService::class)->shopBalance()['owed']);
+    }
+
+    public function test_walk_in_sale_does_not_need_a_phone_number(): void
+    {
+        $item = $this->napaOnShelf(5, paidNow: 0);
+
+        Filament::setCurrentPanel('tenantAdmin');
+        $this->actingAs($this->staff);
+
+        Livewire::test(PharmacyCounter::class)
+            ->mountAction('walkIn')
+            ->assertFormFieldExists('patient_name')
+            ->assertFormFieldDoesNotExist('patient_phone')
+            ->fillForm(function (array $state) use ($item): array {
+                $lines = $state['lines'] ?? [];
+                $uuid = array_key_first($lines);
+                if ($uuid === null) {
+                    $lines = [['pharmacy_item_id' => $item->id, 'qty' => 1]];
+                } else {
+                    $lines[$uuid]['pharmacy_item_id'] = $item->id;
+                    $lines[$uuid]['qty'] = 1;
+                }
+
+                return [
+                    'patient_name' => 'Karim',
+                    'lines' => $lines,
+                    'method' => ChamberCashEntry::METHOD_CASH,
+                ];
+            })
+            ->callMountedAction()
+            ->assertHasNoActionErrors();
+
+        $sale = PharmacySale::query()->latest('id')->first();
+        $this->assertNotNull($sale);
+        $this->assertSame('Karim', $sale->patient_name);
+        $this->assertNull($sale->patient_phone);
+        $this->assertSame(650, $sale->amount);
+    }
+
+    public function test_counter_list_uses_shop_words(): void
+    {
+        $item = $this->napaOnShelf(5, paidNow: 0);
+        app(PharmacySaleService::class)->sell(
+            $this->staff,
+            [['pharmacy_item_id' => $item->id, 'qty' => 1]],
+            ChamberCashEntry::METHOD_CASH,
+            false,
+            null,
+            'Karim',
+        );
+
+        Filament::setCurrentPanel('tenantAdmin');
+        $this->actingAs($this->staff);
+
+        Livewire::test(PharmacyCounter::class)
+            ->assertSee('Amount')
+            ->assertSee('Type of medicine')
+            ->assertSee('Returned')
+            ->assertSee('NAPA 500')
+            ->assertDontSee('Taken')
+            ->assertTableActionHasLabel('void', 'Return', $sale);
     }
 
     public function test_hybrid_deposit_then_sales_then_return_sets_owed(): void
@@ -488,6 +552,80 @@ class PharmacyModuleTest extends TestCase
         $this->actingAs($this->doctorUser);
         $this->assertFalse(PharmacyAccess::canManageStock($this->doctorUser));
         $this->assertFalse(PharmacyItemResource::canViewAny());
+    }
+
+    public function test_selling_at_one_centre_does_not_empty_the_other_cupboard(): void
+    {
+        $mehedibag = Chamber::query()->first();
+        $uttara = Chamber::create(['name' => 'Uttara']);
+
+        $mehedibagItem = $this->namedOnShelf('Joint Pro', 10, $mehedibag->id);
+        $uttaraItem = $this->namedOnShelf('Joint Pro', 10, $uttara->id);
+
+        $mehedibagStaff = User::create([
+            'name' => 'Mehedibag desk',
+            'email' => 'mehedibag@pharmacy-shop.test',
+            'password' => Hash::make('secret'),
+            'role' => User::ROLE_STAFF,
+            'tenant_id' => 'pharmacy-shop',
+        ]);
+        StaffDeskScope::syncChambers($mehedibagStaff, [$mehedibag->id]);
+
+        app(PharmacySaleService::class)->sell(
+            $this->staff,
+            [['pharmacy_item_id' => $uttaraItem->id, 'qty' => 1]],
+            ChamberCashEntry::METHOD_CASH,
+        );
+
+        $this->assertSame(10, $mehedibagItem->fresh()->qty_on_hand);
+        $this->assertSame(9, $uttaraItem->fresh()->qty_on_hand);
+
+        $visible = PharmacyAccess::scopedItems($mehedibagStaff)->pluck('id');
+        $this->assertTrue($visible->contains($mehedibagItem->id));
+        $this->assertFalse($visible->contains($uttaraItem->id));
+
+        try {
+            app(PharmacySaleService::class)->sell(
+                $this->staff,
+                [
+                    ['pharmacy_item_id' => $mehedibagItem->id, 'qty' => 1],
+                    ['pharmacy_item_id' => $uttaraItem->id, 'qty' => 1],
+                ],
+                ChamberCashEntry::METHOD_CASH,
+            );
+            $this->fail('A basket must not mix two centres.');
+        } catch (InvalidArgumentException $e) {
+            $this->assertStringContainsString('mix two centres', $e->getMessage());
+        }
+
+        app(PharmacyStockService::class)->startCount($this->staff, $mehedibag->id);
+        app(PharmacyStockService::class)->startCount($this->staff, $uttara->id);
+        $this->assertSame(2, PharmacyCount::query()->where('status', PharmacyCount::STATUS_IN_PROGRESS)->count());
+
+        $this->expectException(InvalidArgumentException::class);
+        app(PharmacyStockService::class)->startCount($mehedibagStaff, $uttara->id);
+    }
+
+    private function namedOnShelf(string $name, int $qty, int $chamberId, int $paidNow = 0): PharmacyItem
+    {
+        $item = PharmacyItem::create([
+            'name' => $name,
+            'chamber_id' => $chamberId,
+            'sell_price_taka' => 1100,
+            'company_share_taka' => 840,
+            'unit_label' => PharmacyItem::UNIT_BOTTLE,
+            'qty_on_hand' => 0,
+            'is_active' => true,
+        ]);
+        app(PharmacyStockService::class)->receive(
+            $item,
+            $this->staff,
+            $qty,
+            $paidNow,
+            true,
+        );
+
+        return $item->fresh();
     }
 
     private function napaOnShelf(int $qty, int $paidNow, bool $returnable = true): PharmacyItem

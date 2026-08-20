@@ -17,6 +17,7 @@ class PharmacyCount extends Model
 
     protected $fillable = [
         'status',
+        'chamber_id',
         'started_by',
         'saved_by',
         'saved_at',
@@ -34,5 +35,10 @@ class PharmacyCount extends Model
     public function startedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'started_by');
+    }
+
+    public function chamber(): BelongsTo
+    {
+        return $this->belongsTo(Chamber::class);
     }
 }

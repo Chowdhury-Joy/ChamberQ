@@ -10,6 +10,7 @@ use App\Models\PharmacyItem;
 use App\Models\PharmacyStockAdjustment;
 use App\Models\PharmacySupplierSettlement;
 use App\Models\User;
+use App\Support\StaffDeskScope;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -46,6 +47,11 @@ class PharmacyStockService
             $item, $user, $qty, $paidNow, $returnable, $companyShareTaka, $note, $receivedOn, $method, $cashTaka, $onlineTaka, $onlineMethod
         ): PharmacyDelivery {
             $locked = PharmacyItem::query()->whereKey($item->id)->lockForUpdate()->firstOrFail();
+
+            if (! StaffDeskScope::pharmacyItemIsVisible($user, $locked)) {
+                throw new InvalidArgumentException(__('This login cannot change that cupboard.'));
+            }
+
             $share = $companyShareTaka ?? $locked->company_share_taka;
 
             if ($share < 0 || $share > $locked->sell_price_taka) {
@@ -79,6 +85,7 @@ class PharmacyStockService
                     $cashTaka,
                     $onlineTaka,
                     $onlineMethod,
+                    $locked->chamber_id !== null ? (int) $locked->chamber_id : null,
                 );
                 PharmacySupplierSettlement::create([
                     'kind' => PharmacySupplierSettlement::KIND_PURCHASE,
@@ -104,6 +111,11 @@ class PharmacyStockService
 
         DB::transaction(function () use ($item, $user, $qty, $note): void {
             $locked = PharmacyItem::query()->whereKey($item->id)->lockForUpdate()->firstOrFail();
+
+            if (! StaffDeskScope::pharmacyItemIsVisible($user, $locked)) {
+                throw new InvalidArgumentException(__('This login cannot change that cupboard.'));
+            }
+
             $remaining = $qty;
 
             $deliveries = PharmacyDelivery::query()
@@ -148,7 +160,18 @@ class PharmacyStockService
                 throw new InvalidArgumentException(__('That count is already saved.'));
             }
 
-            $items = PharmacyItem::query()->lockForUpdate()->orderBy('name')->get();
+            if ($locked->chamber_id) {
+                $ids = StaffDeskScope::chamberIdsFor($user);
+                if ($ids !== null && ! in_array((int) $locked->chamber_id, $ids, true)) {
+                    throw new InvalidArgumentException(__('This login cannot change that cupboard.'));
+                }
+            }
+
+            $itemsQuery = PharmacyItem::query()->lockForUpdate()->orderBy('name');
+            if ($locked->chamber_id) {
+                $itemsQuery->where('chamber_id', $locked->chamber_id);
+            }
+            $items = $itemsQuery->get();
 
             foreach ($items as $item) {
                 $system = $item->qty_on_hand;
@@ -177,25 +200,52 @@ class PharmacyStockService
         });
     }
 
-    public function startCount(User $user): PharmacyCount
+    public function startCount(User $user, ?int $chamberId = null): PharmacyCount
     {
         $this->assertModule();
 
-        return DB::transaction(function () use ($user): PharmacyCount {
+        return DB::transaction(function () use ($user, $chamberId): PharmacyCount {
+            $chamberId = $this->resolveChamberForCount($user, $chamberId);
+
             $open = PharmacyCount::query()
                 ->where('status', PharmacyCount::STATUS_IN_PROGRESS)
+                ->where('chamber_id', $chamberId)
                 ->lockForUpdate()
                 ->first();
 
             if ($open) {
-                throw new InvalidArgumentException(__('A physical count is already in progress.'));
+                throw new InvalidArgumentException(__('A physical count is already in progress at this centre.'));
             }
 
             return PharmacyCount::create([
                 'status' => PharmacyCount::STATUS_IN_PROGRESS,
+                'chamber_id' => $chamberId,
                 'started_by' => $user->id,
             ]);
         });
+    }
+
+    private function resolveChamberForCount(User $user, ?int $chamberId): int
+    {
+        $options = array_map('intval', array_keys(StaffDeskScope::chamberOptionsFor($user)));
+
+        if ($options === []) {
+            throw new InvalidArgumentException(__('Pick a centre.'));
+        }
+
+        if ($chamberId !== null) {
+            if (! in_array($chamberId, $options, true)) {
+                throw new InvalidArgumentException(__('This login cannot change that cupboard.'));
+            }
+
+            return $chamberId;
+        }
+
+        if (count($options) === 1) {
+            return $options[0];
+        }
+
+        throw new InvalidArgumentException(__('Pick a centre.'));
     }
 
     public function refreshItemQty(PharmacyItem $item): void

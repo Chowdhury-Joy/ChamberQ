@@ -3374,3 +3374,21 @@
  <action>`MupsDemoSeeder` receives a small cupboard through `PharmacyStockService::receive` (returnable, paid ৳0 on credit): Coral D Max 12, MH Vitamin 10, Joint Pro 8, Nervafix 6, Vitafix 6, Flexactive Extra 4, Calcimax 10, Neumax 8, Slim Herb 5. Re-running demo resets those deliveries so stock does not double. Catalogue prices stay on `MupsSeeder`.</action>
  <reason>Like putting a few bottles in the glass cabinet so the first walk-in can actually buy one — not guessing a warehouse, and not typing qty by hand, which would skip the delivery record the till needs.</reason>
 </decision>
+
+## 2026-08-20T18:29:57+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Pharmacy Walk-in sale showed a Phone field. Staff treat that like Daily Roster walk-in, which really does need a mobile to issue a serial. A chemist till does not.</context>
+ <action>Remove `patient_phone` from the Pharmacy **Walk-in sale** form. Name stays optional. Daily Roster / Live Queue / Book serial still require a phone. Rx-linked sales still copy the patient’s phone from the prescription when one exists.</action>
+ <reason>Like a neighbourhood pharmacy: the person at the counter pays cash for a bottle and walks out. Asking for a mobile turns a 10-second sale into a registration, and it is not needed to print a receipt or drop stock.</reason>
+</decision>
+
+## 2026-08-20T18:34:31+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>MUPS has two buildings. One shared shop list meant selling a bottle in Uttara emptied the Mehedibag cupboard on the computer, and a Mehedibag clerk could see Dhaka stock.</context>
+ <action>Option B: each centre has its own pharmacy cupboard (`pharmacy_items.chamber_id`). People are stamped to a building: Mehedibag lead/desk vs Uttara lead/desk; Dr. Moin and the owner stay unstamped (both cities). One sale cannot mix two centres. A physical count is per cupboard. Fee catalogue, referring GPs, and HR rules stay clinic-wide.</action>
+ <reason>Like two shops with two fridges: moving a cashier changes which drawer they use. The same Joint Pro bottle in Uttara is not the one sitting in Chittagong.</reason>
+</decision>

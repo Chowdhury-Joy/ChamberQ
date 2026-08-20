@@ -307,21 +307,29 @@ class MupsWebsiteTest extends TestCase
         $expected = MupsSeeder::pharmacyShopRows();
         $this->assertCount(9, $expected);
 
-        $items = PharmacyItem::query()->orderBy('sort_order')->get();
-        $this->assertCount(9, $items);
+        $items = PharmacyItem::query()->orderBy('chamber_id')->orderBy('sort_order')->get();
+        $this->assertCount(18, $items);
 
-        foreach ($expected as $index => $row) {
-            $item = $items[$index];
-            $this->assertSame($row['name'], $item->name);
-            $this->assertSame($row['sell_price_taka'], $item->sell_price_taka);
-            $this->assertSame($row['company_share_taka'], $item->company_share_taka);
-            $this->assertSame(MupsDemoSeeder::demoStockQty($row['name']), $item->qty_on_hand);
-            $this->assertTrue($item->is_active);
-            $this->assertSame(
-                $row['sell_price_taka'] - $row['company_share_taka'],
-                $item->shopCutTaka(),
-            );
-            $this->assertTrue($item->deliveries()->exists());
+        $chambers = \App\Models\Chamber::query()->orderBy('id')->get();
+        $this->assertCount(2, $chambers);
+
+        foreach ($chambers as $chamber) {
+            $atCentre = $items->where('chamber_id', $chamber->id)->values();
+            $this->assertCount(9, $atCentre);
+
+            foreach ($expected as $index => $row) {
+                $item = $atCentre[$index];
+                $this->assertSame($row['name'], $item->name);
+                $this->assertSame($row['sell_price_taka'], $item->sell_price_taka);
+                $this->assertSame($row['company_share_taka'], $item->company_share_taka);
+                $this->assertSame(MupsDemoSeeder::demoStockQty($row['name']), $item->qty_on_hand);
+                $this->assertTrue($item->is_active);
+                $this->assertSame(
+                    $row['sell_price_taka'] - $row['company_share_taka'],
+                    $item->shopCutTaka(),
+                );
+                $this->assertTrue($item->deliveries()->exists());
+            }
         }
 
         tenancy()->end();
@@ -376,6 +384,47 @@ class MupsWebsiteTest extends TestCase
         $this->assertTrue(\App\Support\PharmacyAccess::canManageStock($lead));
         $this->assertTrue(\App\Filament\TenantAdmin\Pages\PharmacyCounter::canAccess());
         $this->assertTrue(\App\Filament\TenantAdmin\Resources\PharmacyItems\PharmacyItemResource::canViewAny());
+
+        $mehedibag = \App\Models\Chamber::query()->where('name', 'like', '%Mehedibag%')->first();
+        $uttara = \App\Models\Chamber::query()->where('name', 'like', '%Uttara%')->first();
+        $visible = \App\Support\PharmacyAccess::scopedItems($lead)->pluck('chamber_id')->unique()->sort()->values();
+        $this->assertEquals([$mehedibag->id], $visible->all());
+        $this->assertFalse($visible->contains($uttara->id));
+
+        tenancy()->end();
+    }
+
+    public function test_each_centre_has_its_own_desk_logins(): void
+    {
+        $tenant = \App\Models\Tenant::find(MupsSeeder::TENANT_ID);
+        tenancy()->initialize($tenant);
+
+        $mehedibag = \App\Models\Chamber::query()->where('name', 'like', '%Mehedibag%')->first();
+        $uttara = \App\Models\Chamber::query()->where('name', 'like', '%Uttara%')->first();
+
+        $mehedibagLead = \App\Models\User::withoutGlobalScope(\App\Scopes\TenantScope::class)
+            ->where('email', 'lead@mups.local')
+            ->first();
+        $uttaraLead = \App\Models\User::withoutGlobalScope(\App\Scopes\TenantScope::class)
+            ->where('email', 'lead.uttara@mups.local')
+            ->first();
+        $uttaraDesk = \App\Models\User::withoutGlobalScope(\App\Scopes\TenantScope::class)
+            ->where('email', 'staff.uttara@mups.local')
+            ->first();
+        $doctor = \App\Models\User::withoutGlobalScope(\App\Scopes\TenantScope::class)
+            ->where('email', 'doctor@mups.local')
+            ->first();
+
+        $this->assertNotNull($uttaraLead);
+        $this->assertTrue(\App\Support\StaffDeskJobs::isLeadDesk($uttaraLead));
+        $this->assertTrue(\Illuminate\Support\Facades\Hash::check('pass', $uttaraLead->password));
+        $this->assertSame([$uttara->id], \App\Support\StaffDeskScope::chamberIdsFor($uttaraLead));
+        $this->assertSame([$mehedibag->id], \App\Support\StaffDeskScope::chamberIdsFor($mehedibagLead));
+        $this->assertSame([$uttara->id], \App\Support\StaffDeskScope::chamberIdsFor($uttaraDesk));
+        $this->assertNull(\App\Support\StaffDeskScope::chamberIdsFor($doctor));
+
+        $uttaraVisible = \App\Support\PharmacyAccess::scopedItems($uttaraLead)->pluck('chamber_id')->unique()->sort()->values();
+        $this->assertEquals([$uttara->id], $uttaraVisible->all());
 
         tenancy()->end();
     }

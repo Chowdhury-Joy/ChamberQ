@@ -2,7 +2,9 @@
 
 namespace App\Support;
 
+use App\Models\PharmacyItem;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 
 final class PharmacyAccess
 {
@@ -36,5 +38,16 @@ final class PharmacyAccess
         return $user->isStaff()
             && StaffDeskJobs::hasJob($user, StaffDeskJobs::JOB_MONEY)
             && $user->canManageCash();
+    }
+
+    public static function scopedItems(?User $user): Builder
+    {
+        $query = PharmacyItem::query();
+
+        if ($user instanceof User) {
+            StaffDeskScope::constrainPharmacyItems($query, $user);
+        }
+
+        return $query;
     }
 }

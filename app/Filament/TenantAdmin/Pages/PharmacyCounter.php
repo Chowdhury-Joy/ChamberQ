@@ -10,6 +10,7 @@ use App\Models\User;
 use App\Services\OperationalReportService;
 use App\Services\PharmacySaleService;
 use App\Support\PharmacyAccess;
+use App\Support\StaffDeskScope;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
@@ -48,20 +49,36 @@ class PharmacyCounter extends Page implements HasTable
     public function table(Table $table): Table
     {
         return $table
-            ->query(fn (): Builder => PharmacySale::query()->with('items')->latest())
+            ->query(function (): Builder {
+                $query = PharmacySale::query()->with('items')->latest();
+                $user = auth()->user();
+                if ($user instanceof User) {
+                    $ids = StaffDeskScope::chamberIdsFor($user);
+                    if ($ids !== null) {
+                        $query->whereHas('items.item', fn ($item) => $item->whereIn('chamber_id', $ids));
+                    }
+                }
+
+                return $query;
+            })
             ->columns([
                 TextColumn::make('occurred_on')->label(__('Date'))->date(),
                 TextColumn::make('patient_name')->label(__('Patient'))->searchable()->placeholder(__('Walk-in')),
                 TextColumn::make('amount')
-                    ->label(__('Taken'))
+                    ->label(__('Amount'))
                     ->formatStateUsing(fn (PharmacySale $record): string => $record->waived
                         ? __('Waived')
                         : '৳'.number_format($record->amount)),
-                TextColumn::make('items_count')
-                    ->label(__('Lines'))
-                    ->counts('items'),
+                TextColumn::make('medicine_types')
+                    ->label(__('Type of medicine'))
+                    ->getStateUsing(fn (PharmacySale $record): string => $record->items
+                        ->map(fn ($line) => $line->qty > 1 ? $line->name.' × '.$line->qty : $line->name)
+                        ->filter()
+                        ->implode(', '))
+                    ->placeholder('—')
+                    ->wrap(),
                 TextColumn::make('voided_at')
-                    ->label(__('Voided'))
+                    ->label(__('Returned'))
                     ->dateTime()
                     ->placeholder('—'),
             ])
@@ -75,7 +92,7 @@ class PharmacyCounter extends Page implements HasTable
                     ))
                     ->modalSubmitAction(false),
                 Action::make('void')
-                    ->label(__('Void'))
+                    ->label(__('Return'))
                     ->color('danger')
                     ->requiresConfirmation()
                     ->visible(fn (PharmacySale $record): bool => ! $record->isVoided())
@@ -88,7 +105,7 @@ class PharmacyCounter extends Page implements HasTable
                             return;
                         }
 
-                        Notification::make()->title(__('Sale voided'))->success()->send();
+                        Notification::make()->title(__('Sale returned'))->success()->send();
                     }),
             ]);
     }
@@ -149,8 +166,7 @@ class PharmacyCounter extends Page implements HasTable
     private function walkInForm(): array
     {
         return [
-            TextInput::make('patient_name')->label(__('Patient name')),
-            TextInput::make('patient_phone')->label(__('Phone')),
+            TextInput::make('patient_name')->label(__('Name (optional)')),
             $this->linesRepeater(),
             ...PharmacyPaymentFields::components(allowWaive: true),
         ];
@@ -163,7 +179,7 @@ class PharmacyCounter extends Page implements HasTable
             ->schema([
                 Select::make('pharmacy_item_id')
                     ->label(__('Medicine'))
-                    ->options(fn (): array => PharmacyItem::query()
+                    ->options(fn (): array => PharmacyAccess::scopedItems(auth()->user())
                         ->where('is_active', true)
                         ->where('qty_on_hand', '>', 0)
                         ->orderBy('name')
@@ -205,6 +221,11 @@ class PharmacyCounter extends Page implements HasTable
             ];
         }
 
+        $patientName = filled($data['patient_name'] ?? null) ? trim((string) $data['patient_name']) : null;
+        if ($patientName === '') {
+            $patientName = null;
+        }
+
         try {
             app(PharmacySaleService::class)->sell(
                 $user,
@@ -212,8 +233,8 @@ class PharmacyCounter extends Page implements HasTable
                 (string) ($data['method'] ?? \App\Models\ChamberCashEntry::METHOD_CASH),
                 (bool) ($data['waived'] ?? false),
                 $prescription,
-                $data['patient_name'] ?? null,
-                $data['patient_phone'] ?? null,
+                $patientName,
+                null,
                 $data['note'] ?? null,
                 isset($data['cash_taka']) ? (int) $data['cash_taka'] : null,
                 isset($data['online_taka']) ? (int) $data['online_taka'] : null,
@@ -236,7 +257,13 @@ class PharmacyCounter extends Page implements HasTable
 
         return Prescription::query()
             ->whereHas('items')
-            ->whereHas('visitRecord.booking', fn ($q) => $q->whereDate('booking_date', $today))
+            ->whereHas('visitRecord.booking', function ($q) use ($today): void {
+                $q->whereDate('booking_date', $today);
+                $user = auth()->user();
+                if ($user instanceof User) {
+                    StaffDeskScope::constrainBookings($q, $user);
+                }
+            })
             ->with(['patient', 'visitRecord.booking'])
             ->latest()
             ->get()

@@ -13,6 +13,7 @@ use App\Models\PharmacyStockAdjustment;
 use App\Models\Prescription;
 use App\Models\User;
 use App\Support\PrescriptionQuantity;
+use App\Support\StaffDeskScope;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -38,6 +39,15 @@ class PharmacySaleService
     ): PharmacySale {
         $this->assertModule();
 
+        $patientName = filled($patientName) ? trim($patientName) : null;
+        $patientPhone = filled($patientPhone) ? trim($patientPhone) : null;
+        if ($patientName === '') {
+            $patientName = null;
+        }
+        if ($patientPhone === '') {
+            $patientPhone = null;
+        }
+
         if ($lines === []) {
             throw new InvalidArgumentException(__('Add at least one medicine.'));
         }
@@ -47,10 +57,12 @@ class PharmacySaleService
         return DB::transaction(function () use (
             $user, $lines, $method, $waived, $prescription, $patientName, $patientPhone, $note, $cashTaka, $onlineTaka, $onlineMethod, $occurredOn
         ): PharmacySale {
-            $allocations = $this->allocate($lines);
+            $allocations = $this->allocate($user, $lines);
             $total = 0;
+            $saleChamberId = null;
             foreach ($allocations as $row) {
                 $total += $row['qty'] * $row['item']->sell_price_taka;
+                $saleChamberId ??= $row['item']->chamber_id;
             }
 
             if (! $waived && $total < 1) {
@@ -73,6 +85,7 @@ class PharmacySaleService
                     $cashTaka,
                     $onlineTaka,
                     $onlineMethod,
+                    $saleChamberId !== null ? (int) $saleChamberId : null,
                 );
             }
 
@@ -148,12 +161,12 @@ class PharmacySaleService
             $locked = PharmacySale::query()->whereKey($sale->id)->lockForUpdate()->firstOrFail();
 
             if ($locked->isVoided()) {
-                throw new InvalidArgumentException(__('That sale is already voided.'));
+                throw new InvalidArgumentException(__('That sale is already returned.'));
             }
 
             $today = now(OperationalReportService::TIMEZONE)->toDateString();
             if ($locked->occurred_on?->toDateString() !== $today) {
-                throw new InvalidArgumentException(__('Only today\'s sales can be voided.'));
+                throw new InvalidArgumentException(__('Only today\'s sales can be returned.'));
             }
 
             $stock = app(PharmacyStockService::class);
@@ -164,22 +177,24 @@ class PharmacySaleService
                 $delivery->qty_on_hand += $line->qty;
                 $delivery->qty_sold -= $line->qty;
                 $delivery->save();
-                $stock->recordAdjustment($item, PharmacyStockAdjustment::KIND_VOID_RESTORE, $user, $delivery, __('Void sale'));
+                $stock->recordAdjustment($item, PharmacyStockAdjustment::KIND_VOID_RESTORE, $user, $delivery, __('Return sale'));
             }
 
             app(PharmacyDoctorCommissionService::class)->voidForSale($locked);
 
             if (! $locked->waived && $locked->amount > 0) {
+                $refundChamberId = $locked->items()->with('item')->first()?->item?->chamber_id;
                 $refund = app(ChamberCashService::class)->recordLockedExpense(
                     $user,
                     $locked->amount,
                     ChamberCashEntry::CATEGORY_PHARMACY_REFUND,
                     $locked->method,
                     now(OperationalReportService::TIMEZONE),
-                    __('Void pharmacy sale'),
+                    __('Return pharmacy sale'),
                     $locked->cash_taka,
                     $locked->mobile_taka,
                     $locked->mobile_method,
+                    $refundChamberId !== null ? (int) $refundChamberId : null,
                 );
                 $locked->refund_cash_entry_id = $refund->id;
             }
@@ -197,9 +212,14 @@ class PharmacySaleService
     public function suggestionsFromPrescription(Prescription $prescription): array
     {
         $rows = [];
+        $prescription->loadMissing(['items', 'visitRecord.booking.bookable']);
+        $bookable = $prescription->visitRecord?->booking?->bookable;
+        $chamberId = $bookable instanceof \App\Models\ScheduleSession
+            ? (int) $bookable->chamber_id
+            : null;
 
         foreach ($prescription->items as $line) {
-            $item = PharmacyItem::matchByBrand($line->medicine_name);
+            $item = PharmacyItem::matchByBrand($line->medicine_name, $chamberId);
             $rows[] = [
                 'pharmacy_item_id' => $item?->id,
                 'prescription_item_id' => $line->id,
@@ -218,10 +238,11 @@ class PharmacySaleService
      * @param  list<array{pharmacy_item_id: int, qty: int, prescription_item_id?: ?string}>  $lines
      * @return list<array{item: PharmacyItem, delivery: PharmacyDelivery, qty: int, prescription_item_id: ?string}>
      */
-    private function allocate(array $lines): array
+    private function allocate(User $user, array $lines): array
     {
         $allocations = [];
         $remainingOnHand = [];
+        $saleChamberId = null;
 
         foreach ($lines as $line) {
             $qty = (int) ($line['qty'] ?? 0);
@@ -238,6 +259,15 @@ class PharmacySaleService
             if (! $item) {
                 throw new InvalidArgumentException(__('That shop item is not on the list.'));
             }
+
+            if (! StaffDeskScope::pharmacyItemIsVisible($user, $item)) {
+                throw new InvalidArgumentException(__('This login cannot change that cupboard.'));
+            }
+
+            if ($saleChamberId !== null && (int) $item->chamber_id !== $saleChamberId) {
+                throw new InvalidArgumentException(__('One sale cannot mix two centres.'));
+            }
+            $saleChamberId = $item->chamber_id !== null ? (int) $item->chamber_id : $saleChamberId;
 
             $remaining = $qty;
             $deliveries = PharmacyDelivery::query()

@@ -884,6 +884,12 @@
 ## 2026-08-20T18:22:57+0600
 - MUPS demo cupboard: `MupsDemoSeeder` receives a handful of bottles per pad SKU via `PharmacyStockService` (paid ৳0, returnable) so Pharmacy till is not empty.
 
+## 2026-08-20T18:29:57+0600
+- Pharmacy Walk-in sale no longer collects a phone; optional name only (`PharmacyCounter::walkInForm`).
+
+## 2026-08-20T18:34:31+0600
+- Pharmacy stock is per centre (`pharmacy_items.chamber_id`, `pharmacy_counts.chamber_id`). MUPS seed stamps Mehedibag vs Uttara desk logins and clones the nine pad SKUs into two cupboards.
+
 
 
 

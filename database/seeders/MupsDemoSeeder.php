@@ -557,16 +557,21 @@ class MupsDemoSeeder extends Seeder
         }
 
         $stock = app(PharmacyStockService::class);
+        $owner = User::withoutGlobalScope(TenantScope::class)
+            ->where('tenant_id', MupsSeeder::TENANT_ID)
+            ->where('role', User::ROLE_OWNER)
+            ->first();
+        $receiver = $owner ?? $staff;
 
-        foreach (self::demoStockByName() as $name => $qty) {
-            $item = PharmacyItem::query()->where('name', $name)->first();
-            if (! $item || $qty < 1) {
+        foreach (PharmacyItem::query()->orderBy('id')->get() as $item) {
+            $qty = self::demoStockQty($item->name);
+            if ($qty < 1) {
                 continue;
             }
 
             $stock->receive(
                 $item,
-                $staff,
+                $receiver,
                 $qty,
                 0,
                 true,

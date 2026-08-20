@@ -127,6 +127,23 @@ final class StaffDeskScope
         return $query->whereIn('chamber_id', $ids);
     }
 
+    public static function constrainPharmacyItems(Builder $query, User $user): Builder
+    {
+        $ids = self::chamberIdsFor($user);
+        if ($ids === null) {
+            return $query;
+        }
+
+        return $query->whereIn($query->getModel()->getTable().'.chamber_id', $ids);
+    }
+
+    public static function pharmacyItemIsVisible(User $user, \App\Models\PharmacyItem $item): bool
+    {
+        $ids = self::chamberIdsFor($user);
+
+        return $ids === null || in_array((int) $item->chamber_id, $ids, true);
+    }
+
     public static function constrainSlotBlocks(Builder $query, User $user): Builder
     {
         $chamberIds = self::chamberIdsFor($user);

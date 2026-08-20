@@ -29,6 +29,7 @@ use App\Models\User;
 use App\Models\WebPage;
 use App\Scopes\TenantScope;
 use App\Support\SeedAccounts;
+use App\Support\StaffDeskScope;
 use Illuminate\Database\Seeder;
 
 /**
@@ -48,7 +49,8 @@ class MupsSeeder extends Seeder
 
     /**
      * Chamber shop from the MUPS pharmacy price pad (S.P = sell, B.P = company share).
-     * Catalogue qty starts at 0; `MupsDemoSeeder` then receives a small cupboard.
+     * Catalogue qty starts at 0; `MupsDemoSeeder` then receives a small cupboard
+     * at each centre (same nine names, separate qty).
      *
      * @return list<array{name: string, sell_price_taka: int, company_share_taka: int}>
      */
@@ -168,7 +170,7 @@ class MupsSeeder extends Seeder
         SeedAccounts::upsert(
             ['email' => 'staff@mups.local', 'tenant_id' => self::TENANT_ID],
             [
-                'name' => 'MUPS Desk',
+                'name' => 'MUPS Desk — Mehedibag',
                 'role' => User::ROLE_STAFF,
             ],
             'pass',
@@ -177,7 +179,26 @@ class MupsSeeder extends Seeder
         SeedAccounts::upsert(
             ['email' => 'lead@mups.local', 'tenant_id' => self::TENANT_ID],
             [
-                'name' => 'MUPS Lead desk',
+                'name' => 'MUPS Lead desk — Mehedibag',
+                'role' => User::ROLE_STAFF,
+                'desk_is_lead' => true,
+            ],
+            'pass',
+        );
+
+        SeedAccounts::upsert(
+            ['email' => 'staff.uttara@mups.local', 'tenant_id' => self::TENANT_ID],
+            [
+                'name' => 'MUPS Desk — Uttara',
+                'role' => User::ROLE_STAFF,
+            ],
+            'pass',
+        );
+
+        SeedAccounts::upsert(
+            ['email' => 'lead.uttara@mups.local', 'tenant_id' => self::TENANT_ID],
+            [
+                'name' => 'MUPS Lead desk — Uttara',
                 'role' => User::ROLE_STAFF,
                 'desk_is_lead' => true,
             ],
@@ -254,6 +275,7 @@ class MupsSeeder extends Seeder
         $this->seedBranchDay($uttara, $doctor, 4, '10:00', '12:00', '12:00', '13:00');
         $this->seedBranchDay($uttara, $doctor, 4, '17:00', '18:00', '18:00', '21:00');
 
+        $this->stampDeskToCentres($mehedibag, $uttara);
         $this->seedFeeCatalogue();
         $this->seedPharmacyShop();
         $this->seedReferringDoctors();
@@ -338,6 +360,27 @@ class MupsSeeder extends Seeder
         ]);
     }
 
+    private function stampDeskToCentres(Chamber $mehedibag, Chamber $uttara): void
+    {
+        $users = User::withoutGlobalScope(TenantScope::class)
+            ->where('tenant_id', self::TENANT_ID)
+            ->get()
+            ->keyBy('email');
+
+        foreach ([
+            'lead@mups.local' => $mehedibag,
+            'staff@mups.local' => $mehedibag,
+            'lead.uttara@mups.local' => $uttara,
+            'staff.uttara@mups.local' => $uttara,
+        ] as $email => $chamber) {
+            if (! isset($users[$email])) {
+                continue;
+            }
+
+            StaffDeskScope::syncChambers($users[$email], [$chamber->id]);
+        }
+    }
+
     private function seedFeeCatalogue(): void
     {
         $rows = [
@@ -376,16 +419,21 @@ class MupsSeeder extends Seeder
 
     private function seedPharmacyShop(): void
     {
-        foreach (self::pharmacyShopRows() as $index => $row) {
-            PharmacyItem::create([
-                'name' => $row['name'],
-                'sell_price_taka' => $row['sell_price_taka'],
-                'company_share_taka' => $row['company_share_taka'],
-                'unit_label' => PharmacyItem::UNIT_BOTTLE,
-                'qty_on_hand' => 0,
-                'is_active' => true,
-                'sort_order' => ($index + 1) * 10,
-            ]);
+        $chambers = Chamber::query()->orderBy('id')->get();
+
+        foreach ($chambers as $chamber) {
+            foreach (self::pharmacyShopRows() as $index => $row) {
+                PharmacyItem::create([
+                    'chamber_id' => $chamber->id,
+                    'name' => $row['name'],
+                    'sell_price_taka' => $row['sell_price_taka'],
+                    'company_share_taka' => $row['company_share_taka'],
+                    'unit_label' => PharmacyItem::UNIT_BOTTLE,
+                    'qty_on_hand' => 0,
+                    'is_active' => true,
+                    'sort_order' => ($index + 1) * 10,
+                ]);
+            }
         }
     }
 
@@ -414,20 +462,46 @@ class MupsSeeder extends Seeder
             ->where('email', 'lead@mups.local')
             ->first();
 
+        $staffUttara = User::withoutGlobalScope(TenantScope::class)
+            ->where('email', 'staff.uttara@mups.local')
+            ->first();
+
+        $leadUttara = User::withoutGlobalScope(TenantScope::class)
+            ->where('email', 'lead.uttara@mups.local')
+            ->first();
+
         Employee::create([
             'user_id' => $lead?->id,
-            'name' => 'MUPS Lead desk',
+            'name' => 'MUPS Lead desk — Mehedibag',
             'phone' => '01822000010',
-            'job_title' => 'Lead desk — both centres',
+            'job_title' => 'Lead desk — Mehedibag',
             'monthly_salary_taka' => 25000,
             'joined_on' => now()->subYear()->toDateString(),
         ]);
 
         Employee::create([
             'user_id' => $staff?->id,
-            'name' => 'MUPS Desk',
+            'name' => 'MUPS Desk — Mehedibag',
             'phone' => '01822000011',
-            'job_title' => 'Reception — both centres',
+            'job_title' => 'Reception — Mehedibag',
+            'monthly_salary_taka' => 18000,
+            'joined_on' => now()->subMonths(8)->toDateString(),
+        ]);
+
+        Employee::create([
+            'user_id' => $leadUttara?->id,
+            'name' => 'MUPS Lead desk — Uttara',
+            'phone' => '01822000014',
+            'job_title' => 'Lead desk — Uttara',
+            'monthly_salary_taka' => 25000,
+            'joined_on' => now()->subYear()->toDateString(),
+        ]);
+
+        Employee::create([
+            'user_id' => $staffUttara?->id,
+            'name' => 'MUPS Desk — Uttara',
+            'phone' => '01822000015',
+            'job_title' => 'Reception — Uttara',
             'monthly_salary_taka' => 18000,
             'joined_on' => now()->subMonths(8)->toDateString(),
         ]);

@@ -7,9 +7,12 @@ use App\Filament\TenantAdmin\Resources\PharmacyItems\Pages\EditPharmacyItem;
 use App\Filament\TenantAdmin\Resources\PharmacyItems\Pages\ListPharmacyItems;
 use App\Models\ChamberCashEntry;
 use App\Models\PharmacyItem;
+use App\Models\User;
 use App\Services\MedicineService;
 use App\Services\PharmacyStockService;
 use App\Support\PharmacyAccess;
+use App\Support\StaffDeskScope;
+use Illuminate\Database\Eloquent\Builder;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
@@ -49,14 +52,41 @@ class PharmacyItemResource extends Resource
         return static::canViewAny();
     }
 
+    public static function canView($record): bool
+    {
+        return static::canMutate($record);
+    }
+
     public static function canEdit($record): bool
     {
-        return static::canViewAny();
+        return static::canMutate($record);
     }
 
     public static function canDelete($record): bool
     {
-        return static::canViewAny();
+        return static::canMutate($record);
+    }
+
+    private static function canMutate($record): bool
+    {
+        $user = auth()->user();
+
+        return static::canViewAny()
+            && $record instanceof PharmacyItem
+            && $user instanceof User
+            && StaffDeskScope::pharmacyItemIsVisible($user, $record);
+    }
+
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+        $user = auth()->user();
+
+        if ($user instanceof User) {
+            StaffDeskScope::constrainPharmacyItems($query, $user);
+        }
+
+        return $query;
     }
 
     public static function shouldRegisterNavigation(): bool
@@ -90,6 +120,19 @@ class PharmacyItemResource extends Resource
                     }
                 })
                 ->helperText(__('Optional. Typing a name below is enough for a local cream or ORS.')),
+            Forms\Components\Select::make('chamber_id')
+                ->label(__('Centre'))
+                ->options(fn (): array => StaffDeskScope::chamberOptionsFor(auth()->user()))
+                ->default(function (): ?int {
+                    $ids = array_keys(StaffDeskScope::chamberOptionsFor(auth()->user()));
+
+                    return count($ids) === 1 ? (int) $ids[0] : null;
+                })
+                ->required(fn (): bool => StaffDeskScope::tenantHasMultipleChambers())
+                ->visible(fn (): bool => StaffDeskScope::tenantHasMultipleChambers())
+                ->disabled(fn (?string $operation): bool => $operation === 'edit')
+                ->native(false)
+                ->helperText(__('Each centre has its own cupboard.')),
             Forms\Components\TextInput::make('name')
                 ->label(__('Name on the shelf'))
                 ->required()
@@ -138,6 +181,10 @@ class PharmacyItemResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('name')->searchable()->sortable(),
+                TextColumn::make('chamber.name')
+                    ->label(__('Centre'))
+                    ->visible(fn (): bool => StaffDeskScope::tenantHasMultipleChambers())
+                    ->sortable(),
                 TextColumn::make('qty_on_hand')->label(__('On shelf'))->sortable(),
                 TextColumn::make('sell_price_taka')
                     ->label(__('Sell'))

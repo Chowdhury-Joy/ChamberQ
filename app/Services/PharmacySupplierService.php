@@ -7,6 +7,7 @@ use App\Models\PharmacyDelivery;
 use App\Models\PharmacyDoctorCommission;
 use App\Models\PharmacySupplierSettlement;
 use App\Models\User;
+use App\Support\StaffDeskScope;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
@@ -16,12 +17,12 @@ class PharmacySupplierService
     /**
      * @return array{owed: int, refund_due: int, doctor_pending: int}
      */
-    public function shopBalance(): array
+    public function shopBalance(?User $user = null): array
     {
         $owed = 0;
         $refundDue = 0;
 
-        foreach (PharmacyDelivery::query()->get() as $delivery) {
+        foreach ($this->deliveriesQuery($user)->get() as $delivery) {
             $owed += $delivery->owedTaka();
             $refundDue += $delivery->refundDueTaka();
         }
@@ -55,7 +56,7 @@ class PharmacySupplierService
 
         return DB::transaction(function () use ($user, $amount, $method, $note, $occurredOn, $cashTaka, $onlineTaka, $onlineMethod): PharmacySupplierSettlement {
             $remaining = $amount;
-            $deliveries = PharmacyDelivery::query()->orderBy('id')->lockForUpdate()->get();
+            $deliveries = $this->deliveriesQuery($user, lock: true)->get();
 
             foreach ($deliveries as $delivery) {
                 if ($remaining < 1) {
@@ -85,6 +86,7 @@ class PharmacySupplierService
                 $cashTaka,
                 $onlineTaka,
                 $onlineMethod,
+                $this->cashChamberId($user),
             );
 
             return PharmacySupplierSettlement::create([
@@ -118,7 +120,7 @@ class PharmacySupplierService
 
         return DB::transaction(function () use ($user, $amount, $method, $note, $occurredOn, $cashTaka, $onlineTaka, $onlineMethod): PharmacySupplierSettlement {
             $remaining = $amount;
-            $deliveries = PharmacyDelivery::query()->orderBy('id')->lockForUpdate()->get();
+            $deliveries = $this->deliveriesQuery($user, lock: true)->get();
 
             foreach ($deliveries as $delivery) {
                 if ($remaining < 1) {
@@ -148,6 +150,7 @@ class PharmacySupplierService
                 $cashTaka,
                 $onlineTaka,
                 $onlineMethod,
+                $this->cashChamberId($user),
             );
 
             return PharmacySupplierSettlement::create([
@@ -159,6 +162,31 @@ class PharmacySupplierService
                 'note' => $note,
             ]);
         });
+    }
+
+    private function deliveriesQuery(?User $user, bool $lock = false): \Illuminate\Database\Eloquent\Builder
+    {
+        $query = PharmacyDelivery::query()->orderBy('id');
+
+        if ($lock) {
+            $query->lockForUpdate();
+        }
+
+        if ($user instanceof User) {
+            $ids = StaffDeskScope::chamberIdsFor($user);
+            if ($ids !== null) {
+                $query->whereHas('item', fn ($item) => $item->whereIn('chamber_id', $ids));
+            }
+        }
+
+        return $query;
+    }
+
+    private function cashChamberId(User $user): ?int
+    {
+        $ids = StaffDeskScope::chamberIdsFor($user);
+
+        return $ids !== null && count($ids) === 1 ? $ids[0] : null;
     }
 
     private function assertModule(): void
