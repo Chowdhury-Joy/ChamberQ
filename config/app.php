@@ -130,4 +130,16 @@ return [
         'store' => env('APP_MAINTENANCE_STORE', 'database'),
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Trusted Reverse Proxies
+    |--------------------------------------------------------------------------
+    |
+    | Comma-separated IPs/CIDRs, or * when PHP is reachable only through the
+    | proxy. * is fine locally; production should name the load balancer.
+    |
+    */
+
+    'trusted_proxies' => env('TRUSTED_PROXIES', '*'),
+
 ];

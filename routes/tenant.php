@@ -226,6 +226,20 @@ $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
         ->middleware(['throttle:30,1', 'tenant.module:front_door'])
         ->name($routeName('patient.portal'));
 
+    // POST, not GET — the patient's phone must not sit in the URL, history, or
+    // access logs after lookup; it lives in the session instead.
+    Route::post('/portal', [BookingController::class, 'portalLookup'])
+        ->middleware(['throttle:20,1', 'tenant.module:front_door'])
+        ->name($routeName('patient.portal.lookup'));
+
+    Route::post('/portal/rx-otp/send', [BookingController::class, 'sendPortalRxOtp'])
+        ->middleware(['throttle:10,1', 'tenant.module:front_door'])
+        ->name($routeName('patient.portal.rx-otp.send'));
+
+    Route::post('/portal/rx-otp/verify', [BookingController::class, 'verifyPortalRxOtp'])
+        ->middleware(['throttle:10,1', 'tenant.module:front_door'])
+        ->name($routeName('patient.portal.rx-otp.verify'));
+
     Route::post('/portal/rx-password', [BookingController::class, 'setPortalPrescriptionPassword'])
         ->middleware(['throttle:10,1', 'tenant.module:front_door'])
         ->name($routeName('patient.portal.rx-password'));

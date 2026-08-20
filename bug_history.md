@@ -1560,3 +1560,30 @@
  <root_cause>`SuperAdminPanelProvider` had the hamburger icon mapping but no `viteTheme`, `topbar(false)`, or `viewport-fit=cover`. Architecture claimed a `superAdmin/theme.css` that does not exist.</root_cause>
  <prevention_rule>Super Admin must register the same `tenantAdmin/theme.css`, `topbar(false)`, collapsible sidebar, and `viewport-fit=cover` as the chamber desk. Pin in `SuperAdminPanelUxTest`.</prevention_rule>
 </bug>
+
+## 2026-08-19T19:30:00+0000
+
+<bug>
+ <category>Code</category>
+ <symptom>Branch-scoped doctors could stream visit voice/photos and print prescriptions for patients at another chamber in the same clinic; staff could tap cancellation/prescription SMS for out-of-scope bookings.</symptom>
+ <root_cause>`VisitMediaController`, `PrescriptionController`, and `NotifySmsController` checked role + tenant but not `StaffDeskScope` on the related booking.</root_cause>
+ <prevention_rule>Every HTTP path that reads clinical media, prints a prescription, or sends staff SMS must call `StaffDeskScope::assertCanAccessBooking()` after loading the booking — same rule as offline sync.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Code</category>
+ <symptom>A forged Staff & Roles form could set `role=super_admin` even though the Filament select only offered owner/doctor/staff.</symptom>
+ <root_cause>`role` and `tenant_id` were in `User::$fillable`; CreateRecord passed POST data straight into `User::create()`.</root_cause>
+ <prevention_rule>Keep privileged columns off `$fillable`; whitelist tenant-panel roles in `TenantPanelUserRoles` and assign role via `forceFill` after create/edit.</prevention_rule>
+</bug>
+
+ <root_cause>Portal lookup used GET; prescription portal route trusted query-string phone; screen JSON endpoints had no shared secret beyond the numeric session/chamber id.</root_cause>
+ <prevention_rule>Portal lookup must POST into session (`PortalSession`); prescription portal reads session phone only; outdoor-screen polls require `ScreenPollToken` from the rendered TV page.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>Anyone who knew a patient's mobile could set or brute-force the optional portal prescription password without proving they held the SIM.</symptom>
+ <root_cause>`PortalPrescriptionLock` set/unlock accepted password forms keyed only on a phone number the caller typed or pasted from the URL.</root_cause>
+ <prevention_rule>Require a consumed SMS OTP (`PortalOtpService`) in session before any portal prescription password set or unlock.</prevention_rule>
+</bug>

@@ -31,13 +31,19 @@ class SeedAccounts
         $user = User::withoutGlobalScope(TenantScope::class)->where($match)->first();
 
         if ($user) {
-            $user->fill(collect($values)->except('password')->all());
+            $privileged = array_intersect_key($values, array_flip(['role']));
+            $safe = array_diff_key($values, array_flip(['role', 'tenant_id']));
+
+            $user->fill($safe);
+            if ($privileged !== []) {
+                $user->forceFill($privileged);
+            }
             $user->save();
 
             return $user;
         }
 
-        return User::withoutGlobalScope(TenantScope::class)->create([
+        return User::provision([
             ...$match,
             ...$values,
             'password' => Hash::make($plainPassword),

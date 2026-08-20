@@ -842,5 +842,13 @@
 ## 2026-08-20T01:14:17+0600
 - Opt-in Pharmacy module (default off): counter sales, live stock, physical count, per-delivery supplier owed/refund-due, optional doctor % of shop cut on Rx-linked sales; locked cashbook categories; BackupTableMap after sms_messages.
 
+## 2026-08-19T19:30:00+0000
+- Production audit remediation: `StaffDeskScope` on visit media / prescription print / staff SMS HTTP routes; booking serial retry; portal unlock rate limit + min 6-char password; `SittingPrompt` bulk waiting counts + staff buzz cache; queue indexes migration `2026_08_19_200000_add_queue_performance_indexes.php`.
+
+## 2026-08-19T19:45:00+0000
+- Security hardening: portal phone in session (`POST /portal`, `PortalSession`); SMS OTP before prescription password set/unlock (`PortalOtpService`, `portal_otp_codes`); outdoor-screen JSON polls require HMAC `ScreenPollToken`; production-check warns on `TRUSTED_PROXIES=*`; `config/app.trusted_proxies` replaces direct `env()` in `bootstrap/app.php`.
+
+## 2026-08-19T20:00:00+0000
+- Production go-live pass: `User::provision()` + `TenantPanelUserRoles`; extended production-check (`CENTRAL_DOMAINS`, `AUTH_DEBUG`, `LOG_LEVEL`); `scripts/deploy.sh`; weekly `data:backup-export --platform` schedule; developer checklist in `architecture.md`.
 
 

@@ -3213,6 +3213,24 @@
  <reason>Like putting a cashier at the till and a caller at the queue board — they start the shift where they work, not at a noticeboard they do not use.</reason>
 </decision>
 
+## 2026-08-19T20:00:00+0000
+
+<decision>
+ <category>Code</category>
+ <context>Production go-live needs machine-enforceable code guards plus a clear list of server decisions developers must make (SMS vendor, backup target, monitoring channel).</context>
+ <action>Remove `role`/`tenant_id` from User mass assignment; set via `User::provision()` and Filament forceFill after `TenantPanelUserRoles` whitelist. Extend `app:production-check` for `CENTRAL_DOMAINS`, `AUTH_DEBUG`, and verbose `LOG_LEVEL`. Add `scripts/deploy.sh`, weekly platform backup schedule, and a developer go-live checklist in `architecture.md`.</action>
+ <reason>Closes role-escalation forgery and documents what code cannot decide — credentials, cron, and off-server backup copies remain explicit developer/owner choices.</reason>
+</decision>
+
+## 2026-08-19T19:45:00+0000
+
+<decision>
+ <category>Code</category>
+ <context>Production audit flagged patient phone numbers in portal URLs/query strings, prescription password set/unlock without proving phone possession, and unauthenticated outdoor-screen JSON polls keyed only on guessable session ids.</context>
+ <action>Store portal phone in session via `POST /portal` (`PortalSession`); mask display with `BdPhone::maskForDisplay()`. Require SMS OTP (`PortalOtpService`, `portal_otp_codes`) before set/unlock on `PortalPrescriptionLock`. Gate `/api/screen/*` JSON with HMAC `ScreenPollToken` embedded in the TV page. Warn on production-check when `TRUSTED_PROXIES=*`.</action>
+ <reason>Phone numbers must not leak into browser history or access logs; password changes need the same proof as `/me` login; queue JSON exposes patient names/serials and must not be enumerable by id alone.</reason>
+</decision>
+
 ## 2026-08-20T00:58:50+0600
 
 <decision>
@@ -3220,6 +3238,15 @@
  <context>Phone admin fixes (menu under the header, two-line title+buttons, readable dark cards) lived on the chamber desk only. Central ChamberQ Super Admin at `/admin` was still stock Filament, so the same phone problems would show there.</context>
  <action>Point Super Admin at the same tenant admin Vite theme, drop the global topbar, make the sidebar collapsible with the hamburger, set `viewport-fit=cover`, and outline ungrouped table row actions. Marketer `/partner` stays stock Filament.</action>
  <reason>One phone pattern for both desks. ChamberQ’s own admin should not feel like a different app than MUPS when opened on a phone.</reason>
+</decision>
+
+## 2026-08-19T19:30:00+0000
+
+<decision>
+ <category>Code</category>
+ <context>Production audit found desk-scope gaps on HTTP clinical routes, serial allocation races, portal unlock brute force, and queue polling load.</context>
+ <action>Apply `StaffDeskScope` on visit media, prescription print, and staff SMS routes. Retry booking serial allocation on unique violations. Raise portal prescription password minimum to 6 characters with per-phone unlock rate limiting (5 failures → 15 minutes). Bulk-count waiting patients in `SittingPrompt`; cache staff buzz keys before dispatching push jobs. Add queue performance indexes on `live_sessions` and `bookings`.</action>
+ <reason>Closes real IDOR and patient-facing 500s without changing the phone-first portal product model; reduces desk poll cost on busy days.</reason>
 </decision>
 
 ## 2026-08-20T01:14:17+0600

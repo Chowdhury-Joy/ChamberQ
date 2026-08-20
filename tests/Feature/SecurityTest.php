@@ -75,6 +75,25 @@ class SecurityTest extends TestCase
         $this->assertFalse($patient->canAccessPanel(filament()->getPanel('superAdmin')));
     }
 
+    public function test_user_role_is_not_mass_assignable(): void
+    {
+        \Illuminate\Database\Eloquent\Model::reguard();
+
+        try {
+            $user = User::create([
+                'name' => 'Forged',
+                'email' => 'forged@alpha.test',
+                'password' => Hash::make('secret'),
+                'role' => User::ROLE_SUPER_ADMIN,
+                'tenant_id' => 'alpha',
+            ]);
+
+            $this->assertNotSame(User::ROLE_SUPER_ADMIN, $user->fresh()->role);
+        } finally {
+            \Illuminate\Database\Eloquent\Model::unguard();
+        }
+    }
+
     /** Supplying a foreign tenant_id must not place the record in that tenant. */
     public function test_tenant_id_cannot_be_forged_on_create(): void
     {

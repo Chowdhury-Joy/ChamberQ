@@ -58,12 +58,32 @@ class User extends Authenticatable implements FilamentUser, CanResetPasswordCont
         'name',
         'email',
         'password',
-        'tenant_id',
-        'role',
         'assigned_doctor_id',
         'desk_jobs',
         'desk_is_lead',
     ];
+
+    /**
+     * Trusted code paths (seeders, Super Admin onboarding, tests) may set role
+     * and tenant_id. HTTP/Filament must use {@see provision()} or forceFill after
+     * {@see TenantPanelUserRoles::normalize()}.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    public static function provision(array $attributes): static
+    {
+        $privileged = array_intersect_key($attributes, array_flip(['role', 'tenant_id']));
+        $safe = array_diff_key($attributes, $privileged);
+
+        /** @var static $user */
+        $user = static::withoutGlobalScope(\App\Scopes\TenantScope::class)->create($safe);
+
+        if ($privileged !== []) {
+            $user->forceFill($privileged)->save();
+        }
+
+        return $user->fresh() ?? $user;
+    }
 
     /**
      * The attributes that should be hidden for serialization.

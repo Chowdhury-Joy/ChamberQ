@@ -14,6 +14,7 @@ use App\Support\GsmText;
 use App\Support\TenancyUrl;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\ValidationException;
 use Throwable;
 
 class SmsService
@@ -340,6 +341,58 @@ class SmsService
 
             throw $e;
         }
+    }
+
+    /**
+     * Prescription-portal OTP. Debited from the clinic's prepaid SMS wallet.
+     */
+    public function sendPortalOtp(string $phone, string $code): void
+    {
+        $tenantId = (string) tenant('id');
+        $clinic = tenant()?->displayName() ?? 'Clinic';
+        $body = GsmText::toSingleSegment(
+            $clinic.' code: '.$code.'. Valid 5 min. Do not share this code.'
+        );
+        $to = $this->internationalPhone($phone);
+
+        if (! config('sms.enabled')) {
+            Log::info('sms.portal_otp_skipped_disabled', [
+                'tenant_id' => $tenantId,
+                'phone' => $to,
+            ]);
+
+            return;
+        }
+
+        if (! $this->debitOneCredit($tenantId)) {
+            throw ValidationException::withMessages([
+                'code' => 'This clinic cannot send a verification SMS right now. Ask reception for help.',
+            ]);
+        }
+
+        try {
+            $this->gateway->send($to, $body);
+        } catch (Throwable $e) {
+            $this->refundOneCredit($tenantId);
+
+            Log::warning('sms.portal_otp_failed', [
+                'tenant_id' => $tenantId,
+                'to' => $to,
+                'error' => $e->getMessage(),
+            ]);
+
+            throw $e;
+        }
+
+        SmsMessage::withoutGlobalScopes()->create([
+            'tenant_id' => $tenantId,
+            'booking_id' => null,
+            'to' => $to,
+            'body' => $body,
+            'purpose' => SmsMessage::PURPOSE_PORTAL_OTP,
+            'status' => SmsMessage::STATUS_SENT,
+            'credits' => 1,
+        ]);
     }
 
     public function internationalPhone(string $phone): string

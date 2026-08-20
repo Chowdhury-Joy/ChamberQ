@@ -392,15 +392,17 @@ class PrescriptionShareLinkTest extends TestCase
         $this->assertStringContainsString('wa.me', $share);
         $this->assertStringContainsString(__('Send on WhatsApp'), $share);
 
-        // The portal route reaches this same view with the patient's phone
-        // number in the query string. Forwarding that would hand their number
-        // to whoever receives the prescription.
+        // The portal route reaches this same view after a session phone lookup.
+        // Forwarding must not hand the patient's number to whoever receives the prescription.
         tenancy()->initialize($this->tenant);
-        $portalUrl = 'http://rx-share.localhost/portal/prescriptions/'.$this->prescription->id
-            .'?phone=01712345699';
         tenancy()->end();
 
-        $portal = $this->get($portalUrl)->assertOk()->getContent();
+        $this->post('http://rx-share.localhost/portal', ['phone' => '01712345699'])
+            ->assertRedirect('http://rx-share.localhost/portal');
+
+        $portal = $this->get('http://rx-share.localhost/portal/prescriptions/'.$this->prescription->id)
+            ->assertOk()
+            ->getContent();
         $this->assertStringNotContainsString('wa.me', $portal);
     }
 }
