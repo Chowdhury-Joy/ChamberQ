@@ -152,6 +152,8 @@ jobs:
           SMS_DRIVER: http
           FILESYSTEM_DISK: s3
           SESSION_SECURE_COOKIE: 'true'
+          CENTRAL_DOMAINS: chamberq.example,www.chamberq.example
+          LOG_LEVEL: warning
         run: php artisan app:production-check --strict
 
       - name: Run tests
