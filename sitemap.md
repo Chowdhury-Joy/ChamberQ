@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-20T15:42:18+0600
+Last Updated: 2026-08-20T16:32:30+0600
 
 ## Full Site Map
 
@@ -240,7 +240,7 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 
 ### Book a serial from the desk or call centre (chosen date)
 - **Trigger:** Someone phones (or a receptionist books for a relative) for a sitting that is **not** “already standing at the door today.”
-- **Steps:** Staff or owner → **Operations → Book serial** → pick **date** → pick **visit type** (Usual, Follow-up, Intervention if Stations is on, Lab if Stations or lab tests) → if Intervention and the fee list has procedures, pick **intervention type** (PRP, epidural, …) → if Lab, pick **lab type** (MSK, a named test, or collection window) → pick the matching **sitting** → name and phone → optional Different WhatsApp → Book. Confirmation modal (Push WhatsApp / Push SMS when those are on / Open ticket / Done). Auto SMS still goes after the response when ticked. Report / counseling stay on the floor handoff, not this page. **New Walk-In** on Daily Roster / Live Queue is the same visit types for people already at the chamber **today** (overflow stools; Live Queue is already on that sitting).
+- **Steps:** Staff or owner → **Operations → Book serial** → pick **doctor** (pre-filled when the login only sees one) → pick **visit type** (Usual, Follow-up, Intervention if Stations is on, Lab if Stations or lab tests) → if Intervention and the fee list has procedures, pick **intervention type** (PRP, epidural, …) → if Lab, pick **lab type** (MSK, a named test, or collection window) → pick **centre** only when that doctor sits at more than one place → pick a **date** (calendar greys days they do not sit) → pick the matching **sitting** → name and phone → optional Different WhatsApp → Book. Confirmation modal (Push WhatsApp / Push SMS when those are on / Open ticket / Done). Auto SMS still goes after the response when ticked. Report / counseling stay on the floor handoff, not this page. **New Walk-In** on Daily Roster / Live Queue is the same visit types for people already at the chamber **today** (overflow stools; Live Queue is already on that sitting).
 - **Data/systems touched:** `BookingService::createBookingForBookable` (`allowOverflow` false, `sendSms` true), `schedule_sessions`, `bookings` (optional `fee_catalog_item_id`), optional `SendBookingConfirmation`.
 - **Success:** The serial appears on Daily Roster when staff pick that date; the published cap is full when the website would also say full.
 

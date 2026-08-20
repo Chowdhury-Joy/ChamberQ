@@ -857,4 +857,7 @@
 ## 2026-08-19T20:00:00+0000
 - Production go-live pass: `User::provision()` + `TenantPanelUserRoles`; extended production-check (`CENTRAL_DOMAINS`, `AUTH_DEBUG`, `LOG_LEVEL`); `scripts/deploy.sh`; weekly `data:backup-export --platform` schedule; developer checklist in `architecture.md`.
 
+## 2026-08-20T16:32:30+0600
+- Book serial is doctor-first: `StaffBookingForm` doctor + optional centre, calendar `disabledDatesInWindow` for that doctor’s sitting weekdays; walk-in forms unchanged.
+
 

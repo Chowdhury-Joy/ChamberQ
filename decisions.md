@@ -3293,3 +3293,12 @@
  <action>Every doctor’s Patient notifications stage now has three ticks: Auto SMS, Push SMS, Push WhatsApp. Stored as `auto_sms` / `push_sms` / `push_whatsapp`. Defaults keep today’s mix (booking + follow-up Auto SMS; cancellation + after-visit Push WhatsApp; late all off). Legacy `{sms, whatsapp}` JSON still maps. Auto jobs check `wantsAutoSms`; desk buttons and `NotifySmsController` check `wantsPushSms`; WhatsApp stays `wa.me` only. After-visit Auto SMS is an explicit opt-in via `SendVisitShareNotice` (supersedes “staff always tap, nothing auto-sends” for that stage when Auto is ticked).</action>
  <reason>Like choosing missed-call vs tapping the phone vs sending a WhatsApp: the clinic decides per doctor and per message. Solo clients are one doctor, so this is their client setting without a new Super Admin screen.</reason>
 </decision>
+
+## 2026-08-20T16:32:30+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Call-centre Book serial opened on a free calendar of every remaining day, with the doctor buried inside Sitting. On a multi-doctor clinic the caller names a doctor first; off-days still looked bookable. The public website already asked doctor then sitting days. The older “date first, then sitting” rule was only to distinguish this page from today’s walk-in.</context>
+ <action>Book serial is doctor first, then visit type, then centre only when that doctor sits at more than one place, then a calendar that greys days they do not sit, then sitting. One-doctor logins pre-fill Doctor. Changing doctor or visit type clears the date. Walk-in on Daily Roster / Live Queue stays today-only and is unchanged. Supersedes “Date first, then sitting” from 2026-08-19T22:32:01+0600 for field order only.</action>
+ <reason>Same as a cinema phone line: film first, then the dates that film is showing. A grey off-day is honest; an empty Sitting after a black Friday is too late.</reason>
+</decision>

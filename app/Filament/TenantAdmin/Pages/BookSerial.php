@@ -59,7 +59,7 @@ class BookSerial extends Page implements HasForms
     public function mount(): void
     {
         $this->form->fill([
-            'booking_date' => Carbon::today()->toDateString(),
+            'doctor_id' => StaffBookingForm::soleDeskDoctorId(),
             'share_clinical_history' => true,
             'visit_type' => StaffBookingForm::TYPE_USUAL,
             'different_whatsapp' => false,
@@ -121,6 +121,8 @@ class BookSerial extends Page implements HasForms
         ];
 
         $this->form->fill([
+            'doctor_id' => $data['doctor_id'] ?? StaffBookingForm::soleDeskDoctorId(),
+            'chamber_id' => $data['chamber_id'] ?? null,
             'booking_date' => $data['booking_date'],
             'bookable' => $data['bookable'],
             'share_clinical_history' => true,

@@ -5,6 +5,7 @@ namespace App\Filament\TenantAdmin\Support;
 use App\Exceptions\BookingUnavailableException;
 use App\Filament\TenantAdmin\Resources\Patients\Schemas\PatientForm;
 use App\Models\Booking;
+use App\Models\Doctor;
 use App\Models\LabCollectionSlot;
 use App\Models\LabTest;
 use App\Models\Patient;
@@ -24,6 +25,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
+use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Phone / call-centre booking and desk walk-ins: visit type, sitting, patient.
@@ -48,16 +50,22 @@ final class StaffBookingForm
     public static function components(): array
     {
         return [
-            DatePicker::make('booking_date')
-                ->label(__('Date'))
-                ->helperText(__('Any open sitting day from today through the booking window. Same window as the public website.'))
+            Select::make('doctor_id')
+                ->label(__('Doctor'))
+                ->helperText(__('Who the caller asked to see.'))
+                ->options(fn (): array => self::deskDoctorOptions())
+                ->placeholder(__('Select doctor'))
+                ->required(fn (Get $get): bool => ! self::isLabCollectionFromState(
+                    $get('visit_type'),
+                    $get('lab_type'),
+                ))
                 ->native(false)
-                ->required()
-                ->minDate(now()->startOfDay())
-                ->maxDate(PlatformSetting::onlineBookingMaxDate())
-                ->displayFormat('D, j M Y')
+                ->searchable()
+                ->preload()
                 ->live()
                 ->afterStateUpdated(function (Set $set): void {
+                    $set('chamber_id', null);
+                    $set('booking_date', null);
                     $set('bookable', null);
                 }),
             Select::make('visit_type')
@@ -69,6 +77,8 @@ final class StaffBookingForm
                 ->native(false)
                 ->live()
                 ->afterStateUpdated(function (Set $set): void {
+                    $set('chamber_id', null);
+                    $set('booking_date', null);
                     $set('bookable', null);
                     $set('lab_type', null);
                     $set('intervention_type', null);
@@ -84,7 +94,10 @@ final class StaffBookingForm
                 ->native(false)
                 ->searchable()
                 ->live()
-                ->afterStateUpdated(fn (Set $set): mixed => $set('bookable', null)),
+                ->afterStateUpdated(function (Set $set): void {
+                    $set('booking_date', null);
+                    $set('bookable', null);
+                }),
             Select::make('lab_type')
                 ->label(__('Lab type'))
                 ->options(fn (): array => self::labTypeOptions())
@@ -92,7 +105,79 @@ final class StaffBookingForm
                 ->required(fn (Get $get): bool => $get('visit_type') === self::TYPE_LAB)
                 ->native(false)
                 ->live()
-                ->afterStateUpdated(fn (Set $set): mixed => $set('bookable', null)),
+                ->afterStateUpdated(function (Set $set): void {
+                    $set('chamber_id', null);
+                    $set('booking_date', null);
+                    $set('bookable', null);
+                }),
+            Select::make('chamber_id')
+                ->label(__('Centre'))
+                ->helperText(__('This doctor sits at more than one place. Pick the room before the date.'))
+                ->placeholder(__('Select centre'))
+                ->options(fn (Get $get): array => self::chamberOptionsForSelection(
+                    $get('doctor_id'),
+                    (string) ($get('visit_type') ?? self::TYPE_USUAL),
+                    $get('lab_type'),
+                ))
+                ->visible(fn (Get $get): bool => count(self::chamberOptionsForSelection(
+                    $get('doctor_id'),
+                    (string) ($get('visit_type') ?? self::TYPE_USUAL),
+                    $get('lab_type'),
+                )) > 1)
+                ->required(fn (Get $get): bool => count(self::chamberOptionsForSelection(
+                    $get('doctor_id'),
+                    (string) ($get('visit_type') ?? self::TYPE_USUAL),
+                    $get('lab_type'),
+                )) > 1)
+                ->native(false)
+                ->live()
+                ->afterStateUpdated(function (Set $set): void {
+                    $set('booking_date', null);
+                    $set('bookable', null);
+                }),
+            DatePicker::make('booking_date')
+                ->label(__('Date'))
+                ->helperText(function (Get $get): string {
+                    if (blank($get('doctor_id')) && ! self::isLabCollectionFromState(
+                        $get('visit_type'),
+                        $get('lab_type'),
+                    )) {
+                        return __('Pick a doctor first. The calendar then only shows days they sit.');
+                    }
+
+                    if (self::sittingWeekdays(
+                        $get('doctor_id'),
+                        (string) ($get('visit_type') ?? self::TYPE_USUAL),
+                        $get('lab_type'),
+                        $get('chamber_id'),
+                    ) === []) {
+                        return __('This doctor has no sitting for that visit type in the booking window.');
+                    }
+
+                    return __('Only days this doctor sits. Off-days stay grey.');
+                })
+                ->native(false)
+                ->required()
+                ->disabled(function (Get $get): bool {
+                    if (self::isLabCollectionFromState($get('visit_type'), $get('lab_type'))) {
+                        return false;
+                    }
+
+                    return blank($get('doctor_id'));
+                })
+                ->minDate(now()->startOfDay())
+                ->maxDate(PlatformSetting::onlineBookingMaxDate())
+                ->disabledDates(fn (Get $get): array => self::disabledDatesInWindow(
+                    $get('doctor_id'),
+                    (string) ($get('visit_type') ?? self::TYPE_USUAL),
+                    $get('lab_type'),
+                    $get('chamber_id'),
+                ))
+                ->displayFormat('D, j M Y')
+                ->live()
+                ->afterStateUpdated(function (Get $get, Set $set): void {
+                    self::syncBookable($get, $set);
+                }),
             Select::make('bookable')
                 ->label(__('Sitting'))
                 ->helperText(function (Get $get): string {
@@ -107,6 +192,9 @@ final class StaffBookingForm
                     (string) ($get('booking_date') ?? ''),
                     (string) ($get('visit_type') ?? self::TYPE_USUAL),
                     $get('lab_type'),
+                    false,
+                    $get('doctor_id'),
+                    $get('chamber_id'),
                 ))
                 ->required()
                 ->native(false)
@@ -281,12 +369,249 @@ final class StaffBookingForm
     }
 
     /**
+     * @return array<int|string, string>
+     */
+    public static function deskDoctorOptions(): array
+    {
+        $user = auth()->user();
+        if ($user instanceof \App\Models\User) {
+            return StaffDeskScope::doctorOptionsFor($user);
+        }
+
+        return Doctor::query()->orderBy('name')->pluck('name', 'id')->all();
+    }
+
+    public static function soleDeskDoctorId(): ?int
+    {
+        $ids = array_keys(self::deskDoctorOptions());
+
+        return count($ids) === 1 ? (int) $ids[0] : null;
+    }
+
+    public static function isLabCollectionFromState(mixed $visitType, mixed $labType): bool
+    {
+        return $visitType === self::TYPE_LAB && $labType === self::LAB_COLLECTION;
+    }
+
+    /**
+     * @return array<int|string, string>
+     */
+    public static function chamberOptionsForSelection(
+        mixed $doctorId,
+        string $visitType = self::TYPE_USUAL,
+        mixed $labType = null,
+    ): array {
+        $doctorId = filled($doctorId) ? (int) $doctorId : null;
+        $labType = is_string($labType) ? $labType : null;
+
+        if (self::isLabCollectionFromState($visitType, $labType)) {
+            $query = LabCollectionSlot::query()->with('chamber');
+            $user = auth()->user();
+            if ($user instanceof \App\Models\User) {
+                $chamberIds = StaffDeskScope::chamberIdsFor($user);
+                if ($chamberIds !== null) {
+                    $query->whereIn('chamber_id', $chamberIds);
+                }
+            }
+
+            if ($doctorId !== null) {
+                $doctorChamberIds = ScheduleSession::query()
+                    ->where('doctor_id', $doctorId)
+                    ->pluck('chamber_id')
+                    ->unique()
+                    ->all();
+                if ($doctorChamberIds !== []) {
+                    $query->whereIn('chamber_id', $doctorChamberIds);
+                }
+            }
+
+            return $query->get()
+                ->mapWithKeys(fn (LabCollectionSlot $slot) => [
+                    (int) $slot->chamber_id => $slot->chamber?->name ?? __('Main lab'),
+                ])
+                ->all();
+        }
+
+        if ($doctorId === null) {
+            return [];
+        }
+
+        return self::matchingSessionsQuery($visitType, $labType, $doctorId, null)
+            ->with('chamber')
+            ->get()
+            ->mapWithKeys(fn (ScheduleSession $session) => [
+                (int) $session->chamber_id => $session->chamber?->name ?? __('Unknown chamber'),
+            ])
+            ->all();
+    }
+
+    /**
+     * @return list<int>
+     */
+    public static function sittingWeekdays(
+        mixed $doctorId,
+        string $visitType = self::TYPE_USUAL,
+        mixed $labType = null,
+        mixed $chamberId = null,
+    ): array {
+        $labType = is_string($labType) ? $labType : null;
+        $weekdays = collect();
+
+        $includeSessions = ! in_array($visitType, [self::TYPE_LAB], true)
+            || $labType === self::LAB_MSK;
+        $includeLabSlots = $visitType === self::TYPE_LAB
+            && $labType !== null
+            && $labType !== self::LAB_MSK
+            && (tenant()?->hasFeature('lab_tests') ?? false);
+
+        if ($includeSessions) {
+            $weekdays = $weekdays->merge(
+                self::matchingSessionsQuery($visitType, $labType, $doctorId, $chamberId)
+                    ->pluck('day_of_week')
+            );
+        }
+
+        if ($includeLabSlots) {
+            $labQuery = LabCollectionSlot::query();
+            $user = auth()->user();
+            if ($user instanceof \App\Models\User) {
+                $chamberIds = StaffDeskScope::chamberIdsFor($user);
+                if ($chamberIds !== null) {
+                    $labQuery->whereIn('chamber_id', $chamberIds);
+                }
+            }
+            if (filled($chamberId)) {
+                $labQuery->where('chamber_id', (int) $chamberId);
+            }
+            $weekdays = $weekdays->merge($labQuery->pluck('day_of_week'));
+        }
+
+        return $weekdays
+            ->filter(fn ($day) => $day !== null)
+            ->map(fn ($day) => (int) $day)
+            ->unique()
+            ->sort()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function sittingDatesInWindow(
+        mixed $doctorId,
+        string $visitType = self::TYPE_USUAL,
+        mixed $labType = null,
+        mixed $chamberId = null,
+    ): array {
+        $weekdays = self::sittingWeekdays($doctorId, $visitType, $labType, $chamberId);
+        if ($weekdays === []) {
+            return [];
+        }
+
+        $open = [];
+        $cursor = Carbon::today()->startOfDay();
+        $end = Carbon::parse(PlatformSetting::onlineBookingMaxDate())->startOfDay();
+        while ($cursor->lte($end)) {
+            if (in_array($cursor->dayOfWeek, $weekdays, true)) {
+                $open[] = $cursor->toDateString();
+            }
+            $cursor->addDay();
+        }
+
+        return $open;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public static function disabledDatesInWindow(
+        mixed $doctorId,
+        string $visitType = self::TYPE_USUAL,
+        mixed $labType = null,
+        mixed $chamberId = null,
+    ): array {
+        $open = array_flip(self::sittingDatesInWindow($doctorId, $visitType, $labType, $chamberId));
+        $disabled = [];
+        $cursor = Carbon::today()->startOfDay();
+        $end = Carbon::parse(PlatformSetting::onlineBookingMaxDate())->startOfDay();
+        while ($cursor->lte($end)) {
+            $ymd = $cursor->toDateString();
+            if (! isset($open[$ymd])) {
+                $disabled[] = $ymd;
+            }
+            $cursor->addDay();
+        }
+
+        return $disabled;
+    }
+
+    private static function matchingSessionsQuery(
+        string $visitType,
+        ?string $labType,
+        mixed $doctorId,
+        mixed $chamberId,
+    ): Builder {
+        $query = ScheduleSession::query();
+
+        match ($visitType) {
+            self::TYPE_INTERVENTION => $query->where('kind', ScheduleSession::KIND_INTERVENTION),
+            self::TYPE_LAB => $query->where('kind', ScheduleSession::KIND_MSK),
+            default => $query->publiclyBookable(),
+        };
+
+        $user = auth()->user();
+        if ($user instanceof \App\Models\User) {
+            StaffDeskScope::constrainScheduleSessions($query, $user);
+        }
+
+        if (filled($doctorId)) {
+            $query->where('doctor_id', (int) $doctorId);
+        }
+
+        if (filled($chamberId)) {
+            $query->where('chamber_id', (int) $chamberId);
+        }
+
+        return $query;
+    }
+
+    private static function syncBookable(Get $get, Set $set): void
+    {
+        $options = self::bookableOptions(
+            (string) ($get('booking_date') ?? ''),
+            (string) ($get('visit_type') ?? self::TYPE_USUAL),
+            $get('lab_type'),
+            false,
+            $get('doctor_id'),
+            $get('chamber_id'),
+        );
+
+        if (count($options) === 1) {
+            $set('bookable', array_key_first($options));
+
+            return;
+        }
+
+        $current = $get('bookable');
+        if (! is_string($current) || ! array_key_exists($current, $options)) {
+            $set('bookable', null);
+        }
+    }
+
+    /**
      * Sittings (and lab windows) that meet on this calendar date for the chosen visit type.
      *
      * @return array<string, string>
      */
-    public static function bookableOptions(string $ymd, string $visitType = self::TYPE_USUAL, mixed $labType = null, bool $allowOverflow = false): array
-    {
+    public static function bookableOptions(
+        string $ymd,
+        string $visitType = self::TYPE_USUAL,
+        mixed $labType = null,
+        bool $allowOverflow = false,
+        mixed $doctorId = null,
+        mixed $chamberId = null,
+    ): array {
         if ($ymd === '') {
             return [];
         }
@@ -311,19 +636,9 @@ final class StaffBookingForm
             && tenant()?->hasFeature('lab_tests');
 
         if ($includeSessions) {
-            $sessionsQuery = ScheduleSession::query()
+            $sessionsQuery = self::matchingSessionsQuery($visitType, $labType, $doctorId, $chamberId)
                 ->with(['doctor', 'chamber'])
                 ->where('day_of_week', $dow);
-
-            match ($visitType) {
-                self::TYPE_INTERVENTION => $sessionsQuery->where('kind', ScheduleSession::KIND_INTERVENTION),
-                self::TYPE_LAB => $sessionsQuery->where('kind', ScheduleSession::KIND_MSK),
-                default => $sessionsQuery->publiclyBookable(),
-            };
-
-            if ($user instanceof \App\Models\User) {
-                StaffDeskScope::constrainScheduleSessions($sessionsQuery, $user);
-            }
 
             foreach ($sessionsQuery->get() as $session) {
                 $availability = $bookingService->availabilityFor($session, $date->toDateString(), $allowOverflow);
@@ -357,6 +672,9 @@ final class StaffBookingForm
                 if ($chamberIds !== null) {
                     $labQuery->whereIn('chamber_id', $chamberIds);
                 }
+            }
+            if (filled($chamberId)) {
+                $labQuery->where('chamber_id', (int) $chamberId);
             }
 
             foreach ($labQuery->get() as $slot) {
@@ -725,6 +1043,21 @@ final class StaffBookingForm
 
         if (! self::bookableMatchesVisitType($bookable, $visitType, $labType)) {
             throw BookingUnavailableException::visitTypeMismatch();
+        }
+
+        if ($bookable instanceof ScheduleSession) {
+            if (filled($data['doctor_id'] ?? null) && (int) $bookable->doctor_id !== (int) $data['doctor_id']) {
+                throw BookingUnavailableException::sittingDoesNotMatchDoctor();
+            }
+            if (filled($data['chamber_id'] ?? null) && (int) $bookable->chamber_id !== (int) $data['chamber_id']) {
+                throw BookingUnavailableException::sittingDoesNotMatchDoctor();
+            }
+        }
+
+        if ($bookable instanceof LabCollectionSlot
+            && filled($data['chamber_id'] ?? null)
+            && (int) $bookable->chamber_id !== (int) $data['chamber_id']) {
+            throw BookingUnavailableException::sittingDoesNotMatchDoctor();
         }
 
         $patientId = ($data['patient_id'] ?? null) === '__new__'

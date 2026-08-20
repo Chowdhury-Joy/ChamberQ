@@ -112,6 +112,14 @@ class BookingUnavailableException extends Exception
         );
     }
 
+    public static function sittingDoesNotMatchDoctor(): self
+    {
+        return self::make(
+            __('That sitting does not match the chosen doctor.'),
+            'doctor_mismatch'
+        );
+    }
+
     public static function duplicateBooking(): self
     {
         return self::make(

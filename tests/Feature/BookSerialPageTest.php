@@ -157,6 +157,64 @@ class BookSerialPageTest extends TestCase
         $this->assertArrayNotHasKey('session:'.$this->intervention->id, $options);
     }
 
+    public function test_calendar_only_keeps_days_that_doctor_sits(): void
+    {
+        $doctorId = $this->visit->doctor_id;
+        $open = StaffBookingForm::sittingDatesInWindow($doctorId, 'usual');
+        $disabled = StaffBookingForm::disabledDatesInWindow($doctorId, 'usual');
+
+        $this->assertContains('2026-08-22', $open);
+        $this->assertNotContains('2026-08-20', $open);
+        $this->assertContains('2026-08-20', $disabled);
+        $this->assertNotContains('2026-08-22', $disabled);
+    }
+
+    public function test_sitting_list_filters_to_the_chosen_doctor(): void
+    {
+        $other = Doctor::create(['name' => 'Dr Other', 'default_fee_taka' => 700]);
+        $otherVisit = ScheduleSession::create([
+            'chamber_id' => $this->visit->chamber_id,
+            'doctor_id' => $other->id,
+            'day_of_week' => Carbon::parse('2026-08-22')->dayOfWeek,
+            'session_name' => 'Evening',
+            'kind' => ScheduleSession::KIND_VISIT,
+            'start_time' => '16:00',
+            'end_time' => '18:00',
+            'slot_cap' => 4,
+        ]);
+
+        $forKarim = StaffBookingForm::bookableOptions(
+            '2026-08-22',
+            'usual',
+            null,
+            false,
+            $this->visit->doctor_id,
+        );
+        $forOther = StaffBookingForm::bookableOptions(
+            '2026-08-22',
+            'usual',
+            null,
+            false,
+            $other->id,
+        );
+
+        $this->assertArrayHasKey('session:'.$this->visit->id, $forKarim);
+        $this->assertArrayNotHasKey('session:'.$otherVisit->id, $forKarim);
+        $this->assertArrayHasKey('session:'.$otherVisit->id, $forOther);
+        $this->assertArrayNotHasKey('session:'.$this->visit->id, $forOther);
+    }
+
+    public function test_page_asks_for_the_doctor_before_the_date(): void
+    {
+        Filament::setCurrentPanel('tenantAdmin');
+        $this->actingAs($this->staff);
+
+        Livewire::test(BookSerial::class)
+            ->assertSee('Pick the doctor first')
+            ->assertFormFieldExists('doctor_id')
+            ->assertFormFieldExists('booking_date');
+    }
+
     public function test_staff_can_store_a_different_whatsapp_number(): void
     {
         Queue::fake();
@@ -192,8 +250,10 @@ class BookSerialPageTest extends TestCase
 
         Livewire::test(BookSerial::class)
             ->fillForm([
-                'booking_date' => '2026-08-22',
                 'visit_type' => 'followup',
+            ])
+            ->fillForm([
+                'booking_date' => '2026-08-22',
                 'bookable' => 'session:'.$this->visit->id,
                 'patient_phone' => '01715553020',
                 'patient_name' => 'Returnee',
@@ -220,8 +280,10 @@ class BookSerialPageTest extends TestCase
 
         Livewire::test(BookSerial::class)
             ->fillForm([
-                'booking_date' => '2026-08-22',
                 'visit_type' => 'intervention',
+            ])
+            ->fillForm([
+                'booking_date' => '2026-08-22',
                 'bookable' => 'session:'.$this->intervention->id,
                 'patient_phone' => '01715553021',
                 'patient_name' => 'OT Patient',
@@ -257,8 +319,10 @@ class BookSerialPageTest extends TestCase
 
         Livewire::test(BookSerial::class)
             ->fillForm([
-                'booking_date' => '2026-08-22',
                 'visit_type' => 'intervention',
+            ])
+            ->fillForm([
+                'booking_date' => '2026-08-22',
                 'bookable' => 'session:'.$this->intervention->id,
                 'patient_phone' => '01715553023',
                 'patient_name' => 'PRP Patient',
@@ -268,9 +332,11 @@ class BookSerialPageTest extends TestCase
 
         Livewire::test(BookSerial::class)
             ->fillForm([
-                'booking_date' => '2026-08-22',
                 'visit_type' => 'intervention',
                 'intervention_type' => (string) $prp->id,
+            ])
+            ->fillForm([
+                'booking_date' => '2026-08-22',
                 'bookable' => 'session:'.$this->intervention->id,
                 'patient_phone' => '01715553023',
                 'patient_name' => 'PRP Patient',
@@ -306,9 +372,11 @@ class BookSerialPageTest extends TestCase
 
         Livewire::test(BookSerial::class)
             ->fillForm([
-                'booking_date' => '2026-08-22',
                 'visit_type' => 'lab',
                 'lab_type' => 'msk',
+            ])
+            ->fillForm([
+                'booking_date' => '2026-08-22',
                 'bookable' => 'session:'.$msk->id,
                 'patient_phone' => '01715553022',
                 'patient_name' => 'Scan Patient',
