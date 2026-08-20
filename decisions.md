@@ -3330,15 +3330,6 @@
  <reason>Same as a hospital desk: first choose the department (lab or OT), then which test or procedure. Naming the button MSK hid the other door and fought the walk-in form.</reason>
 </decision>
 
-## 2026-08-20T17:55:16+0600
-
-<decision>
- <category>UI/UX</category>
- <context>The MUPS Chittagong branch was labelled Panchlaish, but the chamber is at Neurosense near Chittagong Medical College, which patients know as Mehedibag.</context>
- <action>Rename the seeded chamber, centres-page card, map query, homepage review label, referring GP, procedure-nurse job title, and demo cashbook note from Panchlaish to Mehedibag. Sitting days stay Sun–Tue morning and evening. Uttara is unchanged. CBPH, Belle Vue, and the Pain Solution sample keep their real Panchlaish addresses.</action>
- <reason>Like reprinting the shop sign for the neighbourhood people actually search for — same building, same hours, the name on the ticket now matches the area.</reason>
-</decision>
-
 ## 2026-08-20T17:59:22+0600
 
 <decision>
@@ -3346,4 +3337,13 @@
  <context>The pharmacy shop list (what this chamber actually sells, plus physical count) was owner/helper only. In a real chamber the desk person who takes cash also stocks the cupboard. A later hire might be a dedicated chemist, but today it is the same main staff login.</context>
  <action>**Pharmacy stock** and **Physical count** follow the Money desk job (null/all jobs = the usual one-person staff). Owner/helper still can. Doctors, queue-only, and prep-only cannot. No fourth desk-job tick yet — a dedicated pharmacy staff login can split later without changing the till.</action>
  <reason>Like a chemist counter next to reception: the person at the till updates the shelf list. Locking that behind the owner meant the list never got maintained. The queue caller should not be able to change sell prices.</reason>
+</decision>
+
+## 2026-08-20T18:05:38+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The till field for who sent the patient was labelled “Referred by (outside GP)”. Desk staff already know this list is outside doctors; the extra words made the field look like a technical filter.</context>
+ <action>Rename the Collect fee / New Walk-In / Book serial dropdown to **Referred by**. Bangla is now just “রেফার করেছেন”. Super Admin still calls the module “Referrals — outside GP commissions”; Branding still says “Outside GP cut”.</action>
+ <reason>Like a receipt that just says “Referred by: Dr Karim” — the clerk does not need a reminder that Karim is not on staff. Shorter label, same list.</reason>
 </decision>

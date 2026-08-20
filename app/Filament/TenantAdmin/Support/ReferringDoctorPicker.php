@@ -7,14 +7,14 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 
 /**
- * Shared "Referred by (outside GP)" dropdown for Collect fee and walk-in.
+ * Shared "Referred by" dropdown for Collect fee and walk-in.
  */
 final class ReferringDoctorPicker
 {
     public static function select(): Select
     {
         return Select::make('referring_doctor_id')
-            ->label(__('Referred by (outside GP)'))
+            ->label(__('Referred by'))
             ->options(fn (): array => ReferringDoctor::query()
                 ->where('is_active', true)
                 ->orderBy('name')
