@@ -88,11 +88,11 @@ class Phase0BookingGuardsTest extends TestCase
         // Partial substring must not leak other patients.
         $this->from('http://phase0.localhost/portal')
             ->post('http://phase0.localhost/portal', ['phone' => '1'])
-            ->assertRedirect('http://phase0.localhost/portal');
+            ->assertRedirect('http://phase0.localhost/portal')
+            ->assertSessionHasErrors('phone');
 
         $this->get('http://phase0.localhost/portal')
             ->assertOk()
-            ->assertSee('Please enter a valid Bangladeshi mobile number', false)
             ->assertDontSee('Exact Match');
 
         $this->post('http://phase0.localhost/portal', ['phone' => '01712345678'])

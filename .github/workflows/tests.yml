@@ -154,6 +154,9 @@ jobs:
           SESSION_SECURE_COOKIE: 'true'
           CENTRAL_DOMAINS: chamberq.example,www.chamberq.example
           LOG_LEVEL: warning
+          TRUSTED_PROXIES: 127.0.0.1
+          VAPID_PUBLIC_KEY: Bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+          VAPID_PRIVATE_KEY: yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
         run: php artisan app:production-check --strict
 
       - name: Run tests
