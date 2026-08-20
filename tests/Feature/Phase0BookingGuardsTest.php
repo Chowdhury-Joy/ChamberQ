@@ -86,7 +86,8 @@ class Phase0BookingGuardsTest extends TestCase
         tenancy()->end();
 
         // Partial substring must not leak other patients.
-        $this->post('http://phase0.localhost/portal', ['phone' => '1'])
+        $this->from('http://phase0.localhost/portal')
+            ->post('http://phase0.localhost/portal', ['phone' => '1'])
             ->assertRedirect('http://phase0.localhost/portal');
 
         $this->get('http://phase0.localhost/portal')

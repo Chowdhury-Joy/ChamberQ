@@ -390,6 +390,11 @@ class PortalPrescriptionTest extends TestCase
 
     public function test_portal_unlock_rate_limits_repeated_wrong_passwords(): void
     {
+        // This test exercises PortalPrescriptionLock's per-phone limit (5 wrong
+        // guesses), not the route's HTTP throttle — OTP setup above already
+        // consumes most of the 10/min POST budget on these routes.
+        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
+
         $this->makePrescription('NAPA');
 
         $this->lookupPortal();
