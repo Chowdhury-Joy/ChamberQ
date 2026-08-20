@@ -490,6 +490,11 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                     ->label(__('Patient Details'))
                     ->description(fn (Booking $record) => $record->patient_phone)
                     ->searchable(),
+                TextColumn::make('remarks')
+                    ->label(__('Remarks'))
+                    ->wrap()
+                    ->limit(80)
+                    ->placeholder('—'),
                 TextColumn::make('status')
                     ->badge()
                     ->color(fn (string $state): string => match ($state) {

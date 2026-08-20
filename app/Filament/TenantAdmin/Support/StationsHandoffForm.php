@@ -40,12 +40,17 @@ class StationsHandoffForm
                 $options = app(StationsHandoffService::class)->sittingOptions($target);
                 $default = collect($options)->firstWhere('is_default') ?? $options[0] ?? null;
 
-                return ['sitting_key' => $default['key'] ?? null];
+                return [
+                    'sitting_key' => $default['key'] ?? null,
+                    'remarks' => $target->remarks,
+                ];
             })
             ->schema(function (...$args) use ($booking): array {
                 $target = self::resolveBooking($booking, $args);
 
-                return array_merge(self::sittingFields($target), self::interventionTypeFields());
+                return array_merge(self::sittingFields($target), self::interventionTypeFields(), [
+                    StaffBookingForm::remarksField(),
+                ]);
             })
             ->action(function (array $data, ...$args) use ($booking): void {
                 $target = self::resolveBooking($booking, $args);
@@ -62,6 +67,7 @@ class StationsHandoffForm
                         filled($data['fee_catalog_item_id'] ?? null)
                             ? (int) $data['fee_catalog_item_id']
                             : null,
+                        filled($data['remarks'] ?? null) ? (string) $data['remarks'] : null,
                     );
                 } catch (InvalidArgumentException $e) {
                     Notification::make()

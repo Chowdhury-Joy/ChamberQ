@@ -52,6 +52,7 @@ class RepeatBookingService
                     whatsappPhone: $origin->whatsapp_phone,
                     allowOverflow: false,
                     repeatSeriesId: $seriesId,
+                    remarks: $origin->remarks,
                 );
             } catch (BookingUnavailableException $e) {
                 $plan['skipped'][] = [

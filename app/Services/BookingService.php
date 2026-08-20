@@ -144,6 +144,7 @@ class BookingService
         ?int $referringDoctorId = null,
         ?string $forcedCarePath = null,
         ?int $feeCatalogItemId = null,
+        ?string $remarks = null,
     ): Booking {
         $patientPhone = $this->normalizeBdPhone($patientPhone);
         $whatsappPhone = filled($whatsappPhone) ? $this->normalizeBdPhone($whatsappPhone) : null;
@@ -155,7 +156,9 @@ class BookingService
 
         for ($attempt = 0; $attempt < 3; $attempt++) {
             try {
-                $booking = DB::transaction(function () use ($bookable, $bookingDate, $patientName, $patientPhone, $labTestIds, $patientId, $wantsEarlierDate, $whatsappPhone, $shareClinicalHistory, $nid, $yearOfBirth, $allowOverflow, $repeatSeriesId, $allowEndedToday, $seenBeforeSoftware, $allowCounselingHandoff, $allowStaffHandoff, $allowMskWalkIn, $referringDoctorId, $forcedCarePath, $feeCatalogItemId) {
+                $remarks = $this->normalizedRemarks($remarks);
+
+        $booking = DB::transaction(function () use ($bookable, $bookingDate, $patientName, $patientPhone, $labTestIds, $patientId, $wantsEarlierDate, $whatsappPhone, $shareClinicalHistory, $nid, $yearOfBirth, $allowOverflow, $repeatSeriesId, $allowEndedToday, $seenBeforeSoftware, $allowCounselingHandoff, $allowStaffHandoff, $allowMskWalkIn, $referringDoctorId, $forcedCarePath, $feeCatalogItemId, $remarks) {
             $tenant = tenant();
             $capMode = $tenant->slot_cap_mode ?? 'per_session';
             if ($capMode === 'per_day') {
@@ -281,6 +284,7 @@ class BookingService
                 'patient_name' => $patient->name,
                 'patient_phone' => $patientPhone,
                 'whatsapp_phone' => $whatsappPhone,
+                'remarks' => $remarks,
                 'serial_number' => $nextSerial,
                 'is_overflow' => $isOverflow,
                 'status' => 'waiting',
@@ -637,5 +641,23 @@ class BookingService
     public function normalizeBdPhone(string $phone): string
     {
         return BdPhone::normalize($phone);
+    }
+
+    /**
+     * Desk note on a serial. Never shown on tickets, SMS, or the waiting-room TV.
+     */
+    public function normalizedRemarks(?string $remarks): ?string
+    {
+        if ($remarks === null) {
+            return null;
+        }
+
+        $clean = trim(strip_tags($remarks));
+
+        if ($clean === '') {
+            return null;
+        }
+
+        return mb_substr($clean, 0, 500);
     }
 }

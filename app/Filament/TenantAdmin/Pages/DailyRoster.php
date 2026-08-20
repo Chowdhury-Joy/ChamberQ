@@ -159,6 +159,11 @@ class DailyRoster extends Page implements HasTable, HasForms
                     ->badge()
                     ->color('info'),
                 TextColumn::make('patient_name')->label(__('Name'))->searchable(),
+                TextColumn::make('remarks')
+                    ->label(__('Remarks'))
+                    ->wrap()
+                    ->limit(80)
+                    ->placeholder('—'),
                 TextColumn::make('patient_phone')->label(__('Phone'))->searchable(),
                 TextColumn::make('status')
                     ->badge()

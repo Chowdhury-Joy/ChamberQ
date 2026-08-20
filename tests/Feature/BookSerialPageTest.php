@@ -97,6 +97,7 @@ class BookSerialPageTest extends TestCase
                 'bookable' => 'session:'.$this->visit->id,
                 'patient_phone' => '01715553001',
                 'patient_name' => 'Fatima Rahman',
+                'remarks' => 'Wheelchair',
             ])
             ->call('book')
             ->assertHasNoFormErrors()
@@ -110,6 +111,7 @@ class BookSerialPageTest extends TestCase
         $this->assertSame(1, $booking->serial_number);
         $this->assertFalse($booking->is_overflow);
         $this->assertSame($this->visit->id, $booking->bookable_id);
+        $this->assertSame('Wheelchair', $booking->remarks);
 
         Queue::assertPushed(SendBookingConfirmation::class);
     }

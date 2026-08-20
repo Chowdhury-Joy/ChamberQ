@@ -154,6 +154,7 @@ class LiveQueueControlPageTest extends TestCase
                 'patient_name' => 'Joy Walk-In',
                 'visit_type' => 'usual',
                 'share_clinical_history' => true,
+                'remarks' => 'Came with mother',
             ])
             ->callMountedAction()
             ->assertHasNoErrors()
@@ -164,6 +165,7 @@ class LiveQueueControlPageTest extends TestCase
             'patient_phone' => '01711112222',
             'bookable_id' => $this->session->id,
             'status' => 'waiting',
+            'remarks' => 'Came with mother',
         ]);
     }
 

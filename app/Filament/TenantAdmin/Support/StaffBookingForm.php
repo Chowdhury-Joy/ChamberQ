@@ -20,6 +20,7 @@ use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
+use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
@@ -218,6 +219,7 @@ final class StaffBookingForm
                 ->searchable()
                 ->native(false)
                 ->visible(fn (): bool => tenant()?->hasReferrals() ?? false),
+            self::remarksField(),
         ];
     }
 
@@ -651,7 +653,18 @@ final class StaffBookingForm
                 ->searchable()
                 ->native(false)
                 ->visible(fn (): bool => tenant()?->hasReferrals() ?? false),
+            self::remarksField(),
         ]);
+    }
+
+    public static function remarksField(): Textarea
+    {
+        return Textarea::make('remarks')
+            ->label(__('Remarks'))
+            ->helperText(__('Staff only — not shown on the ticket, SMS, or waiting-room TV.'))
+            ->placeholder(__('e.g. wheelchair, VIP, sister of Dr Karim'))
+            ->rows(2)
+            ->maxLength(500);
     }
 
     public static function bookableMatchesVisitType(
@@ -758,6 +771,7 @@ final class StaffBookingForm
             feeCatalogItemId: $visitType === self::TYPE_INTERVENTION
                 ? $interventionTypeId
                 : null,
+            remarks: filled($data['remarks'] ?? null) ? (string) $data['remarks'] : null,
         );
     }
 }

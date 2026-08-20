@@ -393,7 +393,7 @@ class StationsHandoffService
         return $options;
     }
 
-    public function sendVisitToIntervention(Booking $visitBooking, string $bookingDate, ?int $sessionId = null, ?int $feeCatalogItemId = null): Booking
+    public function sendVisitToIntervention(Booking $visitBooking, string $bookingDate, ?int $sessionId = null, ?int $feeCatalogItemId = null, ?string $remarks = null): Booking
     {
         if (! tenant()?->hasStations()) {
             throw new InvalidArgumentException(__('Stations module is not enabled.'));
@@ -406,7 +406,7 @@ class StationsHandoffService
         $fromSession = $this->sittingSession($visitBooking);
         $interventionSession = $this->resolveInterventionSession($fromSession, $bookingDate, $sessionId);
 
-        return DB::transaction(function () use ($visitBooking, $interventionSession, $bookingDate, $feeCatalogItemId) {
+        return DB::transaction(function () use ($visitBooking, $interventionSession, $bookingDate, $feeCatalogItemId, $remarks) {
             try {
                 $procedureBooking = $this->bookingService->createBookingForBookable(
                     $interventionSession,
@@ -419,6 +419,7 @@ class StationsHandoffService
                     allowOverflow: true,
                     allowEndedToday: Carbon::parse($bookingDate)->isToday(),
                     feeCatalogItemId: $feeCatalogItemId,
+                    remarks: filled($remarks) ? $remarks : $visitBooking->remarks,
                 );
             } catch (BookingUnavailableException $e) {
                 throw new InvalidArgumentException($e->getMessage(), 0, $e);
@@ -796,6 +797,7 @@ class StationsHandoffService
                     allowOverflow: true,
                     allowEndedToday: true,
                     allowStaffHandoff: true,
+                    remarks: $from->remarks,
                 );
             } catch (BookingUnavailableException $e) {
                 throw new InvalidArgumentException($e->getMessage(), 0, $e);

@@ -66,6 +66,8 @@
         .dark .lqc-serial { color: rgb(244 244 245); }
         .lqc-name { font-size: 1.125rem; font-weight: 600; color: rgb(39 39 42); }
         .dark .lqc-name { color: rgb(228 228 231); }
+        .lqc-remarks { font-size: 0.875rem; font-weight: 500; line-height: 1.4; color: rgb(113 113 122); }
+        .dark .lqc-remarks { color: rgb(161 161 170); }
         .lqc-elapsed { font-variant-numeric: tabular-nums; font-weight: 600; }
         .lqc-elapsed-over { color: rgb(185 28 28); }
         .dark .lqc-elapsed-over { color: rgb(248 113 113); }
@@ -331,6 +333,9 @@
                                         </div>
 
                                         <div class="lqc-name">{{ $current->patient_name }}</div>
+                                        @if(filled($current->remarks))
+                                            <div class="lqc-remarks">{{ $current->remarks }}</div>
+                                        @endif
 
                                         @php
                                             $since = $current->status === 'in_chamber'
@@ -495,6 +500,9 @@
                                         @if($nextWaiting)
                                             <div class="lqc-serial">#{{ $nextWaiting->serial_number }}</div>
                                             <div class="lqc-name">{{ $nextWaiting->patient_name }}</div>
+                                            @if(filled($nextWaiting->remarks))
+                                                <div class="lqc-remarks">{{ $nextWaiting->remarks }}</div>
+                                            @endif
                                             <div class="lqc-actions">
                                                 <x-filament::button wire:click="callNextPatientOnly" color="primary" icon="heroicon-m-megaphone" size="lg" class="cq-offline-queue-allowed" data-cq-queue-action="call_next">
                                                     {{ 'Call #'.$nextWaiting->serial_number }}

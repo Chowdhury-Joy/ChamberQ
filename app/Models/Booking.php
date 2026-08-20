@@ -35,6 +35,7 @@ class Booking extends Model
         'patient_name',
         'patient_phone',
         'whatsapp_phone',
+        'remarks',
         'serial_number',
         'voucher_number',
         'related_booking_id',
