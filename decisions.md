@@ -3428,3 +3428,12 @@
  <action>Replace the modal with `GET /pharmacy-sales/{sale}/invoice` — a print-ready landscape pad that follows that voucher: sequential Sl No (`pharmacy_sales.receipt_number`), chamber address/phones, lines with Qty/Rate/Amount, payment ticks, Taka in words, Total/Discount/Net Payable, Received By / Thank You / Customer Signature. Recording a sale opens it; Receipt on the till list does too. Returned sales stamp RETURNED. Guest / queue-only / other-centre logins cannot open it.</action>
  <reason>Like tearing the next page off the printed pad: the customer leaves with the same layout they already know, filled in by the till instead of blue pen.</reason>
 </decision>
+
+## 2026-08-20T19:11:48+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The shop pad is a portrait A4 sheet with a navy/white checkered square border and the clinic logo. A landscape slip, or a voucher with only typed clinic name, did not match the paper they already stamp.</context>
+ <action>Print the medicine voucher on A4 portrait. Frame the whole page with the checkered border. Put the Branding logo (`tenants.logo_url`) beside the clinic name when one is set. Keep the same fields (Sl No, customer, table, Cash/Card/Bkash/Nagad, In Word, totals, signatures).</action>
+ <reason>Like photocopying the real pad: the border and the logo are what the customer recognises first; the till still fills in the numbers.</reason>
+</decision>

@@ -325,6 +325,7 @@ class PharmacyModuleTest extends TestCase
             'contact' => '01805414666',
         ]);
         $this->tenant->name = 'MUPS — Dr. Moin Uddin Pain Solution';
+        $this->tenant->logo_url = '/images/mups/mups-logo.png';
         $this->tenant->save();
 
         $item = $this->namedOnShelf('Joint Pro', 5, $chamber->id);
@@ -358,6 +359,11 @@ class PharmacyModuleTest extends TestCase
         $response->assertSee('box is-on', false);
         $response->assertSee('01805-414666', false);
         $response->assertSee('20-08-26', false);
+        $response->assertSee('size: A4', false);
+        $response->assertDontSee('landscape', false);
+        $response->assertSee('repeating-conic-gradient', false);
+        $response->assertSee('/images/mups/mups-logo.png', false);
+        $response->assertSee('clinic-logo', false);
     }
 
     public function test_voucher_numbers_run_like_a_pad(): void

@@ -902,6 +902,9 @@
 ## 2026-08-20T18:59:32+0600
 - Pharmacy till prints a landscape MEDICINE VOUCHER (`PharmacyInvoiceController`, `tenant/pharmacy-invoice.blade.php`, sequential `pharmacy_sales.receipt_number`); the old modal receipt view is gone.
 
+## 2026-08-20T19:11:48+0600
+- Medicine voucher is A4 portrait with the shop pad’s checkered navy/white square border and the clinic Branding logo (`tenants.logo_url`).
+
 
 
 

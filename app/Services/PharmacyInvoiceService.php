@@ -8,13 +8,14 @@ use App\Models\PharmacySale;
 use App\Models\PharmacySaleItem;
 use App\Models\Tenant;
 use App\Support\BdPhone;
+use App\Support\SafeUrl;
 use App\Support\TakaWords;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 
 class PharmacyInvoiceService
 {
-    public const MIN_ROWS = 4;
+    public const MIN_ROWS = 8;
 
     public function assignIfNeeded(PharmacySale $sale): void
     {
@@ -65,6 +66,7 @@ class PharmacyInvoiceService
      *     tenant: ?Tenant,
      *     chamber: ?Chamber,
      *     clinicName: string,
+     *     logoUrl: ?string,
      *     thankYouBrand: string,
      *     address: ?string,
      *     phones: list<string>,
@@ -99,6 +101,7 @@ class PharmacyInvoiceService
             'tenant' => $tenant,
             'chamber' => $chamber,
             'clinicName' => $tenant?->displayName() ?? config('app.name'),
+            'logoUrl' => $this->logoUrl($tenant),
             'thankYouBrand' => $this->thankYouBrand($tenant),
             'address' => filled($chamber?->address) ? (string) $chamber->address : null,
             'phones' => $this->phones($tenant, $chamber),
@@ -115,6 +118,13 @@ class PharmacyInvoiceService
     public static function formatTaka(int $taka): string
     {
         return number_format($taka).'/-';
+    }
+
+    private function logoUrl(?Tenant $tenant): ?string
+    {
+        $href = SafeUrl::href($tenant?->logo_url, '');
+
+        return $href !== '' ? $href : null;
     }
 
     private function thankYouBrand(?Tenant $tenant): string
