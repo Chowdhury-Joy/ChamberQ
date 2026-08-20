@@ -76,7 +76,7 @@ class User extends Authenticatable implements FilamentUser, CanResetPasswordCont
         $safe = array_diff_key($attributes, $privileged);
 
         /** @var static $user */
-        $user = static::withoutGlobalScope(\App\Scopes\TenantScope::class)->query()->create($safe);
+        $user = static::withoutGlobalScope(\App\Scopes\TenantScope::class)->create($safe);
 
         if ($privileged !== []) {
             $user->forceFill($privileged)->save();

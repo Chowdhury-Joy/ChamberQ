@@ -15,10 +15,19 @@ return new class extends Migration
 
         // Prefix lengths keep the composite key under InnoDB's 3072-byte limit on
         // MySQL utf8mb4 (three default string() columns would exceed it with status).
-        DB::statement(
-            'ALTER TABLE bookings ADD INDEX bookings_queue_advance_idx '
-            .'(tenant_id(36), bookable_type(191), bookable_id, booking_date, status(32), serial_number)',
-        );
+        if (Schema::getConnection()->getDriverName() === 'mysql') {
+            DB::statement(
+                'ALTER TABLE bookings ADD INDEX bookings_queue_advance_idx '
+                .'(tenant_id(36), bookable_type(191), bookable_id, booking_date, status(32), serial_number)',
+            );
+        } else {
+            Schema::table('bookings', function (Blueprint $table) {
+                $table->index(
+                    ['tenant_id', 'bookable_type', 'bookable_id', 'booking_date', 'status', 'serial_number'],
+                    'bookings_queue_advance_idx',
+                );
+            });
+        }
     }
 
     public function down(): void

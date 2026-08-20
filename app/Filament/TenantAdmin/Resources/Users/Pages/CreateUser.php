@@ -100,11 +100,6 @@ class CreateUser extends CreateRecord
         $role = (string) ($data['role'] ?? User::ROLE_STAFF);
         unset($data['role']);
 
-        $record = static::getModel()::create($data);
-        if ($record instanceof User) {
-            $record->forceFill(['role' => $role])->save();
-        }
-
-        return $record;
+        return User::provision([...$data, 'role' => $role]);
     }
 }
