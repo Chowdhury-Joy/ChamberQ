@@ -926,6 +926,12 @@
 ## 2026-08-21T00:32:27+0600
 - Pharmacy till takes a typed Discount ৳; cashbook posts collected (list minus discount); voucher Discount is hidden on waived sales.
 
+## 2026-08-21T01:00:16+0600
+- Public SEO-first: search titles from specialty + city, `/conditions/{slug}` topic pages from the homepage condition library, Super Admin Google-ready checklist on tenant edit; solo homepage cards unchanged.
+
+
+
+
 
 
 

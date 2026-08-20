@@ -71,7 +71,11 @@ if (! function_exists('clinic_nav_items')) {
             ['label' => __('Doctors'), 'href' => tenant_safe_href('/doctors')],
         ];
 
-        $reserved = ['departments', 'doctors', 'blog', 'book', 'portal'];
+        $reserved = ['departments', 'doctors', 'blog', 'book', 'portal', 'conditions'];
+
+        if (function_exists('tenant') && tenant() && \App\Support\PublicConditionTopics::all() !== []) {
+            $items[] = ['label' => __('Conditions we treat'), 'href' => tenant_safe_href('/conditions')];
+        }
 
         if (function_exists('tenant') && tenant()) {
             $pages = \App\Models\WebPage::query()

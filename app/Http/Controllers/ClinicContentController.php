@@ -113,7 +113,7 @@ class ClinicContentController extends Controller
             'seo' => $tenant
                 ? PublicSeo::tenantPage(
                     $tenant,
-                    $pageTitle.' | '.$brand,
+                    PublicSeo::labeledTitle($tenant, $pageTitle),
                     $seo['description'] ?? null,
                     $seo['index'] ?? true,
                     $seo['image'] ?? null,

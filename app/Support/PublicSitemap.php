@@ -69,9 +69,17 @@ final class PublicSitemap
             ['loc' => $prefix.'/book'],
         ];
 
+        $topics = PublicConditionTopics::all();
+        if ($topics !== []) {
+            $urls[] = ['loc' => $prefix.'/conditions'];
+            foreach ($topics as $topic) {
+                $urls[] = ['loc' => $prefix.'/conditions/'.$topic['slug']];
+            }
+        }
+
         foreach (WebPage::query()->where('is_published', true)->orderBy('slug')->get() as $page) {
             $slug = trim((string) $page->slug, '/');
-            if ($slug === '') {
+            if ($slug === '' || in_array($slug, ['conditions', 'departments', 'doctors', 'blog', 'book', 'portal'], true)) {
                 continue;
             }
 

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\BlogPost;
 use App\Models\Chamber;
+use App\Models\Doctor;
 use App\Models\Domain;
 use App\Models\Tenant;
 use App\Models\WebPage;
@@ -37,6 +38,7 @@ class PublicSeoTest extends TestCase
 
         $this->assertDoesNotMatchRegularExpression('/^'.$pattern.'$/', 'robots.txt');
         $this->assertDoesNotMatchRegularExpression('/^'.$pattern.'$/', 'sitemap.xml');
+        $this->assertDoesNotMatchRegularExpression('/^'.$pattern.'$/', 'conditions');
     }
 
     public function test_central_robots_txt_hides_staff_and_private_paths(): void
@@ -107,11 +109,13 @@ class PublicSeoTest extends TestCase
             ->getContent();
 
         $this->assertStringContainsString('name="description"', $home);
+        $this->assertStringContainsString('Pain specialist in Chattogram | Riverside Clinic', $home);
         $this->assertStringContainsString('Pain care in Chattogram', $home);
         $this->assertStringContainsString('rel="canonical"', $home);
         $this->assertStringContainsString('property="og:title"', $home);
         $this->assertStringContainsString('application/ld+json', $home);
         $this->assertStringContainsString('MedicalClinic', $home);
+        $this->assertStringContainsString('addressLocality', $home);
         $this->assertStringContainsString('index, follow', $home);
 
         $book = $this->get('http://seo-clinic.localhost/book')
@@ -121,6 +125,8 @@ class PublicSeoTest extends TestCase
         $this->assertStringContainsString('name="description"', $book);
         $this->assertStringContainsString('rel="canonical"', $book);
         $this->assertStringContainsString('/book', $book);
+        $this->assertStringContainsString('Pain specialist in Chattogram', $book);
+        $this->assertStringContainsString('Pay at the chamber', $book);
     }
 
     public function test_clinic_sitemap_lists_public_pages_not_portal(): void
@@ -144,6 +150,7 @@ class PublicSeoTest extends TestCase
         $this->assertStringContainsString('<loc>http://seo-clinic.localhost/</loc>', $xml);
         $this->assertStringContainsString('<loc>http://seo-clinic.localhost/book</loc>', $xml);
         $this->assertStringContainsString('<loc>http://seo-clinic.localhost/blog/back-pain-tips</loc>', $xml);
+        $this->assertStringContainsString('<loc>http://seo-clinic.localhost/conditions/knee-pain</loc>', $xml);
         $this->assertStringNotContainsString('/portal</loc>', $xml);
         $this->assertStringNotContainsString('/admin</loc>', $xml);
     }
@@ -184,6 +191,38 @@ class PublicSeoTest extends TestCase
         $this->assertStringContainsString('BlogPosting', $html);
     }
 
+    public function test_condition_topic_pages_are_indexable_and_empty_library_is_not(): void
+    {
+        $this->publishHome();
+
+        $html = $this->get('http://seo-clinic.localhost/conditions/knee-pain')
+            ->assertOk()
+            ->getContent();
+
+        $this->assertStringContainsString('Knee pain', $html);
+        $this->assertStringContainsString('ACL tears', $html);
+        $this->assertStringContainsString('MedicalCondition', $html);
+        $this->assertStringContainsString('index, follow', $html);
+        $this->assertStringContainsString('Knee pain | Pain specialist in Chattogram', $html);
+
+        $this->get('http://seo-clinic.localhost/conditions')
+            ->assertOk()
+            ->assertSee('Knee pain', false);
+
+        $this->get('http://seo-clinic.localhost/conditions/missing')
+            ->assertNotFound();
+
+        $solo = Tenant::create([
+            'id' => 'seo-solo',
+            'plan_tier' => 'solo',
+            'name' => 'Dr Empty',
+        ]);
+        Domain::create(['domain' => 'seo-solo.localhost', 'tenant_id' => $solo->id]);
+
+        $this->get('http://seo-solo.localhost/conditions')
+            ->assertNotFound();
+    }
+
     private function publishHome(): void
     {
         tenancy()->initialize($this->clinic);
@@ -191,6 +230,12 @@ class PublicSeoTest extends TestCase
         Chamber::create([
             'name' => 'Panchlaish',
             'address' => 'Panchlaish, Chattogram',
+        ]);
+
+        Doctor::create([
+            'name' => 'Dr Hasan',
+            'public_title' => 'Pain specialist',
+            'practice_type' => Doctor::PRACTICE_GENERAL,
         ]);
 
         WebPage::create([
@@ -203,6 +248,19 @@ class PublicSeoTest extends TestCase
                     'data' => [
                         'headline' => 'Relief without surgery',
                         'subheadline' => 'Pain care in Chattogram',
+                    ],
+                ],
+                [
+                    'type' => 'condition_library',
+                    'data' => [
+                        'heading' => 'Conditions we treat',
+                        'conditions' => [
+                            [
+                                'name' => 'Knee pain',
+                                'description' => 'Sports injuries and worn joints.',
+                                'features' => [['label' => 'ACL tears']],
+                            ],
+                        ],
                     ],
                 ],
             ],

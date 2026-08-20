@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-21T00:32:27+0600
+Last Updated: 2026-08-21T01:00:16+0600
 
 ## Full Site Map
 
@@ -19,7 +19,7 @@ Hosts: values in `CENTRAL_DOMAINS` (e.g. `localhost`).
 | `/me/history` | Past visits and prescriptions for this phone (own records; no share-flag gate; no voice/photo) | patient login |
 | `/me/prescriptions/{id}` | Full patient pad for one prescription belonging to this phone | patient login |
 | `/admin` | Super Admin Filament login | public login |
-| `/admin/*` | Super Admin: Tenants under **Platform** (incl. **Product modules**; **Maestro**/Clinic label; Prescription-free-for-life tick; **paying** one-time/monthly; MR + marketer; per-deal % overrides; live list → paying → cuts preview; opt-in **Stations / Referrals / HR / Pharmacy** ticks, default off), Marketers, **Medical representatives**, Discount Codes, Commissions; finance dashboard then platform totals then latest 8 tenants; **Client Health** seller overview (`/admin/seller-overview`, names link to tenant edit); **Research data** aggregate view (`/admin/research`); **Booking window** (`/admin/booking-window`, platform default days ahead; a chamber may set its own shorter window); **Platform data backup** (`/admin/data-backup`, restore defaults to dry-run and confirms before a live replace); Tenants list row actions (Edit / Download chamber backup) sit in a **⋮** menu with finance columns behind the column manager; per-tenant chamber backup download plus Restore/Delete behind **Dangerous** on tenant edit; confirm doctor setup/monthly/**12 months prepaid** on tenant edit | super_admin only |
+| `/admin/*` | Super Admin: Tenants under **Platform** (incl. **Google-ready** punch-list on tenant edit; **Product modules**; **Maestro**/Clinic label; Prescription-free-for-life tick; **paying** one-time/monthly; MR + marketer; per-deal % overrides; live list → paying → cuts preview; opt-in **Stations / Referrals / HR / Pharmacy** ticks, default off), Marketers, **Medical representatives**, Discount Codes, Commissions; finance dashboard then platform totals then latest 8 tenants; **Client Health** seller overview (`/admin/seller-overview`, names link to tenant edit); **Research data** aggregate view (`/admin/research`); **Booking window** (`/admin/booking-window`, platform default days ahead; a chamber may set its own shorter window); **Platform data backup** (`/admin/data-backup`, restore defaults to dry-run and confirms before a live replace); Tenants list row actions (Edit / Download chamber backup) sit in a **⋮** menu with finance columns behind the column manager; per-tenant chamber backup download plus Restore/Delete behind **Dangerous** on tenant edit; confirm doctor setup/monthly/**12 months prepaid** on tenant edit | super_admin only |
 | `/partner` | Marketer partner panel login | public login |
 | `/partner/*` | Marketer: referral link, owed/paid stats, referred doctors list, commission history | marketer only |
 | `/up` | Laravel health check | public |
@@ -33,7 +33,7 @@ Same central host; tenant identified by URL slug (tenant `id`), e.g. `drkarim`.
 |-------|---------|--------|
 | `/{slug}/` | Branded website home | public (**Front door** module) |
 | `/{slug}/robots.txt` | Clinic crawler rules (hide admin, portal, tickets, TV). Google’s official file is still host-root `/robots.txt`; this copy is for custom-domain and path bookmarks | public |
-| `/{slug}/sitemap.xml` | Published pages, `/book`, and clinic departments/doctors/blog | public (**Front door**) |
+| `/{slug}/sitemap.xml` | Published pages, `/book`, condition topic pages, and clinic departments/doctors/blog | public (**Front door**) |
 | `POST /{slug}/` | Safety net: same as `POST /{slug}/book` if the homepage form posts to the page it is sitting on | public (throttled, **Front door**) |
 | `/{slug}/book` | Booking wizard | public (**Front door**) |
 | `POST /{slug}/book` | Homepage hero form target — flashes name/phone to session, redirects to the wizard | public (throttled, **Front door**) |
@@ -43,6 +43,8 @@ Same central host; tenant identified by URL slug (tenant `id`), e.g. `drkarim`.
 | `/{slug}/screen/chamber/{chamber}` | Combined waiting-room TV for every live sitting in that chamber today | public (**Live queue**) |
 | `/{slug}/screen/{session}/{date}` | Outdoor display for a specific date (legacy / deep link) | public (**Live queue**) |
 | `/{slug}/lang/{locale}` | Switch session locale `en` / `bn` (same-host Referer; signed-in staff without Referer return to `/{slug}/admin`) | public |
+| `/{slug}/conditions` | List of condition topic pages (from the homepage condition library). 404 if the list is empty | public (**Front door**) |
+| `/{slug}/conditions/{slug}` | One condition topic (e.g. knee pain) with Book CTA. Not the consult-screen diagnosis catalogue | public (**Front door**) |
 | `/{slug}/departments` | Clinic departments listing (clinic tier only) | public |
 | `/{slug}/departments/{slug}` | Single department page | public |
 | `/{slug}/blog` | Clinic health articles listing (clinic tier only) | public |
@@ -79,7 +81,9 @@ When a doctor connects their own domain (e.g. `drkarim.com`), routes live at the
 |-------|---------|--------|
 | `/{slug?}` | Branded website pages from WebPage builder (home = empty slug) | public |
 | `/robots.txt` | Clinic crawler rules on this host | public |
-| `/sitemap.xml` | Published pages, `/book`, clinic departments/doctors/blog | public |
+| `/sitemap.xml` | Published pages, `/book`, condition topic pages, clinic departments/doctors/blog | public |
+| `/conditions` | List of condition topic pages (empty library → 404) | public (**Front door**) |
+| `/conditions/{slug}` | One condition topic with Book CTA | public (**Front door**) |
 | `/departments` | Clinic departments listing (clinic tier only) | public |
 | `/departments/{slug}` | Single department page | public |
 | `/blog` | Clinic health articles listing (clinic tier only) | public |
@@ -191,7 +195,7 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 4. When doctor pays setup/monthly, Super Admin confirms payment → marketer sees owed commission → Super Admin marks payout paid.
 
 ### Patient → book serial → ticket
-1. Open `/{slug}/` or custom domain home — see doctor brand + Book CTA. On clinic-tier sites the Book Appointment CTA now also sits in the header nav (desktop) and the mobile drawer, per the Clireo design port; solo keeps its locked layout.
+1. Open `/{slug}/` or custom domain home — see doctor brand + Book CTA. On clinic-tier sites the Book Appointment CTA now also sits in the header nav (desktop) and the mobile drawer, per the Clireo design port; solo keeps its locked layout. Google titles use specialty + city. Condition topic pages live at `/conditions/{slug}` (sitemap + clinic nav when the homepage list is filled); homepage condition cards are not restyled.
 2. Book flow — chamber/doctor when needed, then **When can you come?** (only dates with seats left, soonest first; earliest option highlighted). **Your details** under the booking summary strip (Name / Phone / Year of birth optional / NID optional / Different WhatsApp / Who for?; **Share with other ChamberQ doctors**); **Change date** on the summary strip (or Back). If the number is known, choose **Who for?** inline — masked initials (`F. R., 34`); picking one stands the name field down. Clinic hero form POSTs to `/book` (phone then name flashed, never in the URL); `POST /` on the clinic host is the same handler if the browser posts the homepage instead. On a multi-branch clinic it asks **Which centre?** first so Dhaka and Chittagong sittings are never mixed in one list. A ChamberQ patient login on the same host prefills name/phone.
 3. Submit → ticket at `…/bookings/{uuid}`. Goal: proof of serial; share via WhatsApp/copy, or Print / Save as PDF for a paper or file copy. With **Live queue**, the ticket also offers **জানাতে দিন** (Bangla): Allow once so the phone can buzz when the serial is two away / next / called, even if the ticket is closed. If Allow is blocked, the copy says to come at ticket time or sit by the TV.
 4. Optional: PWA install scoped to tenant path or custom domain.
@@ -217,7 +221,7 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 - **Steps:** Create Tenant with URL **slug** (e.g. `drkarim`; rejected if already taken or if it matches a reserved path prefix such as `admin` / `book` / `find` / `me`), **owner login email** (founder — may not be a doctor), **doctor login email** (required), and optional **helper email** (defaults to `support@{slug}.chamberq.internal`). Plan Tier starts as **Maestro**, billing as trial, SMS as 0, all three modules on, theme and locale filled — change them only when the deal is not the default. Optional custom **domain** (repeater starts empty). Tick Prescription free for life if honouring it → type a **paying** price if this doctor gets a courtesy → attach **marketer** and **medical representative** (leave MR empty for a direct sale) / **discount code**, read the labeled list → paying → cuts preview → Create → copy the one-shot **owner / helper / doctor** passwords from the notification → hand off owner + doctor logins to the client (never the helper password).
 - **URLs:** Platform `/{slug}/…`; after custom domain DNS, also `drkarim.com/…` at root.
 - **Modules:** Front door alone = website + book + day list (no outdoor TV / Call next / come-around). Live queue adds TV + live ticket. Prescription adds consult/Rx. Booking confirmation SMS is optional (credits + doctor toggle).
-- **Success:** Enabled module routes work; disabled ones 404. Owner at `/{slug}/admin` (or `/admin` on custom domain). ChamberQ uses the **helper** login on the same URL — invisible on the owner’s Staff & Roles list.
+- **Success:** Enabled module routes work; disabled ones 404. Owner at `/{slug}/admin` (or `/admin` on custom domain). ChamberQ uses the **helper** login on the same URL — invisible on the owner’s Staff & Roles list. On tenant **edit**, the **Google-ready** list is ticked (city in the chamber address, tagline, doctor, published homepage, condition topics, clinic blog) before anyone is told the site will rank.
 
 ### Set how far ahead patients can book (Super Admin)
 - **Trigger:** Owner wants a shorter or longer online booking window for Front doors that have not typed their own, or a clinic wants its own window.
@@ -306,12 +310,12 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 
 ### Content update (staff)
 - **Trigger:** Doctor wants copy/photo change.
-- **Steps:** Staff edits Web Page blocks in tenant admin. Hero photo and **Latest Educational Videos** cover/video are file uploads (or a YouTube link). Clinic tier can also add/edit **Departments**, **Blog posts**, and doctor **Website profile** fields under **Website**.
+- **Steps:** Staff edits Web Page blocks in tenant admin. Hero photo and **Latest Educational Videos** cover/video are file uploads (or a YouTube link). Clinic tier can also add/edit **Departments**, **Blog posts**, and doctor **Website profile** fields under **Website**. Named rows in the homepage **Conditions** library become public `/conditions/{slug}` pages automatically (no extra SEO form).
 
 ### Clinic website content (admin/staff — clinic tier)
 - **Trigger:** Clinic needs a new department, blog article, or public doctor profile.
 - **Steps:** Tenant admin → **Website** → **Departments** / **Blog posts** (create, publish) or **Doctors** → enable **Show on website**, photo, bio, slug → homepage sections (`service_matrix`, `health_insights`, `doctor_grid`) pull published rows automatically.
-- **Data/systems touched:** `departments`, `blog_posts`, `doctors` website columns; public routes `/departments`, `/blog`, `/doctors`.
+- **Data/systems touched:** `departments`, `blog_posts`, `doctors` website columns; public routes `/departments`, `/blog`, `/doctors`, `/conditions`.
 - **Success:** List + detail pages live; homepage teasers match without duplicating cards in the page builder.
 
 ### Follow-up reminders (staff — desk)

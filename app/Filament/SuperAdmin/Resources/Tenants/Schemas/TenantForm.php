@@ -8,6 +8,7 @@ use App\Models\Tenant;
 use App\Services\CommissionService;
 use App\Services\DealCommissionRates;
 use App\Services\PlanPricingService;
+use App\Support\SiteLaunchChecklist;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\ColorPicker;
@@ -20,6 +21,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use Illuminate\Support\HtmlString;
 
 class TenantForm
 {
@@ -27,6 +29,20 @@ class TenantForm
     {
         return $schema
             ->components([
+                Placeholder::make('google_ready')
+                    ->hiddenLabel()
+                    ->visible(fn (string $operation): bool => $operation === 'edit')
+                    ->content(function (?Tenant $record): HtmlString {
+                        if (! $record instanceof Tenant) {
+                            return new HtmlString('');
+                        }
+
+                        return new HtmlString(view('filament.super-admin.partials.google-ready', [
+                            'items' => SiteLaunchChecklist::items($record),
+                        ])->render());
+                    })
+                    ->columnSpanFull(),
+
                 Fieldset::make(__('Identity'))
                     ->schema([
                         TextInput::make('id')

@@ -26,6 +26,7 @@ class TenancyUrlTest extends TestCase
         $this->assertDoesNotMatchRegularExpression('/^'.$pattern.'$/', 'admin');
         $this->assertDoesNotMatchRegularExpression('/^'.$pattern.'$/', 'find');
         $this->assertDoesNotMatchRegularExpression('/^'.$pattern.'$/', 'me');
+        $this->assertDoesNotMatchRegularExpression('/^'.$pattern.'$/', 'conditions');
     }
 
     public function test_tenant_url_uses_path_prefix_on_central_domain(): void

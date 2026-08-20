@@ -5,6 +5,7 @@ declare(strict_types=1);
 use App\Http\Controllers\BookingController;
 use App\Http\Controllers\ClinicContentController;
 use App\Http\Controllers\ConditionController;
+use App\Http\Controllers\ConditionTopicController;
 use App\Http\Controllers\LocaleController;
 use App\Http\Controllers\MedicineController;
 use App\Http\Controllers\NotifySmsController;
@@ -281,6 +282,13 @@ $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
     // Note: /portal/prescriptions/{prescription} is registered above with the
     // other prescription patient routes so it stays next to /p/{token}.
 
+    Route::get('/conditions', [ConditionTopicController::class, 'index'])
+        ->middleware(['tenant.module:front_door'])
+        ->name($routeName('conditions.index'));
+    Route::get('/conditions/{slug}', [ConditionTopicController::class, 'show'])
+        ->middleware(['tenant.module:front_door'])
+        ->name($routeName('conditions.show'));
+
     Route::get('/departments', [ClinicContentController::class, 'departmentsIndex'])
         ->middleware(['tenant.module:front_door'])
         ->name($routeName('clinic.departments.index'));
@@ -303,7 +311,7 @@ $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
     Route::get('/{slug?}', [WebPageController::class, 'show'])
         ->middleware(['tenant.module:front_door'])
         // Exact-segment negative lookahead — (?!foo|bar$) only anchors the last alt.
-        ->where('slug', '^(?!(?:tenant|admin|api|lang|bookings|portal|departments|blog|doctors|robots\\.txt|sitemap\\.xml)$).*$');
+        ->where('slug', '^(?!(?:tenant|admin|api|lang|bookings|portal|departments|blog|doctors|conditions|robots\\.txt|sitemap\\.xml)$).*$');
 };
 
 foreach (config('tenancy.central_domains', []) as $centralDomain) {

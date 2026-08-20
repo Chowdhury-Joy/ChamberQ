@@ -3509,3 +3509,13 @@
  <action>Add a **Discount ৳** box on Sell from prescription and Walk-in. Leave it 0 for the full price. Cashbook and mixed cash+online must match what is left after the discount. The voucher prints Discount. The doctor’s pharmacy % is taken from the shop cut after that discount. Waive still means free, not a discount line.</action>
  <reason>Like a chemist saying “take ৳50 off” then collecting the rest. Stations Collect fee works the other way (type cash+online, leftover is discount). A shop thinks in “how much off,” so the pharmacy till types the discount.</reason>
 </decision>
+
+## 2026-08-21T01:00:16+0600
+
+<decision>
+ <category>CRO</category>
+ <context>Client websites needed to rank for how patients actually search (doctor + city + problem), not only show a pretty homepage. Extra SEO form fields would not be maintained. The solo homepage look stays locked.</context>
+ <action>Auto-build search titles from specialty and chamber city. Publish `/conditions/{slug}` topic pages from the homepage condition list (sitemap + clinic nav; homepage cards unchanged). Super Admin tenant edit shows a Google-ready punch-list that does not block save. Still no SEO boxes in the page builder.</action>
+ <reason>Like putting the visiting card and the clinic’s condition list into Google’s envelope, then checking the envelope is filled before telling a doctor they are live — without asking them to write meta tags, and without restyling the locked patient homepage.</reason>
+</decision>
+
