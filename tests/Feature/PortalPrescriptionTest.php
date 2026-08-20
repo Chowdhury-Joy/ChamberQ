@@ -200,11 +200,6 @@ class PortalPrescriptionTest extends TestCase
         ])->assertRedirect('http://portal-rx.localhost/portal');
     }
 
-    private function flushSession(): void
-    {
-        $this->app['session']->flush();
-    }
-
     public function test_portal_lookup_stores_phone_in_session_not_the_url(): void
     {
         $this->lookupPortal();
