@@ -6,18 +6,21 @@ use App\Exceptions\BookingUnavailableException;
 use App\Filament\TenantAdmin\Resources\Patients\Schemas\PatientForm;
 use App\Models\Booking;
 use App\Models\Doctor;
+use App\Models\FeeCatalogItem;
 use App\Models\LabCollectionSlot;
 use App\Models\LabTest;
 use App\Models\Patient;
 use App\Models\PlatformSetting;
-use App\Models\ReferringDoctor;
 use App\Models\ScheduleSession;
+use App\Models\User;
 use App\Services\BookingService;
 use App\Services\CarePath;
 use App\Services\PatientService;
+use App\Support\BdNid;
 use App\Support\StaffDeskScope;
 use Carbon\Carbon;
 use Filament\Forms\Components\Checkbox;
+use Filament\Forms\Components\Component;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
@@ -45,7 +48,7 @@ final class StaffBookingForm
     public const LAB_COLLECTION = 'collection';
 
     /**
-     * @return list<\Filament\Forms\Components\Component>
+     * @return list<Component>
      */
     public static function components(): array
     {
@@ -287,7 +290,7 @@ final class StaffBookingForm
                 ->helperText(__('From the national ID card — helps reconnect records if the phone number changes.'))
                 ->maxLength(17)
                 ->rule(fn () => function (string $attribute, mixed $value, \Closure $fail): void {
-                    if (filled($value) && ! \App\Support\BdNid::isValid((string) $value)) {
+                    if (filled($value) && ! BdNid::isValid((string) $value)) {
                         $fail(__('Please enter a valid NID (10 or 13 digits), or leave it blank.'));
                     }
                 }),
@@ -295,18 +298,7 @@ final class StaffBookingForm
                 ->label(__('Share health records with other ChamberQ doctors'))
                 ->helperText(__('Visit notes and prescriptions can help the next ChamberQ doctor treat this patient safely. Voice notes and photos stay in this clinic.'))
                 ->default(true),
-            Select::make('referring_doctor_id')
-                ->label(__('Referred by (outside GP)'))
-                ->options(fn (): array => ReferringDoctor::query()
-                    ->where('is_active', true)
-                    ->orderBy('name')
-                    ->get()
-                    ->mapWithKeys(fn (ReferringDoctor $doctor) => [$doctor->id => $doctor->displayLabel()])
-                    ->all())
-                ->placeholder(__('Walk-in / no referrer'))
-                ->searchable()
-                ->native(false)
-                ->visible(fn (): bool => tenant()?->hasReferrals() ?? false),
+            ReferringDoctorPicker::select(),
             self::remarksField(),
         ];
     }
@@ -341,7 +333,7 @@ final class StaffBookingForm
             return [];
         }
 
-        return \App\Models\FeeCatalogItem::interventionTypeOptions();
+        return FeeCatalogItem::interventionTypeOptions();
     }
 
     /**
@@ -374,7 +366,7 @@ final class StaffBookingForm
     public static function deskDoctorOptions(): array
     {
         $user = auth()->user();
-        if ($user instanceof \App\Models\User) {
+        if ($user instanceof User) {
             return StaffDeskScope::doctorOptionsFor($user);
         }
 
@@ -407,7 +399,7 @@ final class StaffBookingForm
         if (self::isLabCollectionFromState($visitType, $labType)) {
             $query = LabCollectionSlot::query()->with('chamber');
             $user = auth()->user();
-            if ($user instanceof \App\Models\User) {
+            if ($user instanceof User) {
                 $chamberIds = StaffDeskScope::chamberIdsFor($user);
                 if ($chamberIds !== null) {
                     $query->whereIn('chamber_id', $chamberIds);
@@ -474,7 +466,7 @@ final class StaffBookingForm
         if ($includeLabSlots) {
             $labQuery = LabCollectionSlot::query();
             $user = auth()->user();
-            if ($user instanceof \App\Models\User) {
+            if ($user instanceof User) {
                 $chamberIds = StaffDeskScope::chamberIdsFor($user);
                 if ($chamberIds !== null) {
                     $labQuery->whereIn('chamber_id', $chamberIds);
@@ -561,7 +553,7 @@ final class StaffBookingForm
         };
 
         $user = auth()->user();
-        if ($user instanceof \App\Models\User) {
+        if ($user instanceof User) {
             StaffDeskScope::constrainScheduleSessions($query, $user);
         }
 
@@ -667,7 +659,7 @@ final class StaffBookingForm
 
         if ($includeLabSlots) {
             $labQuery = LabCollectionSlot::query()->with('chamber')->where('day_of_week', $dow);
-            if ($user instanceof \App\Models\User) {
+            if ($user instanceof User) {
                 $chamberIds = StaffDeskScope::chamberIdsFor($user);
                 if ($chamberIds !== null) {
                     $labQuery->whereIn('chamber_id', $chamberIds);
@@ -703,7 +695,7 @@ final class StaffBookingForm
     /**
      * Walk-in at the door today: same visit types as Book serial, no date picker.
      *
-     * @return list<\Filament\Forms\Components\Component>
+     * @return list<Component>
      */
     public static function walkInComponents(): array
     {
@@ -740,7 +732,7 @@ final class StaffBookingForm
     /**
      * Walk-in onto the sitting already open on Live Queue.
      *
-     * @return list<\Filament\Forms\Components\Component>
+     * @return list<Component>
      */
     public static function liveQueueWalkInComponents(?ScheduleSession $session): array
     {
@@ -807,7 +799,7 @@ final class StaffBookingForm
     }
 
     /**
-     * @return list<\Filament\Forms\Components\Component>
+     * @return list<Component>
      */
     public static function visitTypeFields(): array
     {
@@ -851,7 +843,7 @@ final class StaffBookingForm
     /**
      * Phone, name, optional WhatsApp, household, NID, share, referrer.
      *
-     * @return list<\Filament\Forms\Components\Component>
+     * @return list<Component>
      */
     public static function patientFields(bool $includeWhatsapp): array
     {
@@ -951,7 +943,7 @@ final class StaffBookingForm
                 ->helperText(__('From the national ID card — helps reconnect records if the phone number changes.'))
                 ->maxLength(17)
                 ->rule(fn () => function (string $attribute, mixed $value, \Closure $fail): void {
-                    if (filled($value) && ! \App\Support\BdNid::isValid((string) $value)) {
+                    if (filled($value) && ! BdNid::isValid((string) $value)) {
                         $fail(__('Please enter a valid NID (10 or 13 digits), or leave it blank.'));
                     }
                 }),
@@ -959,18 +951,7 @@ final class StaffBookingForm
                 ->label(__('Share health records with other ChamberQ doctors'))
                 ->helperText(__('Visit notes and prescriptions can help the next ChamberQ doctor treat this patient safely. Voice notes and photos stay in this clinic.'))
                 ->default(true),
-            Select::make('referring_doctor_id')
-                ->label(__('Referred by (outside GP)'))
-                ->options(fn (): array => ReferringDoctor::query()
-                    ->where('is_active', true)
-                    ->orderBy('name')
-                    ->get()
-                    ->mapWithKeys(fn (ReferringDoctor $doctor) => [$doctor->id => $doctor->displayLabel()])
-                    ->all())
-                ->placeholder(__('Walk-in / no referrer'))
-                ->searchable()
-                ->native(false)
-                ->visible(fn (): bool => tenant()?->hasReferrals() ?? false),
+            ReferringDoctorPicker::select(),
             self::remarksField(),
         ]);
     }

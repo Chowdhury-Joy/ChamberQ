@@ -3311,3 +3311,12 @@
  <action>Seed sittings as Panchlaish (Chittagong) Sunday–Tuesday, morning and evening each day; Uttara (Dhaka) Thursday morning and evening. Wednesday, Friday and Saturday have no sitting. Centres page hours match. Re-seed with `MupsSeeder`.</action>
  <reason>Like a two-city visiting consultant who is never in both places the same day, and who takes three weekdays off — the calendar can now show grey closed days instead of a full week of black dates.</reason>
 </decision>
+
+## 2026-08-20T17:22:16+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Desk staff collecting a fee or booking a walk-in typed a new outside GP (e.g. “rashed”) into Referred by and only saw “No options match your search.” Adding a GP required leaving the till for Operations → Referring doctors, which is admin-only — so reception could not finish the job from the screen they were on.</context>
+ <action>The Referred by dropdown now has a + like the medicine picker. Staff type a name (phone and specialty optional). `ReferringDoctor::findOrCreateFromDesk()` saves them onto this clinic’s list, reuses the same name ignoring capitalisation, and turns an inactive GP back on so monthly payouts do not split. Same control on Collect fee, New Walk-In, and Book serial. Operations → Referring doctors stays the place to edit notes or switch someone off.</action>
+ <reason>Same as adding a new contact while sending a WhatsApp instead of closing the chat to open Contacts first. The patient is at the desk with money in hand; the GP’s name only has to be saved once.</reason>
+</decision>

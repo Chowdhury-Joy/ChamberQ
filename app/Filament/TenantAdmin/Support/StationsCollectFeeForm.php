@@ -5,8 +5,10 @@ namespace App\Filament\TenantAdmin\Support;
 use App\Models\Booking;
 use App\Models\ChamberCashEntry;
 use App\Models\FeeCatalogItem;
-use App\Models\ReferringDoctor;
+use App\Models\ScheduleSession;
 use App\Models\User;
+use App\Services\CarePath;
+use App\Services\PracticeRules;
 use App\Services\StationsTillService;
 use Filament\Forms\Components\Checkbox;
 use Filament\Forms\Components\Component;
@@ -30,18 +32,7 @@ class StationsCollectFeeForm
                 ->content(fn (): string => $record->patient_name
                     .' · '.__('Serial :n', ['n' => $record->serial_number])
                     .($record->voucher_number ? ' · '.__('Voucher :v', ['v' => $record->voucher_number]) : '')),
-            Select::make('referring_doctor_id')
-                ->label(__('Referred by (outside GP)'))
-                ->options(fn (): array => ReferringDoctor::query()
-                    ->where('is_active', true)
-                    ->orderBy('name')
-                    ->get()
-                    ->mapWithKeys(fn (ReferringDoctor $doctor) => [$doctor->id => $doctor->displayLabel()])
-                    ->all())
-                ->placeholder(__('Walk-in / no referrer'))
-                ->searchable()
-                ->native(false)
-                ->visible(fn (): bool => tenant()?->hasReferrals() ?? false),
+            ReferringDoctorPicker::select(),
             Select::make('fee_catalog_item_id')
                 ->label(__('Procedure / visit'))
                 ->options(fn (): array => FeeCatalogItem::query()
@@ -111,13 +102,13 @@ class StationsCollectFeeForm
 
         if (! $itemId) {
             $record->loadMissing('bookable');
-            $kind = $record->bookable instanceof \App\Models\ScheduleSession
+            $kind = $record->bookable instanceof ScheduleSession
                 ? $record->bookable->kind
                 : null;
             if (filled($kind)) {
-                $preferFollowUp = $kind === \App\Models\ScheduleSession::KIND_VISIT
-                    && $record->care_path === \App\Services\CarePath::FOLLOW_UP;
-                $suggested = \App\Services\PracticeRules::suggestedRoomFeeTaka($record);
+                $preferFollowUp = $kind === ScheduleSession::KIND_VISIT
+                    && $record->care_path === CarePath::FOLLOW_UP;
+                $suggested = PracticeRules::suggestedRoomFeeTaka($record);
 
                 $query = FeeCatalogItem::query()
                     ->where('is_active', true)
@@ -127,8 +118,8 @@ class StationsCollectFeeForm
                     $itemId = (clone $query)->where('label', 'like', '%ollow-up%')->orderBy('sort_order')->value('id')
                         ?: (clone $query)->orderBy('sort_order')->value('id');
                 } elseif (in_array($kind, [
-                    \App\Models\ScheduleSession::KIND_REPORT,
-                    \App\Models\ScheduleSession::KIND_COUNSELING,
+                    ScheduleSession::KIND_REPORT,
+                    ScheduleSession::KIND_COUNSELING,
                 ], true)) {
                     $itemId = (clone $query)
                         ->orderByRaw('abs(list_price_taka - ?)', [$suggested])
@@ -140,7 +131,7 @@ class StationsCollectFeeForm
             }
         }
 
-        $suggestedCash = $entry?->cash_taka ?? \App\Services\PracticeRules::suggestedRoomFeeTaka($record);
+        $suggestedCash = $entry?->cash_taka ?? PracticeRules::suggestedRoomFeeTaka($record);
 
         return [
             'referring_doctor_id' => $record->referring_doctor_id,

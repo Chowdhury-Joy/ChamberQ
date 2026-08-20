@@ -863,4 +863,7 @@
 ## 2026-08-20T17:10:08+0600
 - MUPS seed sittings are now Panchlaish Sun–Tue (morning + evening) and Uttara Thursday (morning + evening); Wednesday, Friday and Saturday are off so Book Serial can grey those days.
 
+## 2026-08-20T17:22:16+0600
+- Desk can add an outside GP from **Referred by**: `ReferringDoctorPicker` (+ create on Collect fee / walk-in / Book serial) and `ReferringDoctor::findOrCreateFromDesk()`.
+
 

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Filament\TenantAdmin\Support\ReferringDoctorPicker;
 use App\Models\Booking;
 use App\Models\Chamber;
 use App\Models\ChamberCashEntry;
@@ -272,6 +273,65 @@ class ReferralsAndHrModuleTest extends TestCase
             1,
             ChamberCashEntry::query()->where('category', ChamberCashEntry::CATEGORY_REFERRAL_PAYOUT)->count(),
             'The referring doctor was paid twice.',
+        );
+    }
+
+    public function test_desk_can_add_a_referring_doctor_who_is_not_in_the_list(): void
+    {
+        $doctor = ReferringDoctor::findOrCreateFromDesk([
+            'name' => '  Dr Rashed  ',
+            'phone' => '01711111111',
+            'specialty' => 'GP, Agrabad',
+        ]);
+
+        $this->assertSame('Dr Rashed', $doctor->name);
+        $this->assertSame('01711111111', $doctor->phone);
+        $this->assertSame('GP, Agrabad', $doctor->specialty);
+        $this->assertTrue($doctor->is_active);
+        $this->assertSame('referrals-hr', $doctor->tenant_id);
+        $this->assertSame(2, ReferringDoctor::query()->count());
+    }
+
+    public function test_adding_the_same_referring_doctor_twice_reuses_the_row(): void
+    {
+        $first = ReferringDoctor::findOrCreateFromDesk(['name' => 'Dr Rashed']);
+        $second = ReferringDoctor::findOrCreateFromDesk([
+            'name' => 'dr rashed',
+            'phone' => '01711111111',
+        ]);
+
+        $this->assertTrue($first->is($second));
+        $this->assertSame('Dr Rashed', $second->name);
+        $this->assertSame('01711111111', $second->phone);
+        $this->assertSame(2, ReferringDoctor::query()->count());
+    }
+
+    public function test_adding_an_inactive_referring_doctor_again_reactivates_them(): void
+    {
+        $this->referrer->update(['is_active' => false]);
+
+        $again = ReferringDoctor::findOrCreateFromDesk(['name' => 'Dr Karim']);
+
+        $this->assertTrue($this->referrer->is($again));
+        $this->assertTrue($again->fresh()->is_active);
+        $this->assertSame(1, ReferringDoctor::query()->count());
+    }
+
+    public function test_referred_by_picker_creates_the_gp_and_returns_their_id(): void
+    {
+        $select = ReferringDoctorPicker::select();
+        $create = $select->getCreateOptionUsing();
+
+        $this->assertNotNull($create);
+
+        $id = $create([
+            'name' => 'Dr Rashed',
+            'phone' => '01711111111',
+        ]);
+
+        $this->assertSame(
+            ReferringDoctor::query()->where('name', 'Dr Rashed')->value('id'),
+            $id,
         );
     }
 
