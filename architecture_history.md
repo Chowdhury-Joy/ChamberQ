@@ -899,6 +899,9 @@
 ## 2026-08-20T18:46:30+0600
 - Pharmacy Physical count and Pay supplier pages hidden (`PharmacyAccess::backOfficePagesEnabled` false); services kept.
 
+## 2026-08-20T18:59:32+0600
+- Pharmacy till prints a landscape MEDICINE VOUCHER (`PharmacyInvoiceController`, `tenant/pharmacy-invoice.blade.php`, sequential `pharmacy_sales.receipt_number`); the old modal receipt view is gone.
+
 
 
 

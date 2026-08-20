@@ -3419,3 +3419,12 @@
  <action>Hide **Physical count** and **Pay supplier** (`PharmacyAccess::backOfficePagesEnabled()` is false). Services and tables stay. Receive on Pharmacy stock still records a pay-now amount. Same-day **Return** on the till is unchanged.</action>
  <reason>Like leaving the stocktake clipboard and the company ledger in a drawer: the counter still sells and receives boxes. Those two screens can come back with one flag when the owner wants them.</reason>
 </decision>
+
+## 2026-08-20T18:59:32+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The pharmacy till printed a plain list in a modal. The shop already uses a landscape paper MEDICINE VOUCHER (clinic name, Sl No, customer, medicine table, Cash/Card/Bkash/Nagad, amount in words, signatures). Staff handing a different-looking slip at the counter looks like a different shop.</context>
+ <action>Replace the modal with `GET /pharmacy-sales/{sale}/invoice` — a print-ready landscape pad that follows that voucher: sequential Sl No (`pharmacy_sales.receipt_number`), chamber address/phones, lines with Qty/Rate/Amount, payment ticks, Taka in words, Total/Discount/Net Payable, Received By / Thank You / Customer Signature. Recording a sale opens it; Receipt on the till list does too. Returned sales stamp RETURNED. Guest / queue-only / other-centre logins cannot open it.</action>
+ <reason>Like tearing the next page off the printed pad: the customer leaves with the same layout they already know, filled in by the till instead of blue pen.</reason>
+</decision>

@@ -23,15 +23,18 @@ use App\Models\ScheduleSession;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Models\VisitRecord;
+use App\Services\PharmacyDoctorCommissionService;
 use App\Services\PharmacySaleService;
 use App\Services\PharmacyStockService;
 use App\Services\PharmacySupplierService;
 use App\Support\PharmacyAccess;
 use App\Support\StaffDeskJobs;
 use App\Support\StaffDeskScope;
+use App\Support\TakaWords;
 use Carbon\Carbon;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use InvalidArgumentException;
 use Livewire\Livewire;
@@ -151,7 +154,7 @@ class PharmacyModuleTest extends TestCase
         $this->assertSame(35, $commission->amount_taka);
         $this->assertSame(PharmacyDoctorCommission::STATUS_PENDING, $commission->status);
 
-        app(\App\Services\PharmacyDoctorCommissionService::class)->markPaid(
+        app(PharmacyDoctorCommissionService::class)->markPaid(
             PharmacyDoctorCommission::query()->get(),
             $this->staff,
             ChamberCashEntry::METHOD_CASH,
@@ -305,6 +308,177 @@ class PharmacyModuleTest extends TestCase
         );
 
         $this->assertSame(10 * 300, app(PharmacySupplierService::class)->shopBalance()['owed']);
+    }
+
+    public function test_taka_words_match_a_pad_voucher(): void
+    {
+        $this->assertSame('Taka One Thousand One Hundred Only', TakaWords::english(1100));
+        $this->assertSame('Taka Six Hundred Fifty Only', TakaWords::english(650));
+        $this->assertSame('Taka Zero Only', TakaWords::english(0));
+    }
+
+    public function test_medicine_voucher_looks_like_the_printed_pad(): void
+    {
+        $chamber = Chamber::query()->first();
+        $chamber->update([
+            'address' => 'Neurosense, Mehedibag, Chattogram',
+            'contact' => '01805414666',
+        ]);
+        $this->tenant->name = 'MUPS — Dr. Moin Uddin Pain Solution';
+        $this->tenant->save();
+
+        $item = $this->namedOnShelf('Joint Pro', 5, $chamber->id);
+        $sale = app(PharmacySaleService::class)->sell(
+            $this->staff,
+            [['pharmacy_item_id' => $item->id, 'qty' => 1]],
+            ChamberCashEntry::METHOD_CASH,
+            false,
+            null,
+            'Abdul Rufe',
+        );
+
+        $this->assertSame(1, $sale->receipt_number);
+
+        $this->actingAs($this->staff);
+        $response = $this->get(tenant_web_route('pharmacy-invoices.show', ['sale' => $sale]));
+
+        $response->assertOk();
+        $response->assertSee('Medicine voucher', false);
+        $response->assertSee('Customer Name (Mr/Mrs)', false);
+        $response->assertSee('Abdul Rufe', false);
+        $response->assertSee('Joint Pro', false);
+        $response->assertSee('1,100/-', false);
+        $response->assertSee('Taka One Thousand One Hundred Only', false);
+        $response->assertSee('In Word', false);
+        $response->assertSee('Received By', false);
+        $response->assertSee('Customer Signature', false);
+        $response->assertSee('Thank You.', false);
+        $response->assertSee('MUPS', false);
+        $response->assertSee('Cash', false);
+        $response->assertSee('box is-on', false);
+        $response->assertSee('01805-414666', false);
+        $response->assertSee('20-08-26', false);
+    }
+
+    public function test_voucher_numbers_run_like_a_pad(): void
+    {
+        $item = $this->napaOnShelf(5, paidNow: 0);
+        $first = app(PharmacySaleService::class)->sell(
+            $this->staff,
+            [['pharmacy_item_id' => $item->id, 'qty' => 1]],
+            ChamberCashEntry::METHOD_CASH,
+        );
+        $second = app(PharmacySaleService::class)->sell(
+            $this->staff,
+            [['pharmacy_item_id' => $item->id, 'qty' => 1]],
+            ChamberCashEntry::METHOD_CASH,
+        );
+
+        $this->assertSame(1, $first->receipt_number);
+        $this->assertSame(2, $second->receipt_number);
+    }
+
+    public function test_printing_assigns_a_number_to_an_old_sale(): void
+    {
+        $item = $this->napaOnShelf(5, paidNow: 0);
+        $sale = app(PharmacySaleService::class)->sell(
+            $this->staff,
+            [['pharmacy_item_id' => $item->id, 'qty' => 1]],
+            ChamberCashEntry::METHOD_CASH,
+        );
+        $sale->receipt_number = null;
+        $sale->save();
+
+        $this->actingAs($this->staff)
+            ->get(tenant_web_route('pharmacy-invoices.show', ['sale' => $sale]))
+            ->assertOk()
+            ->assertSee('>1<', false);
+
+        $this->assertSame(1, $sale->fresh()->receipt_number);
+    }
+
+    public function test_guest_cannot_open_a_medicine_voucher(): void
+    {
+        $item = $this->napaOnShelf(5, paidNow: 0);
+        $sale = app(PharmacySaleService::class)->sell(
+            $this->staff,
+            [['pharmacy_item_id' => $item->id, 'qty' => 1]],
+            ChamberCashEntry::METHOD_CASH,
+        );
+
+        $this->withHeaders(['Accept' => 'application/json'])
+            ->get(tenant_web_route('pharmacy-invoices.show', ['sale' => $sale]))
+            ->assertUnauthorized();
+    }
+
+    public function test_queue_staff_cannot_open_a_medicine_voucher(): void
+    {
+        $item = $this->napaOnShelf(5, paidNow: 0);
+        $sale = app(PharmacySaleService::class)->sell(
+            $this->staff,
+            [['pharmacy_item_id' => $item->id, 'qty' => 1]],
+            ChamberCashEntry::METHOD_CASH,
+        );
+        $queue = User::create([
+            'name' => 'Queue only',
+            'email' => 'queue-voucher@pharmacy-shop.test',
+            'password' => Hash::make('secret'),
+            'role' => User::ROLE_STAFF,
+            'tenant_id' => 'pharmacy-shop',
+            'desk_jobs' => [StaffDeskJobs::JOB_QUEUE],
+        ]);
+
+        $this->actingAs($queue)
+            ->get(tenant_web_route('pharmacy-invoices.show', ['sale' => $sale]))
+            ->assertForbidden();
+    }
+
+    public function test_branch_staff_cannot_print_another_centre_voucher(): void
+    {
+        $mehedibag = Chamber::query()->first();
+        $uttara = Chamber::create(['name' => 'Uttara']);
+        $item = $this->namedOnShelf('Joint Pro', 5, $uttara->id);
+        $sale = app(PharmacySaleService::class)->sell(
+            $this->staff,
+            [['pharmacy_item_id' => $item->id, 'qty' => 1]],
+            ChamberCashEntry::METHOD_CASH,
+        );
+
+        $mehedibagStaff = User::create([
+            'name' => 'Mehedibag voucher',
+            'email' => 'mehedibag-voucher@pharmacy-shop.test',
+            'password' => Hash::make('secret'),
+            'role' => User::ROLE_STAFF,
+            'tenant_id' => 'pharmacy-shop',
+        ]);
+        StaffDeskScope::syncChambers($mehedibagStaff, [$mehedibag->id]);
+
+        $this->actingAs($mehedibagStaff)
+            ->get(tenant_web_route('pharmacy-invoices.show', ['sale' => $sale]))
+            ->assertForbidden();
+    }
+
+    public function test_counter_receipt_opens_the_voucher_page(): void
+    {
+        $item = $this->napaOnShelf(5, paidNow: 0);
+        $sale = app(PharmacySaleService::class)->sell(
+            $this->staff,
+            [['pharmacy_item_id' => $item->id, 'qty' => 1]],
+            ChamberCashEntry::METHOD_CASH,
+            false,
+            null,
+            'Karim',
+        );
+
+        Filament::setCurrentPanel('tenantAdmin');
+        $this->actingAs($this->staff);
+
+        Livewire::test(PharmacyCounter::class)
+            ->assertTableActionHasUrl(
+                'receipt',
+                tenant_web_route('pharmacy-invoices.show', ['sale' => $sale], absolute: false),
+                $sale,
+            );
     }
 
     public function test_cannot_sell_more_than_on_the_shelf(): void
@@ -498,7 +672,7 @@ class PharmacyModuleTest extends TestCase
 
     public function test_concurrent_last_unit_sale_only_one_succeeds(): void
     {
-        if (\Illuminate\Support\Facades\DB::connection()->getDriverName() !== 'mysql') {
+        if (DB::connection()->getDriverName() !== 'mysql') {
             $this->markTestSkipped('lockForUpdate is a no-op on SQLite');
         }
 

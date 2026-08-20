@@ -3,14 +3,13 @@
 namespace App\Services;
 
 use App\Models\ChamberCashEntry;
-use App\Models\Doctor;
 use App\Models\PharmacyDelivery;
-use App\Models\PharmacyDoctorCommission;
 use App\Models\PharmacyItem;
 use App\Models\PharmacySale;
 use App\Models\PharmacySaleItem;
 use App\Models\PharmacyStockAdjustment;
 use App\Models\Prescription;
+use App\Models\ScheduleSession;
 use App\Models\User;
 use App\Support\PrescriptionQuantity;
 use App\Support\StaffDeskScope;
@@ -97,6 +96,11 @@ class PharmacySaleService
                 $booking = $prescription->visitRecord?->booking;
             }
 
+            PharmacySale::query()
+                ->whereNotNull('receipt_number')
+                ->lockForUpdate()
+                ->get(['id']);
+
             $sale = PharmacySale::create([
                 'patient_id' => $patient?->id,
                 'booking_id' => $booking?->id,
@@ -113,6 +117,7 @@ class PharmacySaleService
                 'recorded_by' => $user->id,
                 'occurred_on' => $occurredOn->toDateString(),
                 'note' => $note,
+                'receipt_number' => ((int) PharmacySale::query()->max('receipt_number')) + 1,
             ]);
 
             $stock = app(PharmacyStockService::class);
@@ -214,7 +219,7 @@ class PharmacySaleService
         $rows = [];
         $prescription->loadMissing(['items', 'visitRecord.booking.bookable']);
         $bookable = $prescription->visitRecord?->booking?->bookable;
-        $chamberId = $bookable instanceof \App\Models\ScheduleSession
+        $chamberId = $bookable instanceof ScheduleSession
             ? (int) $bookable->chamber_id
             : null;
 

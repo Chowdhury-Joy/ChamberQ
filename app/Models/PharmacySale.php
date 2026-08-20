@@ -30,6 +30,7 @@ class PharmacySale extends Model
         'recorded_by',
         'occurred_on',
         'note',
+        'receipt_number',
     ];
 
     protected $casts = [
@@ -39,6 +40,7 @@ class PharmacySale extends Model
         'waived' => 'boolean',
         'voided_at' => 'datetime',
         'occurred_on' => DateOnly::class,
+        'receipt_number' => 'integer',
     ];
 
     public function items(): HasMany
@@ -61,8 +63,20 @@ class PharmacySale extends Model
         return $this->belongsTo(ChamberCashEntry::class, 'cash_entry_id');
     }
 
+    public function recordedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'recorded_by');
+    }
+
     public function isVoided(): bool
     {
         return $this->voided_at !== null;
+    }
+
+    public function receiptLabel(): string
+    {
+        return $this->receipt_number !== null
+            ? (string) $this->receipt_number
+            : (string) $this->id;
     }
 }

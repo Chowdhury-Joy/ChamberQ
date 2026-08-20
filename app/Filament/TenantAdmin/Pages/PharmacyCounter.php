@@ -3,6 +3,7 @@
 namespace App\Filament\TenantAdmin\Pages;
 
 use App\Filament\TenantAdmin\Support\PharmacyPaymentFields;
+use App\Models\ChamberCashEntry;
 use App\Models\PharmacyItem;
 use App\Models\PharmacySale;
 use App\Models\Prescription;
@@ -12,6 +13,7 @@ use App\Services\PharmacySaleService;
 use App\Support\PharmacyAccess;
 use App\Support\StaffDeskScope;
 use Filament\Actions\Action;
+use Filament\Forms\Components\Component;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -85,12 +87,13 @@ class PharmacyCounter extends Page implements HasTable
             ->recordActions([
                 Action::make('receipt')
                     ->label(__('Receipt'))
-                    ->modalHeading(__('Receipt'))
-                    ->modalContent(fn (PharmacySale $record) => view(
-                        'filament.tenant-admin.pages.pharmacy-receipt',
-                        ['sale' => $record->load('items')],
+                    ->icon('heroicon-o-printer')
+                    ->url(fn (PharmacySale $record): string => tenant_web_route(
+                        'pharmacy-invoices.show',
+                        ['sale' => $record],
+                        absolute: false,
                     ))
-                    ->modalSubmitAction(false),
+                    ->openUrlInNewTab(),
                 Action::make('void')
                     ->label(__('Return'))
                     ->color('danger')
@@ -125,7 +128,7 @@ class PharmacyCounter extends Page implements HasTable
         ];
     }
 
-    /** @return list<\Filament\Forms\Components\Component> */
+    /** @return list<Component> */
     private function rxSaleForm(): array
     {
         return [
@@ -162,7 +165,7 @@ class PharmacyCounter extends Page implements HasTable
         ];
     }
 
-    /** @return list<\Filament\Forms\Components\Component> */
+    /** @return list<Component> */
     private function walkInForm(): array
     {
         return [
@@ -227,10 +230,10 @@ class PharmacyCounter extends Page implements HasTable
         }
 
         try {
-            app(PharmacySaleService::class)->sell(
+            $sale = app(PharmacySaleService::class)->sell(
                 $user,
                 $lines,
-                (string) ($data['method'] ?? \App\Models\ChamberCashEntry::METHOD_CASH),
+                (string) ($data['method'] ?? ChamberCashEntry::METHOD_CASH),
                 (bool) ($data['waived'] ?? false),
                 $prescription,
                 $patientName,
@@ -248,6 +251,11 @@ class PharmacyCounter extends Page implements HasTable
 
         Notification::make()->title(__('Sale recorded'))->success()->send();
         $this->resetTable();
+        $this->js('window.open('.json_encode(tenant_web_route(
+            'pharmacy-invoices.show',
+            ['sale' => $sale],
+            absolute: false,
+        )).', "_blank")');
     }
 
     /** @return array<string, string> */

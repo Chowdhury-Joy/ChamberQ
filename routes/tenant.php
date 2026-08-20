@@ -10,6 +10,7 @@ use App\Http\Controllers\MedicineController;
 use App\Http\Controllers\NotifySmsController;
 use App\Http\Controllers\OfflineController;
 use App\Http\Controllers\PatientController;
+use App\Http\Controllers\PharmacyInvoiceController;
 use App\Http\Controllers\PrescriptionController;
 use App\Http\Controllers\PrescriptionShareController;
 use App\Http\Controllers\PWAController;
@@ -109,6 +110,10 @@ $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
     Route::get('/prescriptions/{prescription}/print', [PrescriptionController::class, 'print'])
         ->middleware(['auth', 'tenant.module:prescription'])
         ->name($routeName('prescriptions.print'));
+
+    Route::get('/pharmacy-sales/{sale}/invoice', [PharmacyInvoiceController::class, 'show'])
+        ->middleware(['auth', 'tenant.module:pharmacy'])
+        ->name($routeName('pharmacy-invoices.show'));
 
     // Patient's own copy, opened from the doctor's SMS/WhatsApp link. No auth
     // by design — an unguessable, expiring token is the gate. Full clinical
