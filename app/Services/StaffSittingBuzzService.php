@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Jobs\SendStaffSittingPromptPushes;
 use App\Models\StaffPushSubscription;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 
 class StaffSittingBuzzService
 {
@@ -24,6 +25,15 @@ class StaffSittingBuzzService
 
             return;
         }
+
+        $tenantId = (string) tenant('id');
+        $cacheKey = 'staff_sitting_buzz:'.$tenantId;
+
+        if (Cache::get($cacheKey) === $buzzKey) {
+            return;
+        }
+
+        Cache::put($cacheKey, $buzzKey, now()->addHours(12));
 
         $summaries = $prompts
             ->map(fn (array $prompt) => [

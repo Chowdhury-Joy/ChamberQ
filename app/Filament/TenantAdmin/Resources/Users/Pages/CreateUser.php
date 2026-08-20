@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Support\StaffDeskJobs;
 use App\Support\StaffDeskScope;
 use Filament\Resources\Pages\CreateRecord;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
 
 class CreateUser extends CreateRecord
@@ -37,6 +38,11 @@ class CreateUser extends CreateRecord
         if ($actor instanceof User && UserResource::actorIsLeadOnly()) {
             $data['role'] = User::ROLE_STAFF;
             $data['desk_is_lead'] = false;
+        } else {
+            $data['role'] = \App\Support\TenantPanelUserRoles::normalize(
+                $data['role'] ?? null,
+                $actor,
+            );
         }
 
         if (! ($actor instanceof User && $actor->canManageUsers())) {
@@ -87,5 +93,13 @@ class CreateUser extends CreateRecord
         }
 
         StaffDeskScope::syncChambers($record, $this->chamberIds);
+    }
+
+    protected function handleRecordCreation(array $data): Model
+    {
+        $role = (string) ($data['role'] ?? User::ROLE_STAFF);
+        unset($data['role']);
+
+        return User::provision([...$data, 'role' => $role]);
     }
 }

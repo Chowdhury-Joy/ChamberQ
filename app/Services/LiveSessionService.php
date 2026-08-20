@@ -328,15 +328,27 @@ class LiveSessionService
 
         return DB::transaction(function () use ($booking) {
             $now = now();
-            $liveSession = LiveSession::firstOrCreate([
+            $lookup = [
                 'tenant_id' => tenant('id'),
                 'schedule_session_id' => $booking->bookable_id,
                 // See startSession(): must be a date string, not a Carbon.
                 'session_date' => $booking->booking_date->toDateString(),
-            ], [
+            ];
+
+            $create = fn (): LiveSession => LiveSession::firstOrCreate($lookup, [
                 'status' => 'active',
                 'started_at' => $now,
             ]);
+
+            try {
+                $liveSession = DB::transaction($create);
+            } catch (UniqueConstraintViolationException) {
+                try {
+                    $liveSession = LiveSession::where($lookup)->first() ?? $create();
+                } catch (UniqueConstraintViolationException) {
+                    $liveSession = LiveSession::where($lookup)->firstOrFail();
+                }
+            }
 
             $liveSession = $this->lockSession($liveSession);
 

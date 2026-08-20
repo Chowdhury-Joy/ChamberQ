@@ -278,6 +278,7 @@
             $statusUrl = $liveToday
                 ? tenant_web_route('api.tenant.screen.today', ['session' => $scheduleSession->id], absolute: false)
                 : tenant_web_route('api.tenant.screen', ['session' => $scheduleSession->id, 'date' => $sessionDate], absolute: false);
+            $statusUrl .= '?'.http_build_query(['token' => $screenPollToken ?? '']);
         @endphp
         @php
             $bookUrl = tenant('id') === 'nusraturmi'

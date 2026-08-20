@@ -215,15 +215,16 @@
                     {{ __('Enter your mobile number to look up appointments, tickets, and prescriptions. After a visit you can optionally set a password for next time.') }}
                 </p>
 
-                <form class="portal-form" action="{{ tenant_web_url('/portal') }}" method="GET">
+                <form class="portal-form" action="{{ tenant_web_url('/portal') }}" method="POST">
+                    @csrf
                     <label class="sr-only" for="portal-phone">{{ __('Mobile phone number') }}</label>
                     <input
                         id="portal-phone"
                         class="form-control"
                         type="tel"
                         name="phone"
-                        value="{{ $phone ?? '' }}"
-                        placeholder="017XXXXXXXX"
+                        value=""
+                        placeholder="{{ filled($phoneDisplay ?? null) ? $phoneDisplay : '017XXXXXXXX' }}"
                         required
                         inputmode="numeric"
                         autocomplete="tel"
@@ -245,7 +246,6 @@
                             <h2>{{ __('Your prescriptions') }}</h2>
                             <form action="{{ tenant_web_route('patient.portal.rx-lock', [], absolute: false) }}" method="POST">
                                 @csrf
-                                <input type="hidden" name="phone" value="{{ $phone }}">
                                 <button class="btn btn-ghost" type="submit">{{ __('Hide prescriptions') }}</button>
                             </form>
                         </div>
@@ -270,7 +270,7 @@
                                     </div>
                                     <a
                                         class="btn btn-ghost"
-                                        href="{{ tenant_web_route('prescriptions.portal', ['prescription' => $prescription, 'phone' => $phone], absolute: false) }}"
+                                        href="{{ tenant_web_route('prescriptions.portal', ['prescription' => $prescription], absolute: false) }}"
                                     >
                                         {{ __('View prescription') }}
                                     </a>
@@ -279,7 +279,7 @@
                         </div>
                     @endif
 
-                    <h2>{{ __('Search Results for') }} “{{ $phone }}”</h2>
+                    <h2>{{ __('Search Results for') }} “{{ $phoneDisplay ?? $phone }}”</h2>
 
                     @if($bookings->isEmpty())
                         <div class="portal-empty">

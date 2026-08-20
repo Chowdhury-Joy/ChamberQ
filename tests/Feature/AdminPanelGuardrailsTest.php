@@ -338,6 +338,30 @@ class AdminPanelGuardrailsTest extends TestCase
         tenancy()->end();
     }
 
+    public function test_tenant_admin_cannot_create_a_super_admin_login(): void
+    {
+        $tenant = Tenant::create(['id' => 'clinic', 'plan_tier' => 'solo']);
+        tenancy()->initialize($tenant);
+        $this->tenantAdmin($tenant);
+
+        Livewire::test(CreateUser::class)
+            ->fillForm([
+                'name' => 'Evil Admin',
+                'email' => 'evil@clinic.test',
+                'role' => User::ROLE_SUPER_ADMIN,
+                'password' => 'password',
+            ])
+            ->call('create')
+            ->assertHasFormErrors(['role']);
+
+        $this->assertDatabaseMissing('users', [
+            'email' => 'evil@clinic.test',
+            'role' => User::ROLE_SUPER_ADMIN,
+        ]);
+
+        tenancy()->end();
+    }
+
     public function test_two_partner_accounts_cannot_share_a_login_email(): void
     {
         $existing = User::create([

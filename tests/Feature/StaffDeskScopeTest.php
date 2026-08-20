@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Support\StaffDeskScope;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class StaffDeskScopeTest extends TestCase
@@ -179,5 +180,82 @@ class StaffDeskScopeTest extends TestCase
 
         $this->expectException(\Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException::class);
         StaffDeskScope::assertCanAccessSession($staff, $session);
+    }
+
+    public function test_branch_locked_doctor_cannot_stream_visit_media_from_another_chamber(): void
+    {
+        tenancy()->initialize($this->tenant);
+
+        $panchlaish = Chamber::create(['name' => 'Panchlaish']);
+        $uttara = Chamber::create(['name' => 'Uttara']);
+        $doctorProfile = Doctor::create(['name' => 'Dr. Scope', 'registration_number' => 'A-1']);
+
+        $sessionHere = ScheduleSession::create([
+            'chamber_id' => $panchlaish->id,
+            'doctor_id' => $doctorProfile->id,
+            'day_of_week' => now()->dayOfWeek,
+            'session_name' => 'Morning',
+            'start_time' => '09:00',
+            'end_time' => '12:00',
+            'slot_cap' => 20,
+        ]);
+
+        $sessionThere = ScheduleSession::create([
+            'chamber_id' => $uttara->id,
+            'doctor_id' => $doctorProfile->id,
+            'day_of_week' => now()->dayOfWeek,
+            'session_name' => 'Evening',
+            'start_time' => '17:00',
+            'end_time' => '20:00',
+            'slot_cap' => 20,
+        ]);
+
+        $doctor = $this->makeUser(User::ROLE_DOCTOR, 'doctor@scope.test');
+        StaffDeskScope::syncChambers($doctor, [$panchlaish->id]);
+
+        $visitHere = \App\Models\VisitRecord::create([
+            'tenant_id' => $this->tenant->id,
+            'booking_id' => Booking::create([
+                'bookable_type' => ScheduleSession::class,
+                'bookable_id' => $sessionHere->id,
+                'booking_date' => today()->toDateString(),
+                'serial_number' => 1,
+                'patient_name' => 'Local',
+                'patient_phone' => '01700000011',
+                'status' => 'completed',
+            ])->id,
+            'patient_id' => null,
+            'recorded_by' => $doctor->id,
+            'recorded_at' => now(),
+            'voice_path' => 'visit-audio/scope-clinic/local.webm',
+        ]);
+
+        $visitThere = \App\Models\VisitRecord::create([
+            'tenant_id' => $this->tenant->id,
+            'booking_id' => Booking::create([
+                'bookable_type' => ScheduleSession::class,
+                'bookable_id' => $sessionThere->id,
+                'booking_date' => today()->toDateString(),
+                'serial_number' => 1,
+                'patient_name' => 'Remote',
+                'patient_phone' => '01700000022',
+                'status' => 'completed',
+            ])->id,
+            'patient_id' => null,
+            'recorded_by' => $doctor->id,
+            'recorded_at' => now(),
+            'voice_path' => 'visit-audio/scope-clinic/remote.webm',
+        ]);
+
+        Storage::disk('local')->put('visit-audio/scope-clinic/local.webm', 'audio');
+        Storage::disk('local')->put('visit-audio/scope-clinic/remote.webm', 'audio');
+
+        $this->actingAs($doctor)
+            ->get("http://scope.localhost/visit-records/{$visitHere->id}/voice")
+            ->assertOk();
+
+        $this->actingAs($doctor)
+            ->get("http://scope.localhost/visit-records/{$visitThere->id}/voice")
+            ->assertForbidden();
     }
 }

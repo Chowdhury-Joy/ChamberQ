@@ -20,6 +20,7 @@
         $usesCallChime = $tenant->usesCallChime();
         $usesCallVoice = $tenant->usesCallVoice();
         $statusUrl = tenant_web_route('api.tenant.screen.chamber.today', ['chamber' => $chamber->id], absolute: false);
+        $statusUrl .= '?'.http_build_query(['token' => $screenPollToken ?? '']);
     @endphp
 
     <link rel="stylesheet" href="{{ $localFontCss }}">

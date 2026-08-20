@@ -13,7 +13,7 @@ class CreateMarketer extends CreateRecord
 
     protected function mutateFormDataBeforeCreate(array $data): array
     {
-        $user = User::create([
+        $user = User::provision([
             'name' => $this->data['user_name'] ?? $data['display_name'],
             'email' => $this->data['user_email'],
             'password' => Hash::make($this->data['user_password']),

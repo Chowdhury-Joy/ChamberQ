@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\StaffPushSubscription;
 use App\Support\PushEndpoint;
+use App\Support\StaffDeskJobs;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -25,6 +26,10 @@ class StaffPushController extends Controller
         }
 
         if (! $user->belongsToCurrentTenant()) {
+            abort(403);
+        }
+
+        if (! ($user->canManageQueue() || StaffDeskJobs::canRunQueue($user))) {
             abort(403);
         }
 

@@ -9,6 +9,7 @@ use App\Models\Domain;
 use App\Models\LiveSession;
 use App\Models\ScheduleSession;
 use App\Models\Tenant;
+use App\Support\ScreenPollToken;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -80,12 +81,14 @@ class OutdoorScreenTodayTest extends TestCase
 
         tenancy()->end();
 
+        $token = $this->screenPollToken($this->session->id);
+
         $this->get($this->host.'/screen/'.$this->session->id)
             ->assertOk()
             ->assertSee('Morning', escape: false)
             ->assertSee('Main', escape: false);
 
-        $this->getJson($this->host.'/api/screen/'.$this->session->id)
+        $this->getJson($this->host.'/api/screen/'.$this->session->id.'?token='.$token)
             ->assertOk()
             ->assertJsonPath('status', 'active')
             ->assertJsonPath('session_date', $this->today)
@@ -135,7 +138,9 @@ class OutdoorScreenTodayTest extends TestCase
 
         tenancy()->end();
 
-        $this->getJson($this->host.'/api/screen/'.$this->session->id)
+        $token = $this->screenPollToken($this->session->id);
+
+        $this->getJson($this->host.'/api/screen/'.$this->session->id.'?token='.$token)
             ->assertOk()
             ->assertJsonPath('next_booking', 4)
             ->assertJsonPath('next_estimated_time', '09:49 AM');
@@ -168,7 +173,9 @@ class OutdoorScreenTodayTest extends TestCase
 
         tenancy()->end();
 
-        $this->getJson($this->host.'/api/screen/'.$this->session->id)
+        $token = $this->screenPollToken($this->session->id);
+
+        $this->getJson($this->host.'/api/screen/'.$this->session->id.'?token='.$token)
             ->assertOk()
             ->assertJsonPath('next_booking', null)
             ->assertJsonPath('next_estimated_time', null);
@@ -185,13 +192,14 @@ class OutdoorScreenTodayTest extends TestCase
             'session_date' => $yesterday,
             'status' => 'completed',
             'started_at' => now()->subDay(),
-            'ended_at' => now()->subDay()->addHours(3),
         ]);
 
         tenancy()->end();
 
+        $token = $this->screenPollToken($this->session->id);
+
         // No live session for today yet → "scheduled", not yesterday's completed queue.
-        $this->getJson($this->host.'/api/screen/'.$this->session->id)
+        $this->getJson($this->host.'/api/screen/'.$this->session->id.'?token='.$token)
             ->assertOk()
             ->assertJsonPath('status', 'scheduled')
             ->assertJsonPath('session_date', $this->today);
@@ -210,11 +218,13 @@ class OutdoorScreenTodayTest extends TestCase
 
         tenancy()->end();
 
+        $token = $this->screenPollToken($this->session->id);
+
         $this->get($this->host.'/screen/'.$this->session->id.'/'.$this->today)
             ->assertOk()
             ->assertSee('Morning', escape: false);
 
-        $this->getJson($this->host.'/api/screen/'.$this->session->id.'/'.$this->today)
+        $this->getJson($this->host.'/api/screen/'.$this->session->id.'/'.$this->today.'?token='.$token)
             ->assertOk()
             ->assertJsonPath('status', 'active')
             ->assertJsonPath('session_date', $this->today);
@@ -247,11 +257,15 @@ class OutdoorScreenTodayTest extends TestCase
 
         tenancy()->end();
 
+        tenancy()->initialize($tenant);
+        $token = ScreenPollToken::forSession($session->id);
+        tenancy()->end();
+
         $this->get('http://localhost/path-tv/screen/'.$session->id)
             ->assertOk()
             ->assertSee('Evening', escape: false);
 
-        $this->getJson('http://localhost/path-tv/api/screen/'.$session->id)
+        $this->getJson('http://localhost/path-tv/api/screen/'.$session->id.'?token='.$token)
             ->assertOk()
             ->assertJsonPath('session_date', $this->today)
             ->assertJsonPath('status', 'active');
@@ -265,5 +279,14 @@ class OutdoorScreenTodayTest extends TestCase
             ->assertOk()
             ->assertSee('সেবা নিচ্ছেন', escape: false)
             ->assertSee('শব্দ চালু করতে ট্যাপ করুন', escape: false);
+    }
+
+    private function screenPollToken(int $sessionId): string
+    {
+        tenancy()->initialize($this->tenant);
+        $token = ScreenPollToken::forSession($sessionId);
+        tenancy()->end();
+
+        return $token;
     }
 }

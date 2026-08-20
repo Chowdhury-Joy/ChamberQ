@@ -66,6 +66,12 @@ class EditUser extends EditRecord
         if ($actor instanceof User && UserResource::actorIsLeadOnly()) {
             $data['role'] = User::ROLE_STAFF;
             $data['desk_is_lead'] = $record instanceof User ? $record->desk_is_lead : false;
+        } elseif ($record instanceof User && ! $record->isHelper()) {
+            $data['role'] = \App\Support\TenantPanelUserRoles::normalize(
+                $data['role'] ?? null,
+                $actor,
+                $record,
+            );
         }
 
         if (! ($actor instanceof User && $actor->canManageUsers())) {
@@ -116,6 +122,17 @@ class EditUser extends EditRecord
         $record = $this->getRecord();
         if (! $record instanceof User || $record->isHelper()) {
             return;
+        }
+
+        $state = $this->form->getState();
+        $role = \App\Support\TenantPanelUserRoles::normalize(
+            $state['role'] ?? null,
+            auth()->user(),
+            $record,
+        );
+
+        if ($record->role !== $role) {
+            $record->forceFill(['role' => $role])->save();
         }
 
         StaffDeskScope::syncChambers($record, $this->chamberIds);

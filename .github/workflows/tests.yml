@@ -29,6 +29,11 @@ jobs:
           cp .env.example .env
           php artisan key:generate
 
+      - name: Build frontend assets
+        run: |
+          npm ci
+          npm run build
+
       - name: Run tests
         run: php artisan test
 
@@ -73,6 +78,11 @@ jobs:
         run: |
           cp .env.example .env
           php artisan key:generate
+
+      - name: Build frontend assets
+        run: |
+          npm ci
+          npm run build
 
       - name: Assert MySQL is running with the strict default sql_mode
         env:
@@ -142,6 +152,11 @@ jobs:
           SMS_DRIVER: http
           FILESYSTEM_DISK: s3
           SESSION_SECURE_COOKIE: 'true'
+          CENTRAL_DOMAINS: chamberq.example,www.chamberq.example
+          LOG_LEVEL: warning
+          TRUSTED_PROXIES: 127.0.0.1
+          VAPID_PUBLIC_KEY: Bxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+          VAPID_PRIVATE_KEY: yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
         run: php artisan app:production-check --strict
 
       - name: Run tests

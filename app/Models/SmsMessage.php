@@ -30,6 +30,8 @@ class SmsMessage extends Model
 
     public const PURPOSE_FOLLOW_UP = 'follow_up';
 
+    public const PURPOSE_PORTAL_OTP = 'portal_otp';
+
     protected $fillable = [
         'tenant_id',
         'booking_id',

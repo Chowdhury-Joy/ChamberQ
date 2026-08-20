@@ -16,6 +16,7 @@ use App\Support\BdPhone;
 use App\Support\ScheduleSessionPace;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
@@ -150,7 +151,11 @@ class BookingService
             $whatsappPhone = null;
         }
 
-        $booking = DB::transaction(function () use ($bookable, $bookingDate, $patientName, $patientPhone, $labTestIds, $patientId, $wantsEarlierDate, $whatsappPhone, $shareClinicalHistory, $nid, $yearOfBirth, $allowOverflow, $repeatSeriesId, $allowEndedToday, $seenBeforeSoftware, $allowCounselingHandoff, $allowStaffHandoff, $allowMskWalkIn, $referringDoctorId, $forcedCarePath, $feeCatalogItemId) {
+        $booking = null;
+
+        for ($attempt = 0; $attempt < 3; $attempt++) {
+            try {
+                $booking = DB::transaction(function () use ($bookable, $bookingDate, $patientName, $patientPhone, $labTestIds, $patientId, $wantsEarlierDate, $whatsappPhone, $shareClinicalHistory, $nid, $yearOfBirth, $allowOverflow, $repeatSeriesId, $allowEndedToday, $seenBeforeSoftware, $allowCounselingHandoff, $allowStaffHandoff, $allowMskWalkIn, $referringDoctorId, $forcedCarePath, $feeCatalogItemId) {
             $tenant = tenant();
             $capMode = $tenant->slot_cap_mode ?? 'per_session';
             if ($capMode === 'per_day') {
@@ -308,7 +313,19 @@ class BookingService
             }
 
             return $booking;
-        });
+                });
+
+                break;
+            } catch (UniqueConstraintViolationException) {
+                if ($attempt === 2) {
+                    throw BookingUnavailableException::capacityExceeded();
+                }
+            }
+        }
+
+        if ($booking === null) {
+            throw BookingUnavailableException::capacityExceeded();
+        }
 
         // Past the commit above, so the serial is already the patient's. A
         // voucher is a desk convenience, not part of the booking: letting its
