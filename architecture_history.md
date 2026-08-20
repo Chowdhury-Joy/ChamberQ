@@ -908,6 +908,9 @@
 ## 2026-08-20T19:22:46+0600
 - Medicine voucher prints on one A4 page: logo only (transparent, no clinic-name text), Cash/Online ticks, no Txn ID; MUPS Mehedibag address is near Max Hospital (Neurosense removed).
 
+## 2026-08-20T19:33:54+0600
+- Pharmacy till medicine dropdown shows name / price / stock only; centre is Users → Branches, or a Centre field when the login can see more than one cupboard.
+
 
 
 

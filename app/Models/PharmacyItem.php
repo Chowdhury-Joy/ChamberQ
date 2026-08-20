@@ -90,13 +90,8 @@ class PharmacyItem extends Model
     public function displayLabel(): string
     {
         $stock = __(' :qty in stock', ['qty' => $this->qty_on_hand]);
-        $label = $this->name.' — ৳'.number_format($this->sell_price_taka).$stock;
 
-        if (\App\Support\StaffDeskScope::tenantHasMultipleChambers() && $this->chamber) {
-            $label = $this->chamber->name.' · '.$label;
-        }
-
-        return $label;
+        return $this->name.' — ৳'.number_format($this->sell_price_taka).$stock;
     }
 
     public static function matchByBrand(?string $brand, ?int $chamberId = null): ?self

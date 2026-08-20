@@ -3446,3 +3446,21 @@
  <action>Show only the Branding logo on the voucher (clinic name if there is no logo). Drop the black plate; use the local transparent MUPS mark. Fit one A4 page (`@page` margin 0, fixed 297mm sheet). Payment ticks are Cash and Online (bKash / Nagad / card on the till still map to Online). Remove Txn ID. Mehedibag address and maps are “near Max Hospital, Chattogram”; drop Neurosense from seed, centres copy, and the MUPS handoff.</action>
  <reason>Like a shop stamp: the mark is the brand, Cash or Online is what the customer needs to see, and the address should name the landmark they actually use to find the door.</reason>
 </decision>
+
+## 2026-08-20T19:28:05+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The A4 voucher still looked like a designed invoice: cream paper, gold pills, rounded cards, striped rows. Staff handing that next to a plain printed pad felt like two different shops.</context>
+ <action>Strip the voucher to pad furniture: white paper, checkered border, logo, MEDICINE VOUCHER as a simple navy outline, dotted name/date lines, navy table header, square Cash/Online ticks, a plain totals grid, signatures. Same fields and one A4 page.</action>
+ <reason>Like photocopying a form instead of designing a brochure. The customer should recognise the slip in one glance.</reason>
+</decision>
+
+## 2026-08-20T19:33:54+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The till Medicine dropdown repeated the full centre name on every line (Moin Uddin Pain Solution — Mehedibag · Calcimax …). The clerk already knows which building they are in.</context>
+ <action>Medicine options are name, price, and stock only. Branch is set on the staff login (Users → Branches). If that login can see more than one cupboard, the sale form asks **Centre** once, then the list is just the bottles in that cupboard.</action>
+ <reason>Like a shop menu that does not print the mall name on every dish. You already walked into this branch; you only need the product.</reason>
+</decision>

@@ -220,6 +220,38 @@ class PharmacyModuleTest extends TestCase
         $this->assertSame(650, $sale->amount);
     }
 
+    public function test_till_medicine_list_does_not_repeat_the_centre_name(): void
+    {
+        $mehedibag = Chamber::query()->first();
+        $mehedibag->update(['name' => 'Moin Uddin Pain Solution — Mehedibag']);
+        Chamber::create(['name' => 'Uttara']);
+        $item = $this->namedOnShelf('Calcimax', 5, $mehedibag->id)->load('chamber');
+
+        $this->assertSame('Calcimax — ৳1,100 5 in stock', $item->displayLabel());
+        $this->assertStringNotContainsString($mehedibag->name, $item->displayLabel());
+
+        Filament::setCurrentPanel('tenantAdmin');
+        $this->actingAs($this->staff);
+        Livewire::test(PharmacyCounter::class)
+            ->mountAction('walkIn')
+            ->assertFormFieldExists('chamber_id')
+            ->assertDontSee('Moin Uddin Pain Solution — Mehedibag ·');
+
+        $desk = User::create([
+            'name' => 'Mehedibag desk',
+            'email' => 'mehedibag-till@pharmacy-shop.test',
+            'password' => Hash::make('secret'),
+            'role' => User::ROLE_STAFF,
+            'tenant_id' => 'pharmacy-shop',
+        ]);
+        StaffDeskScope::syncChambers($desk, [$mehedibag->id]);
+        $this->actingAs($desk);
+        Livewire::test(PharmacyCounter::class)
+            ->mountAction('walkIn')
+            ->assertFormFieldDoesNotExist('chamber_id')
+            ->assertDontSee('Moin Uddin Pain Solution — Mehedibag ·');
+    }
+
     public function test_counter_list_uses_shop_words(): void
     {
         $item = $this->napaOnShelf(5, paidNow: 0);

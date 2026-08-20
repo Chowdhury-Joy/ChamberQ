@@ -19,6 +19,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
@@ -131,7 +132,7 @@ class PharmacyCounter extends Page implements HasTable
     /** @return list<Component> */
     private function rxSaleForm(): array
     {
-        return [
+        return $this->withTillCentre([
             Select::make('prescription_id')
                 ->label(__('Today\'s prescription'))
                 ->options(fn (): array => $this->todayPrescriptionOptions())
@@ -159,20 +160,61 @@ class PharmacyCounter extends Page implements HasTable
                         ];
                     }
                     $set('lines', $lines);
+                    if ($lines !== []) {
+                        $first = PharmacyItem::query()->find($lines[0]['pharmacy_item_id']);
+                        if ($first?->chamber_id && $this->tillCentreField() !== null) {
+                            $set('chamber_id', $first->chamber_id);
+                        }
+                    }
                 }),
             $this->linesRepeater(),
             ...PharmacyPaymentFields::components(allowWaive: true),
-        ];
+        ]);
     }
 
     /** @return list<Component> */
     private function walkInForm(): array
     {
-        return [
+        return $this->withTillCentre([
             TextInput::make('patient_name')->label(__('Name (optional)')),
             $this->linesRepeater(),
             ...PharmacyPaymentFields::components(allowWaive: true),
-        ];
+        ]);
+    }
+
+    /**
+     * @param  list<Component>  $fields
+     * @return list<Component>
+     */
+    private function withTillCentre(array $fields): array
+    {
+        $centre = $this->tillCentreField();
+        if ($centre === null) {
+            return $fields;
+        }
+
+        return [$centre, ...$fields];
+    }
+
+    private function tillCentreField(): ?Select
+    {
+        $user = auth()->user();
+        if (! $user instanceof User || ! StaffDeskScope::tenantHasMultipleChambers()) {
+            return null;
+        }
+
+        $options = StaffDeskScope::chamberOptionsFor($user);
+        if (count($options) <= 1) {
+            return null;
+        }
+
+        return Select::make('chamber_id')
+            ->label(__('Centre'))
+            ->options($options)
+            ->required()
+            ->live()
+            ->native(false)
+            ->afterStateUpdated(fn (Set $set) => $set('lines', []));
     }
 
     private function linesRepeater(): Repeater
@@ -182,13 +224,24 @@ class PharmacyCounter extends Page implements HasTable
             ->schema([
                 Select::make('pharmacy_item_id')
                     ->label(__('Medicine'))
-                    ->options(fn (): array => PharmacyAccess::scopedItems(auth()->user())
-                        ->where('is_active', true)
-                        ->where('qty_on_hand', '>', 0)
-                        ->orderBy('name')
-                        ->get()
-                        ->mapWithKeys(fn (PharmacyItem $item): array => [$item->id => $item->displayLabel()])
-                        ->all())
+                    ->options(function (Get $get): array {
+                        $query = PharmacyAccess::scopedItems(auth()->user())
+                            ->where('is_active', true)
+                            ->where('qty_on_hand', '>', 0)
+                            ->orderBy('name');
+
+                        $chamberId = $get('../../chamber_id');
+                        if (filled($chamberId)) {
+                            $query->where('chamber_id', $chamberId);
+                        } elseif ($this->tillCentreField() !== null) {
+                            return [];
+                        }
+
+                        return $query
+                            ->get()
+                            ->mapWithKeys(fn (PharmacyItem $item): array => [$item->id => $item->displayLabel()])
+                            ->all();
+                    })
                     ->required()
                     ->searchable()
                     ->native(false),
