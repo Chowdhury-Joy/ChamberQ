@@ -51,7 +51,6 @@ class ProductionAuditRegressionTest extends TestCase
 
         $doctor = Doctor::create([
             'name' => 'Audit Doctor',
-            'specialization' => 'General',
         ]);
 
         $session = ScheduleSession::create([

@@ -15,6 +15,7 @@ use App\Models\ScheduleSession;
 use App\Services\BookingService;
 use App\Services\PortalOtpService;
 use App\Services\PortalPrescriptionLock;
+use App\Support\BdNid;
 use App\Support\BdPhone;
 use App\Support\PortalSession;
 use App\Support\YearOfBirth;

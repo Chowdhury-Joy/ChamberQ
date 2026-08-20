@@ -86,12 +86,18 @@ class Phase0BookingGuardsTest extends TestCase
         tenancy()->end();
 
         // Partial substring must not leak other patients.
-        $this->get('http://phase0.localhost/portal?phone=1')
+        $this->post('http://phase0.localhost/portal', ['phone' => '1'])
+            ->assertRedirect('http://phase0.localhost/portal');
+
+        $this->get('http://phase0.localhost/portal')
             ->assertOk()
             ->assertSee('Please enter a valid Bangladeshi mobile number', false)
             ->assertDontSee('Exact Match');
 
-        $this->get('http://phase0.localhost/portal?phone=01712345678')
+        $this->post('http://phase0.localhost/portal', ['phone' => '01712345678'])
+            ->assertRedirect('http://phase0.localhost/portal');
+
+        $this->get('http://phase0.localhost/portal')
             ->assertOk()
             ->assertSee('Exact Match');
     }
@@ -107,7 +113,10 @@ class Phase0BookingGuardsTest extends TestCase
         );
         tenancy()->end();
 
-        $this->get('http://phase0.localhost/portal?phone=%2B8801799887766')
+        $this->post('http://phase0.localhost/portal', ['phone' => '+8801799887766'])
+            ->assertRedirect('http://phase0.localhost/portal');
+
+        $this->get('http://phase0.localhost/portal')
             ->assertOk()
             ->assertSee('Variant Patient');
     }

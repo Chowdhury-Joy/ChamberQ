@@ -29,6 +29,11 @@ jobs:
           cp .env.example .env
           php artisan key:generate
 
+      - name: Build frontend assets
+        run: |
+          npm ci
+          npm run build
+
       - name: Run tests
         run: php artisan test
 
@@ -73,6 +78,11 @@ jobs:
         run: |
           cp .env.example .env
           php artisan key:generate
+
+      - name: Build frontend assets
+        run: |
+          npm ci
+          npm run build
 
       - name: Assert MySQL is running with the strict default sql_mode
         env:

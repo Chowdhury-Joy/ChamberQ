@@ -22,7 +22,7 @@ class NotifySmsController extends Controller
         StaffDeskScope::assertCanAccessBooking($user, $booking);
 
         $validated = $request->validate([
-            'message' => ['nullable', 'string', 'max:160'],
+            'message' => ['nullable', 'string', 'max:2000'],
         ]);
 
         $custom = trim((string) ($validated['message'] ?? ''));

@@ -22,9 +22,10 @@ trait BelongsToTenant
             }
         });
 
-        // A record must never change hands, in any context.
+        // A record must never change hands, in any context. Setting tenant_id
+        // from null on first save (seeders, User::provision) is allowed.
         static::updating(function ($model) {
-            if ($model->isDirty('tenant_id')) {
+            if ($model->isDirty('tenant_id') && $model->getOriginal('tenant_id') !== null) {
                 throw new RuntimeException(sprintf(
                     'The tenant_id of an existing %s cannot be changed.',
                     static::class

@@ -366,7 +366,7 @@ class SmsService
 
         if (! $this->debitOneCredit($tenantId)) {
             throw ValidationException::withMessages([
-                'code' => __('This clinic cannot send a verification SMS right now. Ask reception for help.'),
+                'code' => 'This clinic cannot send a verification SMS right now. Ask reception for help.',
             ]);
         }
 

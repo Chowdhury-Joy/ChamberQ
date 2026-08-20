@@ -9,6 +9,7 @@ use App\Models\Domain;
 use App\Models\LiveSession;
 use App\Models\ScheduleSession;
 use App\Models\Tenant;
+use App\Support\ScreenPollToken;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -166,7 +167,11 @@ class ChamberScreenTodayTest extends TestCase
             ->assertOk()
             ->assertSee('Panchlaish', false);
 
-        $payload = $this->getJson($this->host.'/api/screen/chamber/'.$this->chamber->id)
+        tenancy()->initialize($this->tenant);
+        $token = ScreenPollToken::forChamber($this->chamber->id);
+        tenancy()->end();
+
+        $payload = $this->getJson($this->host.'/api/screen/chamber/'.$this->chamber->id.'?token='.$token)
             ->assertOk()
             ->json();
 

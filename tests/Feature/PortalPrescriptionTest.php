@@ -43,7 +43,7 @@ class PortalPrescriptionTest extends TestCase
 
         config(['sms.enabled' => true, 'sms.driver' => 'log']);
 
-        $this->tenant = Tenant::create(['id' => 'portal-rx', 'plan_tier' => 'solo']);
+        $this->tenant = Tenant::create(['id' => 'portal-rx', 'plan_tier' => 'solo', 'sms_balance' => 20]);
         Domain::create(['domain' => 'portal-rx.localhost', 'tenant_id' => $this->tenant->id]);
 
         tenancy()->initialize($this->tenant);

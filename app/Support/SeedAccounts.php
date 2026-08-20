@@ -31,7 +31,7 @@ class SeedAccounts
         $user = User::withoutGlobalScope(TenantScope::class)->where($match)->first();
 
         if ($user) {
-            $privileged = array_intersect_key($values, array_flip(['role', 'tenant_id']));
+            $privileged = array_intersect_key($values, array_flip(['role']));
             $safe = array_diff_key($values, array_flip(['role', 'tenant_id']));
 
             $user->fill($safe);

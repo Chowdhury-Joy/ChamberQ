@@ -210,6 +210,9 @@ class StaffDeskScopeTest extends TestCase
             'slot_cap' => 20,
         ]);
 
+        $doctor = $this->makeUser(User::ROLE_DOCTOR, 'doctor@scope.test');
+        StaffDeskScope::syncChambers($doctor, [$panchlaish->id]);
+
         $visitHere = \App\Models\VisitRecord::create([
             'tenant_id' => $this->tenant->id,
             'booking_id' => Booking::create([
@@ -222,7 +225,7 @@ class StaffDeskScopeTest extends TestCase
                 'status' => 'completed',
             ])->id,
             'patient_id' => null,
-            'recorded_by' => null,
+            'recorded_by' => $doctor->id,
             'recorded_at' => now(),
             'voice_path' => 'visit-audio/scope-clinic/local.webm',
         ]);
@@ -239,13 +242,10 @@ class StaffDeskScopeTest extends TestCase
                 'status' => 'completed',
             ])->id,
             'patient_id' => null,
-            'recorded_by' => null,
+            'recorded_by' => $doctor->id,
             'recorded_at' => now(),
             'voice_path' => 'visit-audio/scope-clinic/remote.webm',
         ]);
-
-        $doctor = $this->makeUser(User::ROLE_DOCTOR, 'doctor@scope.test');
-        StaffDeskScope::syncChambers($doctor, [$panchlaish->id]);
 
         Storage::disk('local')->put('visit-audio/scope-clinic/local.webm', 'audio');
         Storage::disk('local')->put('visit-audio/scope-clinic/remote.webm', 'audio');

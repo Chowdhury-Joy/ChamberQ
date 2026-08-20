@@ -281,7 +281,10 @@ class PatientRecordsStage4DeferredTest extends TestCase
             ->assertDontSee('visit-audio')
             ->assertDontSee('visit-photos');
 
-        $portalUrl = 'http://stage4-deferred.localhost/portal?phone=01799887766';
+        $portalUrl = 'http://stage4-deferred.localhost/portal';
+
+        $this->post($portalUrl, ['phone' => '01799887766'])
+            ->assertRedirect($portalUrl);
 
         $this->get($portalUrl)
             ->assertOk()
