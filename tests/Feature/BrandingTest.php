@@ -45,23 +45,16 @@ class BrandingTest extends TestCase
         ]);
     }
 
-    public function test_sidebar_hides_doctors_menu_for_solo_tier(): void
+    public function test_sidebar_shows_doctors_menu_for_solo_and_clinic(): void
     {
         tenancy()->initialize($this->soloTenant);
         $this->actingAs($this->soloAdmin);
-
-        $this->assertFalse(DoctorResource::shouldRegisterNavigation());
-
+        $this->assertTrue(DoctorResource::shouldRegisterNavigation());
         tenancy()->end();
-    }
 
-    public function test_sidebar_shows_doctors_menu_for_clinic_tier(): void
-    {
         tenancy()->initialize($this->clinicTenant);
         $this->actingAs($this->clinicAdmin);
-
         $this->assertTrue(DoctorResource::shouldRegisterNavigation());
-
         tenancy()->end();
     }
 

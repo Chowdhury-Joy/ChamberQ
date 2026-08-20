@@ -204,12 +204,15 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                     return __('Nobody is still waiting, so ending the session will not cancel anyone.');
                 }
 
-                return __('This cancels :count patient(s) who are still in the queue: :serials. You will get WhatsApp links to tell them.', [
+                $list = __('This cancels :count patient(s) who are still in the queue: :serials. You will get WhatsApp links to tell them.', [
                     'count' => $pending->count(),
                     'serials' => $pending
                         ->map(fn (Booking $booking) => '#'.$booking->serial_number.' '.$booking->patient_name)
                         ->implode(', '),
                 ]);
+                $cost = $this->cancellationSmsCostWarning($pending->count());
+
+                return $cost ? $list.' '.$cost : $list;
             })
             ->modalSubmitActionLabel('End session')
             ->action(function () {
@@ -233,7 +236,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                 if ($cancelled->isNotEmpty()) {
                     Notification::make()
                         ->title(__('Session ended — :count patient(s) cancelled', ['count' => $cancelled->count()]))
-                        ->body(__('Use "Tell cancelled patients" to send each of them a WhatsApp message.'))
+                        ->body($this->cancelledPatientsNotifyBody())
                         ->warning()
                         ->persistent()
                         ->send();
@@ -333,6 +336,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                 return view('filament.tenant-admin.slot-block-notify', [
                     'bookings' => $bookings,
                     'stage' => \App\Models\Doctor::NOTIFY_DOCTOR_LATE,
+                    'delayMinutes' => $minutes,
                     'messages' => $bookings->mapWithKeys(fn (Booking $booking) => [
                         $booking->id => __('Hello :name, the doctor is running :minutes minutes late. Your serial is :serial.', [
                             'name' => $booking->patient_name,
@@ -963,6 +967,52 @@ class LiveQueueControl extends Page implements HasActions, HasTable
             ->send();
     }
 
+    /**
+     * Credit cost of this doctor's Cancellation SMS, or null when that
+     * switch is off (nothing is spent).
+     */
+    public function cancellationSmsCostWarning(int $count): ?string
+    {
+        if ($count < 1 || ! $this->selectedSessionId) {
+            return null;
+        }
+
+        $doctor = ScheduleSession::with('doctor')->find($this->selectedSessionId)?->doctor;
+
+        if (! $doctor?->wantsSms(\App\Models\Doctor::NOTIFY_CANCELLATION)) {
+            return null;
+        }
+
+        $balance = (int) (tenant()->sms_balance ?? 0);
+
+        $warning = __('This texts :count waiting patient(s) and uses :count SMS credit(s). Balance after: :left.', [
+            'count' => $count,
+            'left' => max(0, $balance - $count),
+        ]);
+
+        if ($balance < $count) {
+            $warning .= ' '.__('Only :balance credit(s) left, so the last :short patient(s) will not get a text.', [
+                'balance' => $balance,
+                'short' => $count - $balance,
+            ]);
+        }
+
+        return $warning;
+    }
+
+    public function cancelledPatientsNotifyBody(): string
+    {
+        $doctor = $this->selectedSessionId
+            ? ScheduleSession::with('doctor')->find($this->selectedSessionId)?->doctor
+            : null;
+
+        if ($doctor?->wantsSms(\App\Models\Doctor::NOTIFY_CANCELLATION)) {
+            return __('SMS is sending for this doctor. Use "Tell cancelled patients" for WhatsApp.');
+        }
+
+        return __('Use "Tell cancelled patients" to send each of them a WhatsApp message.');
+    }
+
     // Action for Mark Late
     /**
      * What "Mark Late" is about to send, and what it will cost.
@@ -1141,12 +1191,15 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                     return __('Nobody is still waiting, so cancelling the session will not turn anyone away.');
                 }
 
-                return __('This cancels :count patient(s) still in the queue: :serials. You will get WhatsApp links to tell them.', [
+                $list = __('This cancels :count patient(s) still in the queue: :serials. You will get WhatsApp links to tell them.', [
                     'count' => $pending->count(),
                     'serials' => $pending
                         ->map(fn (Booking $booking) => '#'.$booking->serial_number.' '.$booking->patient_name)
                         ->implode(', '),
                 ]);
+                $cost = $this->cancellationSmsCostWarning($pending->count());
+
+                return $cost ? $list.' '.$cost : $list;
             })
             ->action(function () {
                 if (!$this->selectedSessionId) return;
@@ -1172,7 +1225,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                 if ($cancelled->isNotEmpty()) {
                     Notification::make()
                         ->title(__('Session cancelled — :count patient(s) turned away', ['count' => $cancelled->count()]))
-                        ->body(__('Use "Tell cancelled patients" to send each of them a WhatsApp message.'))
+                        ->body($this->cancelledPatientsNotifyBody())
                         ->warning()
                         ->persistent()
                         ->send();

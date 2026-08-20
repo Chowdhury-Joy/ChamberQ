@@ -172,6 +172,7 @@ class DoctorForm
                             ->columnSpanFull(),
                     ]),
                 Fieldset::make(__('Patient notifications'))
+                    ->description(__('Each doctor can differ. These switches decide SMS and WhatsApp for this doctor only.'))
                     ->columns(2)
                     ->schema([
                         Toggle::make('notify_channels.'.Doctor::NOTIFY_BOOKING_CONFIRMATION.'.sms')
@@ -192,11 +193,11 @@ class DoctorForm
                             ->default(false),
                         Toggle::make('notify_channels.'.Doctor::NOTIFY_CANCELLATION.'.sms')
                             ->label(__('Cancellation — SMS'))
-                            ->helperText(__('Staff tap Send SMS per patient (vacation / end session). 1 credit each.'))
+                            ->helperText(__('Off by default. Turn on for this doctor to automatically text remaining patients when staff finish the sitting early or mark the doctor absent. 1 credit each. Vacation closed days still use Send SMS per patient.'))
                             ->default(false),
                         Toggle::make('notify_channels.'.Doctor::NOTIFY_CANCELLATION.'.whatsapp')
                             ->label(__('Cancellation — WhatsApp'))
-                            ->helperText(__('Shows tap-to-send WhatsApp links. Free; staff must tap.'))
+                            ->helperText(__('On by default. After End session or Doctor absent, staff get a WhatsApp link per remaining patient. Free; they tap each one. Turn off for this doctor to hide those links.'))
                             ->default(true),
                         Toggle::make('notify_channels.'.Doctor::NOTIFY_PRESCRIPTION.'.sms')
                             ->label(__('After visit — SMS'))

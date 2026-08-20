@@ -31,13 +31,7 @@ class DoctorResource extends Resource
 
     public static function shouldRegisterNavigation(): bool
     {
-        if (! (auth()->user()?->canManageOps() ?? false)) {
-            return false;
-        }
-
-        // Solo: one doctor — keep the list off the sidebar; edit via direct record if needed.
-        // Clinic: show the multi-doctor manager.
-        return tenant()?->hasFeature('multiple_doctors') ?? false;
+        return auth()->user()?->canManageOps() ?? false;
     }
 
     public static function form(Schema $schema): Schema

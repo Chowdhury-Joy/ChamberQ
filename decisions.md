@@ -3258,3 +3258,29 @@
  <reason>Like a chemist shop next to the waiting room, not a website checkout. Paying the company for a hundred boxes the moment they land would make a returnable unsold box look like a gift; counting every strip every evening would make the till unusable. Walk-in sales must not silently create a doctor cut the owner never agreed to.</reason>
 </decision>
 
+
+## 2026-08-20T14:12:00+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Remaining-patient notices when a sitting ends early are a per-doctor choice, not a chamber-wide automatic blast. The switches already lived on the Doctors form, but Solo hid that menu from the sidebar, so the owner could not find them.</context>
+ <action>Keep cancellation SMS off by default and WhatsApp tap-to-send on by default. Show **Settings → Doctors** for Solo and Clinic. Each doctor has their own Patient notifications (booking, late, cancellation, prescription, follow-up × SMS/WhatsApp). Cancellation SMS is off until the owner turns it on for that doctor.</action>
+ <reason>Like two consultants sharing a clinic: one may want remaining patients texted, the other may only want WhatsApp. Automatic for everyone would spend credits the owner did not opt into.</reason>
+</decision>
+
+## 2026-08-20T14:20:00+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>The owner asked for remaining-patient SMS to be automatic when a sitting ends early, but still per doctor — not a chamber-wide blast.</context>
+ <action>When that doctor's **Cancellation — SMS** switch is on, `endSession()` / `markAbsent()` dispatch `SendSessionCancellationNotices` after the response (same no-worker shape as doctor-late). Off by default, so clinics that never turn it on spend nothing. WhatsApp stays tap-to-send. Vacation closed days stay staff-tapped Send SMS. A second tap does not debit twice if a cancellation SMS already sent.</action>
+ <reason>Same pattern as Mark Late: the switch is the opt-in; turning it on means the desk does not have to tap nine phones while closing the shutter.</reason>
+</decision>
+
+## 2026-08-20T15:27:22+0600
+<decision>
+ <category>Business_Logic</category>
+ <context>After a good visit, Bangladeshi chambers still collect Google reviews by handing a card or asking verbally. ChamberQ already sent a staff-tapped prescription link at that same doorway moment, but never a review link — and chambers that write prescriptions on paper (Prescription module off) had no after-visit SMS at all.</context>
+ <action>Store a Google “Ask for reviews” URL on Branding (`tenants.review_url`) with an optional per-chamber override. Append it to the existing staff-tapped prescription SMS/WhatsApp. Add `POST /api/bookings/{booking}/sms/review` and Daily Roster / Live Queue **Send review** actions so staff can push the same link without ChamberQ Rx. Reuse the doctor’s prescription notify toggles (relabelled After visit). `GsmText` now keeps every link in the body, not only the first. Review hosts are allowlisted (`g.page`, Google writereview, Maps). Staff always tap; nothing auto-sends.</action>
+ <reason>Asking at the door while the patient is still grateful is when reviews actually happen. One extra line on the prescription text costs no extra habit; paper-pad doctors still get a staff-tapped SMS like cancellation notices. Auto-SMS would feel spammy and burn credits.</reason>
+</decision>

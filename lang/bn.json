@@ -571,6 +571,7 @@
     "End session": "সেশন শেষ করুন",
     "Session ended — :count patient(s) cancelled": "সেশন শেষ — :count জন বাতিল",
     "Use \"Tell cancelled patients\" to send each of them a WhatsApp message.": "প্রত্যেককে হোয়াটসঅ্যাপে জানাতে «বাতিল রোগীদের জানান» চাপুন।",
+    "SMS is sending for this doctor. Use \"Tell cancelled patients\" for WhatsApp.": "এই ডাক্তারের জন্য এসএমএস যাচ্ছে। হোয়াটসঅ্যাপের জন্য «বাতিল রোগীদের জানান» চাপুন।",
     "Session ended": "সেশন শেষ",
     ":count patients today without notes — tap Fill in now on this page while the evening is fresh.": "আজ :count জনের নোট নেই — সন্ধ্যা থাকতেই এই পাতায় «এখনই পূরণ করুন» চাপুন।",
     "Session Ended": "সেশন শেষ হয়েছে",

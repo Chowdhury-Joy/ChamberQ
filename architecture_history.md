@@ -842,6 +842,9 @@
 ## 2026-08-20T01:14:17+0600
 - Opt-in Pharmacy module (default off): counter sales, live stock, physical count, per-delivery supplier owed/refund-due, optional doctor % of shop cut on Rx-linked sales; locked cashbook categories; BackupTableMap after sms_messages.
 
+## 2026-08-20T15:26:12+0600
+- Remaining-patient cancellation SMS can auto-send after End session / Doctor absent when that doctor's Cancellation SMS is on (`SendSessionCancellationNotices`, after-response). Settings → Doctors stays visible on Solo. WhatsApp stays tap-to-send.
+
 ## 2026-08-19T19:30:00+0000
 - Production audit remediation: `StaffDeskScope` on visit media / prescription print / staff SMS HTTP routes; booking serial retry; portal unlock rate limit + min 6-char password; `SittingPrompt` bulk waiting counts + staff buzz cache; queue indexes migration `2026_08_19_200000_add_queue_performance_indexes.php`.
 

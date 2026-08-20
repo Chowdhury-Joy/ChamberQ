@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Jobs\SendDoctorLateNotices;
 use App\Jobs\SendQueueApproachPushes;
+use App\Jobs\SendSessionCancellationNotices;
 use App\Models\Booking;
 use App\Models\Doctor;
 use App\Models\LiveSession;
@@ -520,7 +521,7 @@ class LiveSessionService
      */
     public function endSession(LiveSession $liveSession, string $reason = 'Session ended')
     {
-        return DB::transaction(function () use ($liveSession, $reason) {
+        $toCancel = DB::transaction(function () use ($liveSession, $reason) {
             $liveSession = $this->lockSession($liveSession);
 
             // Captured before the update: once they are `cancelled` the same
@@ -555,6 +556,10 @@ class LiveSessionService
 
             return $toCancel;
         });
+
+        $this->queueCancellationSms($liveSession, $toCancel);
+
+        return $toCancel;
     }
 
     /**
@@ -625,7 +630,7 @@ class LiveSessionService
      */
     public function markAbsent(LiveSession $liveSession, string $reason = 'Doctor unavailable')
     {
-        return DB::transaction(function () use ($liveSession, $reason) {
+        $toCancel = DB::transaction(function () use ($liveSession, $reason) {
             $liveSession = $this->lockSession($liveSession);
 
             // Captured before the update: once they are `cancelled` the same
@@ -661,6 +666,40 @@ class LiveSessionService
 
             return $toCancel;
         });
+
+        $this->queueCancellationSms($liveSession, $toCancel);
+
+        return $toCancel;
+    }
+
+    /**
+     * Auto-SMS remaining patients only when that doctor's Cancellation SMS
+     * switch is on. Off (the default) spends no credits. WhatsApp stays a tap.
+     *
+     * @param  \Illuminate\Support\Collection<int, Booking>|\Illuminate\Database\Eloquent\Collection<int, Booking>  $cancelled
+     */
+    private function queueCancellationSms(LiveSession $liveSession, $cancelled): void
+    {
+        if ($cancelled->isEmpty()) {
+            return;
+        }
+
+        $liveSession->loadMissing('scheduleSession.doctor');
+        $doctor = $liveSession->scheduleSession?->doctor;
+
+        if (! $doctor?->wantsSms(Doctor::NOTIFY_CANCELLATION)) {
+            return;
+        }
+
+        $tenantId = (string) ($liveSession->tenant_id ?: tenant('id'));
+        if ($tenantId === '') {
+            return;
+        }
+
+        SendSessionCancellationNotices::dispatch(
+            $tenantId,
+            $cancelled->pluck('id')->all(),
+        )->afterResponse();
     }
 
     public function pauseSession(LiveSession $liveSession, string $reason, int $estimatedMinutes)

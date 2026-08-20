@@ -78,7 +78,8 @@ class SmsService
     }
 
     /**
-     * Staff-tapped cancellation SMS (vacation block or end-session).
+     * Prepaid cancellation SMS (auto after end-session when that doctor's
+     * Cancellation SMS is on; also staff-tapped for vacation blocks).
      */
     public function sendCancellationNotice(Booking $booking, ?string $body = null): ?SmsMessage
     {
@@ -91,6 +92,17 @@ class SmsService
                 body: $body ?? $this->cancellationBody($booking),
                 purpose: SmsMessage::PURPOSE_CANCELLATION,
             );
+        }
+
+        $alreadySent = SmsMessage::query()
+            ->where('booking_id', $booking->id)
+            ->where('purpose', SmsMessage::PURPOSE_CANCELLATION)
+            ->where('status', SmsMessage::STATUS_SENT)
+            ->latest('id')
+            ->first();
+
+        if ($alreadySent) {
+            return $alreadySent;
         }
 
         return $this->send(

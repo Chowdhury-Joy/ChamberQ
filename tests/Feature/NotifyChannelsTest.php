@@ -192,6 +192,133 @@ class NotifyChannelsTest extends TestCase
         tenancy()->end();
     }
 
+    public function test_end_session_auto_sms_when_cancellation_sms_on(): void
+    {
+        tenancy()->initialize($this->tenant);
+        $this->doctor->update([
+            'notify_channels' => array_replace_recursive(
+                Doctor::defaultNotifyChannels(),
+                [Doctor::NOTIFY_CANCELLATION => ['sms' => true, 'whatsapp' => true]],
+            ),
+        ]);
+
+        $booking = app(BookingService::class)->createBookingForBookable(
+            $this->session,
+            $this->monday,
+            'Rahima',
+            '01712345682',
+            sendSms: false,
+        );
+
+        Carbon::setTestNow(Carbon::parse($this->monday.' 11:00:00'));
+
+        $live = LiveSession::create([
+            'schedule_session_id' => $this->session->id,
+            'session_date' => $this->monday,
+            'status' => 'active',
+            'started_at' => now(),
+        ]);
+
+        app(LiveSessionService::class)->endSession($live);
+
+        $this->assertSame(
+            0,
+            SmsMessage::withoutGlobalScopes()->where('purpose', SmsMessage::PURPOSE_CANCELLATION)->count(),
+            'Cancellation SMS must not block the request that ended the sitting.',
+        );
+
+        $this->app->terminate();
+
+        $message = SmsMessage::withoutGlobalScopes()
+            ->where('booking_id', $booking->id)
+            ->where('purpose', SmsMessage::PURPOSE_CANCELLATION)
+            ->first();
+
+        $this->assertNotNull($message);
+        $this->assertSame(SmsMessage::STATUS_SENT, $message->status);
+        $this->assertSame($body = $message->body, mb_convert_encoding($body, 'ASCII', 'UTF-8'));
+        $this->assertSame(9, $this->tenant->fresh()->sms_balance);
+
+        Carbon::setTestNow();
+        tenancy()->end();
+    }
+
+    public function test_end_session_does_not_sms_when_cancellation_pref_off(): void
+    {
+        tenancy()->initialize($this->tenant);
+
+        app(BookingService::class)->createBookingForBookable(
+            $this->session,
+            $this->monday,
+            'Nusrat',
+            '01712345683',
+            sendSms: false,
+        );
+
+        Carbon::setTestNow(Carbon::parse($this->monday.' 11:00:00'));
+
+        $live = LiveSession::create([
+            'schedule_session_id' => $this->session->id,
+            'session_date' => $this->monday,
+            'status' => 'active',
+            'started_at' => now(),
+        ]);
+
+        app(LiveSessionService::class)->endSession($live);
+        $this->app->terminate();
+
+        $this->assertSame(0, SmsMessage::withoutGlobalScopes()
+            ->where('purpose', SmsMessage::PURPOSE_CANCELLATION)
+            ->count());
+        $this->assertSame(10, $this->tenant->fresh()->sms_balance);
+
+        Carbon::setTestNow();
+        tenancy()->end();
+    }
+
+    public function test_mark_absent_auto_sms_when_cancellation_sms_on(): void
+    {
+        tenancy()->initialize($this->tenant);
+        $this->doctor->update([
+            'notify_channels' => array_replace_recursive(
+                Doctor::defaultNotifyChannels(),
+                [Doctor::NOTIFY_CANCELLATION => ['sms' => true, 'whatsapp' => true]],
+            ),
+        ]);
+
+        $booking = app(BookingService::class)->createBookingForBookable(
+            $this->session,
+            $this->monday,
+            'Karim',
+            '01712345684',
+            sendSms: false,
+        );
+
+        Carbon::setTestNow(Carbon::parse($this->monday.' 11:00:00'));
+
+        $live = LiveSession::create([
+            'schedule_session_id' => $this->session->id,
+            'session_date' => $this->monday,
+            'status' => 'active',
+            'started_at' => now(),
+        ]);
+
+        app(LiveSessionService::class)->markAbsent($live);
+        $this->app->terminate();
+
+        $message = SmsMessage::withoutGlobalScopes()
+            ->where('booking_id', $booking->id)
+            ->where('purpose', SmsMessage::PURPOSE_CANCELLATION)
+            ->first();
+
+        $this->assertNotNull($message);
+        $this->assertSame(SmsMessage::STATUS_SENT, $message->status);
+        $this->assertSame(9, $this->tenant->fresh()->sms_balance);
+
+        Carbon::setTestNow();
+        tenancy()->end();
+    }
+
     public function test_staff_can_send_cancellation_sms_when_pref_on(): void
     {
         tenancy()->initialize($this->tenant);
