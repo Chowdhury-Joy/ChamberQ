@@ -198,15 +198,13 @@ class MupsSeeder extends Seeder
         ]);
 
         // Two branches. Days never overlap — Dr. Moin is in one city at a time.
-        // Chittagong (Panchlaish): Sat, Sun, Mon, Fri.
-        // Dhaka (Uttara): Tue, Wed, Thu.
-        $this->seedBranchDay($panchlaish, $doctor, 6, '10:00', '13:00', '13:00', '20:00');
-        foreach ([0, 1] as $day) {
+        // Testing split so Book Serial can grey off-days per centre:
+        // Chittagong (Panchlaish): Sun, Mon, Tue (morning + evening).
+        // Dhaka (Uttara): Thursday (morning + evening).
+        // Off: Wednesday, Friday, Saturday.
+        foreach ([0, 1, 2] as $day) {
+            $this->seedBranchDay($panchlaish, $doctor, $day, '10:00', '13:00', '13:00', '16:00');
             $this->seedBranchDay($panchlaish, $doctor, $day, '16:00', '17:30', '17:30', '21:00');
-        }
-        $this->seedBranchDay($panchlaish, $doctor, 5, '16:00', '17:30', '17:30', '20:00');
-        foreach ([2, 3] as $day) {
-            $this->seedBranchDay($uttara, $doctor, $day, '17:00', '18:00', '18:00', '21:00');
         }
         $this->seedBranchDay($uttara, $doctor, 4, '10:00', '12:00', '12:00', '13:00');
         $this->seedBranchDay($uttara, $doctor, 4, '17:00', '18:00', '18:00', '21:00');
@@ -808,14 +806,14 @@ class MupsSeeder extends Seeder
                 [
                     'name' => 'Moin Uddin Pain Solution — Panchlaish',
                     'address' => 'Neurosense, Panchlaish, near Chittagong Medical College, Chattogram',
-                    'operating_hours' => 'Sat 10 AM–8 PM · Sun–Mon 4–9 PM · Friday 4–8 PM',
+                    'operating_hours' => 'Sun–Tue 10 AM–4 PM and 4–9 PM',
                     'phone' => '+880 1880-728711',
                     'google_maps_url' => 'https://www.google.com/maps/search/?api=1&query='.rawurlencode('Neurosense Panchlaish Chittagong'),
                 ],
                 [
                     'name' => 'MUPS Dhaka Centre — Uttara',
                     'address' => 'Sector 4, Uttara, Dhaka — about 10 minutes from the airport',
-                    'operating_hours' => 'Tue–Wed 5–9 PM · Thursday 10 AM–1 PM and 5–9 PM',
+                    'operating_hours' => 'Thursday 10 AM–1 PM and 5–9 PM',
                     'phone' => '+880 1880-728711',
                     'google_maps_url' => 'https://www.google.com/maps/search/?api=1&query='.rawurlencode('Uttara Sector 4 Dhaka pain clinic'),
                 ],

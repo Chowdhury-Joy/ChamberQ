@@ -3302,3 +3302,12 @@
  <action>Book serial is doctor first, then visit type, then centre only when that doctor sits at more than one place, then a calendar that greys days they do not sit, then sitting. One-doctor logins pre-fill Doctor. Changing doctor or visit type clears the date. Walk-in on Daily Roster / Live Queue stays today-only and is unchanged. Supersedes “Date first, then sitting” from 2026-08-19T22:32:01+0600 for field order only.</action>
  <reason>Same as a cinema phone line: film first, then the dates that film is showing. A grey off-day is honest; an empty Sitting after a black Friday is too late.</reason>
 </decision>
+
+## 2026-08-20T17:10:08+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>MUPS previously sat every weekday (Chittagong Sat/Sun/Mon/Fri, Dhaka Tue/Wed/Thu), so Book Serial never greyed an off-day when staff picked Dr. Moin. Desk testing needed visible closed days and a clear city split.</context>
+ <action>Seed sittings as Panchlaish (Chittagong) Sunday–Tuesday, morning and evening each day; Uttara (Dhaka) Thursday morning and evening. Wednesday, Friday and Saturday have no sitting. Centres page hours match. Re-seed with `MupsSeeder`.</action>
+ <reason>Like a two-city visiting consultant who is never in both places the same day, and who takes three weekdays off — the calendar can now show grey closed days instead of a full week of black dates.</reason>
+</decision>

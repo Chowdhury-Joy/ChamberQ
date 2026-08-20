@@ -860,4 +860,7 @@
 ## 2026-08-20T16:32:30+0600
 - Book serial is doctor-first: `StaffBookingForm` doctor + optional centre, calendar `disabledDatesInWindow` for that doctor’s sitting weekdays; walk-in forms unchanged.
 
+## 2026-08-20T17:10:08+0600
+- MUPS seed sittings are now Panchlaish Sun–Tue (morning + evening) and Uttara Thursday (morning + evening); Wednesday, Friday and Saturday are off so Book Serial can grey those days.
+
 
