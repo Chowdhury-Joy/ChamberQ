@@ -236,6 +236,10 @@ final class RosterRecordActions
                 ->visible(fn (Booking $record): bool => DeskActionLayout::canCollectFee($record)
                     && $shown(DeskActionLayout::KEY_COLLECT_FEE)($record)),
 
+            FeeReceiptAction::make(Action::make($name(DeskActionLayout::KEY_PRINT_RECEIPT)))
+                ->visible(fn (Booking $record): bool => FeeReceiptAction::canPrint($record)
+                    && $shown(DeskActionLayout::KEY_PRINT_RECEIPT)($record)),
+
             AskReviewAction::whatsapp(Action::make($name(DeskActionLayout::KEY_REVIEW_WHATSAPP)))
                 ->visible(fn (Booking $record): bool => AskReviewAction::canWhatsapp($record)
                     && $shown(DeskActionLayout::KEY_REVIEW_WHATSAPP)($record)),

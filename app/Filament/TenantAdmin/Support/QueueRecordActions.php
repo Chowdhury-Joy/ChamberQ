@@ -61,6 +61,10 @@ final class QueueRecordActions
                 ->visible(fn (Booking $record): bool => DeskActionLayout::canCollectFee($record)
                     && $shown(DeskActionLayout::KEY_COLLECT_FEE)($record)),
 
+            FeeReceiptAction::make(Action::make($name(DeskActionLayout::KEY_PRINT_RECEIPT)))
+                ->visible(fn (Booking $record): bool => FeeReceiptAction::canPrint($record)
+                    && $shown(DeskActionLayout::KEY_PRINT_RECEIPT)($record)),
+
             StationsHandoffForm::bookAction(
                 Action::make($name(DeskActionLayout::KEY_BOOK_INTERVENTION)),
             )->visible(function (Booking $record) use ($shown): bool {

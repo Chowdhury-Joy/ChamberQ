@@ -3464,3 +3464,48 @@
  <action>Medicine options are name, price, and stock only. Branch is set on the staff login (Users → Branches). If that login can see more than one cupboard, the sale form asks **Centre** once, then the list is just the bottles in that cupboard.</action>
  <reason>Like a shop menu that does not print the mall name on every dish. You already walked into this branch; you only need the product.</reason>
 </decision>
+
+## 2026-08-20T23:53:42+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The consultation fee slip must not spill onto a second A4 page the way a school invoice does. Staff also wanted it to feel like the doctor’s pad, not a shop voucher or a tiny thermal receipt.</context>
+ <action>Print Collect fee as one A4 portrait page in Inter: doctor name and chamber on the letterhead, grey patient band, ℞ then particulars and totals, Cash/Online ticks, amount in words, signatures. Sequential receipt numbers per chamber-day. Medicine vouchers stay on their own checkered pad.</action>
+ <reason>Like handing the patient a second sheet from the same prescription pad instead of a school fee bill. One page so the printer never asks for sheet 2.</reason>
+</decision>
+
+## 2026-08-21T00:13:30+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Two medicines on the A4 voucher sat in enormous empty bands. It looked like the list was trying to fill the whole page.</context>
+ <action>Stop stretching the medicine table. Rows stay as tall as the text. Empty paper below the list still holds the totals at the bottom.</action>
+ <reason>Like a shop pad: names sit close together; you do not stretch two lines across half a sheet of A4.</reason>
+</decision>
+
+## 2026-08-21T00:20:31+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Shop-invoice experiments (checker, logo, navy table, Inter, stretched rows) made the medicine slip look like a different clinic from the doctor’s pad.</context>
+ <action>Throw that chrome away. Print pharmacy sales and consultation fees with the same prescription stylesheet: doctor and chamber letterhead, grey patient band, two columns, ℞ list, Hind Siliguri, A4.</action>
+ <reason>The patient already knows that pad. The till paper should be the same sheet with prices, not a second brand.</reason>
+</decision>
+
+## 2026-08-21T00:26:18+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The prescription-style slip still hid the clinic mark, squeezed the chamber address, and stacked medicines like Rx doses instead of a till list.</context>
+ <action>Put the Branding logo on the left. Give the chamber block two-thirds of the header. Draw medicines as a quiet column list (name, qty, rate, amount) with a thin rule and no coloured table bar. Give the medicine column more of the page.</action>
+ <reason>Like a letterhead: stamp on the left, address on the right with room to read, then a neat list of what was sold — not a spreadsheet header.</reason>
+</decision>
+
+## 2026-08-21T00:32:27+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>The pharmacy till always charged the sticker price. A chemist often knocks a little off for a regular, a staff family, or a leftover strip — there was nowhere to type that.</context>
+ <action>Add a **Discount ৳** box on Sell from prescription and Walk-in. Leave it 0 for the full price. Cashbook and mixed cash+online must match what is left after the discount. The voucher prints Discount. The doctor’s pharmacy % is taken from the shop cut after that discount. Waive still means free, not a discount line.</action>
+ <reason>Like a chemist saying “take ৳50 off” then collecting the rest. Stations Collect fee works the other way (type cash+online, leftover is discount). A shop thinks in “how much off,” so the pharmacy till types the discount.</reason>
+</decision>

@@ -224,6 +224,7 @@ class PharmacyCounter extends Page implements HasTable
             ->schema([
                 Select::make('pharmacy_item_id')
                     ->label(__('Medicine'))
+                    ->live()
                     ->options(function (Get $get): array {
                         $query = PharmacyAccess::scopedItems(auth()->user())
                             ->where('is_active', true)
@@ -250,7 +251,8 @@ class PharmacyCounter extends Page implements HasTable
                     ->numeric()
                     ->minValue(1)
                     ->required()
-                    ->default(1),
+                    ->default(1)
+                    ->live(),
                 TextInput::make('prescription_item_id')->hidden(),
             ])
             ->columns(2)
@@ -295,6 +297,7 @@ class PharmacyCounter extends Page implements HasTable
                 isset($data['cash_taka']) ? (int) $data['cash_taka'] : null,
                 isset($data['online_taka']) ? (int) $data['online_taka'] : null,
                 $data['online_method'] ?? null,
+                isset($data['discount_taka']) ? (int) $data['discount_taka'] : 0,
             );
         } catch (InvalidArgumentException $e) {
             Notification::make()->title($e->getMessage())->danger()->send();

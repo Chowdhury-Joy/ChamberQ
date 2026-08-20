@@ -911,6 +911,23 @@
 ## 2026-08-20T19:33:54+0600
 - Pharmacy till medicine dropdown shows name / price / stock only; centre is Users → Branches, or a Centre field when the login can see more than one cupboard.
 
+## 2026-08-20T23:53:42+0600
+- Collect-fee print is a one-page A4 prescription pad (`FeeReceiptService` / `GET /fee-receipts/{entry}`, Inter letterhead); `chamber_cash_entries.receipt_number` is unique per tenant+day.
+
+## 2026-08-21T00:13:30+0600
+- Medicine voucher table no longer flex-grows to fill A4; leftover height is a spacer so SKU rows stay compact.
+
+## 2026-08-21T00:20:31+0600
+- Medicine voucher and fee receipt reprint from the shared prescription pad CSS (letterhead, patient band, two columns, ℞); shop checker/logo/invoice table removed.
+
+## 2026-08-21T00:26:18+0600
+- Medicine voucher header: Branding logo left, wider chamber block right; medicines are a quiet column grid with no navy bar.
+
+## 2026-08-21T00:32:27+0600
+- Pharmacy till takes a typed Discount ৳; cashbook posts collected (list minus discount); voucher Discount is hidden on waived sales.
+
+
+
 
 
 

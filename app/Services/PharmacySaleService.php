@@ -34,6 +34,7 @@ class PharmacySaleService
         ?int $cashTaka = null,
         ?int $onlineTaka = null,
         ?string $onlineMethod = null,
+        int $discountTaka = 0,
         ?CarbonInterface $occurredOn = null,
     ): PharmacySale {
         $this->assertModule();
@@ -54,7 +55,7 @@ class PharmacySaleService
         $occurredOn ??= now(OperationalReportService::TIMEZONE);
 
         return DB::transaction(function () use (
-            $user, $lines, $method, $waived, $prescription, $patientName, $patientPhone, $note, $cashTaka, $onlineTaka, $onlineMethod, $occurredOn
+            $user, $lines, $method, $waived, $prescription, $patientName, $patientPhone, $note, $cashTaka, $onlineTaka, $onlineMethod, $discountTaka, $occurredOn
         ): PharmacySale {
             $allocations = $this->allocate($user, $lines);
             $total = 0;
@@ -68,15 +69,22 @@ class PharmacySaleService
                 throw new InvalidArgumentException(__('Sale total must be at least ৳1, or waived.'));
             }
 
+            $discount = $waived ? 0 : max(0, $discountTaka);
+            if ($discount > $total) {
+                throw new InvalidArgumentException(__('Discount cannot be more than the basket.'));
+            }
+            $collected = $waived ? 0 : $total - $discount;
+            $lineDiscounts = $this->allocateDiscount($allocations, $discount);
+
             $cash = null;
             $split = ['cash_taka' => null, 'online_taka' => null, 'online_method' => null];
 
-            if (! $waived && $total > 0) {
+            if (! $waived && $collected > 0) {
                 $cashService = app(ChamberCashService::class);
-                $split = $cashService->paymentSplit($method, $total, $cashTaka, $onlineTaka, $onlineMethod);
+                $split = $cashService->paymentSplit($method, $collected, $cashTaka, $onlineTaka, $onlineMethod);
                 $cash = $cashService->recordLockedIncome(
                     $user,
-                    $total,
+                    $collected,
                     ChamberCashEntry::CATEGORY_PHARMACY,
                     $method,
                     $occurredOn,
@@ -109,7 +117,7 @@ class PharmacySaleService
                 'patient_name' => $patient?->name ?? $patientName,
                 'patient_phone' => $patient?->phone ?? $patientPhone,
                 'method' => $waived ? ChamberCashEntry::METHOD_CASH : $method,
-                'amount' => $waived ? 0 : $total,
+                'amount' => $collected,
                 'cash_taka' => $waived ? null : $split['cash_taka'],
                 'mobile_taka' => $waived ? null : $split['online_taka'],
                 'mobile_method' => $waived ? null : $split['online_method'],
@@ -122,14 +130,14 @@ class PharmacySaleService
 
             $stock = app(PharmacyStockService::class);
 
-            foreach ($allocations as $row) {
+            foreach ($allocations as $index => $row) {
                 /** @var PharmacyItem $item */
                 $item = $row['item'];
                 /** @var PharmacyDelivery $delivery */
                 $delivery = $row['delivery'];
                 $qty = $row['qty'];
                 $share = $delivery->company_share_taka;
-                $shopCut = $qty * max(0, $item->sell_price_taka - $share);
+                $shopCut = max(0, ($qty * max(0, $item->sell_price_taka - $share)) - ($lineDiscounts[$index] ?? 0));
 
                 $saleItem = PharmacySaleItem::create([
                     'pharmacy_sale_id' => $sale->id,
@@ -311,6 +319,43 @@ class PharmacySaleService
         }
 
         return $allocations;
+    }
+
+    /**
+     * @param  list<array{item: PharmacyItem, delivery: PharmacyDelivery, qty: int, prescription_item_id: ?string}>  $allocations
+     * @return array<int, int>
+     */
+    private function allocateDiscount(array $allocations, int $discount): array
+    {
+        $shares = [];
+        if ($discount < 1 || $allocations === []) {
+            foreach ($allocations as $index => $_) {
+                $shares[$index] = 0;
+            }
+
+            return $shares;
+        }
+
+        $catalogue = 0;
+        $lineTotals = [];
+        foreach ($allocations as $index => $row) {
+            $lineTotals[$index] = $row['qty'] * $row['item']->sell_price_taka;
+            $catalogue += $lineTotals[$index];
+        }
+
+        $used = 0;
+        $last = array_key_last($allocations);
+        foreach ($allocations as $index => $_) {
+            if ($index === $last) {
+                $shares[$index] = max(0, $discount - $used);
+            } else {
+                $share = $catalogue > 0 ? intdiv($discount * $lineTotals[$index], $catalogue) : 0;
+                $shares[$index] = $share;
+                $used += $share;
+            }
+        }
+
+        return $shares;
     }
 
     private function assertModule(): void

@@ -4,10 +4,10 @@ namespace App\Services;
 
 use App\Models\Chamber;
 use App\Models\ChamberCashEntry;
+use App\Models\Doctor;
 use App\Models\PharmacySale;
 use App\Models\PharmacySaleItem;
 use App\Models\Tenant;
-use App\Support\BdPhone;
 use App\Support\SafeUrl;
 use App\Support\TakaWords;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -15,8 +15,6 @@ use Illuminate\Support\Facades\DB;
 
 class PharmacyInvoiceService
 {
-    public const MIN_ROWS = 6;
-
     public const VOUCHER_ONLINE = 'online';
 
     public function assignIfNeeded(PharmacySale $sale): void
@@ -67,59 +65,51 @@ class PharmacyInvoiceService
      *     sale: PharmacySale,
      *     tenant: ?Tenant,
      *     chamber: ?Chamber,
-     *     clinicName: string,
-     *     logoUrl: ?string,
-     *     thankYouBrand: string,
-     *     address: ?string,
-     *     phones: list<string>,
-     *     ink: string,
-     *     lines: list<PharmacySaleItem|null>,
+     *     doctor: ?Doctor,
+     *     patient: mixed,
+     *     lines: list<PharmacySaleItem>,
      *     catalogueTotal: int,
      *     discount: int,
      *     netPayable: int,
      *     amountInWords: string,
-     *     receivedBy: ?string
+     *     receivedBy: ?string,
+     *     logoUrl: ?string
      * }
      */
     public function viewData(PharmacySale $sale): array
     {
         $this->assignIfNeeded($sale);
         $sale->refresh();
-        $sale->load(['items.item.chamber', 'recordedBy']);
+        $sale->load([
+            'items.item.chamber',
+            'recordedBy',
+            'patient',
+            'booking.bookable',
+            'cashEntry.doctor',
+            'prescription.prescribedBy',
+            'prescription.visitRecord.booking.bookable',
+        ]);
 
         $tenant = tenant();
         $chamber = $sale->items->first()?->item?->chamber;
         $catalogueTotal = (int) $sale->items->sum('line_total_taka');
         $netPayable = $sale->waived ? 0 : (int) $sale->amount;
-        $discount = max(0, $catalogueTotal - $netPayable);
-
-        $lines = $sale->items->values()->all();
-        while (count($lines) < self::MIN_ROWS) {
-            $lines[] = null;
-        }
+        $discount = $sale->waived ? 0 : max(0, $catalogueTotal - $netPayable);
 
         return [
             'sale' => $sale,
             'tenant' => $tenant,
             'chamber' => $chamber,
-            'clinicName' => $tenant?->displayName() ?? config('app.name'),
-            'logoUrl' => $this->logoUrl($tenant),
-            'thankYouBrand' => $this->thankYouBrand($tenant),
-            'address' => filled($chamber?->address) ? (string) $chamber->address : null,
-            'phones' => $this->phones($tenant, $chamber),
-            'ink' => $this->ink($tenant),
-            'lines' => $lines,
+            'doctor' => $this->doctorFor($sale),
+            'patient' => $sale->patient,
+            'lines' => $sale->items->values()->all(),
             'catalogueTotal' => $catalogueTotal,
             'discount' => $discount,
             'netPayable' => $netPayable,
             'amountInWords' => TakaWords::english($netPayable),
             'receivedBy' => $sale->recordedBy?->name,
+            'logoUrl' => $this->logoUrl($tenant),
         ];
-    }
-
-    public static function formatTaka(int $taka): string
-    {
-        return number_format($taka).'/-';
     }
 
     private function logoUrl(?Tenant $tenant): ?string
@@ -129,65 +119,31 @@ class PharmacyInvoiceService
         return $href !== '' ? $href : null;
     }
 
-    private function thankYouBrand(?Tenant $tenant): string
+    private function doctorFor(PharmacySale $sale): ?Doctor
     {
-        $name = trim((string) ($tenant?->displayName() ?? ''));
-        if ($name === '') {
-            return (string) config('app.name');
+        if ($sale->cashEntry?->doctor) {
+            return $sale->cashEntry->doctor;
         }
 
-        if (preg_match('/^(.+?)\s+[—–-]\s+/u', $name, $match) === 1 && mb_strlen(trim($match[1])) <= 24) {
-            return trim($match[1]);
-        }
-
-        return $name;
-    }
-
-    /**
-     * @return list<string>
-     */
-    private function phones(?Tenant $tenant, ?Chamber $chamber): array
-    {
-        $raw = [
-            $chamber?->contact,
-            $tenant?->contact_phone,
-            $tenant?->whatsapp_number,
-        ];
-
-        $seen = [];
-        $out = [];
-        foreach ($raw as $value) {
-            if (! filled($value)) {
-                continue;
-            }
-            $display = $this->displayPhone((string) $value);
-            $key = BdPhone::normalize((string) $value);
-            if ($key === '' || isset($seen[$key])) {
-                continue;
-            }
-            $seen[$key] = true;
-            $out[] = $display;
-            if (count($out) >= 3) {
-                break;
+        $prescriber = $sale->prescription?->prescribedBy;
+        if ($prescriber instanceof \App\Models\User) {
+            $fromUser = Doctor::query()->where('user_id', $prescriber->id)->first();
+            if ($fromUser) {
+                return $fromUser;
             }
         }
 
-        return $out;
-    }
-
-    private function displayPhone(string $raw): string
-    {
-        $digits = BdPhone::normalize($raw);
-        if (preg_match('/^(01\d{3})(\d{6})$/', $digits, $match) === 1) {
-            return $match[1].'-'.$match[2];
+        $booking = $sale->booking ?? $sale->prescription?->visitRecord?->booking;
+        if ($booking) {
+            return Doctor::resolveForBooking($booking);
         }
 
-        return trim($raw);
+        return null;
     }
 
-    private function ink(?Tenant $tenant): string
+    public static function formatTaka(int $taka): string
     {
-        return $tenant?->cssThemeColor() ?? '#123a7a';
+        return number_format($taka).'/-';
     }
 
     /**

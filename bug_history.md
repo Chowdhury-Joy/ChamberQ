@@ -1596,3 +1596,12 @@
  <root_cause>Cashbook::canAccess() calls StaffDeskJobs::canCollectFee() without `use App\Support\StaffDeskJobs`. PHP looked in the Pages namespace. Filament still evaluates Cashbook access while building other pages, so one missing import crashed Book Serial.</root_cause>
  <prevention_rule>Any Filament page that calls StaffDeskJobs must import App\Support\StaffDeskJobs. Pin with Cashbook::canAccess() in ChamberCashTest — that call fatals if the import is missing.</prevention_rule>
 </bug>
+
+## 2026-08-21T00:13:30+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>Medicine voucher rows (Calcimax, Flexactive Extra) had huge empty space above and below each name, like two lines filling half the A4 page.</symptom>
+ <root_cause>`table.lines` was `flex: 1` inside a full-height A4 column. Browsers stretched every table row to share leftover page height.</root_cause>
+ <prevention_rule>Never put `flex: 1` on a print table. Grow a spacer under the table. Pin `flex: 0 0 auto` and `lines-spacer` on the medicine voucher.</prevention_rule>
+</bug>

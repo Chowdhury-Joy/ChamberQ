@@ -70,6 +70,8 @@ final class DeskActionLayout
 
     public const KEY_COLLECT_FEE = 'collectFee';
 
+    public const KEY_PRINT_RECEIPT = 'printFeeReceipt';
+
     public const KEY_REPEAT = 'repeatSerial';
 
     public const KEY_CANCEL_REPEAT = 'cancelRepeatRemainder';

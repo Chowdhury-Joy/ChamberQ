@@ -7,6 +7,7 @@ use App\Models\ChamberCashEntry;
 use App\Models\User;
 use App\Support\StaffDeskJobs;
 use App\Support\StaffDeskScope;
+use App\Filament\TenantAdmin\Support\FeeReceiptAction;
 use App\Filament\TenantAdmin\Resources\CashCategories\CashCategoryResource;
 use App\Models\CashCategory;
 use App\Services\CashCategoryService;
@@ -201,7 +202,10 @@ class Cashbook extends Page implements HasTable
             ])
             ->defaultSort('occurred_on', 'desc')
             ->emptyStateHeading(__('No cash recorded for this period yet.'))
-            ->emptyStateDescription(__('Collect a patient fee on Daily Roster, or add an expense here.'));
+            ->emptyStateDescription(__('Collect a patient fee on Daily Roster, or add an expense here.'))
+            ->recordActions([
+                FeeReceiptAction::forCashEntry(Action::make('printFeeReceipt')),
+            ]);
     }
 
     protected function getHeaderActions(): array

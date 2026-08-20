@@ -144,6 +144,16 @@ final class StaffDeskScope
         return $ids === null || in_array((int) $item->chamber_id, $ids, true);
     }
 
+    public static function cashEntryIsVisible(User $user, ChamberCashEntry $entry): bool
+    {
+        $ids = self::chamberIdsFor($user);
+        if ($ids === null || $entry->chamber_id === null) {
+            return true;
+        }
+
+        return in_array((int) $entry->chamber_id, $ids, true);
+    }
+
     public static function constrainSlotBlocks(Builder $query, User $user): Builder
     {
         $chamberIds = self::chamberIdsFor($user);

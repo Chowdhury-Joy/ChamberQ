@@ -24,6 +24,7 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Models\VisitRecord;
 use App\Services\PharmacyDoctorCommissionService;
+use App\Services\PharmacyInvoiceService;
 use App\Services\PharmacySaleService;
 use App\Services\PharmacyStockService;
 use App\Services\PharmacySupplierService;
@@ -181,6 +182,114 @@ class PharmacyModuleTest extends TestCase
 
         $this->assertSame(0, PharmacyDoctorCommission::query()->count());
         $this->assertSame(300, app(PharmacySupplierService::class)->shopBalance()['owed']);
+    }
+
+    public function test_pharmacy_discount_reduces_what_the_till_takes(): void
+    {
+        $item = $this->napaOnShelf(10, paidNow: 0);
+        $rx = $this->todaysPrescription();
+
+        $sale = app(PharmacySaleService::class)->sell(
+            $this->staff,
+            [['pharmacy_item_id' => $item->id, 'qty' => 1, 'prescription_item_id' => $rx->items->first()->id]],
+            ChamberCashEntry::METHOD_CASH,
+            false,
+            $rx,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            50,
+        );
+
+        $this->assertSame(600, $sale->amount);
+        $this->assertSame(300, $sale->items->first()->shop_cut_taka);
+        $this->assertDatabaseHas('chamber_cash_entries', [
+            'category' => ChamberCashEntry::CATEGORY_PHARMACY,
+            'amount' => 600,
+        ]);
+        $this->assertSame(30, PharmacyDoctorCommission::query()->first()?->amount_taka);
+
+        $this->actingAs($this->staff);
+        $this->get(tenant_web_route('pharmacy-invoices.show', ['sale' => $sale]))
+            ->assertOk()
+            ->assertSee('Discount', false)
+            ->assertSee('50/-', false)
+            ->assertSee('600/-', false);
+    }
+
+    public function test_pharmacy_discount_cannot_exceed_the_basket(): void
+    {
+        $item = $this->napaOnShelf(2, paidNow: 0);
+
+        $this->expectException(InvalidArgumentException::class);
+        app(PharmacySaleService::class)->sell(
+            $this->staff,
+            [['pharmacy_item_id' => $item->id, 'qty' => 1]],
+            ChamberCashEntry::METHOD_CASH,
+            false,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            null,
+            651,
+        );
+    }
+
+    public function test_mixed_payment_after_discount_must_equal_what_they_pay(): void
+    {
+        $item = $this->napaOnShelf(5, paidNow: 0);
+
+        $sale = app(PharmacySaleService::class)->sell(
+            $this->staff,
+            [['pharmacy_item_id' => $item->id, 'qty' => 1]],
+            ChamberCashEntry::METHOD_MIXED,
+            false,
+            null,
+            null,
+            null,
+            null,
+            400,
+            200,
+            ChamberCashEntry::METHOD_BKASH,
+            50,
+        );
+
+        $this->assertSame(600, $sale->amount);
+        $this->assertSame(400, $sale->cash_taka);
+        $this->assertSame(200, $sale->mobile_taka);
+    }
+
+    public function test_walk_in_till_has_a_discount_box(): void
+    {
+        $this->napaOnShelf(2, paidNow: 0);
+
+        Filament::setCurrentPanel('tenantAdmin');
+        $this->actingAs($this->staff);
+
+        Livewire::test(PharmacyCounter::class)
+            ->mountAction('walkIn')
+            ->assertFormFieldExists('discount_taka');
+    }
+
+    public function test_waived_medicine_voucher_does_not_call_the_price_a_discount(): void
+    {
+        $item = $this->napaOnShelf(2, paidNow: 0);
+        $sale = app(PharmacySaleService::class)->sell(
+            $this->staff,
+            [['pharmacy_item_id' => $item->id, 'qty' => 1]],
+            ChamberCashEntry::METHOD_CASH,
+            true,
+        );
+
+        $data = app(PharmacyInvoiceService::class)->viewData($sale);
+        $this->assertSame(0, $data['discount']);
+        $this->assertSame(0, $data['netPayable']);
     }
 
     public function test_walk_in_sale_does_not_need_a_phone_number(): void
@@ -376,35 +485,36 @@ class PharmacyModuleTest extends TestCase
         $response = $this->get(tenant_web_route('pharmacy-invoices.show', ['sale' => $sale]));
 
         $response->assertOk();
+        $response->assertSee('Hind Siliguri', false);
+        $response->assertSee('pad-header', false);
+        $response->assertSee('patient-band', false);
+        $response->assertSee('rx-symbol', false);
+        $response->assertSee('med-sheet', false);
+        $response->assertSee('clinic-logo', false);
+        $response->assertSee('/images/mups/mups-logo.png', false);
+        $response->assertSee('minmax(0, 66%)', false);
         $response->assertSee('Medicine voucher', false);
-        $response->assertSee('Customer Name (Mr/Mrs)', false);
         $response->assertSee('Abdul Rufe', false);
         $response->assertSee('Joint Pro', false);
         $response->assertSee('1,100/-', false);
         $response->assertSee('Taka One Thousand One Hundred Only', false);
         $response->assertSee('In Word', false);
         $response->assertSee('Received By', false);
-        $response->assertSee('Customer Signature', false);
         $response->assertSee('Thank You.', false);
-        $response->assertDontSee('MUPS — Dr. Moin Uddin Pain Solution', false);
-        $response->assertDontSee('Neurosense', false);
         $response->assertSee('Mehedibag (near Max Hospital), Chattogram', false);
         $response->assertSee('Cash', false);
         $response->assertSee('Online', false);
+        $response->assertDontSee('Customer Name (Mr/Mrs)', false);
         $response->assertDontSee('Card', false);
         $response->assertDontSee('Bkash', false);
         $response->assertDontSee('Nagad', false);
         $response->assertDontSee('Txn ID', false);
-        $response->assertSee('box is-on', false);
-        $response->assertSee('01805-414666', false);
-        $response->assertSee('20-08-26', false);
-        $response->assertSee('size: A4', false);
+        $response->assertDontSee('box is-on', false);
         $response->assertDontSee('landscape', false);
-        $response->assertSee('repeating-conic-gradient', false);
-        $response->assertSee('/images/mups/mups-logo.png', false);
-        $response->assertSee('clinic-logo', false);
-        $response->assertDontSee('background: #020617', false);
-        $response->assertSee('page-break-inside: avoid', false);
+        $response->assertDontSee('repeating-conic-gradient', false);
+        $response->assertDontSee('lines-spacer', false);
+        $response->assertSee('size: A4', false);
+        $response->assertSee('01805414666', false);
     }
 
     public function test_voucher_ticks_online_when_paid_by_bkash(): void
@@ -422,7 +532,6 @@ class PharmacyModuleTest extends TestCase
         $this->actingAs($this->staff);
         $html = $this->get(tenant_web_route('pharmacy-invoices.show', ['sale' => $sale]))->assertOk();
         $html->assertSee('Online', false);
-        $html->assertSee('box is-on', false);
         $html->assertDontSee('Bkash', false);
     }
 

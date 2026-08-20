@@ -53,6 +53,11 @@ class PharmacySale extends Model
         return $this->belongsTo(Prescription::class);
     }
 
+    public function booking(): BelongsTo
+    {
+        return $this->belongsTo(Booking::class);
+    }
+
     public function patient(): BelongsTo
     {
         return $this->belongsTo(Patient::class);

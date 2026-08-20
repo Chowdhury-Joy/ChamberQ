@@ -14,6 +14,8 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Services\ChamberCashService;
 use App\Services\OperationalReportService;
+use App\Support\StaffDeskJobs;
+use App\Support\StaffDeskScope;
 use Carbon\Carbon;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -466,5 +468,177 @@ class ChamberCashTest extends TestCase
             ChamberCashEntry::METHOD_MIXED,
             occurredOn: Carbon::parse('2026-08-13', OperationalReportService::TIMEZONE),
         );
+    }
+
+    public function test_fee_receipt_uses_the_prescription_pad(): void
+    {
+        $this->doctor->update([
+            'qualifications' => 'MBBS, FCPS',
+            'registration_number' => 'A-12345',
+        ]);
+        $this->chamber->update([
+            'address' => 'Mehedibag (near Max Hospital), Chattogram',
+            'contact' => '01800-000000',
+        ]);
+
+        $staff = $this->makeUser(User::ROLE_STAFF);
+        $booking = $this->makeBooking();
+        $entry = app(ChamberCashService::class)->recordPatientIncome(
+            $booking,
+            $staff,
+            ChamberCashEntry::METHOD_CASH,
+            occurredOn: Carbon::parse('2026-08-13', OperationalReportService::TIMEZONE),
+        );
+
+        $this->actingAs($staff);
+        $response = $this->get(tenant_web_route('fee-receipts.show', ['entry' => $entry]));
+
+        $response->assertOk();
+        $response->assertSee('Hind Siliguri', false);
+        $response->assertSee('size: A4', false);
+        $response->assertDontSee('landscape', false);
+        $response->assertDontSee('max-width: 320px', false);
+        $response->assertDontSee('family=Inter', false);
+        $response->assertSee('pad-header', false);
+        $response->assertSee('patient-band', false);
+        $response->assertSee('rx-symbol', false);
+        $response->assertSee('Dr. Cash', false);
+        $response->assertSee('MBBS, FCPS', false);
+        $response->assertSee('Fatima Rahman', false);
+        $response->assertSee('Mehedibag (near Max Hospital), Chattogram', false);
+        $response->assertSee('800/-', false);
+        $response->assertSee('Taka Eight Hundred Only', false);
+        $this->assertSame(1, $entry->fresh()->receipt_number);
+    }
+
+    public function test_fee_receipt_numbers_run_per_day(): void
+    {
+        $staff = $this->makeUser(User::ROLE_STAFF);
+        $day = Carbon::parse('2026-08-13', OperationalReportService::TIMEZONE);
+        $first = app(ChamberCashService::class)->recordPatientIncome(
+            $this->makeBooking('waiting', 1),
+            $staff,
+            ChamberCashEntry::METHOD_CASH,
+            occurredOn: $day,
+        );
+        $second = app(ChamberCashService::class)->recordPatientIncome(
+            $this->makeBooking('waiting', 2),
+            $staff,
+            ChamberCashEntry::METHOD_CASH,
+            occurredOn: $day,
+        );
+
+        $this->actingAs($staff);
+        $this->get(tenant_web_route('fee-receipts.show', ['entry' => $first]))->assertOk();
+        $this->get(tenant_web_route('fee-receipts.show', ['entry' => $second]))->assertOk();
+
+        $this->assertSame(1, $first->fresh()->receipt_number);
+        $this->assertSame(2, $second->fresh()->receipt_number);
+    }
+
+    public function test_guest_cannot_open_a_fee_receipt(): void
+    {
+        $entry = app(ChamberCashService::class)->recordPatientIncome(
+            $this->makeBooking(),
+            $this->makeUser(User::ROLE_STAFF),
+            ChamberCashEntry::METHOD_CASH,
+            occurredOn: Carbon::parse('2026-08-13', OperationalReportService::TIMEZONE),
+        );
+
+        $this->withHeaders(['Accept' => 'application/json'])
+            ->get(tenant_web_route('fee-receipts.show', ['entry' => $entry]))
+            ->assertUnauthorized();
+    }
+
+    public function test_queue_staff_cannot_open_a_fee_receipt(): void
+    {
+        $staff = $this->makeUser(User::ROLE_STAFF);
+        $entry = app(ChamberCashService::class)->recordPatientIncome(
+            $this->makeBooking(),
+            $staff,
+            ChamberCashEntry::METHOD_CASH,
+            occurredOn: Carbon::parse('2026-08-13', OperationalReportService::TIMEZONE),
+        );
+        $queue = User::create([
+            'name' => 'Queue only',
+            'email' => 'queue@cashbook-clinic.loc',
+            'password' => Hash::make('secret'),
+            'role' => User::ROLE_STAFF,
+            'tenant_id' => 'cashbook-clinic',
+            'desk_jobs' => [StaffDeskJobs::JOB_QUEUE],
+        ]);
+
+        $this->actingAs($queue)
+            ->get(tenant_web_route('fee-receipts.show', ['entry' => $entry]))
+            ->assertForbidden();
+    }
+
+    public function test_rent_and_other_income_have_no_fee_receipt(): void
+    {
+        $admin = $this->makeUser(User::ROLE_ADMIN);
+        $day = Carbon::parse('2026-08-13', OperationalReportService::TIMEZONE);
+        $rent = app(ChamberCashService::class)->recordExpense(
+            $admin,
+            5000,
+            ChamberCashEntry::CATEGORY_RENT,
+            ChamberCashEntry::METHOD_CASH,
+            $day,
+            $this->chamber->id,
+        );
+        $other = app(ChamberCashService::class)->recordOtherIncome(
+            $admin,
+            200,
+            ChamberCashEntry::CATEGORY_OTHER_INCOME,
+            ChamberCashEntry::METHOD_CASH,
+            $day,
+            $this->chamber->id,
+        );
+
+        $this->actingAs($admin);
+        $this->get(tenant_web_route('fee-receipts.show', ['entry' => $rent]))->assertNotFound();
+        $this->get(tenant_web_route('fee-receipts.show', ['entry' => $other]))->assertNotFound();
+    }
+
+    public function test_branch_staff_cannot_print_another_centre_fee_receipt(): void
+    {
+        $uttara = Chamber::create(['name' => 'Uttara']);
+        $uttaraSession = ScheduleSession::create([
+            'chamber_id' => $uttara->id,
+            'doctor_id' => $this->doctor->id,
+            'day_of_week' => 1,
+            'session_name' => 'Uttara morning',
+            'start_time' => '09:00',
+            'end_time' => '12:00',
+            'slot_cap' => 20,
+        ]);
+        $booking = Booking::create([
+            'bookable_type' => ScheduleSession::class,
+            'bookable_id' => $uttaraSession->id,
+            'booking_date' => '2026-08-13',
+            'patient_name' => 'Uttara Patient',
+            'patient_phone' => '01719999999',
+            'serial_number' => 9,
+            'status' => 'waiting',
+        ]);
+        $staff = $this->makeUser(User::ROLE_STAFF);
+        $entry = app(ChamberCashService::class)->recordPatientIncome(
+            $booking,
+            $staff,
+            ChamberCashEntry::METHOD_CASH,
+            occurredOn: Carbon::parse('2026-08-13', OperationalReportService::TIMEZONE),
+        );
+
+        $mehedibagStaff = User::create([
+            'name' => 'Mehedibag money',
+            'email' => 'mehedibag@cashbook-clinic.loc',
+            'password' => Hash::make('secret'),
+            'role' => User::ROLE_STAFF,
+            'tenant_id' => 'cashbook-clinic',
+        ]);
+        StaffDeskScope::syncChambers($mehedibagStaff, [$this->chamber->id]);
+
+        $this->actingAs($mehedibagStaff)
+            ->get(tenant_web_route('fee-receipts.show', ['entry' => $entry]))
+            ->assertForbidden();
     }
 }

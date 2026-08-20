@@ -85,6 +85,7 @@ class ChamberCashEntry extends Model
         'recorded_by',
         'occurred_on',
         'note',
+        'receipt_number',
     ];
 
     protected $casts = [
@@ -96,6 +97,7 @@ class ChamberCashEntry extends Model
         'clinic_share_taka' => 'integer',
         'doctor_share_taka' => 'integer',
         'occurred_on' => DateOnly::class,
+        'receipt_number' => 'integer',
     ];
 
     /** @return array<string, string> */
@@ -218,6 +220,20 @@ class ChamberCashEntry extends Model
     public function isWaived(): bool
     {
         return $this->category === self::CATEGORY_WAIVED;
+    }
+
+    /** Consultation / procedure fee a patient can take a paper slip for — not rent, pharmacy, or refunds. */
+    public function isPatientFeeReceipt(): bool
+    {
+        return $this->isIncome()
+            && in_array($this->category, [self::CATEGORY_PATIENT, self::CATEGORY_WAIVED], true);
+    }
+
+    public function receiptLabel(): string
+    {
+        $n = (int) ($this->receipt_number ?? 0);
+
+        return $n > 0 ? (string) $n : '—';
     }
 
     public function booking(): BelongsTo
