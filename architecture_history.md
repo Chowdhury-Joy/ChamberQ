@@ -890,6 +890,15 @@
 ## 2026-08-20T18:34:31+0600
 - Pharmacy stock is per centre (`pharmacy_items.chamber_id`, `pharmacy_counts.chamber_id`). MUPS seed stamps Mehedibag vs Uttara desk logins and clones the nine pad SKUs into two cupboards.
 
+## 2026-08-20T18:39:42+0600
+- Pharmacy till list labels: Amount, Type of medicine (names, not a line count), Return / Returned instead of Void / Voided.
+
+## 2026-08-20T18:42:50+0600
+- Pharmacy stock list labels: Current stock, Selling price, Buying price, Profit (form fields match).
+
+## 2026-08-20T18:46:30+0600
+- Pharmacy Physical count and Pay supplier pages hidden (`PharmacyAccess::backOfficePagesEnabled` false); services kept.
+
 
 
 

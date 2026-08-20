@@ -3392,3 +3392,30 @@
  <action>Option B: each centre has its own pharmacy cupboard (`pharmacy_items.chamber_id`). People are stamped to a building: Mehedibag lead/desk vs Uttara lead/desk; Dr. Moin and the owner stay unstamped (both cities). One sale cannot mix two centres. A physical count is per cupboard. Fee catalogue, referring GPs, and HR rules stay clinic-wide.</action>
  <reason>Like two shops with two fridges: moving a cashier changes which drawer they use. The same Joint Pro bottle in Uttara is not the one sitting in Chittagong.</reason>
 </decision>
+
+## 2026-08-20T18:39:42+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The Pharmacy till list used shop-unfriendly words: Taken, Lines (a count), and Void. Desk staff read that like a programmer’s ledger, not a chemist pad.</context>
+ <action>Rename **Taken** to **Amount**, replace the **Lines** count with **Type of medicine** (the bottle names), and rename **Void** / **Voided** to **Return** / **Returned**. Supplier **Return unsold** is unchanged. The same-day undo still restores stock and posts a pharmacy refund.</action>
+ <reason>Like a chemist khata: you look up how much was taken, which bottles went out, and a Return when the customer brings them back the same day — not an accounting void.</reason>
+</decision>
+
+## 2026-08-20T18:42:50+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Pharmacy stock used short ledger words: On shelf, Sell, Company, Shop cut. Staff already think in pad language (S.P / B.P) and “how many bottles are here”.</context>
+ <action>Rename the list (and matching add/edit fields) to **Current stock**, **Selling price**, **Buying price**, and **Profit**. Internal columns stay `qty_on_hand` / `sell_price_taka` / `company_share_taka`. Receive still pays the company now; that is not a price column.</action>
+ <reason>Same as the handwritten shop pad: S.P is what the patient pays, B.P is what the company is owed, leftover is profit, and the number on the shelf is current stock — not “on shelf / shop cut”.</reason>
+</decision>
+
+## 2026-08-20T18:46:30+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The desk is selling from the cupboard. Physical count and Pay supplier are month-end / audit tools, not the daily till. Extra Operations items made the shop look unfinished.</context>
+ <action>Hide **Physical count** and **Pay supplier** (`PharmacyAccess::backOfficePagesEnabled()` is false). Services and tables stay. Receive on Pharmacy stock still records a pay-now amount. Same-day **Return** on the till is unchanged.</action>
+ <reason>Like leaving the stocktake clipboard and the company ledger in a drawer: the counter still sells and receives boxes. Those two screens can come back with one flag when the owner wants them.</reason>
+</decision>

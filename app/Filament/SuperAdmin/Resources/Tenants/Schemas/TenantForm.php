@@ -189,7 +189,7 @@ class TenantForm
                             ->default(false),
                         Checkbox::make('module_pharmacy')
                             ->label(__('Pharmacy — counter sales + shop stock'))
-                            ->helperText(__('Sell from the prescription (or walk-in), take cash/bKash at the counter, live quantity, physical count, pay the company now or after it sells. Default off — not in the Website/Queue/Rx bundle.'))
+                            ->helperText(__('Sell from the prescription (or walk-in), take cash/bKash at the counter, live quantity. Default off — not in the Website/Queue/Rx bundle.'))
                             ->default(false),
                     ]),
 

@@ -33,7 +33,7 @@ class PharmacyPaySupplier extends Page
 
     public static function canAccess(): bool
     {
-        return PharmacyAccess::canRunCounter(auth()->user());
+        return PharmacyAccess::canAccessPaySupplier(auth()->user());
     }
 
     public function mount(): void

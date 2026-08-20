@@ -55,7 +55,7 @@ class PharmacyStockService
             $share = $companyShareTaka ?? $locked->company_share_taka;
 
             if ($share < 0 || $share > $locked->sell_price_taka) {
-                throw new InvalidArgumentException(__('Company share cannot be more than the sell price.'));
+                throw new InvalidArgumentException(__('Buying price cannot be more than the selling price.'));
             }
 
             $delivery = PharmacyDelivery::create([

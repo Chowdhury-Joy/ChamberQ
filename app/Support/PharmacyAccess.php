@@ -21,8 +21,8 @@ final class PharmacyAccess
     }
 
     /**
-     * Shop list + physical count. For now this is the Money desk (the usual
-     * one-person staff login), not a separate chemist role. A later dedicated
+     * Shop list. For now this is the Money desk (the usual one-person
+     * staff login), not a separate chemist role. A later dedicated
      * pharmacy staff tick can split this without changing the till.
      */
     public static function canManageStock(?User $user): bool
@@ -38,6 +38,25 @@ final class PharmacyAccess
         return $user->isStaff()
             && StaffDeskJobs::hasJob($user, StaffDeskJobs::JOB_MONEY)
             && $user->canManageCash();
+    }
+
+    /**
+     * Physical count and Pay supplier stay in code. Hidden from the desk
+     * until the owner asks to turn them back on.
+     */
+    public static function backOfficePagesEnabled(): bool
+    {
+        return false;
+    }
+
+    public static function canAccessPhysicalCount(?User $user): bool
+    {
+        return self::backOfficePagesEnabled() && self::canManageStock($user);
+    }
+
+    public static function canAccessPaySupplier(?User $user): bool
+    {
+        return self::backOfficePagesEnabled() && self::canRunCounter($user);
     }
 
     public static function scopedItems(?User $user): Builder

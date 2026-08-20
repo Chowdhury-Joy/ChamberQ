@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Filament\TenantAdmin\Pages\PharmacyCounter;
+use App\Filament\TenantAdmin\Pages\PharmacyPaySupplier;
 use App\Filament\TenantAdmin\Pages\PharmacyPhysicalCount;
+use App\Filament\TenantAdmin\Resources\PharmacyItems\Pages\ListPharmacyItems;
 use App\Filament\TenantAdmin\Resources\PharmacyItems\PharmacyItemResource;
 use App\Models\Booking;
 use App\Models\Chamber;
@@ -218,7 +220,7 @@ class PharmacyModuleTest extends TestCase
     public function test_counter_list_uses_shop_words(): void
     {
         $item = $this->napaOnShelf(5, paidNow: 0);
-        app(PharmacySaleService::class)->sell(
+        $sale = app(PharmacySaleService::class)->sell(
             $this->staff,
             [['pharmacy_item_id' => $item->id, 'qty' => 1]],
             ChamberCashEntry::METHOD_CASH,
@@ -237,6 +239,22 @@ class PharmacyModuleTest extends TestCase
             ->assertSee('NAPA 500')
             ->assertDontSee('Taken')
             ->assertTableActionHasLabel('void', 'Return', $sale);
+    }
+
+    public function test_shop_list_uses_cupboard_words(): void
+    {
+        $this->napaOnShelf(5, paidNow: 0);
+
+        Filament::setCurrentPanel('tenantAdmin');
+        $this->actingAs($this->staff);
+
+        Livewire::test(ListPharmacyItems::class)
+            ->assertSee('Current stock')
+            ->assertSee('Selling price')
+            ->assertSee('Buying price')
+            ->assertSee('Profit')
+            ->assertDontSee('On shelf')
+            ->assertDontSee('Shop cut');
     }
 
     public function test_hybrid_deposit_then_sales_then_return_sets_owed(): void
@@ -536,7 +554,8 @@ class PharmacyModuleTest extends TestCase
         $this->actingAs($this->staff);
         $this->assertTrue(PharmacyAccess::canManageStock($this->staff));
         $this->assertTrue(PharmacyItemResource::canViewAny());
-        $this->assertTrue(PharmacyPhysicalCount::canAccess());
+        $this->assertFalse(PharmacyPhysicalCount::canAccess());
+        $this->assertFalse(PharmacyPaySupplier::canAccess());
 
         $this->actingAs($moneyOnly);
         $this->assertTrue(PharmacyAccess::canManageStock($moneyOnly));
@@ -552,6 +571,24 @@ class PharmacyModuleTest extends TestCase
         $this->actingAs($this->doctorUser);
         $this->assertFalse(PharmacyAccess::canManageStock($this->doctorUser));
         $this->assertFalse(PharmacyItemResource::canViewAny());
+    }
+
+    public function test_physical_count_and_pay_supplier_stay_off_the_menu(): void
+    {
+        $owner = User::query()->where('email', 'owner@pharmacy-shop.test')->first()
+            ?? User::create([
+                'name' => 'Owner',
+                'email' => 'owner@pharmacy-shop.test',
+                'password' => Hash::make('secret'),
+                'role' => User::ROLE_OWNER,
+                'tenant_id' => 'pharmacy-shop',
+            ]);
+
+        foreach ([$this->staff, $owner] as $user) {
+            $this->actingAs($user);
+            $this->assertFalse(PharmacyPhysicalCount::canAccess());
+            $this->assertFalse(PharmacyPaySupplier::canAccess());
+        }
     }
 
     public function test_selling_at_one_centre_does_not_empty_the_other_cupboard(): void

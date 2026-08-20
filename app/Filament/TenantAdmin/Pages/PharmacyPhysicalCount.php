@@ -42,7 +42,7 @@ class PharmacyPhysicalCount extends Page implements HasTable
 
     public static function canAccess(): bool
     {
-        return PharmacyAccess::canManageStock(auth()->user());
+        return PharmacyAccess::canAccessPhysicalCount(auth()->user());
     }
 
     public function mount(): void

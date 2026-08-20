@@ -141,14 +141,14 @@ class PharmacyItemResource extends Resource
                 ->label(__('Generic'))
                 ->maxLength(255),
             Forms\Components\TextInput::make('sell_price_taka')
-                ->label(__('Sell price (৳) — what the patient pays'))
+                ->label(__('Selling price (৳)'))
                 ->numeric()
                 ->minValue(0)
                 ->required()
                 ->live(),
             Forms\Components\TextInput::make('company_share_taka')
-                ->label(__('Company share (৳)'))
-                ->helperText(__('What the medicine company gets per unit sold. Shop cut is the leftover.'))
+                ->label(__('Buying price (৳)'))
+                ->helperText(__('What the company is owed per bottle. Profit is selling minus buying.'))
                 ->numeric()
                 ->minValue(0)
                 ->default(0)
@@ -157,12 +157,12 @@ class PharmacyItemResource extends Resource
                 ->rules([
                     fn (Get $get): \Closure => function (string $attribute, mixed $value, \Closure $fail) use ($get): void {
                         if ((int) $value > (int) $get('sell_price_taka')) {
-                            $fail(__('Company share cannot be more than the sell price.'));
+                            $fail(__('Buying price cannot be more than the selling price.'));
                         }
                     },
                 ]),
             Forms\Components\Placeholder::make('shop_cut')
-                ->label(__('Shop cut'))
+                ->label(__('Profit'))
                 ->content(fn (Get $get): string => '৳'.number_format(max(0, (int) $get('sell_price_taka') - (int) $get('company_share_taka')))),
             Forms\Components\Select::make('unit_label')
                 ->label(__('Counted as'))
@@ -185,15 +185,15 @@ class PharmacyItemResource extends Resource
                     ->label(__('Centre'))
                     ->visible(fn (): bool => StaffDeskScope::tenantHasMultipleChambers())
                     ->sortable(),
-                TextColumn::make('qty_on_hand')->label(__('On shelf'))->sortable(),
+                TextColumn::make('qty_on_hand')->label(__('Current stock'))->sortable(),
                 TextColumn::make('sell_price_taka')
-                    ->label(__('Sell'))
+                    ->label(__('Selling price'))
                     ->formatStateUsing(fn (int $state): string => '৳'.number_format($state)),
                 TextColumn::make('company_share_taka')
-                    ->label(__('Company'))
+                    ->label(__('Buying price'))
                     ->formatStateUsing(fn (int $state): string => '৳'.number_format($state)),
                 TextColumn::make('shop_cut')
-                    ->label(__('Shop cut'))
+                    ->label(__('Profit'))
                     ->state(fn (PharmacyItem $record): string => '৳'.number_format($record->shopCutTaka())),
                 IconColumn::make('is_active')->boolean(),
             ])
@@ -210,7 +210,7 @@ class PharmacyItemResource extends Resource
                             ->minValue(1)
                             ->required(),
                         Forms\Components\TextInput::make('company_share_taka')
-                            ->label(__('Company share this box (৳)'))
+                            ->label(__('Buying price this box (৳)'))
                             ->helperText(__('Leave as the item default unless this delivery has a different deal.'))
                             ->numeric()
                             ->minValue(0),
