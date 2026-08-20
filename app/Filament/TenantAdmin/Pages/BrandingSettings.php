@@ -56,6 +56,7 @@ class BrandingSettings extends Page implements HasForms
                 'font_family' => $tenant->font_family ?? 'Outfit',
                 'contact_phone' => $tenant->contact_phone,
                 'whatsapp_number' => $tenant->whatsapp_number,
+                'review_url' => $tenant->review_url,
                 'default_locale' => $tenant->default_locale ?? 'en',
                 'call_timeout_seconds' => $tenant->call_timeout_seconds ?? 10,
                 'estimated_time_buffer_minutes' => $tenant->estimated_time_buffer_minutes ?? 30,
@@ -137,6 +138,19 @@ class BrandingSettings extends Page implements HasForms
                             ->autocomplete('tel')
                             ->placeholder('8801XXXXXXXXX')
                             ->maxLength(20),
+                        TextInput::make('review_url')
+                            ->label(__('Google review link'))
+                            ->helperText(__('Paste the link Google gives you under Ask for reviews. After a visit, staff can send this with the prescription SMS/WhatsApp, or on its own if you do not use ChamberQ prescriptions. A chamber can override this.'))
+                            ->placeholder('https://g.page/r/…/review')
+                            ->url()
+                            ->maxLength(2048)
+                            ->rule(static function () {
+                                return static function (string $attribute, mixed $value, \Closure $fail): void {
+                                    if (filled($value) && ! \App\Models\Chamber::isGoogleReviewUrl((string) $value)) {
+                                        $fail(__('Paste a Google review link, for example https://g.page/r/…/review or a Google Maps share link.'));
+                                    }
+                                };
+                            }),
                         Select::make('default_locale')
                             ->label(__('Chamber language'))
                             ->helperText(__('Book, ticket, waiting-room TV, and this admin panel. Homepage Bangla articles are still the paid bangla_homepage add-on.'))
@@ -317,6 +331,9 @@ class BrandingSettings extends Page implements HasForms
                 'font_family' => $data['font_family'],
                 'contact_phone' => $data['contact_phone'],
                 'whatsapp_number' => $data['whatsapp_number'],
+                'review_url' => filled($data['review_url'] ?? null)
+                    ? \App\Models\Chamber::sanitisedReviewUrl((string) $data['review_url'])
+                    : null,
                 'default_locale' => $data['default_locale'],
                 'collect_fee_at_checkin' => (bool) ($data['collect_fee_at_checkin'] ?? false),
                 'patient_booking_horizon_days' => filled($data['patient_booking_horizon_days'] ?? null)

@@ -140,10 +140,10 @@ class GsmText
     /**
      * Normalise, then guarantee the result bills as exactly one segment.
      *
-     * Any trailing link is preserved whole and the prose in front of it is
-     * shortened instead — a truncated ticket or prescription URL is worse than
-     * a truncated sentence, because it is the only actionable part of the
-     * message.
+     * Every http(s) link is preserved whole and the prose around them is
+     * shortened instead — a truncated ticket, prescription, or review URL is
+     * worse than a truncated sentence. The first-link-only cut used to drop a
+     * second URL (prescription + Google review) as if it were prose.
      */
     public static function toSingleSegment(string $text): string
     {
@@ -153,13 +153,20 @@ class GsmText
             return $text;
         }
 
-        $url = null;
+        preg_match_all('~https?://\S+~', $text, $matches);
+        $urls = $matches[0];
 
-        if (preg_match('~https?://\S+~', $text, $matches)) {
-            $url = $matches[0];
-            $text = trim(str_replace($url, '', $text));
-            $text = preg_replace('/[ \t]+/', ' ', $text) ?? $text;
+        if ($urls === []) {
+            return self::truncateToUnits($text, self::SEGMENT_UNITS - 3);
         }
+
+        $prose = $text;
+        foreach ($urls as $url) {
+            $prose = str_replace($url, '', $prose);
+        }
+        $prose = trim(preg_replace('/[ \t]+/', ' ', $prose) ?? $prose);
+
+        $linkTail = implode(' ', $urls);
 
         // Some links cannot be shortened away. A link longer than a segment on
         // its own makes one segment physically impossible, and the choice is
@@ -170,20 +177,21 @@ class GsmText
         //
         // No message sent today reaches this branch: the prescription share URL
         // did, at ~181 characters, until it became /p/{token}. This is the net
-        // for the next long link, not dead code.
-        if ($url !== null && self::units($url) + 1 >= self::SEGMENT_UNITS) {
-            $prose = self::truncateToUnits($text, self::SEGMENT_UNITS - 3);
+        // for the next long link (or two links that will not fit), not dead code.
+        if (self::units($linkTail) + 1 >= self::SEGMENT_UNITS) {
+            $cut = self::truncateToUnits($prose, self::SEGMENT_UNITS - 3);
 
-            return trim($prose.' '.$url);
+            return trim($cut.' '.$linkTail);
         }
 
         $budget = self::SEGMENT_UNITS
-            - ($url !== null ? self::units($url) + 1 : 0)
+            - self::units($linkTail)
+            - 1
             - 3; // "..." marking the cut
 
-        $prose = self::truncateToUnits($text, max($budget, 0));
+        $cut = self::truncateToUnits($prose, max($budget, 0));
 
-        return trim($url !== null ? $prose.' '.$url : $prose);
+        return trim($cut.' '.$linkTail);
     }
 
     /**

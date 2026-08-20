@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Booking;
+use App\Models\Chamber;
 use App\Models\Prescription;
 use App\Models\User;
 use App\Services\SmsService;
@@ -64,6 +65,35 @@ class NotifySmsController extends Controller
         ]);
     }
 
+    /**
+     * Staff-tapped Google review SMS (paper-prescription chambers).
+     */
+    public function review(Request $request, Booking $booking, SmsService $sms): JsonResponse
+    {
+        $user = $request->user();
+        $this->authorizeStaffNotify($user);
+        StaffDeskScope::assertCanAccessBooking($user, $booking);
+
+        if ($booking->status !== 'completed') {
+            abort(422, __('Send the review text after the visit is completed.'));
+        }
+
+        if (Chamber::reviewUrlForBooking($booking) === null) {
+            abort(422, __('No Google review link is saved. Add it under Branding or Chambers.'));
+        }
+
+        try {
+            $message = $sms->sendReviewNotice($booking);
+        } catch (\InvalidArgumentException $e) {
+            abort(422, $e->getMessage());
+        }
+
+        return response()->json([
+            'status' => $message?->status,
+            'credits' => $message?->credits ?? 0,
+        ]);
+    }
+
     private function authorizeStaffNotify(?User $user): void
     {
         // Role AND practice — these routes have no Filament panel guard.
@@ -74,6 +104,7 @@ class NotifySmsController extends Controller
                 $user->canManageOps()
                 || $user->canManageQueue()
                 || $user->canViewVisitNotes()
+                || $user->canWorkDesk()
             )
         ) {
             abort(403);

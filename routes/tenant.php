@@ -146,6 +146,10 @@ $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
         ->middleware(['auth', 'throttle:30,1', 'tenant.module:prescription'])
         ->name($routeName('prescriptions.sms'));
 
+    Route::post('/api/bookings/{booking}/sms/review', [NotifySmsController::class, 'review'])
+        ->middleware(['auth', 'throttle:30,1'])
+        ->name($routeName('bookings.sms.review'));
+
     Route::post('/api/visit-media/upload-voice', [VisitMediaController::class, 'uploadVoice'])
         ->middleware(['auth', 'throttle:30,1', 'tenant.module:prescription']);
 

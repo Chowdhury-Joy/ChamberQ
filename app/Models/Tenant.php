@@ -229,6 +229,7 @@ class Tenant extends BaseTenant
             'name',
             'contact_phone',
             'whatsapp_number',
+            'review_url',
             'theme_color',
             'logo_url',
             'favicon_url',

@@ -120,6 +120,14 @@ final class QueueRecordActions
                 ->visible(fn (Booking $record): bool => DeskActionLayout::canReinstate($record)
                     && $shown(DeskActionLayout::KEY_REINSTATE)($record))
                 ->action(fn (Booking $record) => $reinstate($record)),
+
+            AskReviewAction::whatsapp(Action::make($name(DeskActionLayout::KEY_REVIEW_WHATSAPP)))
+                ->visible(fn (Booking $record): bool => AskReviewAction::canWhatsapp($record)
+                    && $shown(DeskActionLayout::KEY_REVIEW_WHATSAPP)($record)),
+
+            AskReviewAction::sms(Action::make($name(DeskActionLayout::KEY_REVIEW_SMS)))
+                ->visible(fn (Booking $record): bool => AskReviewAction::canSms($record)
+                    && $shown(DeskActionLayout::KEY_REVIEW_SMS)($record)),
         ];
     }
 }

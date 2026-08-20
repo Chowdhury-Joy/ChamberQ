@@ -236,6 +236,14 @@ final class RosterRecordActions
                 ->visible(fn (Booking $record): bool => DeskActionLayout::canCollectFee($record)
                     && $shown(DeskActionLayout::KEY_COLLECT_FEE)($record)),
 
+            AskReviewAction::whatsapp(Action::make($name(DeskActionLayout::KEY_REVIEW_WHATSAPP)))
+                ->visible(fn (Booking $record): bool => AskReviewAction::canWhatsapp($record)
+                    && $shown(DeskActionLayout::KEY_REVIEW_WHATSAPP)($record)),
+
+            AskReviewAction::sms(Action::make($name(DeskActionLayout::KEY_REVIEW_SMS)))
+                ->visible(fn (Booking $record): bool => AskReviewAction::canSms($record)
+                    && $shown(DeskActionLayout::KEY_REVIEW_SMS)($record)),
+
             Action::make($name(DeskActionLayout::KEY_REPEAT))
                 ->label('Repeat sitting')
                 ->icon('heroicon-o-arrow-path')

@@ -4,19 +4,28 @@
 
     WhatsApp is the existing human-tapped `wa.me` pattern; SMS is staff-tapped
     against the prepaid wallet. Both are gated by the prescribing doctor's
-    notify_channels.prescription prefs.
+    notify_channels.prescription prefs. A Google review link (Branding or
+    Chamber) is appended when saved; paper-prescription chambers can send that
+    link on its own.
 --}}
 @props(['booking', 'prescription'])
 
 @php
     use App\Models\Doctor;
+    use App\Support\VisitShareCopy;
 
     $doctor = $booking ? Doctor::resolveForBooking($booking) : null;
     $showWa = $doctor?->wantsWhatsapp(Doctor::NOTIFY_PRESCRIPTION) ?? true;
     $showSms = $doctor?->wantsSms(Doctor::NOTIFY_PRESCRIPTION) ?? false;
+    $reviewUrl = $booking ? VisitShareCopy::reviewUrl($booking) : null;
+    $hasShare = $prescription || $reviewUrl;
+    $smsUrl = $prescription
+        ? tenant_web_route('prescriptions.sms', $prescription)
+        : ($booking ? tenant_web_route('bookings.sms.review', $booking) : null);
+    $waMessage = $booking ? VisitShareCopy::whatsappMessage($booking, $prescription) : '';
 @endphp
 
-@if ($prescription)
+@if ($hasShare)
     <div
         style="display: flex; flex-wrap: wrap; gap: 0.5rem;"
         x-data="{
@@ -27,7 +36,7 @@
                 this.sending = true;
                 this.error = null;
                 try {
-                    const res = await fetch(@js(tenant_web_route('prescriptions.sms', $prescription)), {
+                    const res = await fetch(@js($smsUrl), {
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
@@ -61,36 +70,34 @@
             }
         }"
     >
-        <x-filament::button
-            tag="a"
-            href="{{ tenant_web_route('prescriptions.print', $prescription) }}"
-            target="_blank"
-            size="sm"
-            color="gray"
-            icon="heroicon-m-printer"
-        >
-            {{ __('Print prescription') }}
-        </x-filament::button>
+        @if ($prescription)
+            <x-filament::button
+                tag="a"
+                href="{{ tenant_web_route('prescriptions.print', $prescription) }}"
+                target="_blank"
+                size="sm"
+                color="gray"
+                icon="heroicon-m-printer"
+            >
+                {{ __('Print prescription') }}
+            </x-filament::button>
+        @endif
 
         @if ($showWa && $booking && filled($booking->patient_phone))
             <x-filament::button
                 tag="a"
-                href="{{ $booking->whatsappLink(__('Hello :name, here is your prescription from :date. You can view or print it here: :link', [
-                    'name' => $booking->patient_name,
-                    'date' => $booking->booking_date?->translatedFormat('j F Y'),
-                    'link' => $prescription->shareUrl(),
-                ])) }}"
+                href="{{ $booking->whatsappLink($waMessage) }}"
                 target="_blank"
                 rel="noopener noreferrer"
                 size="sm"
                 color="success"
                 icon="heroicon-o-paper-airplane"
             >
-                {{ __('Send via WhatsApp') }}
+                {{ $prescription ? __('Send via WhatsApp') : __('Send review via WhatsApp') }}
             </x-filament::button>
         @endif
 
-        @if ($showSms && $booking && filled($booking->patient_phone))
+        @if ($showSms && $booking && filled($booking->patient_phone) && $smsUrl)
             <x-filament::button
                 type="button"
                 size="sm"

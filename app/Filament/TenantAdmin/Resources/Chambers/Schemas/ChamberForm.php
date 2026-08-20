@@ -37,6 +37,20 @@ class ChamberForm
                             }
                         };
                     }),
+                TextInput::make('review_url')
+                    ->label(__('Google review link'))
+                    ->helperText(__('Paste the link Google gives you under Ask for reviews (g.page or Maps). After a visit, staff can send this with the prescription, or on its own if you write prescriptions on paper. Overrides the Branding link for this chamber.'))
+                    ->placeholder('https://g.page/r/…/review')
+                    ->url()
+                    ->maxLength(2048)
+                    ->columnSpanFull()
+                    ->rule(static function () {
+                        return static function (string $attribute, mixed $value, \Closure $fail): void {
+                            if (filled($value) && ! Chamber::isGoogleReviewUrl((string) $value)) {
+                                $fail(__('Paste a Google review link, for example https://g.page/r/…/review or a Google Maps share link.'));
+                            }
+                        };
+                    }),
                 KeyValue::make('hours')
                     ->label(__('Operating Hours'))
                     ->keyLabel(__('Day'))

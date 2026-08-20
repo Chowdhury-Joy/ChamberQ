@@ -78,6 +78,10 @@ final class DeskActionLayout
 
     public const KEY_REINSTATE = 'reinstate';
 
+    public const KEY_REVIEW_WHATSAPP = 'askReviewWhatsapp';
+
+    public const KEY_REVIEW_SMS = 'askReviewSms';
+
     public static function actionName(string $key, string $slot): string
     {
         return $slot === self::SLOT_MORE ? $key : $key.'Primary';
