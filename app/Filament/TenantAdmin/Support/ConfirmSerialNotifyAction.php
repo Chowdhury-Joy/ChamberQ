@@ -7,21 +7,22 @@ use App\Models\Doctor;
 use App\Models\SmsMessage;
 use App\Models\User;
 use App\Services\SmsService;
-use App\Support\VisitShareCopy;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 
-final class AskReviewAction
+/**
+ * Staff-tapped serial confirmation (Push SMS / Push WhatsApp) on Daily Roster
+ * and Live Queue — covers online bookings and walk-ins that have no Book serial modal.
+ */
+final class ConfirmSerialNotifyAction
 {
     public static function whatsapp(Action $action): Action
     {
         return $action
-            ->label(__('Send review via WhatsApp'))
-            ->icon('heroicon-o-paper-airplane')
+            ->label(__('Push WhatsApp'))
+            ->icon('heroicon-o-chat-bubble-left-right')
             ->color('success')
-            ->url(fn (Booking $record): string => $record->whatsappLink(
-                VisitShareCopy::whatsappMessage($record),
-            ))
+            ->url(fn (Booking $record): string => $record->whatsappLink(self::message($record)))
             ->openUrlInNewTab()
             ->visible(fn (Booking $record): bool => self::canWhatsapp($record));
     }
@@ -29,22 +30,15 @@ final class AskReviewAction
     public static function sms(Action $action): Action
     {
         return $action
-            ->label(__('Send review SMS'))
+            ->label(__('Push SMS'))
             ->icon('heroicon-o-device-phone-mobile')
             ->color('warning')
             ->action(function (Booking $record): void {
-                try {
-                    $message = app(SmsService::class)->sendReviewNotice($record, staffTap: true);
-                } catch (\InvalidArgumentException $e) {
-                    Notification::make()->title($e->getMessage())->danger()->send();
-
-                    return;
-                }
-
+                $message = app(SmsService::class)->sendBookingConfirmation($record, staffTap: true);
                 $status = $message?->status;
 
                 if ($status === SmsMessage::STATUS_SENT) {
-                    Notification::make()->title(__('Review SMS sent'))->success()->send();
+                    Notification::make()->title(__('Confirmation SMS sent'))->success()->send();
 
                     return;
                 }
@@ -61,23 +55,13 @@ final class AskReviewAction
             ->visible(fn (Booking $record): bool => self::canSms($record));
     }
 
-    public static function canOffer(Booking $record): bool
-    {
-        return $record->status === 'completed'
-            && filled($record->patient_phone)
-            && VisitShareCopy::reviewUrl($record) !== null
-            && self::actorMayNotify();
-    }
-
     public static function canWhatsapp(Booking $record): bool
     {
         if (! self::canOffer($record)) {
             return false;
         }
 
-        $doctor = Doctor::resolveForBooking($record);
-
-        return $doctor?->wantsWhatsapp(Doctor::NOTIFY_PRESCRIPTION) ?? true;
+        return Doctor::resolveForBooking($record)?->wantsWhatsapp(Doctor::NOTIFY_BOOKING_CONFIRMATION) ?? false;
     }
 
     public static function canSms(Booking $record): bool
@@ -86,9 +70,25 @@ final class AskReviewAction
             return false;
         }
 
-        $doctor = Doctor::resolveForBooking($record);
+        return Doctor::resolveForBooking($record)?->wantsPushSms(Doctor::NOTIFY_BOOKING_CONFIRMATION) ?? false;
+    }
 
-        return $doctor?->wantsPushSms(Doctor::NOTIFY_PRESCRIPTION) ?? false;
+    public static function canOffer(Booking $record): bool
+    {
+        return ! in_array($record->status, ['cancelled', 'no_show'], true)
+            && filled($record->patient_phone)
+            && self::actorMayNotify();
+    }
+
+    public static function message(Booking $record): string
+    {
+        $dateLabel = $record->booking_date?->translatedFormat('j F Y') ?? '';
+
+        return __('Hello :name, your serial is :serial on :date.', [
+            'name' => $record->patient_name,
+            'serial' => $record->serial_number,
+            'date' => $dateLabel,
+        ]);
     }
 
     private static function actorMayNotify(): bool
@@ -100,7 +100,6 @@ final class AskReviewAction
             && (
                 $user->canManageOps()
                 || $user->canManageQueue()
-                || $user->canViewVisitNotes()
                 || $user->canWorkDesk()
             );
     }

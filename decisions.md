@@ -3282,5 +3282,14 @@
  <category>Business_Logic</category>
  <context>After a good visit, Bangladeshi chambers still collect Google reviews by handing a card or asking verbally. ChamberQ already sent a staff-tapped prescription link at that same doorway moment, but never a review link — and chambers that write prescriptions on paper (Prescription module off) had no after-visit SMS at all.</context>
  <action>Store a Google “Ask for reviews” URL on Branding (`tenants.review_url`) with an optional per-chamber override. Append it to the existing staff-tapped prescription SMS/WhatsApp. Add `POST /api/bookings/{booking}/sms/review` and Daily Roster / Live Queue **Send review** actions so staff can push the same link without ChamberQ Rx. Reuse the doctor’s prescription notify toggles (relabelled After visit). `GsmText` now keeps every link in the body, not only the first. Review hosts are allowlisted (`g.page`, Google writereview, Maps). Staff always tap; nothing auto-sends.</action>
- <reason>Asking at the door while the patient is still grateful is when reviews actually happen. One extra line on the prescription text costs no extra habit; paper-pad doctors still get a staff-tapped SMS like cancellation notices. Auto-SMS would feel spammy and burn credits.</reason>
+  <reason>Asking at the door while the patient is still grateful is when reviews actually happen. One extra line on the prescription text costs no extra habit; paper-pad doctors still get a staff-tapped SMS like cancellation notices. Auto-SMS would feel spammy and burn credits.</reason>
+</decision>
+
+## 2026-08-20T15:42:18+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>Each ChamberQ client needed to pick, per message type, whether ChamberQ texts the patient itself, staff tap SMS, or staff tap WhatsApp. The old form only had SMS vs WhatsApp, and auto vs tap was hardcoded by stage (booking auto, prescription tap), so a clinic that wanted staff to send the serial text could not turn Auto off without losing SMS entirely.</context>
+ <action>Every doctor’s Patient notifications stage now has three ticks: Auto SMS, Push SMS, Push WhatsApp. Stored as `auto_sms` / `push_sms` / `push_whatsapp`. Defaults keep today’s mix (booking + follow-up Auto SMS; cancellation + after-visit Push WhatsApp; late all off). Legacy `{sms, whatsapp}` JSON still maps. Auto jobs check `wantsAutoSms`; desk buttons and `NotifySmsController` check `wantsPushSms`; WhatsApp stays `wa.me` only. After-visit Auto SMS is an explicit opt-in via `SendVisitShareNotice` (supersedes “staff always tap, nothing auto-sends” for that stage when Auto is ticked).</action>
+ <reason>Like choosing missed-call vs tapping the phone vs sending a WhatsApp: the clinic decides per doctor and per message. Solo clients are one doctor, so this is their client setting without a new Super Admin screen.</reason>
 </decision>

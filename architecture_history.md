@@ -845,6 +845,9 @@
 ## 2026-08-20T15:26:12+0600
 - Remaining-patient cancellation SMS can auto-send after End session / Doctor absent when that doctor's Cancellation SMS is on (`SendSessionCancellationNotices`, after-response). Settings → Doctors stays visible on Solo. WhatsApp stays tap-to-send.
 
+## 2026-08-20T15:42:18+0600
+- Per-doctor patient notices are three choices on every stage (Auto SMS / Push SMS / Push WhatsApp): `Doctor` helpers, `SmsService` `staffTap`, `SendVisitShareNotice`, `ConfirmSerialNotifyAction`, staff confirmation/late/follow-up SMS routes.
+
 ## 2026-08-19T19:30:00+0000
 - Production audit remediation: `StaffDeskScope` on visit media / prescription print / staff SMS HTTP routes; booking serial retry; portal unlock rate limit + min 6-char password; `SittingPrompt` bulk waiting counts + staff buzz cache; queue indexes migration `2026_08_19_200000_add_queue_performance_indexes.php`.
 

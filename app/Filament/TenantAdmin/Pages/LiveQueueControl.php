@@ -979,7 +979,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
 
         $doctor = ScheduleSession::with('doctor')->find($this->selectedSessionId)?->doctor;
 
-        if (! $doctor?->wantsSms(\App\Models\Doctor::NOTIFY_CANCELLATION)) {
+        if (! $doctor?->wantsAutoSms(\App\Models\Doctor::NOTIFY_CANCELLATION)) {
             return null;
         }
 
@@ -1006,11 +1006,11 @@ class LiveQueueControl extends Page implements HasActions, HasTable
             ? ScheduleSession::with('doctor')->find($this->selectedSessionId)?->doctor
             : null;
 
-        if ($doctor?->wantsSms(\App\Models\Doctor::NOTIFY_CANCELLATION)) {
-            return __('SMS is sending for this doctor. Use "Tell cancelled patients" for WhatsApp.');
+        if ($doctor?->wantsAutoSms(\App\Models\Doctor::NOTIFY_CANCELLATION)) {
+            return __('SMS is sending for this doctor. Use "Tell cancelled patients" for Push SMS or Push WhatsApp.');
         }
 
-        return __('Use "Tell cancelled patients" to send each of them a WhatsApp message.');
+        return __('Use "Tell cancelled patients" to send Push SMS or Push WhatsApp.');
     }
 
     // Action for Mark Late
@@ -1028,7 +1028,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
 
         $doctor = ScheduleSession::with('doctor')->find($this->selectedSessionId)?->doctor;
 
-        if (! $doctor?->wantsSms(\App\Models\Doctor::NOTIFY_DOCTOR_LATE)) {
+        if (! $doctor?->wantsAutoSms(\App\Models\Doctor::NOTIFY_DOCTOR_LATE)) {
             return null;
         }
 
@@ -1112,7 +1112,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
 
                 $this->delayedNotifyMinutes = (int) $data['delay_minutes'];
                 $doctor = $scheduleSession->doctor;
-                $this->delayedNotifyBookingIds = ($doctor?->wantsWhatsapp(\App\Models\Doctor::NOTIFY_DOCTOR_LATE) ?? false)
+                $this->delayedNotifyBookingIds = ($doctor?->wantsStaffTap(\App\Models\Doctor::NOTIFY_DOCTOR_LATE) ?? false)
                     ? $bookings->pluck('id')->all()
                     : [];
                 

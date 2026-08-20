@@ -5,6 +5,7 @@ namespace App\Filament\TenantAdmin\Pages;
 use App\Exceptions\BookingUnavailableException;
 use App\Filament\TenantAdmin\Support\StaffBookingForm;
 use App\Models\Booking;
+use App\Models\Doctor;
 use App\Models\LabCollectionSlot;
 use App\Models\ScheduleSession;
 use App\Support\TenancyUrl;
@@ -101,14 +102,22 @@ class BookSerial extends Page implements HasForms
             'date' => $dateLabel,
         ]);
 
+        $doctor = Doctor::resolveForBooking($booking);
+
         $this->lastBooked = [
             'serial' => (int) $booking->serial_number,
             'name' => (string) $booking->patient_name,
             'phone' => (string) $booking->patient_phone,
             'date' => $dateLabel,
             'sitting' => $this->sittingLabel($booking),
-            'whatsapp' => $booking->whatsappLink($waMessage),
+            'whatsapp' => ($doctor?->wantsWhatsapp(Doctor::NOTIFY_BOOKING_CONFIRMATION) ?? false)
+                ? $booking->whatsappLink($waMessage)
+                : null,
+            'sms_url' => ($doctor?->wantsPushSms(Doctor::NOTIFY_BOOKING_CONFIRMATION) ?? false)
+                ? tenant_web_route('bookings.sms.confirmation', $booking)
+                : null,
             'ticket' => $ticketUrl,
+            'auto_sms' => $doctor?->wantsAutoSms(Doctor::NOTIFY_BOOKING_CONFIRMATION) ?? false,
         ];
 
         $this->form->fill([

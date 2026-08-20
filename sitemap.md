@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-20T15:26:12+0600
+Last Updated: 2026-08-20T15:42:18+0600
 
 ## Full Site Map
 
@@ -135,8 +135,12 @@ Available under both platform path (`/{slug}/api/…`) and custom domain (`/api/
 | `GET /api/screen/{session}` | Outdoor TV poll (always today) | public (throttled) |
 | `GET /api/screen/chamber/{chamber}` | Combined chamber TV poll (always today) | public (throttled) |
 | `GET /api/screen/{session}/{date}` | Screen poll for a specific date (legacy) | public (throttled) |
-| `POST /api/bookings/{booking}/sms/cancellation` | Staff-tapped cancellation SMS (prepaid; gated by doctor `cancellation` SMS pref) | auth, same tenant (ops/queue/visit-notes), throttled |
-| `POST /api/prescriptions/{prescription}/sms` | Staff-tapped prescription-link SMS (prepaid; gated by doctor `prescription` SMS pref) | auth, same tenant (ops/queue/visit-notes), throttled |
+| `POST /api/bookings/{booking}/sms/cancellation` | Staff-tapped cancellation SMS (prepaid; gated by doctor `cancellation` Push SMS) | auth, same tenant (ops/queue/visit-notes/desk), throttled |
+| `POST /api/bookings/{booking}/sms/confirmation` | Staff-tapped booking confirmation SMS (prepaid; gated by doctor booking Push SMS) | auth, same tenant (ops/queue/visit-notes/desk), throttled |
+| `POST /api/bookings/{booking}/sms/late` | Staff-tapped doctor-late SMS (prepaid; gated by doctor late Push SMS) | auth, same tenant (ops/queue/visit-notes/desk), throttled |
+| `POST /api/bookings/{booking}/sms/follow-up` | Staff-tapped follow-up reminder SMS (prepaid; gated by doctor follow-up Push SMS) | auth, same tenant (ops/queue/visit-notes/desk), throttled |
+| `POST /api/prescriptions/{prescription}/sms` | Staff-tapped prescription-link SMS (prepaid; gated by doctor after-visit Push SMS) | auth, same tenant (ops/queue/visit-notes/desk), throttled |
+| `POST /api/bookings/{booking}/sms/review` | Staff-tapped Google-review SMS when there is no ChamberQ Rx (prepaid; same after-visit Push SMS) | auth, same tenant (ops/queue/visit-notes/desk), throttled |
 
 ### Tenant doctor-only routes (auth)
 Available under both platform path and custom domain. Requires doctor role (`canViewVisitNotes`) **and** membership of the tenant being served (`User::belongsToCurrentTenant()`) — panels share one session cookie across every tenant on the host, so the role check alone is not authorisation here.
@@ -236,7 +240,7 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 
 ### Book a serial from the desk or call centre (chosen date)
 - **Trigger:** Someone phones (or a receptionist books for a relative) for a sitting that is **not** “already standing at the door today.”
-- **Steps:** Staff or owner → **Operations → Book serial** → pick **date** → pick **visit type** (Usual, Follow-up, Intervention if Stations is on, Lab if Stations or lab tests) → if Intervention and the fee list has procedures, pick **intervention type** (PRP, epidural, …) → if Lab, pick **lab type** (MSK, a named test, or collection window) → pick the matching **sitting** → name and phone → optional Different WhatsApp → Book. Confirmation modal (WhatsApp / Open ticket / Done). SMS uses the call number. Report / counseling stay on the floor handoff, not this page. **New Walk-In** on Daily Roster / Live Queue is the same visit types for people already at the chamber **today** (overflow stools; Live Queue is already on that sitting).
+- **Steps:** Staff or owner → **Operations → Book serial** → pick **date** → pick **visit type** (Usual, Follow-up, Intervention if Stations is on, Lab if Stations or lab tests) → if Intervention and the fee list has procedures, pick **intervention type** (PRP, epidural, …) → if Lab, pick **lab type** (MSK, a named test, or collection window) → pick the matching **sitting** → name and phone → optional Different WhatsApp → Book. Confirmation modal (Push WhatsApp / Push SMS when those are on / Open ticket / Done). Auto SMS still goes after the response when ticked. Report / counseling stay on the floor handoff, not this page. **New Walk-In** on Daily Roster / Live Queue is the same visit types for people already at the chamber **today** (overflow stools; Live Queue is already on that sitting).
 - **Data/systems touched:** `BookingService::createBookingForBookable` (`allowOverflow` false, `sendSms` true), `schedule_sessions`, `bookings` (optional `fee_catalog_item_id`), optional `SendBookingConfirmation`.
 - **Success:** The serial appears on Daily Roster when staff pick that date; the published cap is full when the website would also say full.
 
@@ -247,7 +251,7 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 
 ### Tell waiting patients the doctor is late
 - **Trigger:** Doctor will arrive late (call from traffic, emergency, etc.) and patients are already booked for today.
-- **Steps:** Queue runner → **Daily Roster** → **Mark Late** → pick session (auto-filled when only one) → pick delay (15–120 min) → confirm (shows SMS credit cost when late SMS is on). Or the same action under Live Queue Control → **Session actions** → **Mark Late** (no need to press Start). On a `delayed` sitting, **Add time** only accepts a **larger** total (30 → 60, not 15). If late WhatsApp is on, **Tell waiting patients** appears for tap-to-send `wa.me` links.
+- **Steps:** Queue runner → **Daily Roster** → **Mark Late** → pick session (auto-filled when only one) → pick delay (15–120 min) → confirm (shows SMS credit cost when late Auto SMS is on). Or the same action under Live Queue Control → **Session actions** → **Mark Late** (no need to press Start). Consult Screen Mark Late is the same for a doctor-run queue. On a `delayed` sitting, **Add time** only accepts a **larger** total (30 → 60, not 15). If late Push SMS or Push WhatsApp is on, **Tell waiting patients** appears for tap-to-send.
 - **Data/systems touched:** `live_sessions` (status `delayed`, `delay_minutes`), waiting/called/skipped `bookings`, optional `SendDoctorLateNotices` SMS, patient ticket delay banner.
 - **Success:** Patients see/hear the delay; session is marked delayed until Start clears it; SMS wallet only charged when late SMS is enabled.
 
@@ -308,9 +312,15 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 
 ### Follow-up reminders (staff — desk)
 - **Trigger:** A visit has a follow-up date set and the prescribing doctor has follow-up notifications enabled.
-- **Steps:** **SMS (automatic):** daily job texts patients **3 days before** the follow-up date when the doctor's follow-up SMS toggle is on (1 credit; empty wallet skips). **WhatsApp (confirm first):** when the doctor's follow-up WhatsApp toggle is on, staff (or the doctor if this practice has no staff login) get a panel notification → **Operations → Follow-up reminders** → tap **Confirm WhatsApp** per row to open the prepared message.
+- **Steps:** **Auto SMS:** daily job texts patients **3 days before** the follow-up date when the doctor's follow-up Auto SMS is on (1 credit; empty wallet skips). **Push WhatsApp / Push SMS:** when those are on, staff (or the doctor if this practice has no staff login) get a panel notification → **Operations → Follow-up reminders** → tap **Push WhatsApp** or **Push SMS** per row.
 - **Data/systems touched:** `visit_records.follow_up_date`, reminder timestamp columns, `SmsMessage` (`purpose=follow_up`), doctor `notify_channels.follow_up`.
-- **Success:** Patient is reminded before the follow-up; WhatsApp never sends without a human tap.
+- **Success:** Patient is reminded before the follow-up; WhatsApp never sends without a human tap. Push SMS also needs a tap unless Auto SMS is on.
+
+### Patient notifications (owner / doctor — settings)
+- **Trigger:** A clinic wants ChamberQ to text patients itself, or wants staff to tap SMS / WhatsApp, for booking, late, cancellation, after the visit, or follow-up.
+- **Steps:** **Settings → Doctors** → that doctor's **Patient notifications**. Each message type has three ticks: **Auto SMS** (ChamberQ sends from prepaid credit), **Push SMS** (staff tap Send SMS, still prepaid), **Push WhatsApp** (staff tap WhatsApp, free, never auto). A solo practice is one doctor, so this is that client's mix.
+- **Data/systems touched:** `doctors.notify_channels` (`auto_sms` / `push_sms` / `push_whatsapp` per stage).
+- **Success:** Staff only see Push buttons for what that doctor ticked; Auto SMS only fires when Auto is ticked.
 
 ### Repeating serials (staff — desk, per doctor)
 - **Trigger:** Admin has ticked **Staff may book repeating serials** on that doctor (off by default). A patient needs the same sitting for later weeks (physio course, dressings).

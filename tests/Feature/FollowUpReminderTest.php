@@ -270,13 +270,13 @@ class FollowUpReminderTest extends TestCase
         // single number, or a row the sender cannot make sense of.
         app()->instance(SmsService::class, new class(app(\App\Contracts\SmsGateway::class)) extends SmsService
         {
-            public function sendFollowUpReminder($booking, $visit, $doctor): ?SmsMessage
+            public function sendFollowUpReminder($booking, $visit, $doctor, bool $staffTap = false): ?SmsMessage
             {
                 if ($booking->patient_phone === '01712345900') {
                     throw new \RuntimeException('unroutable number');
                 }
 
-                return parent::sendFollowUpReminder($booking, $visit, $doctor);
+                return parent::sendFollowUpReminder($booking, $visit, $doctor, $staffTap);
             }
         });
 

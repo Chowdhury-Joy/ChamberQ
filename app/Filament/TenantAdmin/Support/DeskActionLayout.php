@@ -82,6 +82,10 @@ final class DeskActionLayout
 
     public const KEY_REVIEW_SMS = 'askReviewSms';
 
+    public const KEY_SERIAL_WHATSAPP = 'confirmSerialWhatsapp';
+
+    public const KEY_SERIAL_SMS = 'confirmSerialSms';
+
     public static function actionName(string $key, string $slot): string
     {
         return $slot === self::SLOT_MORE ? $key : $key.'Primary';

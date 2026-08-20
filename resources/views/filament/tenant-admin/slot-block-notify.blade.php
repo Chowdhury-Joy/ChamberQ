@@ -17,15 +17,18 @@
 
     $messages = $messages ?? [];
     $stage = $stage ?? Doctor::NOTIFY_CANCELLATION;
-    $smsRouteName = $stage === Doctor::NOTIFY_DOCTOR_LATE
-        ? null // delay SMS is automatic; this list is WhatsApp-only for late
-        : 'bookings.sms.cancellation';
+    $smsRouteName = match ($stage) {
+        Doctor::NOTIFY_DOCTOR_LATE => 'bookings.sms.late',
+        Doctor::NOTIFY_CANCELLATION => 'bookings.sms.cancellation',
+        default => null,
+    };
+    $delayMinutes = (int) ($delayMinutes ?? 0);
 @endphp
 <div class="space-y-3" x-data="{
     sending: {},
     done: {},
     error: {},
-    async sendSms(bookingId, url, message) {
+    async sendSms(bookingId, url, payload) {
         this.sending[bookingId] = true;
         this.error[bookingId] = null;
         try {
@@ -39,7 +42,7 @@
                         || '',
                     'X-Requested-With': 'XMLHttpRequest',
                 },
-                body: JSON.stringify(message ? { message } : {}),
+                body: JSON.stringify(payload || {}),
             });
             const data = await res.json().catch(() => ({}));
             if (! res.ok) {
@@ -71,8 +74,14 @@
             @php
                 $doctor = Doctor::resolveForBooking($booking);
                 $showWa = $doctor?->wantsWhatsapp($stage) ?? ($stage === Doctor::NOTIFY_CANCELLATION);
-                $showSms = $smsRouteName && ($doctor?->wantsSms($stage) ?? false);
+                $showSms = $smsRouteName && ($doctor?->wantsPushSms($stage) ?? false);
                 $waMessage = $messages[$booking->id] ?? null;
+                $smsUrl = $smsRouteName
+                    ? tenant_web_route($smsRouteName, $booking)
+                    : null;
+                $smsPayload = $stage === Doctor::NOTIFY_DOCTOR_LATE
+                    ? ['delay_minutes' => $delayMinutes]
+                    : ($waMessage ? ['message' => $waMessage] : []);
             @endphp
             <li class="flex flex-wrap items-center justify-between gap-3 py-2">
                 <div class="min-w-0">
@@ -109,8 +118,8 @@
                             x-bind:disabled="sending['{{ $booking->id }}'] || done['{{ $booking->id }}']"
                             x-on:click="sendSms(
                                 @js($booking->id),
-                                @js(tenant_web_route('bookings.sms.cancellation', $booking)),
-                                @js($waMessage)
+                                @js($smsUrl),
+                                @js($smsPayload)
                             )"
                         >
                             <span x-show="! done['{{ $booking->id }}']" x-text="sending['{{ $booking->id }}'] ? @js(__('Sending…')) : @js(__('Send SMS'))"></span>

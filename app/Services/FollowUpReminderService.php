@@ -29,6 +29,7 @@ class FollowUpReminderService
         $dayAfter = now()->addDays(self::DAYS_BEFORE + 1)->toDateString();
         $smsSent = 0;
         $whatsappQueued = 0;
+        $staffTapQueued = 0;
         $failed = 0;
 
         $visits = VisitRecord::query()
@@ -43,7 +44,7 @@ class FollowUpReminderService
             // that will not resolve — used to abort this whole loop and, from
             // the command above, every tenant left in the cursor.
             try {
-                if ($this->remindForVisit($visit, $smsSent, $whatsappQueued)) {
+                if ($this->remindForVisit($visit, $smsSent, $whatsappQueued, $staffTapQueued)) {
                     continue;
                 }
             } catch (Throwable $e) {
@@ -58,11 +59,12 @@ class FollowUpReminderService
             }
         }
 
-        if ($whatsappQueued > 0) {
+        $staffTaps = $whatsappQueued + $staffTapQueued;
+        if ($staffTaps > 0) {
             // Also isolated: the reminders themselves are already sent by this
             // point, so a failure to notify staff must not discard the counts.
             try {
-                $this->notifyWhatsappHandlers($whatsappQueued);
+                $this->notifyWhatsappHandlers($staffTaps);
             } catch (Throwable $e) {
                 Log::error('follow_up_reminder.staff_notify_failed', [
                     'tenant_id' => tenant('id'),
@@ -79,7 +81,7 @@ class FollowUpReminderService
      *
      * @return bool True when there was nothing to do for this visit.
      */
-    private function remindForVisit(VisitRecord $visit, int &$smsSent, int &$whatsappQueued): bool
+    private function remindForVisit(VisitRecord $visit, int &$smsSent, int &$whatsappQueued, int &$staffTapQueued): bool
     {
         $booking = $visit->booking;
 
@@ -93,7 +95,9 @@ class FollowUpReminderService
             return true;
         }
 
-        if ($doctor->wantsSms(Doctor::NOTIFY_FOLLOW_UP) && $visit->follow_up_reminder_sms_sent_at === null) {
+        $smsAlreadySent = $visit->follow_up_reminder_sms_sent_at !== null;
+
+        if ($doctor->wantsAutoSms(Doctor::NOTIFY_FOLLOW_UP) && ! $smsAlreadySent) {
             $sent = DB::transaction(function () use ($visit, $booking, $doctor): bool {
                 $locked = VisitRecord::query()->whereKey($visit->id)->lockForUpdate()->first();
 
@@ -114,6 +118,7 @@ class FollowUpReminderService
 
             if ($sent) {
                 $smsSent++;
+                $smsAlreadySent = true;
             }
         }
 
@@ -124,12 +129,70 @@ class FollowUpReminderService
             $whatsappQueued++;
         }
 
+        if ($doctor->wantsPushSms(Doctor::NOTIFY_FOLLOW_UP) && ! $smsAlreadySent) {
+            $staffTapQueued++;
+        }
+
         return false;
     }
 
     public function whatsappMessage(Booking $booking, VisitRecord $visit, Doctor $doctor): string
     {
         return $this->sms->followUpReminderBody($booking, $visit, $doctor);
+    }
+
+    /**
+     * Visit ids that still need a staff tap (Push SMS and/or Push WhatsApp).
+     *
+     * @return list<int>
+     */
+    public function pendingStaffTapVisitIds(): array
+    {
+        $from = now()->toDateString();
+        $until = now()->addDays(self::DAYS_BEFORE + 1)->toDateString();
+
+        $window = VisitRecord::query()
+            ->where('follow_up_date', '>=', $from)
+            ->where('follow_up_date', '<', $until)
+            ->with(['booking.bookable.doctor'])
+            ->get();
+
+        $queuedWhatsapp = VisitRecord::query()
+            ->whereNotNull('follow_up_reminder_whatsapp_queued_at')
+            ->whereNull('follow_up_reminder_whatsapp_sent_at')
+            ->where('follow_up_date', '>=', $from)
+            ->with(['booking.bookable.doctor'])
+            ->get();
+
+        $ids = [];
+
+        foreach ($window->concat($queuedWhatsapp)->unique('id') as $visit) {
+            if (! $visit instanceof VisitRecord) {
+                continue;
+            }
+
+            $booking = $visit->booking;
+            if (! $booking instanceof Booking || blank($booking->patient_phone)) {
+                continue;
+            }
+
+            $doctor = Doctor::resolveForBooking($booking);
+            if (! $doctor) {
+                continue;
+            }
+
+            $needsWhatsapp = $doctor->wantsWhatsapp(Doctor::NOTIFY_FOLLOW_UP)
+                && $visit->follow_up_reminder_whatsapp_sent_at === null;
+
+            $needsSms = $doctor->wantsPushSms(Doctor::NOTIFY_FOLLOW_UP)
+                && $visit->follow_up_reminder_sms_sent_at === null;
+
+            if ($needsWhatsapp || $needsSms) {
+                $ids[] = (int) $visit->id;
+            }
+        }
+
+        return $ids;
     }
 
     private function notifyWhatsappHandlers(int $count): void
@@ -149,9 +212,9 @@ class FollowUpReminderService
         }
 
         Notification::make()
-            ->title(__('Follow-up WhatsApp reminders ready'))
+            ->title(__('Follow-up reminders ready'))
             ->body(trans_choice(
-                '{1} patient needs a follow-up WhatsApp reminder. Open Operations → Follow-up reminders.|[2,*] :count patients need follow-up WhatsApp reminders. Open Operations → Follow-up reminders.',
+                '{1} patient needs a follow-up reminder. Open Operations → Follow-up reminders.|[2,*] :count patients need follow-up reminders. Open Operations → Follow-up reminders.',
                 $count,
                 ['count' => $count],
             ))

@@ -16,7 +16,7 @@
 
     $doctor = $booking ? Doctor::resolveForBooking($booking) : null;
     $showWa = $doctor?->wantsWhatsapp(Doctor::NOTIFY_PRESCRIPTION) ?? true;
-    $showSms = $doctor?->wantsSms(Doctor::NOTIFY_PRESCRIPTION) ?? false;
+    $showSms = $doctor?->wantsPushSms(Doctor::NOTIFY_PRESCRIPTION) ?? false;
     $reviewUrl = $booking ? VisitShareCopy::reviewUrl($booking) : null;
     $hasShare = $prescription || $reviewUrl;
     $smsUrl = $prescription

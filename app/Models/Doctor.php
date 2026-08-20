@@ -95,20 +95,130 @@ class Doctor extends Model
 
     public const NOTIFY_FOLLOW_UP = 'follow_up';
 
+    public const CHANNEL_AUTO_SMS = 'auto_sms';
+
+    public const CHANNEL_PUSH_SMS = 'push_sms';
+
+    public const CHANNEL_PUSH_WHATSAPP = 'push_whatsapp';
+
+    /**
+     * Stages where the old `sms` toggle meant ChamberQ sent the text itself.
+     *
+     * @var list<string>
+     */
+    private const LEGACY_AUTO_SMS_STAGES = [
+        self::NOTIFY_BOOKING_CONFIRMATION,
+        self::NOTIFY_DOCTOR_LATE,
+        self::NOTIFY_CANCELLATION,
+        self::NOTIFY_FOLLOW_UP,
+    ];
+
+    /**
+     * Stages where the old `sms` toggle meant staff tapped Send SMS.
+     * Cancellation is in both lists: end-session auto-sent, vacation was a tap.
+     *
+     * @var list<string>
+     */
+    private const LEGACY_PUSH_SMS_STAGES = [
+        self::NOTIFY_CANCELLATION,
+        self::NOTIFY_PRESCRIPTION,
+    ];
+
     /**
      * Defaults match today's product behaviour so existing clinics keep the
      * same outbound mix until a doctor edits them.
      *
-     * @return array<string, array{sms: bool, whatsapp: bool}>
+     * @return array<string, array{auto_sms: bool, push_sms: bool, push_whatsapp: bool}>
      */
     public static function defaultNotifyChannels(): array
     {
         return [
-            self::NOTIFY_BOOKING_CONFIRMATION => ['sms' => true, 'whatsapp' => false],
-            self::NOTIFY_DOCTOR_LATE => ['sms' => false, 'whatsapp' => false],
-            self::NOTIFY_CANCELLATION => ['sms' => false, 'whatsapp' => true],
-            self::NOTIFY_PRESCRIPTION => ['sms' => false, 'whatsapp' => true],
-            self::NOTIFY_FOLLOW_UP => ['sms' => true, 'whatsapp' => false],
+            self::NOTIFY_BOOKING_CONFIRMATION => [
+                self::CHANNEL_AUTO_SMS => true,
+                self::CHANNEL_PUSH_SMS => false,
+                self::CHANNEL_PUSH_WHATSAPP => false,
+            ],
+            self::NOTIFY_DOCTOR_LATE => [
+                self::CHANNEL_AUTO_SMS => false,
+                self::CHANNEL_PUSH_SMS => false,
+                self::CHANNEL_PUSH_WHATSAPP => false,
+            ],
+            self::NOTIFY_CANCELLATION => [
+                self::CHANNEL_AUTO_SMS => false,
+                self::CHANNEL_PUSH_SMS => false,
+                self::CHANNEL_PUSH_WHATSAPP => true,
+            ],
+            self::NOTIFY_PRESCRIPTION => [
+                self::CHANNEL_AUTO_SMS => false,
+                self::CHANNEL_PUSH_SMS => false,
+                self::CHANNEL_PUSH_WHATSAPP => true,
+            ],
+            self::NOTIFY_FOLLOW_UP => [
+                self::CHANNEL_AUTO_SMS => true,
+                self::CHANNEL_PUSH_SMS => false,
+                self::CHANNEL_PUSH_WHATSAPP => false,
+            ],
+        ];
+    }
+
+    /**
+     * Labels for the three delivery choices every stage offers.
+     *
+     * @return array<string, string>
+     */
+    public static function notifyDeliveryOptions(): array
+    {
+        return [
+            self::CHANNEL_AUTO_SMS => __('Auto SMS'),
+            self::CHANNEL_PUSH_SMS => __('Push SMS'),
+            self::CHANNEL_PUSH_WHATSAPP => __('Push WhatsApp'),
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>|list<string>|null  $state
+     * @return list<string>
+     */
+    public static function selectedNotifyDeliveries(mixed $state): array
+    {
+        if (! is_array($state)) {
+            return [];
+        }
+
+        if (array_is_list($state)) {
+            return array_values(array_filter(
+                $state,
+                fn (mixed $key): bool => in_array($key, [
+                    self::CHANNEL_AUTO_SMS,
+                    self::CHANNEL_PUSH_SMS,
+                    self::CHANNEL_PUSH_WHATSAPP,
+                ], true),
+            ));
+        }
+
+        $selected = [];
+
+        foreach ([self::CHANNEL_AUTO_SMS, self::CHANNEL_PUSH_SMS, self::CHANNEL_PUSH_WHATSAPP] as $key) {
+            if (! empty($state[$key])) {
+                $selected[] = $key;
+            }
+        }
+
+        return $selected;
+    }
+
+    /**
+     * @param  list<string>|array<string, mixed>|null  $state
+     * @return array{auto_sms: bool, push_sms: bool, push_whatsapp: bool}
+     */
+    public static function notifyDeliveriesFromSelection(mixed $state): array
+    {
+        $keys = is_array($state) ? $state : [];
+
+        return [
+            self::CHANNEL_AUTO_SMS => in_array(self::CHANNEL_AUTO_SMS, $keys, true),
+            self::CHANNEL_PUSH_SMS => in_array(self::CHANNEL_PUSH_SMS, $keys, true),
+            self::CHANNEL_PUSH_WHATSAPP => in_array(self::CHANNEL_PUSH_WHATSAPP, $keys, true),
         ];
     }
 
@@ -242,7 +352,7 @@ class Doctor extends Model
     }
 
     /**
-     * @return array<string, array{sms: bool, whatsapp: bool}>
+     * @return array<string, array{auto_sms: bool, push_sms: bool, push_whatsapp: bool}>
      */
     public function notifyChannels(): array
     {
@@ -251,24 +361,79 @@ class Doctor extends Model
         $merged = [];
 
         foreach ($defaults as $stage => $channels) {
-            $row = $stored[$stage] ?? [];
+            $row = is_array($stored[$stage] ?? null) ? $stored[$stage] : [];
             $merged[$stage] = [
-                'sms' => array_key_exists('sms', $row) ? (bool) $row['sms'] : $channels['sms'],
-                'whatsapp' => array_key_exists('whatsapp', $row) ? (bool) $row['whatsapp'] : $channels['whatsapp'],
+                self::CHANNEL_AUTO_SMS => self::channelFromRow(
+                    $row,
+                    self::CHANNEL_AUTO_SMS,
+                    'sms',
+                    $channels[self::CHANNEL_AUTO_SMS],
+                    in_array($stage, self::LEGACY_AUTO_SMS_STAGES, true),
+                ),
+                self::CHANNEL_PUSH_SMS => self::channelFromRow(
+                    $row,
+                    self::CHANNEL_PUSH_SMS,
+                    'sms',
+                    $channels[self::CHANNEL_PUSH_SMS],
+                    in_array($stage, self::LEGACY_PUSH_SMS_STAGES, true),
+                ),
+                self::CHANNEL_PUSH_WHATSAPP => self::channelFromRow(
+                    $row,
+                    self::CHANNEL_PUSH_WHATSAPP,
+                    'whatsapp',
+                    $channels[self::CHANNEL_PUSH_WHATSAPP],
+                    true,
+                ),
             ];
         }
 
         return $merged;
     }
 
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private static function channelFromRow(
+        array $row,
+        string $newKey,
+        string $legacyKey,
+        bool $default,
+        bool $legacyMapsToThisChannel,
+    ): bool {
+        if (array_key_exists($legacyKey, $row)) {
+            return (bool) $row[$legacyKey] && $legacyMapsToThisChannel;
+        }
+
+        if (array_key_exists($newKey, $row)) {
+            return (bool) $row[$newKey];
+        }
+
+        return $default;
+    }
+
+    public function wantsAutoSms(string $stage): bool
+    {
+        return (bool) ($this->notifyChannels()[$stage][self::CHANNEL_AUTO_SMS] ?? false);
+    }
+
+    public function wantsPushSms(string $stage): bool
+    {
+        return (bool) ($this->notifyChannels()[$stage][self::CHANNEL_PUSH_SMS] ?? false);
+    }
+
     public function wantsSms(string $stage): bool
     {
-        return (bool) ($this->notifyChannels()[$stage]['sms'] ?? false);
+        return $this->wantsAutoSms($stage) || $this->wantsPushSms($stage);
     }
 
     public function wantsWhatsapp(string $stage): bool
     {
-        return (bool) ($this->notifyChannels()[$stage]['whatsapp'] ?? false);
+        return (bool) ($this->notifyChannels()[$stage][self::CHANNEL_PUSH_WHATSAPP] ?? false);
+    }
+
+    public function wantsStaffTap(string $stage): bool
+    {
+        return $this->wantsPushSms($stage) || $this->wantsWhatsapp($stage);
     }
 
     /**

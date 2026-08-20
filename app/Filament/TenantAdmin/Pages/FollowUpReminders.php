@@ -4,11 +4,14 @@ namespace App\Filament\TenantAdmin\Pages;
 
 use App\Models\Booking;
 use App\Models\Doctor;
+use App\Models\SmsMessage;
 use App\Models\User;
 use App\Models\VisitRecord;
 use App\Support\StaffDeskScope;
 use App\Services\FollowUpReminderService;
+use App\Services\SmsService;
 use Filament\Actions\Action;
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Concerns\InteractsWithTable;
@@ -44,10 +47,10 @@ class FollowUpReminders extends Page implements HasTable
     {
         $user = auth()->user();
 
+        $ids = app(FollowUpReminderService::class)->pendingStaffTapVisitIds();
+
         $query = VisitRecord::query()
-            ->whereNotNull('follow_up_reminder_whatsapp_queued_at')
-            ->whereNull('follow_up_reminder_whatsapp_sent_at')
-            ->where('follow_up_date', '>=', now()->toDateString())
+            ->whereIn('id', $ids === [] ? [0] : $ids)
             ->with(['booking'])
             ->orderBy('follow_up_date');
 
@@ -72,7 +75,7 @@ class FollowUpReminders extends Page implements HasTable
             ])
             ->recordActions([
                 Action::make('whatsapp')
-                    ->label(__('Confirm WhatsApp'))
+                    ->label(__('Push WhatsApp'))
                     ->icon('heroicon-o-chat-bubble-left-right')
                     ->action(function (VisitRecord $record): void {
                         $booking = $record->booking;
@@ -83,7 +86,7 @@ class FollowUpReminders extends Page implements HasTable
 
                         $doctor = Doctor::resolveForBooking($booking);
 
-                        if (! $doctor) {
+                        if (! $doctor?->wantsWhatsapp(Doctor::NOTIFY_FOLLOW_UP)) {
                             return;
                         }
 
@@ -95,9 +98,63 @@ class FollowUpReminders extends Page implements HasTable
 
                         $this->js('window.open('.json_encode($url).', "_blank")');
                     })
-                    ->visible(fn (VisitRecord $record): bool => filled($record->booking?->patient_phone)),
+                    ->visible(function (VisitRecord $record): bool {
+                        $booking = $record->booking;
+                        if (! $booking instanceof Booking || blank($booking->patient_phone)) {
+                            return false;
+                        }
+
+                        return Doctor::resolveForBooking($booking)?->wantsWhatsapp(Doctor::NOTIFY_FOLLOW_UP) ?? false;
+                    }),
+                Action::make('sms')
+                    ->label(__('Push SMS'))
+                    ->icon('heroicon-o-device-phone-mobile')
+                    ->color('warning')
+                    ->action(function (VisitRecord $record): void {
+                        $booking = $record->booking;
+                        $doctor = $booking instanceof Booking ? Doctor::resolveForBooking($booking) : null;
+
+                        if (! $booking instanceof Booking || ! $doctor) {
+                            return;
+                        }
+
+                        $message = app(SmsService::class)->sendFollowUpReminder(
+                            $booking,
+                            $record,
+                            $doctor,
+                            staffTap: true,
+                        );
+
+                        if ($message?->status === SmsMessage::STATUS_SENT) {
+                            $record->forceFill(['follow_up_reminder_sms_sent_at' => now()])->save();
+                            Notification::make()->title(__('Follow-up SMS sent'))->success()->send();
+
+                            return;
+                        }
+
+                        $error = match ($message?->status) {
+                            SmsMessage::STATUS_SKIPPED_NO_BALANCE => __('No SMS credits left'),
+                            SmsMessage::STATUS_SKIPPED_PREF_OFF => __('SMS is off for this doctor'),
+                            SmsMessage::STATUS_SKIPPED_DISABLED => __('SMS is disabled'),
+                            default => __('Could not send SMS'),
+                        };
+
+                        Notification::make()->title($error)->danger()->send();
+                    })
+                    ->visible(function (VisitRecord $record): bool {
+                        if ($record->follow_up_reminder_sms_sent_at !== null) {
+                            return false;
+                        }
+
+                        $booking = $record->booking;
+                        if (! $booking instanceof Booking || blank($booking->patient_phone)) {
+                            return false;
+                        }
+
+                        return Doctor::resolveForBooking($booking)?->wantsPushSms(Doctor::NOTIFY_FOLLOW_UP) ?? false;
+                    }),
             ])
-            ->emptyStateHeading(__('No follow-up WhatsApp reminders waiting'))
-            ->emptyStateDescription(__('When a doctor turns on follow-up WhatsApp, patients appear here 3 days before their follow-up date for staff to confirm.'));
+            ->emptyStateHeading(__('No follow-up reminders waiting'))
+            ->emptyStateDescription(__('When a doctor turns on follow-up Push WhatsApp or Push SMS, patients appear here 3 days before their follow-up date for staff to confirm.'));
     }
 }

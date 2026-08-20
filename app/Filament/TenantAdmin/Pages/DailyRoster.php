@@ -296,7 +296,7 @@ class DailyRoster extends Page implements HasTable, HasForms
 
                         $this->delayedNotifyMinutes = (int) $data['delay_minutes'];
                         $doctor = $scheduleSession->doctor;
-                        $this->delayedNotifyBookingIds = ($doctor?->wantsWhatsapp(Doctor::NOTIFY_DOCTOR_LATE) ?? false)
+                        $this->delayedNotifyBookingIds = ($doctor?->wantsStaffTap(Doctor::NOTIFY_DOCTOR_LATE) ?? false)
                             ? $bookings->pluck('id')->all()
                             : [];
 
@@ -336,6 +336,7 @@ class DailyRoster extends Page implements HasTable, HasForms
                             return view('filament.tenant-admin.slot-block-notify', [
                                 'bookings' => $bookings,
                                 'stage' => Doctor::NOTIFY_DOCTOR_LATE,
+                                'delayMinutes' => $minutes,
                                 'messages' => $bookings->mapWithKeys(fn (Booking $booking) => [
                                     $booking->id => __('Hello :name, the doctor is running :minutes minutes late. Your serial is :serial.', [
                                         'name' => $booking->patient_name,
@@ -461,7 +462,7 @@ class DailyRoster extends Page implements HasTable, HasForms
         $session = ScheduleSession::with('doctor')->find($scheduleSessionId);
         $doctor = $session?->doctor;
 
-        if (! $doctor?->wantsSms(Doctor::NOTIFY_DOCTOR_LATE)) {
+        if (! $doctor?->wantsAutoSms(Doctor::NOTIFY_DOCTOR_LATE)) {
             return null;
         }
 

@@ -142,6 +142,18 @@ $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
         ->middleware(['auth', 'throttle:30,1', 'tenant.module:front_door'])
         ->name($routeName('bookings.sms.cancellation'));
 
+    Route::post('/api/bookings/{booking}/sms/confirmation', [NotifySmsController::class, 'confirmation'])
+        ->middleware(['auth', 'throttle:30,1', 'tenant.module:front_door'])
+        ->name($routeName('bookings.sms.confirmation'));
+
+    Route::post('/api/bookings/{booking}/sms/late', [NotifySmsController::class, 'doctorLate'])
+        ->middleware(['auth', 'throttle:30,1', 'tenant.module:live_queue'])
+        ->name($routeName('bookings.sms.late'));
+
+    Route::post('/api/bookings/{booking}/sms/follow-up', [NotifySmsController::class, 'followUp'])
+        ->middleware(['auth', 'throttle:30,1', 'tenant.module:prescription'])
+        ->name($routeName('bookings.sms.follow-up'));
+
     Route::post('/api/prescriptions/{prescription}/sms', [NotifySmsController::class, 'prescription'])
         ->middleware(['auth', 'throttle:30,1', 'tenant.module:prescription'])
         ->name($routeName('prescriptions.sms'));

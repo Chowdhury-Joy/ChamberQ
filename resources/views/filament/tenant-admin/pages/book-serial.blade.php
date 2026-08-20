@@ -108,7 +108,47 @@
 
                 @include('filament.tenant-admin.pages.book-serial-confirmed', ['lastBooked' => $lastBooked])
 
-                <div class="book-serial-dialog__actions">
+                <div class="book-serial-dialog__actions" x-data="{
+                    sending: false,
+                    done: false,
+                    error: null,
+                    async sendSms() {
+                        this.sending = true;
+                        this.error = null;
+                        try {
+                            const res = await fetch(@js($lastBooked['sms_url'] ?? ''), {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Accept': 'application/json',
+                                    'X-CSRF-TOKEN': document.querySelector('meta[name=csrf-token]')?.content
+                                        || document.querySelector('input[name=_token]')?.value
+                                        || '',
+                                    'X-Requested-With': 'XMLHttpRequest',
+                                },
+                                body: '{}',
+                            });
+                            const data = await res.json().catch(() => ({}));
+                            if (! res.ok) {
+                                this.error = data.message || @js(__('Could not send SMS'));
+                            } else if (data.status === 'sent') {
+                                this.done = true;
+                            } else if (data.status === 'skipped_no_balance') {
+                                this.error = @js(__('No SMS credits left'));
+                            } else if (data.status === 'skipped_pref_off') {
+                                this.error = @js(__('SMS is off for this doctor'));
+                            } else if (data.status === 'skipped_disabled') {
+                                this.error = @js(__('SMS is disabled'));
+                            } else {
+                                this.error = data.status || @js(__('Could not send SMS'));
+                            }
+                        } catch (e) {
+                            this.error = @js(__('Could not send SMS'));
+                        } finally {
+                            this.sending = false;
+                        }
+                    }
+                }">
                     <x-filament::button color="gray" wire:click="closeBookedSerialModal">
                         {{ __('Done') }}
                     </x-filament::button>
@@ -119,9 +159,27 @@
                             target="_blank"
                             rel="noopener noreferrer"
                         >
-                            {{ __('WhatsApp') }}
+                            {{ __('Push WhatsApp') }}
                         </x-filament::button>
                     @endif
+                    @if (filled($lastBooked['sms_url'] ?? null))
+                        <x-filament::button
+                            type="button"
+                            color="warning"
+                            x-on:click="sendSms()"
+                            x-bind:disabled="sending || done"
+                        >
+                            <span x-show="! done" x-text="sending ? @js(__('Sending…')) : @js(__('Push SMS'))"></span>
+                            <span x-show="done" x-cloak>{{ __('Sent') }}</span>
+                        </x-filament::button>
+                    @endif
+                    <p
+                        class="basis-full text-xs text-danger-600 dark:text-danger-400"
+                        style="flex-basis: 100%;"
+                        x-show="error"
+                        x-text="error"
+                        x-cloak
+                    ></p>
                     @if (filled($lastBooked['ticket'] ?? null))
                         <x-filament::button
                             tag="a"

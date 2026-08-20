@@ -412,16 +412,99 @@ class NotifyChannelsTest extends TestCase
     {
         $defaults = Doctor::defaultNotifyChannels();
 
-        $this->assertTrue($defaults[Doctor::NOTIFY_BOOKING_CONFIRMATION]['sms']);
-        $this->assertFalse($defaults[Doctor::NOTIFY_BOOKING_CONFIRMATION]['whatsapp']);
-        $this->assertFalse($defaults[Doctor::NOTIFY_DOCTOR_LATE]['sms']);
-        $this->assertFalse($defaults[Doctor::NOTIFY_DOCTOR_LATE]['whatsapp']);
-        $this->assertFalse($defaults[Doctor::NOTIFY_CANCELLATION]['sms']);
-        $this->assertTrue($defaults[Doctor::NOTIFY_CANCELLATION]['whatsapp']);
-        $this->assertFalse($defaults[Doctor::NOTIFY_PRESCRIPTION]['sms']);
-        $this->assertTrue($defaults[Doctor::NOTIFY_PRESCRIPTION]['whatsapp']);
-        $this->assertTrue($defaults[Doctor::NOTIFY_FOLLOW_UP]['sms']);
-        $this->assertFalse($defaults[Doctor::NOTIFY_FOLLOW_UP]['whatsapp']);
+        $this->assertTrue($defaults[Doctor::NOTIFY_BOOKING_CONFIRMATION][Doctor::CHANNEL_AUTO_SMS]);
+        $this->assertFalse($defaults[Doctor::NOTIFY_BOOKING_CONFIRMATION][Doctor::CHANNEL_PUSH_SMS]);
+        $this->assertFalse($defaults[Doctor::NOTIFY_BOOKING_CONFIRMATION][Doctor::CHANNEL_PUSH_WHATSAPP]);
+        $this->assertFalse($defaults[Doctor::NOTIFY_DOCTOR_LATE][Doctor::CHANNEL_AUTO_SMS]);
+        $this->assertFalse($defaults[Doctor::NOTIFY_DOCTOR_LATE][Doctor::CHANNEL_PUSH_SMS]);
+        $this->assertFalse($defaults[Doctor::NOTIFY_DOCTOR_LATE][Doctor::CHANNEL_PUSH_WHATSAPP]);
+        $this->assertFalse($defaults[Doctor::NOTIFY_CANCELLATION][Doctor::CHANNEL_AUTO_SMS]);
+        $this->assertFalse($defaults[Doctor::NOTIFY_CANCELLATION][Doctor::CHANNEL_PUSH_SMS]);
+        $this->assertTrue($defaults[Doctor::NOTIFY_CANCELLATION][Doctor::CHANNEL_PUSH_WHATSAPP]);
+        $this->assertFalse($defaults[Doctor::NOTIFY_PRESCRIPTION][Doctor::CHANNEL_AUTO_SMS]);
+        $this->assertFalse($defaults[Doctor::NOTIFY_PRESCRIPTION][Doctor::CHANNEL_PUSH_SMS]);
+        $this->assertTrue($defaults[Doctor::NOTIFY_PRESCRIPTION][Doctor::CHANNEL_PUSH_WHATSAPP]);
+        $this->assertTrue($defaults[Doctor::NOTIFY_FOLLOW_UP][Doctor::CHANNEL_AUTO_SMS]);
+        $this->assertFalse($defaults[Doctor::NOTIFY_FOLLOW_UP][Doctor::CHANNEL_PUSH_SMS]);
+        $this->assertFalse($defaults[Doctor::NOTIFY_FOLLOW_UP][Doctor::CHANNEL_PUSH_WHATSAPP]);
+    }
+
+    public function test_legacy_sms_flag_still_means_auto_for_booking(): void
+    {
+        tenancy()->initialize($this->tenant);
+        $doctor = Doctor::create([
+            'name' => 'Dr Legacy',
+            'notify_channels' => [
+                Doctor::NOTIFY_BOOKING_CONFIRMATION => ['sms' => true, 'whatsapp' => false],
+            ],
+        ]);
+
+        $this->assertTrue($doctor->wantsAutoSms(Doctor::NOTIFY_BOOKING_CONFIRMATION));
+        $this->assertFalse($doctor->wantsPushSms(Doctor::NOTIFY_BOOKING_CONFIRMATION));
+        $this->assertTrue($doctor->wantsSms(Doctor::NOTIFY_BOOKING_CONFIRMATION));
+        tenancy()->end();
+    }
+
+    public function test_push_sms_does_not_auto_send_booking_confirmation(): void
+    {
+        tenancy()->initialize($this->tenant);
+        $this->doctor->update([
+            'notify_channels' => array_replace_recursive(
+                Doctor::defaultNotifyChannels(),
+                [Doctor::NOTIFY_BOOKING_CONFIRMATION => [
+                    Doctor::CHANNEL_AUTO_SMS => false,
+                    Doctor::CHANNEL_PUSH_SMS => true,
+                    Doctor::CHANNEL_PUSH_WHATSAPP => false,
+                ]],
+            ),
+        ]);
+        tenancy()->end();
+
+        $this->postJson('http://notify-clinic.localhost/api/bookings', [
+            'bookable_type' => 'session',
+            'bookable_id' => $this->session->id,
+            'booking_date' => $this->monday,
+            'patient_name' => 'Push Only',
+            'patient_phone' => '01712345690',
+        ])->assertOk();
+
+        $this->assertSame(10, $this->tenant->fresh()->sms_balance);
+        $message = SmsMessage::withoutGlobalScopes()
+            ->where('purpose', SmsMessage::PURPOSE_BOOKING_CONFIRMATION)
+            ->first();
+        $this->assertSame(SmsMessage::STATUS_SKIPPED_PREF_OFF, $message?->status);
+        $this->assertSame(0, $message?->credits);
+    }
+
+    public function test_staff_can_send_booking_sms_when_push_on(): void
+    {
+        tenancy()->initialize($this->tenant);
+        $this->doctor->update([
+            'notify_channels' => array_replace_recursive(
+                Doctor::defaultNotifyChannels(),
+                [Doctor::NOTIFY_BOOKING_CONFIRMATION => [
+                    Doctor::CHANNEL_AUTO_SMS => false,
+                    Doctor::CHANNEL_PUSH_SMS => true,
+                    Doctor::CHANNEL_PUSH_WHATSAPP => false,
+                ]],
+            ),
+        ]);
+
+        $booking = app(BookingService::class)->createBookingForBookable(
+            $this->session,
+            $this->monday,
+            'Push Fatima',
+            '01712345691',
+            sendSms: false,
+        );
+        tenancy()->end();
+
+        $this->actingAs($this->staff)
+            ->postJson('http://notify-clinic.localhost/api/bookings/'.$booking->id.'/sms/confirmation')
+            ->assertOk()
+            ->assertJsonPath('status', SmsMessage::STATUS_SENT);
+
+        $this->assertSame(9, $this->tenant->fresh()->sms_balance);
     }
 
     public function test_null_notify_channels_merges_defaults(): void

@@ -597,7 +597,7 @@ class LiveSessionService
 
         $doctor = $liveSession->scheduleSession?->doctor;
 
-        if ($doctor?->wantsSms(Doctor::NOTIFY_DOCTOR_LATE) && $bookings->isNotEmpty()) {
+        if ($doctor?->wantsAutoSms(Doctor::NOTIFY_DOCTOR_LATE) && $bookings->isNotEmpty()) {
             // Handed off rather than looped here: each send waits up to ten
             // seconds on the gateway, so thirty waiting patients could hold the
             // queue screen for minutes at the exact moment staff need it to
@@ -687,7 +687,7 @@ class LiveSessionService
         $liveSession->loadMissing('scheduleSession.doctor');
         $doctor = $liveSession->scheduleSession?->doctor;
 
-        if (! $doctor?->wantsSms(Doctor::NOTIFY_CANCELLATION)) {
+        if (! $doctor?->wantsAutoSms(Doctor::NOTIFY_CANCELLATION)) {
             return;
         }
 

@@ -29,18 +29,24 @@ class SmsService
      *
      * Booking always stays created — empty wallet, prefs off, or gateway
      * failure only affects the SMS row (and refunds the credit on hard send failure).
+     *
+     * Auto (staffTap false) requires Auto SMS. A staff tap requires Push SMS.
      */
-    public function sendBookingConfirmation(Booking $booking): ?SmsMessage
+    public function sendBookingConfirmation(Booking $booking, bool $staffTap = false): ?SmsMessage
     {
         $doctor = Doctor::resolveForBooking($booking);
 
-        if ($doctor && ! $doctor->wantsSms(Doctor::NOTIFY_BOOKING_CONFIRMATION)) {
+        if (! $this->smsPrefAllows($doctor, Doctor::NOTIFY_BOOKING_CONFIRMATION, $staffTap)) {
             return $this->record(
                 $booking,
                 SmsMessage::STATUS_SKIPPED_PREF_OFF,
                 body: $this->confirmationBody($booking),
                 purpose: SmsMessage::PURPOSE_BOOKING_CONFIRMATION,
             );
+        }
+
+        if ($already = $this->alreadySent($booking, SmsMessage::PURPOSE_BOOKING_CONFIRMATION)) {
+            return $already;
         }
 
         return $this->send(
@@ -56,17 +62,21 @@ class SmsService
      *
      * @return Collection<int, SmsMessage>
      */
-    public function sendDoctorLateNotices(Booking $booking, int $delayMinutes): ?SmsMessage
+    public function sendDoctorLateNotices(Booking $booking, int $delayMinutes, bool $staffTap = false): ?SmsMessage
     {
         $doctor = Doctor::resolveForBooking($booking);
 
-        if ($doctor && ! $doctor->wantsSms(Doctor::NOTIFY_DOCTOR_LATE)) {
+        if (! $this->smsPrefAllows($doctor, Doctor::NOTIFY_DOCTOR_LATE, $staffTap)) {
             return $this->record(
                 $booking,
                 SmsMessage::STATUS_SKIPPED_PREF_OFF,
                 body: $this->doctorLateBody($booking, $delayMinutes),
                 purpose: SmsMessage::PURPOSE_DOCTOR_LATE,
             );
+        }
+
+        if ($already = $this->alreadySent($booking, SmsMessage::PURPOSE_DOCTOR_LATE)) {
+            return $already;
         }
 
         return $this->send(
@@ -79,13 +89,13 @@ class SmsService
 
     /**
      * Prepaid cancellation SMS (auto after end-session when that doctor's
-     * Cancellation SMS is on; also staff-tapped for vacation blocks).
+     * Cancellation Auto SMS is on; also staff-tapped for vacation blocks).
      */
-    public function sendCancellationNotice(Booking $booking, ?string $body = null): ?SmsMessage
+    public function sendCancellationNotice(Booking $booking, ?string $body = null, bool $staffTap = false): ?SmsMessage
     {
         $doctor = Doctor::resolveForBooking($booking);
 
-        if ($doctor && ! $doctor->wantsSms(Doctor::NOTIFY_CANCELLATION)) {
+        if (! $this->smsPrefAllows($doctor, Doctor::NOTIFY_CANCELLATION, $staffTap)) {
             return $this->record(
                 $booking,
                 SmsMessage::STATUS_SKIPPED_PREF_OFF,
@@ -94,15 +104,8 @@ class SmsService
             );
         }
 
-        $alreadySent = SmsMessage::query()
-            ->where('booking_id', $booking->id)
-            ->where('purpose', SmsMessage::PURPOSE_CANCELLATION)
-            ->where('status', SmsMessage::STATUS_SENT)
-            ->latest('id')
-            ->first();
-
-        if ($alreadySent) {
-            return $alreadySent;
+        if ($already = $this->alreadySent($booking, SmsMessage::PURPOSE_CANCELLATION)) {
+            return $already;
         }
 
         return $this->send(
@@ -114,20 +117,24 @@ class SmsService
     }
 
     /**
-     * Staff-tapped prescription share SMS (48h signed link in the body).
+     * After-visit prescription share SMS (48h signed link in the body).
      */
-    public function sendPrescriptionNotice(Booking $booking, Prescription $prescription): ?SmsMessage
+    public function sendPrescriptionNotice(Booking $booking, Prescription $prescription, bool $staffTap = false): ?SmsMessage
     {
         $doctor = Doctor::resolveForBooking($booking);
         $body = $this->prescriptionBody($booking, $prescription);
 
-        if ($doctor && ! $doctor->wantsSms(Doctor::NOTIFY_PRESCRIPTION)) {
+        if (! $this->smsPrefAllows($doctor, Doctor::NOTIFY_PRESCRIPTION, $staffTap)) {
             return $this->record(
                 $booking,
                 SmsMessage::STATUS_SKIPPED_PREF_OFF,
                 body: $body,
                 purpose: SmsMessage::PURPOSE_PRESCRIPTION,
             );
+        }
+
+        if ($already = $this->alreadySent($booking, SmsMessage::PURPOSE_PRESCRIPTION)) {
+            return $already;
         }
 
         return $this->send(
@@ -139,10 +146,10 @@ class SmsService
     }
 
     /**
-     * Staff-tapped after-visit SMS when there is no ChamberQ prescription
-     * (paper pad) — Google review link only. Same notify toggle as prescription.
+     * After-visit SMS when there is no ChamberQ prescription (paper pad) —
+     * Google review link only. Same notify stage as prescription.
      */
-    public function sendReviewNotice(Booking $booking): ?SmsMessage
+    public function sendReviewNotice(Booking $booking, bool $staffTap = false): ?SmsMessage
     {
         $reviewUrl = Chamber::reviewUrlForBooking($booking);
         if ($reviewUrl === null) {
@@ -152,13 +159,17 @@ class SmsService
         $doctor = Doctor::resolveForBooking($booking);
         $body = $this->reviewBody($booking, $reviewUrl);
 
-        if ($doctor && ! $doctor->wantsSms(Doctor::NOTIFY_PRESCRIPTION)) {
+        if (! $this->smsPrefAllows($doctor, Doctor::NOTIFY_PRESCRIPTION, $staffTap)) {
             return $this->record(
                 $booking,
                 SmsMessage::STATUS_SKIPPED_PREF_OFF,
                 body: $body,
                 purpose: SmsMessage::PURPOSE_PRESCRIPTION,
             );
+        }
+
+        if ($already = $this->alreadySent($booking, SmsMessage::PURPOSE_PRESCRIPTION)) {
+            return $already;
         }
 
         return $this->send(
@@ -177,19 +188,23 @@ class SmsService
     }
 
     /**
-     * Automatic follow-up reminder, 3 days before the visit date.
+     * Follow-up reminder, 3 days before the visit date.
      */
-    public function sendFollowUpReminder(Booking $booking, VisitRecord $visit, Doctor $doctor): ?SmsMessage
+    public function sendFollowUpReminder(Booking $booking, VisitRecord $visit, Doctor $doctor, bool $staffTap = false): ?SmsMessage
     {
         $body = $this->followUpReminderBody($booking, $visit, $doctor);
 
-        if (! $doctor->wantsSms(Doctor::NOTIFY_FOLLOW_UP)) {
+        if (! $this->smsPrefAllows($doctor, Doctor::NOTIFY_FOLLOW_UP, $staffTap)) {
             return $this->record(
                 $booking,
                 SmsMessage::STATUS_SKIPPED_PREF_OFF,
                 body: $body,
                 purpose: SmsMessage::PURPOSE_FOLLOW_UP,
             );
+        }
+
+        if ($already = $this->alreadySent($booking, SmsMessage::PURPOSE_FOLLOW_UP)) {
+            return $already;
         }
 
         return $this->send(
@@ -252,6 +267,25 @@ class SmsService
     public function refundOneCredit(string $tenantId): void
     {
         $this->refundCredits($tenantId, 1);
+    }
+
+    private function smsPrefAllows(?Doctor $doctor, string $stage, bool $staffTap): bool
+    {
+        if (! $doctor) {
+            return true;
+        }
+
+        return $staffTap ? $doctor->wantsPushSms($stage) : $doctor->wantsAutoSms($stage);
+    }
+
+    private function alreadySent(Booking $booking, string $purpose): ?SmsMessage
+    {
+        return SmsMessage::query()
+            ->where('booking_id', $booking->id)
+            ->where('purpose', $purpose)
+            ->where('status', SmsMessage::STATUS_SENT)
+            ->latest('id')
+            ->first();
     }
 
     public function confirmationBody(Booking $booking): string
@@ -355,18 +389,22 @@ class SmsService
         // 160-unit segment ceiling, and those 7 characters are the difference
         // between one credit and two. The link is self-evidently the thing to
         // tap. See PrescriptionShortLinkTest.
-        return implode(' ', array_filter([
+        $body = implode(' ', array_filter([
             $clinic.':',
             'Prescription for '.$booking->patient_name,
             $date !== '' ? 'from '.$date : null,
-        ])).': '.$link.$this->reviewSuffix($booking);
+        ])).': '.$link;
+
+        $suffix = $this->reviewSuffix($booking);
+
+        return $suffix === '' ? $body : $body.$suffix;
     }
 
     private function reviewSuffix(Booking $booking): string
     {
-        $reviewUrl = Chamber::reviewUrlForBooking($booking);
+        $url = Chamber::reviewUrlForBooking($booking);
 
-        return $reviewUrl !== null ? ' Review: '.$reviewUrl : '';
+        return $url ? ' Review: '.$url : '';
     }
 
     /**

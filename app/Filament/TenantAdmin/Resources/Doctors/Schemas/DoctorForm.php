@@ -6,6 +6,7 @@ use App\Filament\TenantAdmin\Support\PracticeRulesForm;
 use App\Filament\TenantAdmin\Support\PublicMediaFields;
 use App\Models\Doctor;
 use App\Models\User;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
@@ -172,50 +173,47 @@ class DoctorForm
                             ->columnSpanFull(),
                     ]),
                 Fieldset::make(__('Patient notifications'))
-                    ->description(__('Each doctor can differ. These switches decide SMS and WhatsApp for this doctor only.'))
-                    ->columns(2)
+                    ->description(__('Each doctor can differ. Tick Auto SMS (ChamberQ texts them), Push SMS (staff tap Send SMS), and/or Push WhatsApp (staff tap WhatsApp). WhatsApp is never sent by itself.'))
                     ->schema([
-                        Toggle::make('notify_channels.'.Doctor::NOTIFY_BOOKING_CONFIRMATION.'.sms')
-                            ->label(__('Booking confirmation — SMS'))
-                            ->helperText(__('Automatic text after a patient books. Uses 1 prepaid credit.'))
-                            ->default(true),
-                        Toggle::make('notify_channels.'.Doctor::NOTIFY_BOOKING_CONFIRMATION.'.whatsapp')
-                            ->label(__('Booking confirmation — WhatsApp'))
-                            ->helperText(__('Reserved for staff re-send; patients already share their ticket. Off by default.'))
-                            ->default(false),
-                        Toggle::make('notify_channels.'.Doctor::NOTIFY_DOCTOR_LATE.'.sms')
-                            ->label(__('Doctor late — SMS'))
-                            ->helperText(__('Automatic text to waiting patients when staff mark delay. 1 credit each.'))
-                            ->default(false),
-                        Toggle::make('notify_channels.'.Doctor::NOTIFY_DOCTOR_LATE.'.whatsapp')
-                            ->label(__('Doctor late — WhatsApp'))
-                            ->helperText(__('Shows tap-to-send WhatsApp links after Mark Late. Free; staff must tap.'))
-                            ->default(false),
-                        Toggle::make('notify_channels.'.Doctor::NOTIFY_CANCELLATION.'.sms')
-                            ->label(__('Cancellation — SMS'))
-                            ->helperText(__('Off by default. Turn on for this doctor to automatically text remaining patients when staff finish the sitting early or mark the doctor absent. 1 credit each. Vacation closed days still use Send SMS per patient.'))
-                            ->default(false),
-                        Toggle::make('notify_channels.'.Doctor::NOTIFY_CANCELLATION.'.whatsapp')
-                            ->label(__('Cancellation — WhatsApp'))
-                            ->helperText(__('On by default. After End session or Doctor absent, staff get a WhatsApp link per remaining patient. Free; they tap each one. Turn off for this doctor to hide those links.'))
-                            ->default(true),
-                        Toggle::make('notify_channels.'.Doctor::NOTIFY_PRESCRIPTION.'.sms')
-                            ->label(__('After visit — SMS'))
-                            ->helperText(__('Staff tap Send SMS after the visit: ChamberQ prescription link when you use it, plus the Google review link when one is saved. Uses prepaid credits.'))
-                            ->default(false),
-                        Toggle::make('notify_channels.'.Doctor::NOTIFY_PRESCRIPTION.'.whatsapp')
-                            ->label(__('After visit — WhatsApp'))
-                            ->helperText(__('Shows Send via WhatsApp after the visit (prescription and/or Google review). Free; staff must tap.'))
-                            ->default(true),
-                        Toggle::make('notify_channels.'.Doctor::NOTIFY_FOLLOW_UP.'.sms')
-                            ->label(__('Follow-up reminder — SMS'))
-                            ->helperText(__('Automatic text 3 days before the follow-up date. 1 credit each.'))
-                            ->default(true),
-                        Toggle::make('notify_channels.'.Doctor::NOTIFY_FOLLOW_UP.'.whatsapp')
-                            ->label(__('Follow-up reminder — WhatsApp'))
-                            ->helperText(__('Queues a staff confirm list each morning. Free; staff or doctor must tap.'))
-                            ->default(false),
+                        self::notifyStage(
+                            Doctor::NOTIFY_BOOKING_CONFIRMATION,
+                            __('Booking confirmation'),
+                            __('After a patient books a serial. Auto SMS uses 1 prepaid credit. Push buttons show on Book serial and the day list.'),
+                        ),
+                        self::notifyStage(
+                            Doctor::NOTIFY_DOCTOR_LATE,
+                            __('Doctor late'),
+                            __('When staff mark delay. Auto SMS texts everyone waiting (1 credit each). Push SMS / WhatsApp appear on Tell waiting patients.'),
+                        ),
+                        self::notifyStage(
+                            Doctor::NOTIFY_CANCELLATION,
+                            __('Cancellation'),
+                            __('Auto SMS texts remaining patients when staff finish early or mark the doctor absent. Closed days always need a tap — tick Push SMS or Push WhatsApp for those.'),
+                        ),
+                        self::notifyStage(
+                            Doctor::NOTIFY_PRESCRIPTION,
+                            __('After visit'),
+                            __('Prescription link and Google review. Auto SMS sends when the visit is completed. Push buttons stay on the desk for a tap.'),
+                        ),
+                        self::notifyStage(
+                            Doctor::NOTIFY_FOLLOW_UP,
+                            __('Follow-up reminder'),
+                            __('3 days before the follow-up date. Auto SMS runs in the morning. Push SMS / WhatsApp appear on Follow-up reminders for staff to tap.'),
+                        ),
                     ]),
             ]);
+    }
+
+    private static function notifyStage(string $stage, string $label, string $helper): CheckboxList
+    {
+        return CheckboxList::make('notify_channels.'.$stage)
+            ->label($label)
+            ->helperText($helper)
+            ->options(Doctor::notifyDeliveryOptions())
+            ->default(Doctor::selectedNotifyDeliveries(Doctor::defaultNotifyChannels()[$stage]))
+            ->formatStateUsing(fn (mixed $state): array => Doctor::selectedNotifyDeliveries($state))
+            ->dehydrateStateUsing(fn (mixed $state): array => Doctor::notifyDeliveriesFromSelection($state))
+            ->columns(1)
+            ->columnSpanFull();
     }
 }

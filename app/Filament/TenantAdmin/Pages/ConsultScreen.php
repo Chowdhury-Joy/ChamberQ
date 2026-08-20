@@ -4,6 +4,7 @@ namespace App\Filament\TenantAdmin\Pages;
 
 use App\Support\StaffDeskJobs;
 use App\Models\Booking;
+use App\Models\Doctor;
 use App\Models\LabCollectionSlot;
 use App\Models\LiveSession;
 use App\Models\MedicineUsage;
@@ -61,6 +62,10 @@ class ConsultScreen extends Page implements HasActions
      * a wall that pushes the prescription table below the fold.
      */
     private const MY_MEDICINE_CHIPS = 8;
+
+    public array $delayedNotifyBookingIds = [];
+
+    public int $delayedNotifyMinutes = 0;
 
     public static function canAccess(): bool
     {
@@ -329,6 +334,7 @@ class ConsultScreen extends Page implements HasActions
 
         return [
             ...$handoff,
+            $this->notifyDelayedAction(),
             Action::make('patientArrived')
                 ->label('Patient arrived')
                 ->icon('heroicon-o-check')
@@ -477,6 +483,40 @@ class ConsultScreen extends Page implements HasActions
                     Notification::make()->title(__('Session resumed'))->success()->send();
                 }),
         ];
+    }
+
+    /**
+     * After Mark Late, when this doctor uses Push SMS or Push WhatsApp for delays.
+     */
+    public function notifyDelayedAction(): Action
+    {
+        return Action::make('notifyDelayed')
+            ->label('Tell waiting patients')
+            ->icon('heroicon-o-chat-bubble-left-right')
+            ->color('warning')
+            ->modalHeading('Doctor is running late')
+            ->modalSubmitAction(false)
+            ->modalCancelActionLabel('Done')
+            ->modalContent(function (): \Illuminate\Contracts\View\View {
+                $bookings = Booking::whereIn('id', $this->delayedNotifyBookingIds)
+                    ->orderBy('serial_number')
+                    ->get();
+                $minutes = $this->delayedNotifyMinutes;
+
+                return view('filament.tenant-admin.slot-block-notify', [
+                    'bookings' => $bookings,
+                    'stage' => Doctor::NOTIFY_DOCTOR_LATE,
+                    'delayMinutes' => $minutes,
+                    'messages' => $bookings->mapWithKeys(fn (Booking $booking) => [
+                        $booking->id => __('Hello :name, the doctor is running :minutes minutes late. Your serial is :serial.', [
+                            'name' => $booking->patient_name,
+                            'minutes' => $minutes,
+                            'serial' => $booking->serial_number,
+                        ]),
+                    ])->all(),
+                ]);
+            })
+            ->visible(fn (): bool => $this->delayedNotifyBookingIds !== []);
     }
 
     /**
@@ -872,7 +912,13 @@ class ConsultScreen extends Page implements HasActions
                     'status' => 'delayed',
                 ]);
 
-                app(LiveSessionService::class)->markDelay($liveSession, (int) $data['delay_minutes']);
+                $bookings = app(LiveSessionService::class)->markDelay($liveSession, (int) $data['delay_minutes']);
+
+                $scheduleSession->loadMissing('doctor');
+                $this->delayedNotifyMinutes = (int) $data['delay_minutes'];
+                $this->delayedNotifyBookingIds = ($scheduleSession->doctor?->wantsStaffTap(Doctor::NOTIFY_DOCTOR_LATE) ?? false)
+                    ? $bookings->pluck('id')->all()
+                    : [];
 
                 Notification::make()->title(__('Session Delayed'))->success()->send();
                 $this->promptSessionId = null;

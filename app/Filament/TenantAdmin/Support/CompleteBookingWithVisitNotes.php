@@ -2,7 +2,9 @@
 
 namespace App\Filament\TenantAdmin\Support;
 
+use App\Jobs\SendVisitShareNotice;
 use App\Models\Booking;
+use App\Models\Doctor;
 use App\Services\LiveSessionService;
 use App\Services\VisitRecordService;
 use Filament\Actions\Action;
@@ -53,6 +55,8 @@ class CompleteBookingWithVisitNotes
 
         $liveSessionService->completeBooking($record);
 
+        self::queueAutoVisitShare($record);
+
         Notification::make()
             ->title(__('Visit completed'))
             ->success()
@@ -85,10 +89,28 @@ class CompleteBookingWithVisitNotes
 
         $liveSessionService->completeCurrentPatientWithoutAdvancing($session);
 
+        self::queueAutoVisitShare($booking);
+
         Notification::make()
             ->title(__('Visit completed'))
             ->body(__('Print or send the prescription, then tap Call next patient when ready.'))
             ->success()
             ->send();
+    }
+
+    private static function queueAutoVisitShare(Booking $booking): void
+    {
+        $doctor = Doctor::resolveForBooking($booking);
+
+        if (! $doctor?->wantsAutoSms(Doctor::NOTIFY_PRESCRIPTION)) {
+            return;
+        }
+
+        $tenantId = (string) ($booking->tenant_id ?: tenant('id'));
+        if ($tenantId === '') {
+            return;
+        }
+
+        SendVisitShareNotice::dispatch($tenantId, (string) $booking->id)->afterResponse();
     }
 }

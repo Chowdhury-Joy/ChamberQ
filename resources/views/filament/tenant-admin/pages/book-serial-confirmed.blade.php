@@ -9,6 +9,12 @@
         @endif
     </p>
     <p class="book-serial-confirmed__sms">
-        {{ __('A confirmation SMS will go if the wallet has credit. You can also send WhatsApp or open the ticket.') }}
+        @if (! empty($lastBooked['auto_sms']))
+            {{ __('A confirmation SMS will go if the wallet has credit.') }}
+        @elseif (filled($lastBooked['sms_url'] ?? null) || filled($lastBooked['whatsapp'] ?? null))
+            {{ __('Tap Push SMS or Push WhatsApp below if this doctor uses those.') }}
+        @else
+            {{ __('No automatic text for this doctor. Open the ticket if you need to share it.') }}
+        @endif
     </p>
 </div>

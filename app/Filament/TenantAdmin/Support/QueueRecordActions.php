@@ -128,6 +128,14 @@ final class QueueRecordActions
             AskReviewAction::sms(Action::make($name(DeskActionLayout::KEY_REVIEW_SMS)))
                 ->visible(fn (Booking $record): bool => AskReviewAction::canSms($record)
                     && $shown(DeskActionLayout::KEY_REVIEW_SMS)($record)),
+
+            ConfirmSerialNotifyAction::whatsapp(Action::make($name(DeskActionLayout::KEY_SERIAL_WHATSAPP)))
+                ->visible(fn (Booking $record): bool => ConfirmSerialNotifyAction::canWhatsapp($record)
+                    && $shown(DeskActionLayout::KEY_SERIAL_WHATSAPP)($record)),
+
+            ConfirmSerialNotifyAction::sms(Action::make($name(DeskActionLayout::KEY_SERIAL_SMS)))
+                ->visible(fn (Booking $record): bool => ConfirmSerialNotifyAction::canSms($record)
+                    && $shown(DeskActionLayout::KEY_SERIAL_SMS)($record)),
         ];
     }
 }
