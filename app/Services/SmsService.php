@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Contracts\SmsGateway;
 use App\Models\Booking;
+use App\Models\Chamber;
 use App\Models\Doctor;
 use App\Models\Prescription;
 use App\Models\ScheduleSession;
@@ -55,21 +56,17 @@ class SmsService
      *
      * @return Collection<int, SmsMessage>
      */
-    public function sendDoctorLateNotices(Booking $booking, int $delayMinutes, bool $staffTap = false): ?SmsMessage
+    public function sendDoctorLateNotices(Booking $booking, int $delayMinutes): ?SmsMessage
     {
         $doctor = Doctor::resolveForBooking($booking);
 
-        if (! $this->smsPrefAllows($doctor, Doctor::NOTIFY_DOCTOR_LATE, $staffTap)) {
+        if ($doctor && ! $doctor->wantsSms(Doctor::NOTIFY_DOCTOR_LATE)) {
             return $this->record(
                 $booking,
                 SmsMessage::STATUS_SKIPPED_PREF_OFF,
                 body: $this->doctorLateBody($booking, $delayMinutes),
                 purpose: SmsMessage::PURPOSE_DOCTOR_LATE,
             );
-        }
-
-        if ($already = $this->alreadySent($booking, SmsMessage::PURPOSE_DOCTOR_LATE)) {
-            return $already;
         }
 
         return $this->send(
@@ -127,6 +124,44 @@ class SmsService
             SmsMessage::PURPOSE_PRESCRIPTION,
             'sms.prescription_failed',
         );
+    }
+
+    /**
+     * Staff-tapped after-visit SMS when there is no ChamberQ prescription
+     * (paper pad) — Google review link only. Same notify toggle as prescription.
+     */
+    public function sendReviewNotice(Booking $booking): ?SmsMessage
+    {
+        $reviewUrl = Chamber::reviewUrlForBooking($booking);
+        if ($reviewUrl === null) {
+            throw new \InvalidArgumentException('No Google review link is saved for this chamber.');
+        }
+
+        $doctor = Doctor::resolveForBooking($booking);
+        $body = $this->reviewBody($booking, $reviewUrl);
+
+        if ($doctor && ! $doctor->wantsSms(Doctor::NOTIFY_PRESCRIPTION)) {
+            return $this->record(
+                $booking,
+                SmsMessage::STATUS_SKIPPED_PREF_OFF,
+                body: $body,
+                purpose: SmsMessage::PURPOSE_PRESCRIPTION,
+            );
+        }
+
+        return $this->send(
+            $booking,
+            $body,
+            SmsMessage::PURPOSE_PRESCRIPTION,
+            'sms.review_failed',
+        );
+    }
+
+    public function reviewBody(Booking $booking, string $reviewUrl): string
+    {
+        $clinic = Tenant::find($booking->tenant_id)?->displayName() ?? 'Clinic';
+
+        return $clinic.': Thank you for visiting. Please leave a review: '.$reviewUrl;
     }
 
     /**
@@ -312,7 +347,14 @@ class SmsService
             $clinic.':',
             'Prescription for '.$booking->patient_name,
             $date !== '' ? 'from '.$date : null,
-        ])).': '.$link;
+        ])).': '.$link.$this->reviewSuffix($booking);
+    }
+
+    private function reviewSuffix(Booking $booking): string
+    {
+        $reviewUrl = Chamber::reviewUrlForBooking($booking);
+
+        return $reviewUrl !== null ? ' Review: '.$reviewUrl : '';
     }
 
     /**
