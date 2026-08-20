@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Models\PharmacyItem;
 use Database\Seeders\MupsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
@@ -102,7 +103,7 @@ class MupsWebsiteTest extends TestCase
         $this->get('http://mups.localhost/centres')
             ->assertOk()
             ->assertSee('Two centres. One standard of care.')
-            ->assertSee('Panchlaish')
+            ->assertSee('Mehedibag')
             ->assertSee('Uttara')
             ->assertDontSee('Epic Healthcare');
 
@@ -170,7 +171,7 @@ class MupsWebsiteTest extends TestCase
             ->assertOk()
             ->assertSee('id="hero-chamber"', false)
             ->assertSee('Which centre?')
-            ->assertSee('Panchlaish')
+            ->assertSee('Mehedibag')
             ->assertSee('Uttara')
             ->getContent();
 
@@ -196,13 +197,13 @@ class MupsWebsiteTest extends TestCase
     {
         $tenant = \App\Models\Tenant::find(MupsSeeder::TENANT_ID);
         tenancy()->initialize($tenant);
-        $panchlaish = \App\Models\Chamber::query()->where('name', 'like', '%Panchlaish%')->first();
+        $mehedibag = \App\Models\Chamber::query()->where('name', 'like', '%Mehedibag%')->first();
         $uttara = \App\Models\Chamber::query()->where('name', 'like', '%Uttara%')->first();
-        $panchSession = \App\Models\ScheduleSession::query()
+        $mehedibagSession = \App\Models\ScheduleSession::query()
             ->publiclyBookable()
-            ->where('chamber_id', $panchlaish->id)
+            ->where('chamber_id', $mehedibag->id)
             ->first();
-        $doctorId = (string) $panchSession->doctor_id;
+        $doctorId = (string) $mehedibagSession->doctor_id;
         tenancy()->end();
 
         $this->followingRedirects()
@@ -211,28 +212,28 @@ class MupsWebsiteTest extends TestCase
                 'phone' => '01712345678',
                 'doctor' => $doctorId,
                 'chamber' => (string) $uttara->id,
-                'session' => (string) $panchSession->id,
+                'session' => (string) $mehedibagSession->id,
                 'date' => now()->toDateString(),
             ])
             ->assertOk()
             ->assertSee('"chamber":"'.$uttara->id.'"', false)
-            ->assertDontSee('"session":"'.$panchSession->id.'"', false);
+            ->assertDontSee('"session":"'.$mehedibagSession->id.'"', false);
     }
 
     public function test_homepage_post_with_hero_fields_still_reaches_the_wizard(): void
     {
         $tenant = \App\Models\Tenant::find(MupsSeeder::TENANT_ID);
         tenancy()->initialize($tenant);
-        $panchlaish = \App\Models\Chamber::query()->where('name', 'like', '%Panchlaish%')->first();
+        $mehedibag = \App\Models\Chamber::query()->where('name', 'like', '%Mehedibag%')->first();
         $session = \App\Models\ScheduleSession::query()
             ->publiclyBookable()
-            ->where('chamber_id', $panchlaish->id)
+            ->where('chamber_id', $mehedibag->id)
             ->first();
         $payload = [
             'name' => 'Fatima Rahman',
             'phone' => '01712345678',
             'doctor' => (string) $session->doctor_id,
-            'chamber' => (string) $panchlaish->id,
+            'chamber' => (string) $mehedibag->id,
             'session' => (string) $session->id,
             'date' => now()->next($session->day_of_week)->toDateString(),
         ];
@@ -268,6 +269,8 @@ class MupsWebsiteTest extends TestCase
         $this->assertTrue($tenant->hasStations());
         $this->assertTrue($tenant->hasReferrals());
         $this->assertTrue($tenant->hasHr());
+        $this->assertTrue($tenant->hasPharmacy());
+        $this->assertTrue($tenant->hasPharmacy());
         $this->assertTrue($tenant->hasFeature('bangla_homepage'));
         $this->assertSame(\App\Models\Tenant::ETA_LIVE_AVERAGE, $tenant->eta_model);
         $this->assertSame(\App\Models\Tenant::ANNOUNCE_CHIME_AND_VOICE, $tenant->call_announce_mode);
@@ -276,7 +279,7 @@ class MupsWebsiteTest extends TestCase
         tenancy()->initialize($tenant);
 
         $this->assertSame(2, \App\Models\Chamber::count());
-        $this->assertTrue(\App\Models\Chamber::query()->where('name', 'like', '%Panchlaish%')->exists());
+        $this->assertTrue(\App\Models\Chamber::query()->where('name', 'like', '%Mehedibag%')->exists());
         $this->assertTrue(\App\Models\Chamber::query()->where('name', 'like', '%Uttara%')->exists());
         $this->assertFalse(\App\Models\Chamber::query()->where('name', 'like', '%Epic%')->exists());
 

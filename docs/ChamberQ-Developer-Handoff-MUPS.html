@@ -118,7 +118,7 @@
   </div>
   <p class="cover-meta">
     <strong>Client:</strong> MUPS — Dr. Mohammad Moin Uddin<br>
-    <strong>Branches:</strong> Panchlaish, Chattogram · Uttara, Dhaka<br>
+    <strong>Branches:</strong> Mehedibag, Chattogram · Uttara, Dhaka<br>
     <strong>Tenant slug:</strong> mups<br>
     <strong>Written:</strong> 17 August 2026
   </p>
@@ -129,7 +129,7 @@
   <h1>What MUPS is</h1>
   <p class="subhead">Like a small hospital with one specialist who works two cities — and a kitchen that already has a second stove. Software has to know which building, which room, which doctor’s list, and that a consultation booking cannot land on the OT list.</p>
   <div class="stat-grid">
-    <div class="stat-box"><div class="stat-label">Branches</div><div class="stat-value">2</div><p>Panchlaish and Uttara. Never the same day.</p></div>
+    <div class="stat-box"><div class="stat-label">Branches</div><div class="stat-value">2</div><p>Mehedibag and Uttara. Never the same day.</p></div>
     <div class="stat-box"><div class="stat-label">Rooms per branch-day</div><div class="stat-value">3</div><p>Intervention, Consultation (public), Counseling (free).</p></div>
     <div class="stat-box"><div class="stat-label">Doctors</div><div class="stat-value">1 now</div><p>Dr. Moin today. A second profile is allowed; the Doctors menu is already on.</p></div>
   </div>
@@ -194,6 +194,7 @@
     <tbody>
       <tr><td>Admin</td><td><code>admin@mups.local</code></td><td>Branding, cash categories, backup, HR, referrals, website</td></tr>
       <tr><td>Doctor</td><td><code>doctor@mups.local</code></td><td>Consult Screen, Rx, consultation notes</td></tr>
+      <tr><td>Lead desk</td><td><code>lead@mups.local</code></td><td>All counters plus hire Staff (not owners/doctors/helpers)</td></tr>
       <tr><td>Desk</td><td><code>staff@mups.local</code></td><td>Daily Roster, Call next, Collect fee, walk-ins, TV</td></tr>
     </tbody>
   </table>
@@ -210,19 +211,19 @@
   <table>
     <thead><tr><th>Day</th><th>Building</th><th>Intervention</th><th>Consultation (patients book this)</th></tr></thead>
     <tbody>
-      <tr><td>Saturday</td><td>Panchlaish</td><td>10:00–13:00</td><td>13:00–20:00</td></tr>
-      <tr><td>Sunday</td><td>Panchlaish</td><td>16:00–17:30</td><td>17:30–21:00</td></tr>
-      <tr><td>Monday</td><td>Panchlaish</td><td>16:00–17:30</td><td>17:30–21:00</td></tr>
+      <tr><td>Saturday</td><td>Mehedibag</td><td>10:00–13:00</td><td>13:00–20:00</td></tr>
+      <tr><td>Sunday</td><td>Mehedibag</td><td>16:00–17:30</td><td>17:30–21:00</td></tr>
+      <tr><td>Monday</td><td>Mehedibag</td><td>16:00–17:30</td><td>17:30–21:00</td></tr>
       <tr><td>Tuesday</td><td>Uttara</td><td>17:00–18:00</td><td>18:00–21:00</td></tr>
       <tr><td>Wednesday</td><td>Uttara</td><td>17:00–18:00</td><td>18:00–21:00</td></tr>
       <tr><td>Thursday</td><td>Uttara</td><td>10:00–12:00 and 17:00–18:00</td><td>12:00–13:00 and 18:00–21:00</td></tr>
-      <tr><td>Friday</td><td>Panchlaish</td><td>16:00–17:30</td><td>17:30–20:00</td></tr>
+      <tr><td>Friday</td><td>Mehedibag</td><td>16:00–17:30</td><td>17:30–20:00</td></tr>
     </tbody>
   </table>
-  <p><strong>Panchlaish:</strong> Neurosense, near Chittagong Medical College. <strong>Uttara:</strong> Sector 4, about 10 minutes from the airport.</p>
+  <p><strong>Mehedibag:</strong> Neurosense, near Chittagong Medical College. <strong>Uttara:</strong> Sector 4, about 10 minutes from the airport.</p>
   <p>Counseling covers the same clock as intervention through consultation. It is <strong>not</strong> on the public website. Patients arrive only when desk taps <strong>Send to counseling</strong> after a procedure is marked done — walked to the next room, not given a new appointment card for next week.</p>
   <div class="callout">
-    Public <strong>/centres</strong> says “Two centres. One standard of care.” An older website listed Epic Healthcare / Dhanmondi as a third address. MUPS here is Dhaka (Uttara) and Chittagong (Panchlaish) only. Do not put Dhanmondi back.
+    Public <strong>/centres</strong> says “Two centres. One standard of care.” An older website listed Epic Healthcare / Dhanmondi as a third address. MUPS here is Dhaka (Uttara) and Chittagong (Mehedibag) only. Do not put Dhanmondi back.
   </div>
 </section>
 
@@ -255,7 +256,7 @@
     <li><strong>Land on the website.</strong> Hero: “Relief without surgery.” Book a serial; pay at the chamber.</li>
     <li><strong>Book.</strong> The wizard only lists <strong>Consultation</strong> sittings. A patient cannot self-book intervention or counseling. Name + BD mobile. No account required. With one doctor, that step is skipped. With two, patients pick the doctor first (or arrive pre-filled from a profile Book button).</li>
     <li><strong>Ticket.</strong> UUID link (the secret). Sitting window always. Now-serving and come-around because live queue is on. Voucher number prints when the till assigned one (not on free counseling rows).</li>
-    <li><strong>Waiting room.</strong> TV for that branch: <strong>All rooms TV</strong> for Panchlaish or Uttara. Idle rooms stay off the board so tiles stay large. The calling room inverts to light tile / dark numerals.</li>
+    <li><strong>Waiting room.</strong> TV for that branch: <strong>All rooms TV</strong> for Mehedibag or Uttara. Idle rooms stay off the board so tiles stay large. The calling room inverts to light tile / dark numerals.</li>
     <li><strong>Portal (optional).</strong> Phone lookup, or ChamberQ <code>/me</code> OTP locker.</li>
   </ol>
   <p>Consultation sittings: cap 20 + 6 walk-in overflow. Intervention: cap 12, desk-only (no public overflow). Counseling: cap 40, desk-created after a procedure.</p>
@@ -276,7 +277,7 @@
     <li><strong>Mark Late</strong> if Dr. Moin is stuck in traffic — patients get the delay SMS because doctor-late notify is on.</li>
     <li><strong>End session</strong> names who will be cancelled and offers WhatsApp links.</li>
   </ol>
-  <p><strong>All rooms TV:</strong> one bookmark per branch. Panchlaish’s TV must not show Uttara’s rooms. Bookmark the chamber URL, not a single sitting. The next page is two mixed-room patients — consultation, OT, counseling — on one Saturday board.</p>
+  <p><strong>All rooms TV:</strong> one bookmark per branch. Mehedibag’s TV must not show Uttara’s rooms. Bookmark the chamber URL, not a single sitting. The next page is two mixed-room patients — consultation, OT, counseling — on one Saturday board.</p>
 </section>
 
 <section class="sheet flow-sheet">
@@ -336,9 +337,9 @@
   <h2>Cashbook</h2>
   <p>Operations → Cashbook. Patient fees from Collect fee; expenses (rent, salary, referral payout). Mixed cash + online is supported. Categories live under Operations → Cash categories.</p>
   <h2>Referrals</h2>
-  <p>Seeded GPs: Dr. Karim (Panchlaish) and Dr. Sultana (Uttara ortho). At Collect fee, pick “Referred by.” End of month: Referral ledger → Mark selected as paid. Default owed: ৳200 per consultation, ৳1,000 per intervention. A waived fee voids the commission.</p>
+  <p>Seeded GPs: Dr. Karim (Mehedibag) and Dr. Sultana (Uttara ortho). At Collect fee, pick “Referred by.” End of month: Referral ledger → Mark selected as paid. Default owed: ৳200 per consultation, ৳1,000 per intervention. A waived fee voids the commission.</p>
   <h2>HR</h2>
-  <p>Three people: desk (linked to <code>staff@mups.local</code>, ৳18,000), procedure nurse Panchlaish (Nurse Rina, ৳22,000), procedure nurse Uttara (Nurse Farhana, ৳22,000). Paying salary writes a cashbook expense in the same breath as the payroll row — a double-click cannot leave an orphan expense.</p>
+  <p>Four people: lead desk (linked to <code>lead@mups.local</code>, ৳25,000), desk (linked to <code>staff@mups.local</code>, ৳18,000), procedure nurse Mehedibag (Nurse Rina, ৳22,000), procedure nurse Uttara (Nurse Farhana, ৳22,000). Paying salary writes a cashbook expense in the same breath as the payroll row — a double-click cannot leave an orphan expense.</p>
   <h2>Offline</h2>
   <p>Pack bag (Rx) and queue snapshot work on this computer if the ISP dies. There is no separate queue worker to install — that is deliberate for a chamber laptop.</p>
 </section>
@@ -361,14 +362,14 @@
     <li>Counseling still follows the procedure doctor’s chamber/day. Send to counseling looks for a counseling sitting for <em>that</em> doctor in that building. If the associate will finish procedures, they need a counseling sitting too, or the button hides.</li>
   </ol>
   <div class="callout">
-    Two realistic MUPS shapes: (1) <strong>Same building, two rooms</strong> — Moin in Intervention, associate in Consultation, one waiting-room TV. (2) <strong>Same brand, different days</strong> — associate covers a Panchlaish afternoon Moin used to fly for. Days can overlap once there are two people; the “never the same city” rule was for one body, not a software lock.
+    Two realistic MUPS shapes: (1) <strong>Same building, two rooms</strong> — Moin in Intervention, associate in Consultation, one waiting-room TV. (2) <strong>Same brand, different days</strong> — associate covers a Mehedibag afternoon Moin used to fly for. Days can overlap once there are two people; the “never the same city” rule was for one body, not a software lock.
   </div>
   <h2>What patients and desk then see</h2>
   <ul>
     <li><strong>Book:</strong> Pick doctor appears. Dates and Consultation sittings are only that doctor’s. Intervention and counseling stay off the public wizard.</li>
     <li><strong>Website:</strong> Doctors page lists both. Homepage grid is cards, not the single founder poster. Tick <strong>Show on website</strong> off for a fellow who should not be bookable from Google.</li>
     <li><strong>Desk:</strong> Daily Roster and Live Queue Control list every sitting today. The receptionist picks the room the way they pick a counter. Walk-ins must land on the right doctor’s Consultation sitting — the wrong sitting is the wrong pad and the wrong fee split.</li>
-    <li><strong>TV:</strong> All rooms TV is still <em>per building</em>. If both doctors are live in Panchlaish, both rooms can appear (up to four tiles). Uttara’s TV must not show Panchlaish. Idle rooms stay off the board.</li>
+    <li><strong>TV:</strong> All rooms TV is still <em>per building</em>. If both doctors are live in Mehedibag, both rooms can appear (up to four tiles). Uttara’s TV must not show Mehedibag. Idle rooms stay off the board.</li>
     <li><strong>Money:</strong> The fee catalogue is clinic-wide (Consultation ৳1,000, epidural ৳8,000…). House share vs doctor share is on the chip, not a second price list per name. If an associate charges differently, add a catalogue row or use that doctor’s extra fees — do not silently reuse Moin’s consultation chip and hope.</li>
     <li><strong>Prescription:</strong> The booking’s sitting doctor wins. If Moin covers the associate’s list, the printed pad is still the sitting’s name. My medicines and packs stay on the signed-in doctor. Staff paper entry follows the sitting doctor’s toggle, not whoever is at the desk.</li>
   </ul>
@@ -393,7 +394,7 @@
     <li>Seed MUPS. Open <code>/mups/</code> — homepage loads, nav has Centres, not a 500.</li>
     <li>Tenant admin → Chambers = 2. Schedule = Intervention / Consultation / Counseling on each branch day.</li>
     <li><code>/mups/book</code> offers Consultation only.</li>
-    <li><code>/mups/centres</code> shows Panchlaish and Uttara, not Epic Healthcare.</li>
+    <li><code>/mups/centres</code> shows Mehedibag and Uttara, not Epic Healthcare.</li>
     <li>Live Queue Control → All rooms TV for today’s branch.</li>
     <li>If you add a second doctor: wizard shows Pick doctor; new sittings are theirs; Consult Screen still follows the latest live sitting — confirm before two rooms run at once.</li>
   </ol>

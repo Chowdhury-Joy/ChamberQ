@@ -3330,6 +3330,15 @@
  <reason>Same as a hospital desk: first choose the department (lab or OT), then which test or procedure. Naming the button MSK hid the other door and fought the walk-in form.</reason>
 </decision>
 
+## 2026-08-20T17:55:16+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The MUPS Chittagong branch was labelled Panchlaish, but the chamber is at Neurosense near Chittagong Medical College, which patients know as Mehedibag.</context>
+ <action>Rename the seeded chamber, centres-page card, map query, homepage review label, referring GP, procedure-nurse job title, and demo cashbook note from Panchlaish to Mehedibag. Sitting days stay Sun–Tue morning and evening. Uttara is unchanged. CBPH, Belle Vue, and the Pain Solution sample keep their real Panchlaish addresses.</action>
+ <reason>Like reprinting the shop sign for the neighbourhood people actually search for — same building, same hours, the name on the ticket now matches the area.</reason>
+</decision>
+
 ## 2026-08-20T17:59:22+0600
 
 <decision>

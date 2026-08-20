@@ -498,7 +498,7 @@ class MupsDemoSeeder extends Seeder
 
         foreach ([
             ['amount' => 650, 'category' => ChamberCashEntry::CATEGORY_SUPPLIES, 'method' => ChamberCashEntry::METHOD_CASH, 'note' => '[demo] Sterile packs & ultrasound gel'],
-            ['amount' => 2200, 'category' => ChamberCashEntry::CATEGORY_UTILITIES, 'method' => ChamberCashEntry::METHOD_BKASH, 'note' => '[demo] Panchlaish electricity share'],
+            ['amount' => 2200, 'category' => ChamberCashEntry::CATEGORY_UTILITIES, 'method' => ChamberCashEntry::METHOD_BKASH, 'note' => '[demo] Mehedibag electricity share'],
             ['amount' => 180, 'category' => ChamberCashEntry::CATEGORY_TRANSPORT, 'method' => ChamberCashEntry::METHOD_CASH, 'note' => '[demo] CNG — Dhaka sitting'],
             ['amount' => 12000, 'category' => ChamberCashEntry::CATEGORY_RENT, 'method' => ChamberCashEntry::METHOD_BANK, 'note' => '[demo] Uttara room — weekly share'],
         ] as $row) {

@@ -25,7 +25,7 @@ use Illuminate\Database\Seeder;
 /**
  * Clinic Front door + full floor for MUPS (Dr. Moin Uddin Pain Solution).
  *
- * Two branches: Panchlaish (Chattogram) and Uttara (Dhaka). Super Admin
+ * Two branches: Mehedibag (Chattogram) and Uttara (Dhaka). Super Admin
  * modules all on (website, live queue, Rx, Stations, Referrals, HR).
  * Copy from https://www.drmups.com; visual shell is the Clireo clinic look.
  *
@@ -36,6 +36,27 @@ class MupsSeeder extends Seeder
     public const TENANT_ID = 'mups';
 
     private const IMG = 'https://www.drmups.com/assets/img';
+
+    /**
+     * Chamber shop from the MUPS pharmacy price pad (S.P = sell, B.P = company share).
+     * Stock starts at 0 — the pad had no quantities; desk receives boxes later.
+     *
+     * @return list<array{name: string, sell_price_taka: int, company_share_taka: int}>
+     */
+    public static function pharmacyShopRows(): array
+    {
+        return [
+            ['name' => 'Coral D Max', 'sell_price_taka' => 850, 'company_share_taka' => 550],
+            ['name' => 'MH Vitamin', 'sell_price_taka' => 650, 'company_share_taka' => 325],
+            ['name' => 'Joint Pro', 'sell_price_taka' => 1100, 'company_share_taka' => 840],
+            ['name' => 'Nervafix', 'sell_price_taka' => 1500, 'company_share_taka' => 1085],
+            ['name' => 'Vitafix', 'sell_price_taka' => 1600, 'company_share_taka' => 1100],
+            ['name' => 'Flexactive Extra', 'sell_price_taka' => 2900, 'company_share_taka' => 2250],
+            ['name' => 'Calcimax', 'sell_price_taka' => 950, 'company_share_taka' => 700],
+            ['name' => 'Neumax', 'sell_price_taka' => 950, 'company_share_taka' => 700],
+            ['name' => 'Slim Herb', 'sell_price_taka' => 1500, 'company_share_taka' => 1000],
+        ];
+    }
 
     public function run(): void
     {
@@ -183,11 +204,11 @@ class MupsSeeder extends Seeder
             ],
         ]);
 
-        $panchlaish = Chamber::create([
-            'name' => 'Moin Uddin Pain Solution — Panchlaish',
-            'address' => 'Neurosense, Panchlaish (near Chittagong Medical College), Chattogram',
+        $mehedibag = Chamber::create([
+            'name' => 'Moin Uddin Pain Solution — Mehedibag',
+            'address' => 'Neurosense, Mehedibag (near Chittagong Medical College), Chattogram',
             'contact' => '01880728711',
-            'map_url' => 'https://www.google.com/maps/search/?api=1&query='.rawurlencode('Neurosense Panchlaish Chittagong Medical College'),
+            'map_url' => 'https://www.google.com/maps/search/?api=1&query='.rawurlencode('Neurosense Mehedibag Chittagong Medical College'),
         ]);
 
         $uttara = Chamber::create([
@@ -199,12 +220,12 @@ class MupsSeeder extends Seeder
 
         // Two branches. Days never overlap — Dr. Moin is in one city at a time.
         // Testing split so Book Serial can grey off-days per centre:
-        // Chittagong (Panchlaish): Sun, Mon, Tue (morning + evening).
+        // Chittagong (Mehedibag): Sun, Mon, Tue (morning + evening).
         // Dhaka (Uttara): Thursday (morning + evening).
         // Off: Wednesday, Friday, Saturday.
         foreach ([0, 1, 2] as $day) {
-            $this->seedBranchDay($panchlaish, $doctor, $day, '10:00', '13:00', '13:00', '16:00');
-            $this->seedBranchDay($panchlaish, $doctor, $day, '16:00', '17:30', '17:30', '21:00');
+            $this->seedBranchDay($mehedibag, $doctor, $day, '10:00', '13:00', '13:00', '16:00');
+            $this->seedBranchDay($mehedibag, $doctor, $day, '16:00', '17:30', '17:30', '21:00');
         }
         $this->seedBranchDay($uttara, $doctor, 4, '10:00', '12:00', '12:00', '13:00');
         $this->seedBranchDay($uttara, $doctor, 4, '17:00', '18:00', '18:00', '21:00');
@@ -318,7 +339,7 @@ class MupsSeeder extends Seeder
     private function seedReferringDoctors(): void
     {
         ReferringDoctor::create([
-            'name' => 'Dr. Karim (Panchlaish GP)',
+            'name' => 'Dr. Karim (Mehedibag GP)',
             'phone' => '01811000011',
             'specialty' => 'General practice',
         ]);
@@ -348,7 +369,7 @@ class MupsSeeder extends Seeder
         Employee::create([
             'name' => 'Nurse Rina',
             'phone' => '01822000012',
-            'job_title' => 'Procedure nurse — Panchlaish',
+            'job_title' => 'Procedure nurse — Mehedibag',
             'monthly_salary_taka' => 22000,
             'joined_on' => now()->subYear()->toDateString(),
         ]);
@@ -748,7 +769,7 @@ class MupsSeeder extends Seeder
                     [
                         'quote' => 'Surgery was already booked. Second opinion at MUPS: try this first. I cancelled the OT.',
                         'name' => 'Rina S.',
-                        'label' => 'Panchlaish · Nerve pain',
+                        'label' => 'Mehedibag · Nerve pain',
                     ],
                 ],
             ]],
@@ -804,11 +825,11 @@ class MupsSeeder extends Seeder
             'heading' => 'Find us close to home',
             'locations' => [
                 [
-                    'name' => 'Moin Uddin Pain Solution — Panchlaish',
-                    'address' => 'Neurosense, Panchlaish, near Chittagong Medical College, Chattogram',
+                    'name' => 'Moin Uddin Pain Solution — Mehedibag',
+                    'address' => 'Neurosense, Mehedibag, near Chittagong Medical College, Chattogram',
                     'operating_hours' => 'Sun–Tue 10 AM–4 PM and 4–9 PM',
                     'phone' => '+880 1880-728711',
-                    'google_maps_url' => 'https://www.google.com/maps/search/?api=1&query='.rawurlencode('Neurosense Panchlaish Chittagong'),
+                    'google_maps_url' => 'https://www.google.com/maps/search/?api=1&query='.rawurlencode('Neurosense Mehedibag Chittagong'),
                 ],
                 [
                     'name' => 'MUPS Dhaka Centre — Uttara',
