@@ -338,6 +338,107 @@ class PharmacyModuleTest extends TestCase
         );
     }
 
+    public function test_mixed_cash_and_online_records_split(): void
+    {
+        $item = $this->napaOnShelf(5, paidNow: 0);
+
+        $sale = app(PharmacySaleService::class)->sell(
+            $this->staff,
+            [['pharmacy_item_id' => $item->id, 'qty' => 1]],
+            ChamberCashEntry::METHOD_MIXED,
+            false,
+            null,
+            null,
+            null,
+            null,
+            400,
+            250,
+            ChamberCashEntry::METHOD_BKASH,
+        );
+
+        $this->assertSame(650, $sale->amount);
+        $this->assertSame(400, $sale->cash_taka);
+        $this->assertSame(250, $sale->mobile_taka);
+        $this->assertSame(ChamberCashEntry::METHOD_BKASH, $sale->mobile_method);
+    }
+
+    public function test_partial_fill_and_skip_line(): void
+    {
+        $item = $this->napaOnShelf(10, paidNow: 0);
+        $rx = $this->todaysPrescription();
+        $secondLine = PrescriptionItem::create([
+            'prescription_id' => $rx->id,
+            'medicine_name' => 'ORS',
+            'frequency' => '1+0+0',
+            'duration' => '3 days',
+            'sort_order' => 2,
+        ]);
+
+        $sale = app(PharmacySaleService::class)->sell(
+            $this->staff,
+            [
+                ['pharmacy_item_id' => $item->id, 'qty' => 1, 'prescription_item_id' => $rx->items->first()->id],
+                ['pharmacy_item_id' => $item->id, 'qty' => 0, 'prescription_item_id' => $secondLine->id],
+            ],
+            ChamberCashEntry::METHOD_CASH,
+            false,
+            $rx,
+        );
+
+        $this->assertSame(650, $sale->amount);
+        $this->assertSame(1, $sale->items()->count());
+        $this->assertSame(9, $item->fresh()->qty_on_hand);
+    }
+
+    public function test_supplier_refund_posts_income(): void
+    {
+        $item = $this->napaOnShelf(100, paidNow: 20000);
+        app(PharmacySaleService::class)->sell(
+            $this->staff,
+            [['pharmacy_item_id' => $item->id, 'qty' => 40]],
+            ChamberCashEntry::METHOD_CASH,
+        );
+        app(PharmacyStockService::class)->returnUnsold($item, $this->staff, 60);
+
+        app(PharmacySupplierService::class)->recordRefund($this->staff, 8000, ChamberCashEntry::METHOD_CASH);
+
+        $this->assertSame(0, app(PharmacySupplierService::class)->shopBalance()['refund_due']);
+        $this->assertDatabaseHas('chamber_cash_entries', [
+            'category' => ChamberCashEntry::CATEGORY_PHARMACY_SUPPLIER_REFUND,
+            'amount' => 8000,
+            'direction' => ChamberCashEntry::DIRECTION_INCOME,
+        ]);
+    }
+
+    public function test_concurrent_last_unit_sale_only_one_succeeds(): void
+    {
+        if (\Illuminate\Support\Facades\DB::connection()->getDriverName() !== 'mysql') {
+            $this->markTestSkipped('lockForUpdate is a no-op on SQLite');
+        }
+
+        $item = $this->napaOnShelf(1, paidNow: 0);
+        $failures = 0;
+        $successes = 0;
+
+        foreach ([1, 2] as $attempt) {
+            try {
+                app(PharmacySaleService::class)->sell(
+                    $this->staff,
+                    [['pharmacy_item_id' => $item->id, 'qty' => 1]],
+                    ChamberCashEntry::METHOD_CASH,
+                );
+                $successes++;
+            } catch (InvalidArgumentException) {
+                $failures++;
+            }
+        }
+
+        $this->assertSame(1, $successes);
+        $this->assertSame(1, $failures);
+        $this->assertSame(0, $item->fresh()->qty_on_hand);
+        $this->assertSame(1, PharmacySale::query()->count());
+    }
+
     private function napaOnShelf(int $qty, int $paidNow, bool $returnable = true): PharmacyItem
     {
         $item = PharmacyItem::create([
