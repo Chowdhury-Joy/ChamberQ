@@ -44,6 +44,21 @@ class PharmacyItemResource extends Resource
         return PharmacyAccess::canManageStock(auth()->user());
     }
 
+    public static function canCreate(): bool
+    {
+        return static::canViewAny();
+    }
+
+    public static function canEdit($record): bool
+    {
+        return static::canViewAny();
+    }
+
+    public static function canDelete($record): bool
+    {
+        return static::canViewAny();
+    }
+
     public static function shouldRegisterNavigation(): bool
     {
         return static::canViewAny();

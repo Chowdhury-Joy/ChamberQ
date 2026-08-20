@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-20T17:32:20+0600
+Last Updated: 2026-08-20T17:59:22+0600
 
 ## Full Site Map
 
@@ -56,8 +56,8 @@ Same central host; tenant identified by URL slug (tenant `id`), e.g. `drkarim`.
 | `/{slug}/admin/missed-procedures` | Unfinished past-dated intervention rows (WhatsApp + Move; Stations only) | staff / doctor (`canWorkDesk`, **Stations**) |
 | `/{slug}/admin/cash-categories` | Income/expense category labels for the cashbook (add, hide, rename custom) | admin only |
 | `/{slug}/admin/pharmacy-counter` | Pharmacy till: sell from Rx or walk-in, receipt, same-day void | staff with money job / admin (**Pharmacy**) |
-| `/{slug}/admin/pharmacy-items` | Shop stock: add SKU, receive box, return unsold | admin (**Pharmacy**) |
-| `/{slug}/admin/pharmacy-physical-count` | Physical count vs system qty (inventory history, not cashbook) | admin (**Pharmacy**) |
+| `/{slug}/admin/pharmacy-items` | Shop stock: add SKU, receive box, return unsold | staff with money job / admin (**Pharmacy**) |
+| `/{slug}/admin/pharmacy-physical-count` | Physical count vs system qty (inventory history, not cashbook) | staff with money job / admin (**Pharmacy**) |
 | `/{slug}/admin/pharmacy-pay-supplier` | Pay what is owed to the company, or record a supplier refund | staff with money job / admin (**Pharmacy**) |
 | `/{slug}/admin/pharmacy-doctor-commissions` | Pending doctor pharmacy cuts → mark paid | staff with money job / admin (**Pharmacy**) |
 | `/{slug}/admin/operational-reports` | Day / week / month booking counts | admin / doctor |
@@ -101,8 +101,8 @@ When a doctor connects their own domain (e.g. `drkarim.com`), routes live at the
 | `/admin/missed-procedures` | Unfinished past-dated intervention rows (WhatsApp + Move; Stations only) | staff / doctor (`canWorkDesk`, **Stations**) |
 | `/admin/cash-categories` | Income/expense category labels for the cashbook (add, hide, rename custom) | admin only |
 | `/admin/pharmacy-counter` | Pharmacy till: sell from Rx or walk-in, receipt, same-day void | staff with money job / admin (**Pharmacy**) |
-| `/admin/pharmacy-items` | Shop stock: add SKU, receive box, return unsold | admin (**Pharmacy**) |
-| `/admin/pharmacy-physical-count` | Physical count vs system qty (inventory history, not cashbook) | admin (**Pharmacy**) |
+| `/admin/pharmacy-items` | Shop stock: add SKU, receive box, return unsold | staff with money job / admin (**Pharmacy**) |
+| `/admin/pharmacy-physical-count` | Physical count vs system qty (inventory history, not cashbook) | staff with money job / admin (**Pharmacy**) |
 | `/admin/pharmacy-pay-supplier` | Pay what is owed to the company, or record a supplier refund | staff with money job / admin (**Pharmacy**) |
 | `/admin/pharmacy-doctor-commissions` | Pending doctor pharmacy cuts → mark paid | staff with money job / admin (**Pharmacy**) |
 | `/admin/referring-doctors` | Outside GP registry (Referrals module) | staff / doctor / admin |
@@ -296,7 +296,7 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 
 ### Staff & Roles (owner / helper / lead desk — settings)
 - **Trigger:** Owner adds a partner, doctor login, or desk staff member; a **lead desk** supervisor hires counter staff; ChamberQ helper manages logins the owner must not see.
-- **Steps:** **Settings → Staff & Roles** — list is grouped by job (Owners / Doctors / Desk staff) with filter chips. Create user → pick **Owner**, **Doctor**, or **Staff (desk + content)**. For **Staff**, optional **Desk jobs** ticks: **Money** (Collect fee + Cashbook + Pharmacy when that module is on), **Queue** (Live Queue + Call next), **Prep** (outdoor vitals + Mark prepped); leave all ticked for one person doing everything. **Lead desk** (owner/helper only) covers all counters and may add/edit **Staff** only — not owners, doctors, or helpers. On multi-branch clinics, optional **Branches** multi-select (empty = all branches; hidden when only one chamber). For desk staff, optional **Works for** one doctor (empty = hospital team at their branch(es)). ChamberQ helpers never appear for the owner; Super Admin adds/removes helpers separately. A lead with branch lock only hires staff for those branches.
+- **Steps:** **Settings → Staff & Roles** — list is grouped by job (Owners / Doctors / Desk staff) with filter chips. Create user → pick **Owner**, **Doctor**, or **Staff (desk + content)**. For **Staff**, optional **Desk jobs** ticks: **Money** (Collect fee + Cashbook + Pharmacy till and shop stock when that module is on), **Queue** (Live Queue + Call next), **Prep** (outdoor vitals + Mark prepped); leave all ticked for one person doing everything. **Lead desk** (owner/helper only) covers all counters and may add/edit **Staff** only — not owners, doctors, or helpers. On multi-branch clinics, optional **Branches** multi-select (empty = all branches; hidden when only one chamber). For desk staff, optional **Works for** one doctor (empty = hospital team at their branch(es)). ChamberQ helpers never appear for the owner; Super Admin adds/removes helpers separately. A lead with branch lock only hires staff for those branches.
 - **Data/systems touched:** `users`, `users.desk_jobs`, `users.desk_is_lead`, `chamber_user`, `users.assigned_doctor_id`.
 - **Success:** Owner can scan who is who at a glance; till / queue / weight counters only see their buttons; lead desk can grow the team without owner passwords; branch-locked reception only sees their roster/queue/cash; a doctor’s assistant only sees that doctor’s sittings.
 
@@ -351,7 +351,7 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 ### Pharmacy counter (when Pharmacy module on)
 
 - **Trigger:** The chamber sells medicines from a cupboard (or a small shop) and needs the till and the shelf to stay in step — without an online patient checkout.
-- **Steps:** Super Admin ticks **Pharmacy**. Owner (or admin) **Pharmacy stock** — add what this shop actually holds (search the national list, set sell price and company share, receive a box: pay ৳0 / some / full now, mark returnable or bought outright). Desk with the **Money** job opens **Operations → Pharmacy** — pick today’s prescription or a walk-in name, add lines, take cash / bKash / Nagad / card / cash+online (same as Collect fee). Receipt prints. Live qty drops. **Pay supplier** when the company should get its share of what sold (or to record a refund if a returnable box came back after an overpay). Optional **Doctor pharmacy cuts** (Branding % of shop cut, default 0 = off) only on Rx-linked sales; walk-in is ৳0. **Physical count** when the cupboard is counted: type what is on the shelf; the gap is stock history, not a cashbook line. Same-day **Void** undoes the sale.
+- **Steps:** Super Admin ticks **Pharmacy**. Desk with the **Money** job (or owner) **Pharmacy stock** — add what this shop actually holds (search the national list, set sell price and company share, receive a box: pay ৳0 / some / full now, mark returnable or bought outright). Same desk opens **Operations → Pharmacy** — pick today’s prescription or a walk-in name, add lines, take cash / bKash / Nagad / card / cash+online (same as Collect fee). Receipt prints. Live qty drops. **Pay supplier** when the company should get its share of what sold (or to record a refund if a returnable box came back after an overpay). Optional **Doctor pharmacy cuts** (Branding % of shop cut, default 0 = off) only on Rx-linked sales; walk-in is ৳0. **Physical count** when the cupboard is counted: type what is on the shelf; the gap is stock history, not a cashbook line. Same-day **Void** undoes the sale. A later dedicated chemist staff login can take stock without a new till role — not split yet.
 - **Data/systems touched:** `pharmacy_items`, `pharmacy_deliveries`, `pharmacy_sales` / `_items`, `pharmacy_counts` / `_items`, `pharmacy_stock_adjustments`, `pharmacy_supplier_settlements`, `pharmacy_doctor_commissions`, `PharmacySaleService` / `PharmacyStockService` / `PharmacySupplierService` / `PharmacyDoctorCommissionService`, cashbook `pharmacy` / `pharmacy_purchase` / `pharmacy_refund` / `pharmacy_supplier_refund` / `pharmacy_doctor_payout`.
 - **Success:** End of day the khata shows the full sell price that came in; the shelf qty matches what was sold/received/counted; the company is owed only for what the deal says (sold vs bought-outright); the doctor is not silently owed a walk-in cut.
 

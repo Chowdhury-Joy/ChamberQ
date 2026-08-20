@@ -3,6 +3,8 @@
 namespace Tests\Feature;
 
 use App\Filament\TenantAdmin\Pages\PharmacyCounter;
+use App\Filament\TenantAdmin\Pages\PharmacyPhysicalCount;
+use App\Filament\TenantAdmin\Resources\PharmacyItems\PharmacyItemResource;
 use App\Models\Booking;
 use App\Models\Chamber;
 use App\Models\ChamberCashEntry;
@@ -22,6 +24,8 @@ use App\Models\VisitRecord;
 use App\Services\PharmacySaleService;
 use App\Services\PharmacyStockService;
 use App\Services\PharmacySupplierService;
+use App\Support\PharmacyAccess;
+use App\Support\StaffDeskJobs;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
@@ -437,6 +441,53 @@ class PharmacyModuleTest extends TestCase
         $this->assertSame(1, $failures);
         $this->assertSame(0, $item->fresh()->qty_on_hand);
         $this->assertSame(1, PharmacySale::query()->count());
+    }
+
+    public function test_main_staff_can_update_shop_stock_but_queue_staff_and_doctors_cannot(): void
+    {
+        $owner = User::create([
+            'name' => 'Owner',
+            'email' => 'owner@pharmacy-shop.test',
+            'password' => Hash::make('secret'),
+            'role' => User::ROLE_OWNER,
+            'tenant_id' => 'pharmacy-shop',
+        ]);
+        $queue = User::create([
+            'name' => 'Queue',
+            'email' => 'queue@pharmacy-shop.test',
+            'password' => Hash::make('secret'),
+            'role' => User::ROLE_STAFF,
+            'tenant_id' => 'pharmacy-shop',
+            'desk_jobs' => [StaffDeskJobs::JOB_QUEUE],
+        ]);
+        $moneyOnly = User::create([
+            'name' => 'Money',
+            'email' => 'money@pharmacy-shop.test',
+            'password' => Hash::make('secret'),
+            'role' => User::ROLE_STAFF,
+            'tenant_id' => 'pharmacy-shop',
+            'desk_jobs' => [StaffDeskJobs::JOB_MONEY],
+        ]);
+
+        $this->actingAs($this->staff);
+        $this->assertTrue(PharmacyAccess::canManageStock($this->staff));
+        $this->assertTrue(PharmacyItemResource::canViewAny());
+        $this->assertTrue(PharmacyPhysicalCount::canAccess());
+
+        $this->actingAs($moneyOnly);
+        $this->assertTrue(PharmacyAccess::canManageStock($moneyOnly));
+
+        $this->actingAs($owner);
+        $this->assertTrue(PharmacyAccess::canManageStock($owner));
+
+        $this->actingAs($queue);
+        $this->assertFalse(PharmacyAccess::canManageStock($queue));
+        $this->assertFalse(PharmacyItemResource::canViewAny());
+        $this->assertFalse(PharmacyPhysicalCount::canAccess());
+
+        $this->actingAs($this->doctorUser);
+        $this->assertFalse(PharmacyAccess::canManageStock($this->doctorUser));
+        $this->assertFalse(PharmacyItemResource::canViewAny());
     }
 
     private function napaOnShelf(int $qty, int $paidNow, bool $returnable = true): PharmacyItem

@@ -869,6 +869,9 @@
 ## 2026-08-20T17:32:20+0600
 - Floor handoff is destination then type: **Send to lab** (`sendToLab` + lab type, today MSK) and **Send to intervention**; a first visit may pick either path. `StationsHandoffService::nextRoomKinds()` offers both from a visit sitting.
 
+## 2026-08-20T17:59:22+0600
+- Pharmacy shop stock and physical count are a Money-desk staff job (owner/helper still can); `PharmacyAccess::canManageStock` is no longer admin-only.
+
 
 
 

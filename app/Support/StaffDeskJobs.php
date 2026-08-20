@@ -7,6 +7,7 @@ use App\Models\User;
 /**
  * Which desk buttons a Staff login may use — money, queue, prep — plus lead
  * desk hiring. Null/empty desk_jobs means all three (legacy one-desk behaviour).
+ * Money includes pharmacy till + shop stock when that module is on.
  * A login with exactly one job opens that page after sign-in.
  */
 final class StaffDeskJobs
@@ -119,7 +120,7 @@ final class StaffDeskJobs
     public static function jobOptions(): array
     {
         return [
-            self::JOB_MONEY => __('Money — collect fee, cashbook, and pharmacy'),
+            self::JOB_MONEY => __('Money — collect fee, cashbook, pharmacy till, and shop stock'),
             self::JOB_QUEUE => __('Queue — call next and live queue'),
             self::JOB_PREP => __('Prep — outdoor vitals and room prep'),
         ];

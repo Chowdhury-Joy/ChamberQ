@@ -3329,3 +3329,12 @@
  <action>Rename the floor actions to **Send to lab** and **Send to intervention**. Lab opens a type picker (MSK today) then puts them on today's list. Intervention still asks when and the procedure type. A first visit may pick either path (skipping lab is allowed); follow-up still forks lab→report vs intervention→counseling. Supersedes “new visits must go Visit → MSK first” from 2026-08-18 for the desk handoff only.</action>
  <reason>Same as a hospital desk: first choose the department (lab or OT), then which test or procedure. Naming the button MSK hid the other door and fought the walk-in form.</reason>
 </decision>
+
+## 2026-08-20T17:59:22+0600
+
+<decision>
+ <category>Business_Logic</category>
+ <context>The pharmacy shop list (what this chamber actually sells, plus physical count) was owner/helper only. In a real chamber the desk person who takes cash also stocks the cupboard. A later hire might be a dedicated chemist, but today it is the same main staff login.</context>
+ <action>**Pharmacy stock** and **Physical count** follow the Money desk job (null/all jobs = the usual one-person staff). Owner/helper still can. Doctors, queue-only, and prep-only cannot. No fourth desk-job tick yet — a dedicated pharmacy staff login can split later without changing the till.</action>
+ <reason>Like a chemist counter next to reception: the person at the till updates the shelf list. Locking that behind the owner meant the list never got maintained. The queue caller should not be able to change sell prices.</reason>
+</decision>
