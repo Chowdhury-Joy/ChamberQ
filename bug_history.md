@@ -1587,3 +1587,12 @@
  <root_cause>`PortalPrescriptionLock` set/unlock accepted password forms keyed only on a phone number the caller typed or pasted from the URL.</root_cause>
  <prevention_rule>Require a consumed SMS OTP (`PortalOtpService`) in session before any portal prescription password set or unlock.</prevention_rule>
 </bug>
+
+## 2026-08-20T13:20:10+0600
+
+<bug>
+ <category>Code</category>
+ <symptom>Opening Book Serial (or any tenant admin page) showed Class "App\Filament\TenantAdmin\Pages\StaffDeskJobs" not found from Cashbook.php line 61.</symptom>
+ <root_cause>Cashbook::canAccess() calls StaffDeskJobs::canCollectFee() without `use App\Support\StaffDeskJobs`. PHP looked in the Pages namespace. Filament still evaluates Cashbook access while building other pages, so one missing import crashed Book Serial.</root_cause>
+ <prevention_rule>Any Filament page that calls StaffDeskJobs must import App\Support\StaffDeskJobs. Pin with Cashbook::canAccess() in ChamberCashTest — that call fatals if the import is missing.</prevention_rule>
+</bug>
