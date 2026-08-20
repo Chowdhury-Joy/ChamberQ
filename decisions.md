@@ -3437,3 +3437,12 @@
  <action>Print the medicine voucher on A4 portrait. Frame the whole page with the checkered border. Put the Branding logo (`tenants.logo_url`) beside the clinic name when one is set. Keep the same fields (Sl No, customer, table, Cash/Card/Bkash/Nagad, In Word, totals, signatures).</action>
  <reason>Like photocopying the real pad: the border and the logo are what the customer recognises first; the till still fills in the numbers.</reason>
 </decision>
+
+## 2026-08-20T19:22:46+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The printed voucher still typed MUPS / Dr. Moin Uddin Pain Solution next to the logo, sat the logo on a black plate, spilled onto a second sheet, listed Card / bKash / Nagad plus a blank Txn ID, and the Chittagong address still said Neurosense near Chittagong Medical College.</context>
+ <action>Show only the Branding logo on the voucher (clinic name if there is no logo). Drop the black plate; use the local transparent MUPS mark. Fit one A4 page (`@page` margin 0, fixed 297mm sheet). Payment ticks are Cash and Online (bKash / Nagad / card on the till still map to Online). Remove Txn ID. Mehedibag address and maps are “near Max Hospital, Chattogram”; drop Neurosense from seed, centres copy, and the MUPS handoff.</action>
+ <reason>Like a shop stamp: the mark is the brand, Cash or Online is what the customer needs to see, and the address should name the landmark they actually use to find the door.</reason>
+</decision>

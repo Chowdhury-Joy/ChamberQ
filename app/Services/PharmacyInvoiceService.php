@@ -15,7 +15,9 @@ use Illuminate\Support\Facades\DB;
 
 class PharmacyInvoiceService
 {
-    public const MIN_ROWS = 8;
+    public const MIN_ROWS = 6;
+
+    public const VOUCHER_ONLINE = 'online';
 
     public function assignIfNeeded(PharmacySale $sale): void
     {
@@ -210,5 +212,36 @@ class PharmacyInvoiceService
         }
 
         return [(string) $sale->method];
+    }
+
+    /**
+     * Voucher ticks: Cash and/or Online. The till still records bKash / Nagad / card.
+     *
+     * @return list<string>
+     */
+    public static function tickedVoucherPayments(PharmacySale $sale): array
+    {
+        $raw = self::tickedMethods($sale);
+        $out = [];
+        if (in_array(ChamberCashEntry::METHOD_CASH, $raw, true)) {
+            $out[] = ChamberCashEntry::METHOD_CASH;
+        }
+
+        $online = [
+            ChamberCashEntry::METHOD_BKASH,
+            ChamberCashEntry::METHOD_NAGAD,
+            ChamberCashEntry::METHOD_CARD,
+            ChamberCashEntry::METHOD_BANK,
+            ChamberCashEntry::METHOD_BANGLA_QR,
+            ChamberCashEntry::METHOD_OTHER,
+        ];
+        foreach ($raw as $method) {
+            if (in_array($method, $online, true)) {
+                $out[] = self::VOUCHER_ONLINE;
+                break;
+            }
+        }
+
+        return $out;
     }
 }

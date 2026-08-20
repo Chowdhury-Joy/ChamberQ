@@ -80,7 +80,7 @@ class MupsSeeder extends Seeder
             'contact_phone' => '01880728711',
             'whatsapp_number' => '8801880728711',
             'theme_color' => '#1B2978',
-            'logo_url' => self::IMG.'/logo.webp',
+            'logo_url' => '/images/mups/mups-logo.png',
             'favicon_url' => '/images/mups/favicon.svg',
             'font_family' => 'Golos Text',
             'default_locale' => 'en',
@@ -251,9 +251,9 @@ class MupsSeeder extends Seeder
 
         $mehedibag = Chamber::create([
             'name' => 'Moin Uddin Pain Solution — Mehedibag',
-            'address' => 'Neurosense, Mehedibag (near Chittagong Medical College), Chattogram',
+            'address' => 'Mehedibag (near Max Hospital), Chattogram',
             'contact' => '01880728711',
-            'map_url' => 'https://www.google.com/maps/search/?api=1&query='.rawurlencode('Neurosense Mehedibag Chittagong Medical College'),
+            'map_url' => 'https://www.google.com/maps/search/?api=1&query='.rawurlencode('Mehedibag Max Hospital Chattogram'),
         ]);
 
         $uttara = Chamber::create([
@@ -966,10 +966,10 @@ class MupsSeeder extends Seeder
             'locations' => [
                 [
                     'name' => 'Moin Uddin Pain Solution — Mehedibag',
-                    'address' => 'Neurosense, Mehedibag, near Chittagong Medical College, Chattogram',
+                    'address' => 'Mehedibag (near Max Hospital), Chattogram',
                     'operating_hours' => 'Sun–Tue 10 AM–4 PM and 4–9 PM',
                     'phone' => '+880 1880-728711',
-                    'google_maps_url' => 'https://www.google.com/maps/search/?api=1&query='.rawurlencode('Neurosense Mehedibag Chittagong'),
+                    'google_maps_url' => 'https://www.google.com/maps/search/?api=1&query='.rawurlencode('Mehedibag Max Hospital Chattogram'),
                 ],
                 [
                     'name' => 'MUPS Dhaka Centre — Uttara',

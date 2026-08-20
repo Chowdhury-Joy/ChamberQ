@@ -321,7 +321,7 @@ class PharmacyModuleTest extends TestCase
     {
         $chamber = Chamber::query()->first();
         $chamber->update([
-            'address' => 'Neurosense, Mehedibag, Chattogram',
+            'address' => 'Mehedibag (near Max Hospital), Chattogram',
             'contact' => '01805414666',
         ]);
         $this->tenant->name = 'MUPS — Dr. Moin Uddin Pain Solution';
@@ -354,8 +354,15 @@ class PharmacyModuleTest extends TestCase
         $response->assertSee('Received By', false);
         $response->assertSee('Customer Signature', false);
         $response->assertSee('Thank You.', false);
-        $response->assertSee('MUPS', false);
+        $response->assertDontSee('MUPS — Dr. Moin Uddin Pain Solution', false);
+        $response->assertDontSee('Neurosense', false);
+        $response->assertSee('Mehedibag (near Max Hospital), Chattogram', false);
         $response->assertSee('Cash', false);
+        $response->assertSee('Online', false);
+        $response->assertDontSee('Card', false);
+        $response->assertDontSee('Bkash', false);
+        $response->assertDontSee('Nagad', false);
+        $response->assertDontSee('Txn ID', false);
         $response->assertSee('box is-on', false);
         $response->assertSee('01805-414666', false);
         $response->assertSee('20-08-26', false);
@@ -364,6 +371,27 @@ class PharmacyModuleTest extends TestCase
         $response->assertSee('repeating-conic-gradient', false);
         $response->assertSee('/images/mups/mups-logo.png', false);
         $response->assertSee('clinic-logo', false);
+        $response->assertDontSee('background: #020617', false);
+        $response->assertSee('page-break-inside: avoid', false);
+    }
+
+    public function test_voucher_ticks_online_when_paid_by_bkash(): void
+    {
+        $item = $this->napaOnShelf(5, paidNow: 0);
+        $sale = app(PharmacySaleService::class)->sell(
+            $this->staff,
+            [['pharmacy_item_id' => $item->id, 'qty' => 1]],
+            ChamberCashEntry::METHOD_BKASH,
+            false,
+            null,
+            'Abdul Rufe',
+        );
+
+        $this->actingAs($this->staff);
+        $html = $this->get(tenant_web_route('pharmacy-invoices.show', ['sale' => $sale]))->assertOk();
+        $html->assertSee('Online', false);
+        $html->assertSee('box is-on', false);
+        $html->assertDontSee('Bkash', false);
     }
 
     public function test_voucher_numbers_run_like_a_pad(): void

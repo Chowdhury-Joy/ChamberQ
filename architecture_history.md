@@ -905,6 +905,9 @@
 ## 2026-08-20T19:11:48+0600
 - Medicine voucher is A4 portrait with the shop pad’s checkered navy/white square border and the clinic Branding logo (`tenants.logo_url`).
 
+## 2026-08-20T19:22:46+0600
+- Medicine voucher prints on one A4 page: logo only (transparent, no clinic-name text), Cash/Online ticks, no Txn ID; MUPS Mehedibag address is near Max Hospital (Neurosense removed).
+
 
 
 

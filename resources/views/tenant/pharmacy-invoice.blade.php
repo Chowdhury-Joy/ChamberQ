@@ -43,51 +43,53 @@
         /* Checkered pad border: small navy/white squares around the whole A4 page. */
         .sheet {
             width: 210mm;
-            min-height: 297mm;
+            height: 297mm;
             margin: 12px auto 36px;
-            padding: 8px;
+            padding: 6px;
             box-sizing: border-box;
             background:
                 repeating-conic-gradient(var(--ink) 0% 25%, #fff 0% 50%)
                 0 0 / 8px 8px;
             box-shadow: 0 18px 50px rgba(15, 35, 70, 0.18);
+            overflow: hidden;
+            page-break-inside: avoid;
+            break-inside: avoid;
         }
         .voucher {
             background: var(--paper);
-            min-height: calc(297mm - 16px);
-            padding: 0 0 14mm;
+            height: calc(297mm - 12px);
+            padding: 0 0 8mm;
             display: flex;
             flex-direction: column;
+            overflow: hidden;
         }
         .head {
             display: grid;
             grid-template-columns: 1fr auto;
-            gap: 16px 28px;
+            gap: 10px 20px;
             align-items: center;
-            padding: 14mm 15mm 12mm;
+            padding: 8mm 12mm 7mm;
             background: color-mix(in srgb, var(--ink) 9%, #f4f8fd);
             border-bottom: 2px solid var(--ink);
         }
         .brand {
             display: flex;
             align-items: center;
-            gap: 14px;
+            gap: 12px;
             min-width: 0;
+            flex-wrap: wrap;
         }
         .clinic-logo {
-            height: 68px;
+            height: 48px;
             width: auto;
-            max-width: 220px;
+            max-width: 260px;
             object-fit: contain;
             display: block;
             flex: 0 0 auto;
-            background: #020617;
-            padding: 6px 8px;
-            border-radius: 8px;
+            background: transparent;
             -webkit-print-color-adjust: exact;
             print-color-adjust: exact;
         }
-        .brand:has(.clinic-logo) .clinic-en { font-size: 22px; }
         .kicker {
             margin: 0 0 6px;
             font-size: 11px;
@@ -106,12 +108,11 @@
         }
         .badge {
             display: inline-block;
-            margin-top: 10px;
             border: 1.5px solid var(--gold);
             color: var(--ink-deep);
             border-radius: 999px;
-            padding: 5px 16px;
-            font-size: 11px;
+            padding: 4px 12px;
+            font-size: 10px;
             font-weight: 800;
             letter-spacing: 0.16em;
             text-transform: uppercase;
@@ -119,24 +120,24 @@
         }
         .contact {
             text-align: right;
-            font-size: 12.5px;
-            line-height: 1.55;
-            max-width: 230px;
+            font-size: 11.5px;
+            line-height: 1.45;
+            max-width: 240px;
             color: #3f3a33;
         }
-        .contact .addr { margin: 0 0 8px; font-weight: 600; }
+        .contact .addr { margin: 0 0 6px; font-weight: 600; }
         .contact .tel { margin: 0; }
         .meta {
             display: grid;
             grid-template-columns: 1fr 1.6fr 1fr;
-            gap: 12px;
-            margin: 18px 15mm 16px;
+            gap: 10px;
+            margin: 10px 12mm 10px;
         }
         .meta .field {
             background: #fff;
             border: 1px solid var(--rule);
-            border-radius: 10px;
-            padding: 10px 12px 8px;
+            border-radius: 8px;
+            padding: 7px 10px 6px;
         }
         .meta .label {
             display: block;
@@ -155,10 +156,10 @@
             color: var(--ink-deep);
         }
         table.lines {
-            width: calc(100% - 30mm);
-            margin: 0 15mm;
+            width: calc(100% - 24mm);
+            margin: 0 12mm;
             border-collapse: collapse;
-            font-size: 14px;
+            font-size: 13px;
             flex: 1;
             background: #fff;
         }
@@ -166,18 +167,18 @@
             background: var(--ink);
             color: #fff;
             font-weight: 700;
-            padding: 10px 12px;
+            padding: 7px 10px;
             text-align: left;
         }
-        table.lines th:first-child { border-radius: 10px 0 0 0; }
-        table.lines th:last-child { border-radius: 0 10px 0 0; }
+        table.lines th:first-child { border-radius: 8px 0 0 0; }
+        table.lines th:last-child { border-radius: 0 8px 0 0; }
         table.lines th.num, table.lines td.num { text-align: center; width: 2.6rem; }
         table.lines th.qty, table.lines td.qty { text-align: center; width: 4rem; }
         table.lines th.money, table.lines td.money { text-align: right; width: 6.5rem; }
         table.lines td {
             border-bottom: 1px solid var(--rule);
-            padding: 11px 12px;
-            height: 38px;
+            padding: 6px 10px;
+            height: 28px;
             vertical-align: middle;
         }
         table.lines tbody tr:nth-child(even) td { background: #f6f3ec; }
@@ -187,15 +188,15 @@
         .foot {
             display: grid;
             grid-template-columns: 1.3fr 0.9fr;
-            gap: 18px 22px;
-            margin: 18px 15mm 0;
+            gap: 12px 18px;
+            margin: 10px 12mm 0;
             align-items: stretch;
         }
         .pay {
             background: #fff;
             border: 1px solid var(--rule);
-            border-radius: 12px;
-            padding: 14px 16px 12px;
+            border-radius: 10px;
+            padding: 10px 12px 8px;
         }
         .pay-title {
             margin: 0 0 10px;
@@ -273,7 +274,7 @@
         }
         .totals th, .totals td {
             border: 1px solid var(--rule);
-            padding: 11px 14px;
+            padding: 7px 12px;
         }
         .totals th {
             text-align: left;
@@ -292,16 +293,16 @@
         .sign {
             display: grid;
             grid-template-columns: 1fr auto 1fr;
-            gap: 16px;
+            gap: 12px;
             align-items: end;
-            margin: 28px 15mm 0;
-            padding-top: 8px;
+            margin: 14px 12mm 0;
+            padding-top: 4px;
         }
         .sign .slot { text-align: center; }
         .sign .who {
-            min-height: 2.2em;
+            min-height: 1.6em;
             font-weight: 700;
-            font-size: 14px;
+            font-size: 13px;
         }
         .sign .caption {
             border-top: 1.5px solid var(--ink);
@@ -335,22 +336,26 @@
             letter-spacing: 0.14em;
         }
         @media print {
-            body { background: #fff; }
+            html, body { height: 297mm; overflow: hidden; background: #fff; }
             .screen-bar { display: none; }
             .sheet {
                 margin: 0;
-                width: auto;
-                min-height: 0;
+                width: 210mm;
+                height: 297mm;
+                max-height: 297mm;
                 box-shadow: none;
+                overflow: hidden;
+                page-break-inside: avoid;
+                break-inside: avoid;
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
-            .voucher { min-height: 0; }
+            .voucher { height: calc(297mm - 12px); min-height: 0; overflow: hidden; }
             .clinic-logo {
                 -webkit-print-color-adjust: exact;
                 print-color-adjust: exact;
             }
-            @page { size: A4; margin: 8mm; }
+            @page { size: A4; margin: 0; }
         }
     </style>
 </head>
@@ -363,13 +368,11 @@
             <div class="head">
                 <div class="brand">
                     @if($logoUrl)
-                        <img class="clinic-logo" src="{{ $logoUrl }}" alt="{{ $clinicName }}">
-                    @endif
-                    <div>
-                        <p class="kicker">{{ $thankYouBrand }}</p>
+                        <img class="clinic-logo" src="{{ $logoUrl }}" alt="">
+                    @else
                         <p class="clinic-en">{{ $clinicName }}</p>
-                        <span class="badge">{{ __('Medicine voucher') }}</span>
-                    </div>
+                    @endif
+                    <span class="badge">{{ __('Medicine voucher') }}</span>
                 </div>
                 <div class="contact">
                     @if($address)
@@ -422,18 +425,12 @@
             <div class="foot">
                 <div class="pay">
                     @php
-                        $ticked = \App\Services\PharmacyInvoiceService::tickedMethods($sale);
+                        $ticked = \App\Services\PharmacyInvoiceService::tickedVoucherPayments($sale);
                     @endphp
                     <p class="pay-title">{{ __('Paid how') }}</p>
                     <div class="pay-row">
                         <span class="box {{ in_array(\App\Models\ChamberCashEntry::METHOD_CASH, $ticked, true) ? 'is-on' : '' }}"><i></i> {{ __('Cash') }}</span>
-                        <span class="box {{ in_array(\App\Models\ChamberCashEntry::METHOD_CARD, $ticked, true) ? 'is-on' : '' }}"><i></i> {{ __('Card') }}</span>
-                        <span class="box {{ in_array(\App\Models\ChamberCashEntry::METHOD_BKASH, $ticked, true) ? 'is-on' : '' }}"><i></i> {{ __('Bkash') }}</span>
-                        <span class="box {{ in_array(\App\Models\ChamberCashEntry::METHOD_NAGAD, $ticked, true) ? 'is-on' : '' }}"><i></i> {{ __('Nagad') }}</span>
-                    </div>
-                    <div class="dotted">
-                        <span class="label">{{ __('Txn ID') }} :</span>
-                        <span class="line"></span>
+                        <span class="box {{ in_array(\App\Services\PharmacyInvoiceService::VOUCHER_ONLINE, $ticked, true) ? 'is-on' : '' }}"><i></i> {{ __('Online') }}</span>
                     </div>
                     <div class="dotted">
                         <span class="label">{{ __('In Word') }} :</span>
@@ -461,7 +458,7 @@
                     <div class="who">{{ $receivedBy }}</div>
                     <div class="caption">{{ __('Received By') }}</div>
                 </div>
-                <div class="thanks">{{ __('Thank You.') }} {{ $thankYouBrand }}</div>
+                <div class="thanks">{{ __('Thank You.') }}</div>
                 <div class="slot">
                     <div class="who">&nbsp;</div>
                     <div class="caption">{{ __('Customer Signature') }}</div>
