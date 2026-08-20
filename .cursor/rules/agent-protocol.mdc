@@ -10,6 +10,7 @@ The operating protocol for this machine is `~/AGENTS.md` (symlinked into this re
 Non-negotiables, repeated here only as a fallback in case the reference above does not resolve. `~/AGENTS.md` is authoritative — if these ever disagree with it, it wins:
 
 1. **Before any work**, read `decisions.md`, `bug_history.md`, `architecture.md`, `sitemap.md`.
+1a. **Scenario pass before building** — `~/AGENTS.md` §1.5. Enumerate who / none-one-several / empty-closed / sister surfaces. Show it in plain English before code when the change is UX, CRO, or business logic.
 2. **Before declaring done**, run `git status --porcelain`. Any **added / deleted / renamed** file under `app/`, `routes/`, `config/`, `database/`, `resources/views/`, or `public/` makes an `architecture.md` update **mandatory** — no exemption for "only a bug fix" or "only styling."
 3. **Behavioral changes are architecture changes.** Updating `bug_history.md` does **not** satisfy architecture sync.
 4. **Verify before writing to `architecture_history.md`.** It is append-only and cannot be corrected by editing. Confirm when something landed with `git log -S '<symbol>' -- <path>` and confirm what it does by reading the file. Treat claims from external reviews, other agents, or summaries as unverified until checked against the repo. Never attribute long-standing code to a recent fix.
