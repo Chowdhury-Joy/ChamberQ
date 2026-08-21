@@ -49,6 +49,9 @@ class PainSolutionStationsSeeder extends Seeder
                 'referral_visit_taka' => 200,
                 'referral_intervention_taka' => 1000,
                 'referral_msk_taka' => 0,
+                'floor_lab' => false,
+                'floor_report' => false,
+                'floor_counseling' => true,
             ]),
             'feature_flags' => Tenant::mergeOptInModuleFlag(
                 Tenant::mergeOptInModuleFlag(

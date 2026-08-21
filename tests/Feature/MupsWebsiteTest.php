@@ -285,7 +285,9 @@ class MupsWebsiteTest extends TestCase
 
         $this->assertGreaterThan(0, \App\Models\ScheduleSession::query()->where('kind', \App\Models\ScheduleSession::KIND_VISIT)->count());
         $this->assertGreaterThan(0, \App\Models\ScheduleSession::query()->where('kind', \App\Models\ScheduleSession::KIND_INTERVENTION)->count());
-        $this->assertGreaterThan(0, \App\Models\ScheduleSession::query()->where('kind', \App\Models\ScheduleSession::KIND_COUNSELING)->count());
+        $this->assertTrue(\App\Services\PracticeRules::hasFloorLab($tenant));
+        $this->assertTrue(\App\Services\PracticeRules::hasFloorReport($tenant));
+        $this->assertTrue(\App\Services\PracticeRules::hasFloorCounseling($tenant));
         $this->assertGreaterThan(0, \App\Models\FeeCatalogItem::query()->count());
         $this->assertGreaterThan(0, \App\Models\ReferringDoctor::query()->count());
         $this->assertGreaterThan(0, \App\Models\Employee::query()->count());

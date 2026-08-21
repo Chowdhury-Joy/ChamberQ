@@ -17,6 +17,27 @@ use InvalidArgumentException;
 
 class StationsHandoffService
 {
+    /**
+     * Visit / consult / OT sittings — the clinic clock. Lab, report and
+     * counseling lists follow this day; they are not sittings of their own.
+     *
+     * @var list<string>
+     */
+    public const CLINIC_SITTING_KINDS = [
+        ScheduleSession::KIND_VISIT,
+        ScheduleSession::KIND_CONSULT,
+        ScheduleSession::KIND_INTERVENTION,
+    ];
+
+    /**
+     * @var list<string>
+     */
+    public const FLOOR_ROOM_KINDS = [
+        ScheduleSession::KIND_MSK,
+        ScheduleSession::KIND_REPORT,
+        ScheduleSession::KIND_COUNSELING,
+    ];
+
     public function __construct(
         private readonly BookingService $bookingService,
         private readonly VoucherService $voucherService,
@@ -84,7 +105,7 @@ class StationsHandoffService
         }
 
         $date = $procedure->booking_date?->toDateString();
-        if ($date === null || $this->findSession($session, ScheduleSession::KIND_COUNSELING, $date) === null) {
+        if ($date === null) {
             return false;
         }
 
@@ -487,7 +508,7 @@ class StationsHandoffService
             $from,
             ScheduleSession::KIND_COUNSELING,
             __('This patient is already on today\'s counseling list.'),
-            __('No counseling sitting is scheduled for this doctor on that date.'),
+            __('Counseling is not open — this clinic is not sitting that day, or counseling is not a room here.'),
         );
     }
 
@@ -505,7 +526,7 @@ class StationsHandoffService
             $from,
             ScheduleSession::KIND_MSK,
             __('This patient is already on today\'s MSK list.'),
-            __('No MSK sitting is scheduled for this doctor on that date.'),
+            __('Lab is not open — this clinic is not sitting that day, or there is no lab room.'),
             $branch,
         );
     }
@@ -520,7 +541,7 @@ class StationsHandoffService
             $from,
             ScheduleSession::KIND_REPORT,
             __('This patient is already on today\'s report list.'),
-            __('No report sitting is scheduled for this doctor on that date.'),
+            __('Report is not open — this clinic is not sitting that day, or there is no report room.'),
         );
     }
 
@@ -737,17 +758,123 @@ class StationsHandoffService
         return $match;
     }
 
+    public function provisionFloorRoomsForDate(string $date): void
+    {
+        if (! tenant()?->hasStations()) {
+            return;
+        }
+
+        $dow = Carbon::parse($date)->dayOfWeek;
+        $sittings = ScheduleSession::query()
+            ->whereIn('kind', self::CLINIC_SITTING_KINDS)
+            ->where('day_of_week', $dow)
+            ->get()
+            ->unique(fn (ScheduleSession $session): string => $session->chamber_id.'|'.$session->doctor_id);
+
+        foreach ($sittings as $from) {
+            foreach (self::FLOOR_ROOM_KINDS as $kind) {
+                if ($this->shouldProvisionFloorRoom($kind)) {
+                    $this->findSession($from, $kind, $date);
+                }
+            }
+        }
+    }
+
+    public function ensureRoomQueue(ScheduleSession $from, string $kind, string $bookingDate): ?ScheduleSession
+    {
+        return $this->findSession($from, $kind, $bookingDate);
+    }
+
     private function findSession(ScheduleSession $from, string $kind, string $bookingDate): ?ScheduleSession
     {
         $date = Carbon::parse($bookingDate);
 
-        return ScheduleSession::query()
+        $existing = ScheduleSession::query()
             ->where('chamber_id', $from->chamber_id)
             ->where('doctor_id', $from->doctor_id)
             ->where('kind', $kind)
             ->where('day_of_week', $date->dayOfWeek)
             ->orderBy('start_time')
             ->first();
+
+        if ($existing) {
+            return $existing;
+        }
+
+        if (! $this->shouldProvisionFloorRoom($kind) || ! $this->clinicIsOpenOn($from, $bookingDate)) {
+            return null;
+        }
+
+        return $this->provisionRoomQueue($from, $kind, $bookingDate);
+    }
+
+    private function shouldProvisionFloorRoom(string $kind): bool
+    {
+        if (! in_array($kind, self::FLOOR_ROOM_KINDS, true)) {
+            return false;
+        }
+
+        if (! PracticeRules::hasFloorRoom($kind)) {
+            return false;
+        }
+
+        if ($kind === ScheduleSession::KIND_COUNSELING && PracticeRules::counselingIsOwnSession()) {
+            return false;
+        }
+
+        return true;
+    }
+
+    private function clinicSittingsOnDate(ScheduleSession $from, string $date)
+    {
+        $dow = Carbon::parse($date)->dayOfWeek;
+
+        return ScheduleSession::query()
+            ->where('chamber_id', $from->chamber_id)
+            ->where('doctor_id', $from->doctor_id)
+            ->whereIn('kind', self::CLINIC_SITTING_KINDS)
+            ->where('day_of_week', $dow)
+            ->get();
+    }
+
+    private function clinicIsOpenOn(ScheduleSession $from, string $date): bool
+    {
+        if ($this->clinicSittingsOnDate($from, $date)->isNotEmpty()) {
+            return true;
+        }
+
+        return in_array($from->kind, self::CLINIC_SITTING_KINDS, true)
+            && (int) $from->day_of_week === Carbon::parse($date)->dayOfWeek;
+    }
+
+    private function provisionRoomQueue(ScheduleSession $from, string $kind, string $bookingDate): ScheduleSession
+    {
+        $sittings = $this->clinicSittingsOnDate($from, $bookingDate);
+        if ($sittings->isEmpty() && in_array($from->kind, self::CLINIC_SITTING_KINDS, true)) {
+            $sittings = collect([$from]);
+        }
+
+        $starts = $sittings->pluck('start_time')->filter()->sort()->values();
+        $ends = $sittings->pluck('end_time')->filter()->sort()->values();
+
+        $name = match ($kind) {
+            ScheduleSession::KIND_MSK => __('Lab'),
+            ScheduleSession::KIND_REPORT => __('Report'),
+            ScheduleSession::KIND_COUNSELING => __('Counseling'),
+            default => $kind,
+        };
+
+        return ScheduleSession::create([
+            'chamber_id' => $from->chamber_id,
+            'doctor_id' => $from->doctor_id,
+            'day_of_week' => Carbon::parse($bookingDate)->dayOfWeek,
+            'session_name' => $name,
+            'kind' => $kind,
+            'start_time' => $starts->first() ?? $from->start_time,
+            'end_time' => $ends->last() ?? $from->end_time,
+            'slot_cap' => 40,
+            'walk_in_overflow_cap' => $kind === ScheduleSession::KIND_MSK ? 6 : 0,
+        ]);
     }
 
     private function hasRoom(ScheduleSession $from, string $kind, string $date): bool
@@ -759,7 +886,32 @@ class StationsHandoffService
                 ->contains(fn (ScheduleSession $session): bool => (int) $session->day_of_week === $weekday);
         }
 
-        return $this->findSession($from, $kind, $date) !== null;
+        if (in_array($kind, self::FLOOR_ROOM_KINDS, true)) {
+            if (! PracticeRules::hasFloorRoom($kind)) {
+                return false;
+            }
+
+            if ($kind === ScheduleSession::KIND_COUNSELING && PracticeRules::counselingIsOwnSession()) {
+                return $this->lookupSession($from, $kind, $date) !== null;
+            }
+
+            return $this->clinicIsOpenOn($from, $date);
+        }
+
+        return $this->lookupSession($from, $kind, $date) !== null;
+    }
+
+    private function lookupSession(ScheduleSession $from, string $kind, string $bookingDate): ?ScheduleSession
+    {
+        $date = Carbon::parse($bookingDate);
+
+        return ScheduleSession::query()
+            ->where('chamber_id', $from->chamber_id)
+            ->where('doctor_id', $from->doctor_id)
+            ->where('kind', $kind)
+            ->where('day_of_week', $date->dayOfWeek)
+            ->orderBy('start_time')
+            ->first();
     }
 
     private function sittingIsKind(Booking $booking, string $kind): bool

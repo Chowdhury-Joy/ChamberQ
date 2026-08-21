@@ -353,6 +353,11 @@ class LiveQueueControl extends Page implements HasActions, HasTable
     {
         $today = Carbon::today()->dayOfWeek;
 
+        if (tenant()?->hasStations()) {
+            app(\App\Services\StationsHandoffService::class)
+                ->provisionFloorRoomsForDate(Carbon::today()->toDateString());
+        }
+
         $query = ScheduleSession::with('chamber')
             ->where('day_of_week', $today)
             ->orderBy('start_time');

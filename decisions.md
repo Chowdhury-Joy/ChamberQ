@@ -3537,3 +3537,11 @@
  <reason>Like a bank token machine: “twelve … twelve … twelve”. One second between passes is long enough to hear as three separate calls. Staff at the desk hear the same pattern the waiting room hears.</reason>
 </decision>
 
+## 2026-08-21T10:21:43+0600
+<decision>
+ <category>Business_Logic</category>
+ <context>MSK and Report were modelled as extra sittings with their own hours. On the floor they are rooms: if a visit is happening, the clinic is open, so those rooms are open. Counseling is a list for today and may be the same physical room as visit or OT; another hospital may still give counseling its own sitting hours. Treating them as sessions hid Send to lab when a leftover Visit-only day had no MSK sitting, and would force a recode per clinic.</context>
+ <action>Timetable sittings stay Visit / Intervention (and leftover Consult). Branding ticks **Lab / Report / Counseling** as floor rooms (`practice_rules.floor_lab` etc.). Send to lab/report/counseling follows an open clinic day and provisions a same-day list spanning visit+OT hours when no leftover sitting exists. Lab type picker stays (MSK today; other clinics add types). Counseling-as-session is an optional Branding tick. MUPS seed stops creating MSK/Report/Counseling sittings. Pain Solution ticks counseling only. Supersedes “MSK and Report are staff-pushed sittings” from the 2026-08-18 care-path decision for those two, and counseling-as-default-sitting.</action>
+ <reason>Like a restaurant: lunch is the sitting; kitchen and cashier are rooms, not extra lunch times. The next hospital ticks which rooms it has instead of getting a ChamberQ rebuild.</reason>
+</decision>
+

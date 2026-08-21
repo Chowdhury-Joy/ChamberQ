@@ -62,15 +62,36 @@ class ScheduleSession extends Model
     }
 
     /** @return array<string, string> */
+    public static function timetableKindOptions(?string $current = null): array
+    {
+        $options = [
+            self::KIND_CONSULT => __('Consult (free)'),
+            self::KIND_VISIT => __('Visit'),
+            self::KIND_INTERVENTION => __('Intervention'),
+            self::KIND_COUNSELING => __('Counseling (own hours)'),
+        ];
+
+        if ($current === self::KIND_MSK) {
+            $options[self::KIND_MSK] = __('Lab list (legacy sitting)');
+        }
+
+        if ($current === self::KIND_REPORT) {
+            $options[self::KIND_REPORT] = __('Report list (legacy sitting)');
+        }
+
+        return $options;
+    }
+
+    /** @return array<string, string> */
     public static function kindOptions(): array
     {
         return [
             self::KIND_CONSULT => __('Consult (free)'),
             self::KIND_VISIT => __('Visit'),
             self::KIND_INTERVENTION => __('Intervention'),
-            self::KIND_MSK => __('MSK scan'),
+            self::KIND_MSK => __('Lab'),
             self::KIND_REPORT => __('Report'),
-            self::KIND_COUNSELING => __('Counseling (free)'),
+            self::KIND_COUNSELING => __('Counseling'),
         ];
     }
 

@@ -16,6 +16,8 @@ use App\Models\User;
 use App\Services\BookingService;
 use App\Services\CarePath;
 use App\Services\PatientService;
+use App\Services\PracticeRules;
+use App\Services\StationsHandoffService;
 use App\Support\BdNid;
 use App\Support\StaffDeskScope;
 use Carbon\Carbon;
@@ -458,8 +460,10 @@ final class StaffBookingForm
 
         if ($includeSessions) {
             $weekdays = $weekdays->merge(
-                self::matchingSessionsQuery($visitType, $labType, $doctorId, $chamberId)
-                    ->pluck('day_of_week')
+                self::labUsesClinicDays($visitType, $labType)
+                    ? self::clinicSessionsQuery($doctorId, $chamberId)->pluck('day_of_week')
+                    : self::matchingSessionsQuery($visitType, $labType, $doctorId, $chamberId)
+                        ->pluck('day_of_week')
             );
         }
 
@@ -568,6 +572,33 @@ final class StaffBookingForm
         return $query;
     }
 
+    private static function labUsesClinicDays(string $visitType, mixed $labType): bool
+    {
+        return $visitType === self::TYPE_LAB
+            && $labType === self::LAB_MSK
+            && PracticeRules::hasFloorLab();
+    }
+
+    private static function clinicSessionsQuery(mixed $doctorId, mixed $chamberId): Builder
+    {
+        $query = ScheduleSession::query()->whereIn('kind', StationsHandoffService::CLINIC_SITTING_KINDS);
+
+        $user = auth()->user();
+        if ($user instanceof User) {
+            StaffDeskScope::constrainScheduleSessions($query, $user);
+        }
+
+        if (filled($doctorId)) {
+            $query->where('doctor_id', (int) $doctorId);
+        }
+
+        if (filled($chamberId)) {
+            $query->where('chamber_id', (int) $chamberId);
+        }
+
+        return $query;
+    }
+
     private static function syncBookable(Get $get, Set $set): void
     {
         $options = self::bookableOptions(
@@ -628,6 +659,20 @@ final class StaffBookingForm
             && tenant()?->hasFeature('lab_tests');
 
         if ($includeSessions) {
+            if ($visitType === self::TYPE_LAB && $labType === self::LAB_MSK && PracticeRules::hasFloorLab()) {
+                $from = self::clinicSessionsQuery($doctorId, $chamberId)
+                    ->where('day_of_week', $dow)
+                    ->orderBy('start_time')
+                    ->first();
+                if ($from) {
+                    app(StationsHandoffService::class)->ensureRoomQueue(
+                        $from,
+                        ScheduleSession::KIND_MSK,
+                        $date->toDateString(),
+                    );
+                }
+            }
+
             $sessionsQuery = self::matchingSessionsQuery($visitType, $labType, $doctorId, $chamberId)
                 ->with(['doctor', 'chamber'])
                 ->where('day_of_week', $dow);

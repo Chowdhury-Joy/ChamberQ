@@ -257,7 +257,7 @@ class StationsHandoffForm
                     return [
                         Placeholder::make('no_lab')
                             ->hiddenLabel()
-                            ->content(__('No lab sitting is scheduled for this doctor today.')),
+                            ->content(__('No lab room is open for this clinic today.')),
                     ];
                 }
 

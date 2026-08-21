@@ -436,10 +436,10 @@ class StationsTillTest extends TestCase
 
     /**
      * The action is a plain confirm modal with no form, so there is nowhere to
-     * explain a missing counseling sitting. If visibility does not match
+     * explain a missing counseling room. If visibility does not match
      * capability, staff tap it, confirm, and only then get a red toast.
      */
-    public function test_send_to_counseling_is_hidden_until_a_counseling_sitting_exists(): void
+    public function test_send_to_counseling_is_hidden_until_the_clinic_has_that_room(): void
     {
         $intervention = ScheduleSession::create([
             'chamber_id' => $this->chamber->id,
@@ -467,23 +467,20 @@ class StationsTillTest extends TestCase
 
         $this->assertFalse(
             $handoff->canSendToCounseling($procedure->fresh(['bookable'])),
-            'Send to counseling was offered with no counseling sitting to send them to.',
+            'Send to counseling was offered with no counseling room.',
         );
 
-        ScheduleSession::create([
-            'chamber_id' => $this->chamber->id,
-            'doctor_id' => $this->doctor->id,
-            'day_of_week' => Carbon::today()->dayOfWeek,
-            'session_name' => 'Counseling',
-            'kind' => ScheduleSession::KIND_COUNSELING,
-            'start_time' => '10:00',
-            'end_time' => '14:30',
-            'slot_cap' => 20,
+        $this->tenant->update([
+            'practice_rules' => \App\Services\PracticeRules::normalize([
+                'floor_counseling' => true,
+            ]),
         ]);
+        $this->tenant->refresh();
+        tenancy()->initialize($this->tenant);
 
         $this->assertTrue(
             $handoff->canSendToCounseling($procedure->fresh(['bookable'])),
-            'Send to counseling stayed hidden even though a counseling sitting exists.',
+            'Send to counseling stayed hidden even though counseling is a room on an open day.',
         );
     }
 

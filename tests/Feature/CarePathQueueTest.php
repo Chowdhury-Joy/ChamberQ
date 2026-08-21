@@ -12,6 +12,7 @@ use App\Models\ScheduleSession;
 use App\Models\Tenant;
 use App\Services\BookingService;
 use App\Services\CarePath;
+use App\Services\PracticeRules;
 use App\Services\StationsHandoffService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -247,6 +248,43 @@ class CarePathQueueTest extends TestCase
             allowOverflow: true,
             allowEndedToday: true,
         );
+    }
+
+    public function test_lab_report_and_counseling_follow_an_open_clinic_day_without_their_own_sittings(): void
+    {
+        $this->msk->delete();
+        $this->report->delete();
+        $this->counseling->delete();
+
+        $this->tenant->update([
+            'practice_rules' => PracticeRules::normalize([
+                'floor_lab' => true,
+                'floor_report' => true,
+                'floor_counseling' => true,
+            ]),
+        ]);
+
+        $visit = $this->bookVisit('Open Day Rooms', '01715550020');
+        $handoff = app(StationsHandoffService::class);
+
+        $this->assertTrue($handoff->canSendToLab($visit->fresh(['bookable'])));
+        $this->assertTrue($handoff->canSendVisit($visit->fresh(['bookable'])));
+
+        $lab = $handoff->sendToLab($visit->fresh(['bookable']), ScheduleSession::KIND_MSK);
+        $this->assertSame(ScheduleSession::KIND_MSK, $lab->bookable?->kind);
+        $this->assertNotSame($this->visit->id, $lab->bookable_id);
+
+        $procedure = $handoff->sendVisitToIntervention(
+            $visit->fresh(['bookable']),
+            Carbon::today()->toDateString(),
+        );
+        $procedure->update(['procedure_status' => Booking::PROCEDURE_DONE]);
+
+        $report = $handoff->sendToReport($procedure->fresh(['bookable']));
+        $this->assertSame(ScheduleSession::KIND_REPORT, $report->bookable?->kind);
+
+        $counseling = $handoff->sendToCounseling($report->fresh(['bookable']));
+        $this->assertSame(ScheduleSession::KIND_COUNSELING, $counseling->bookable?->kind);
     }
 
     public function test_without_msk_and_report_rooms_the_short_path_still_works(): void

@@ -16,7 +16,9 @@ use Carbon\Carbon;
  * Stored as JSON on the tenant (default) and optionally on the doctor
  * (override). Missing follow-up / room-fee keys use a 3-month window and
  * free report/counseling so the floor still runs before anyone opens
- * Branding. Outside-GP cuts default to ৳0 — each clinic types its own
+ * Branding. Lab, report, and counseling are floor rooms on an open clinic
+ * day (Branding ticks), not sittings, unless a clinic turns counseling into
+ * its own sitting. Outside-GP cuts default to ৳0 — each clinic types its own
  * amounts. MUPS-sized numbers belong in that clinic’s seed or Branding,
  * not in PHP constants for every client.
  */
@@ -48,7 +50,11 @@ class PracticeRules
      *     counseling_price_after_taka: int,
      *     referral_visit_taka: int,
      *     referral_intervention_taka: int,
-     *     referral_msk_taka: int
+     *     referral_msk_taka: int,
+     *     floor_lab: bool,
+     *     floor_report: bool,
+     *     floor_counseling: bool,
+     *     counseling_as_session: bool
      * }
      */
     public static function defaults(): array
@@ -67,6 +73,10 @@ class PracticeRules
             'referral_visit_taka' => 0,
             'referral_intervention_taka' => 0,
             'referral_msk_taka' => 0,
+            'floor_lab' => false,
+            'floor_report' => false,
+            'floor_counseling' => false,
+            'counseling_as_session' => false,
         ];
     }
 
@@ -81,6 +91,10 @@ class PracticeRules
             'referral_visit_taka',
             'referral_intervention_taka',
             'referral_msk_taka',
+            'floor_lab',
+            'floor_report',
+            'floor_counseling',
+            'counseling_as_session',
         ];
     }
 
@@ -117,7 +131,96 @@ class PracticeRules
             'referral_visit_taka' => max(0, (int) ($stored['referral_visit_taka'] ?? 0)),
             'referral_intervention_taka' => max(0, (int) ($stored['referral_intervention_taka'] ?? 0)),
             'referral_msk_taka' => max(0, (int) ($stored['referral_msk_taka'] ?? 0)),
+            'floor_lab' => self::storedBool($stored, 'floor_lab'),
+            'floor_report' => self::storedBool($stored, 'floor_report'),
+            'floor_counseling' => self::storedBool($stored, 'floor_counseling'),
+            'counseling_as_session' => self::storedBool($stored, 'counseling_as_session'),
         ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $stored
+     */
+    private static function storedBool(array $stored, string $key): bool
+    {
+        if (! array_key_exists($key, $stored)) {
+            return false;
+        }
+
+        return filter_var($stored[$key], FILTER_VALIDATE_BOOLEAN);
+    }
+
+    /**
+     * Branding checkboxes: honour an explicit tick, otherwise a leftover
+     * sitting of that kind still means the room exists.
+     *
+     * @return array<string, mixed>
+     */
+    public static function forBrandingForm(?Tenant $tenant = null): array
+    {
+        $tenant = $tenant ?? tenant();
+        $raw = is_array($tenant?->practice_rules) ? $tenant->practice_rules : [];
+        $rules = self::normalize($raw);
+
+        $rules['floor_lab'] = self::hasFloorLab($tenant);
+        $rules['floor_report'] = self::hasFloorReport($tenant);
+        $rules['floor_counseling'] = self::hasFloorCounseling($tenant);
+        $rules['counseling_as_session'] = self::counselingIsOwnSession($tenant);
+
+        return $rules;
+    }
+
+    public static function hasFloorLab(?Tenant $tenant = null): bool
+    {
+        return self::hasFloorRoom(ScheduleSession::KIND_MSK, $tenant);
+    }
+
+    public static function hasFloorReport(?Tenant $tenant = null): bool
+    {
+        return self::hasFloorRoom(ScheduleSession::KIND_REPORT, $tenant);
+    }
+
+    public static function hasFloorCounseling(?Tenant $tenant = null): bool
+    {
+        return self::hasFloorRoom(ScheduleSession::KIND_COUNSELING, $tenant);
+    }
+
+    public static function counselingIsOwnSession(?Tenant $tenant = null): bool
+    {
+        $tenant = $tenant ?? tenant();
+        $raw = is_array($tenant?->practice_rules) ? $tenant->practice_rules : [];
+
+        return self::storedBool($raw, 'counseling_as_session');
+    }
+
+    public static function hasFloorRoom(string $kind, ?Tenant $tenant = null): bool
+    {
+        $tenant = $tenant ?? tenant();
+        if (! $tenant?->hasStations()) {
+            return false;
+        }
+
+        $flag = match ($kind) {
+            ScheduleSession::KIND_MSK => 'floor_lab',
+            ScheduleSession::KIND_REPORT => 'floor_report',
+            ScheduleSession::KIND_COUNSELING => 'floor_counseling',
+            default => null,
+        };
+
+        if ($flag === null) {
+            return false;
+        }
+
+        $raw = is_array($tenant->practice_rules) ? $tenant->practice_rules : [];
+        if (array_key_exists($flag, $raw)) {
+            return filter_var($raw[$flag], FILTER_VALIDATE_BOOLEAN);
+        }
+
+        if (! tenancy()->initialized) {
+            return false;
+        }
+
+        return ScheduleSession::query()->where('kind', $kind)->exists();
     }
 
     /**

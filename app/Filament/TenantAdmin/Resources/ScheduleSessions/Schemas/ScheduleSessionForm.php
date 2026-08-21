@@ -55,12 +55,14 @@ class ScheduleSessionForm
                     ->required()
                     ->maxLength(255),
                 Select::make('kind')
-                    ->label(__('Room type'))
-                    ->options(ScheduleSession::kindOptions())
+                    ->label(__('Session type'))
+                    ->options(fn (Get $get): array => ScheduleSession::timetableKindOptions(
+                        is_string($get('kind')) ? $get('kind') : null,
+                    ))
                     ->native(false)
                     ->visible(fn (): bool => tenant()?->hasStations() ?? false)
                     ->required(fn (): bool => tenant()?->hasStations() ?? false)
-                    ->helperText(__('Counseling, MSK and Report are free — Collect fee stays hidden. Visit and intervention use the fee catalogue.')),
+                    ->helperText(__('Visit and intervention have hours. Lab and report are rooms on an open clinic day (Branding). Add Counseling here only if this clinic runs counseling on its own clock.')),
                 TimePicker::make('start_time')
                     ->required()
                     ->seconds(false)

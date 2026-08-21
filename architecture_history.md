@@ -935,3 +935,5 @@
 ## 2026-08-21T09:59:28+0600
 - Queue call voice: serial WAV three times with a 1s gap on the outdoor TV, all-rooms TV, and Live Queue Control; patient name once after the three numbers.
 
+## 2026-08-21T10:21:43+0600
+- Lab, report, and counseling are floor rooms on an open clinic day (`PracticeRules` ticks); `StationsHandoffService` provisions same-day lists instead of requiring MSK/Report/Counseling sittings.

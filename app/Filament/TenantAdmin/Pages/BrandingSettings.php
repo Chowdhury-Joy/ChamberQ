@@ -71,7 +71,7 @@ class BrandingSettings extends Page implements HasForms
                 'collect_fee_at_checkin' => (bool) $tenant->collect_fee_at_checkin,
                 'patient_booking_horizon_days' => $tenant->patient_booking_horizon_days,
                 'pharmacy_doctor_percent' => (int) ($tenant->pharmacy_doctor_percent ?? 0),
-            ] + \App\Services\PracticeRules::normalize($tenant->practice_rules));
+            ] + \App\Services\PracticeRules::forBrandingForm($tenant));
         }
     }
 
@@ -192,6 +192,7 @@ class BrandingSettings extends Page implements HasForms
                     '',
                     fn (): bool => tenant()?->hasStations() ?? false,
                     includeReferral: true,
+                    includeFloorRooms: true,
                 ),
 
                 Fieldset::make(__('Live Queue Settings'))

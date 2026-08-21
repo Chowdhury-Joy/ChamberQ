@@ -5,6 +5,7 @@ namespace App\Filament\TenantAdmin\Support;
 use App\Services\PracticeRules;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Utilities\Get;
 
@@ -13,7 +14,7 @@ final class PracticeRulesForm
     /**
      * @return list<Fieldset>
      */
-    public static function fieldsets(string $prefix = '', mixed $visible = true, bool $includeReferral = false): array
+    public static function fieldsets(string $prefix = '', mixed $visible = true, bool $includeReferral = false, bool $includeFloorRooms = false): array
     {
         $key = fn (string $name): string => $prefix === '' ? $name : $prefix.'.'.$name;
 
@@ -47,6 +48,30 @@ final class PracticeRulesForm
             Fieldset::make(__('Counseling fee'))
                 ->schema(self::roomPricingFields($key, 'counseling', __('Counseling'))),
         ];
+
+        if ($includeFloorRooms) {
+            array_unshift($sets, Fieldset::make(__('Rooms on a clinic day'))
+                ->schema([
+                    Toggle::make($key('floor_lab'))
+                        ->label(__('Lab room'))
+                        ->helperText(__('Open whenever this clinic is sitting — not a separate session. Send to lab picks the test type (MSK today; another clinic adds its own).'))
+                        ->default(false),
+                    Toggle::make($key('floor_report'))
+                        ->label(__('Report room'))
+                        ->helperText(__('Same idea: a room on an open day, not its own sitting hours.'))
+                        ->default(false),
+                    Toggle::make($key('floor_counseling'))
+                        ->label(__('Counseling'))
+                        ->helperText(__('A list for today. It can be the same physical room as visit or OT. Tick the next box only if this clinic runs counseling on its own clock.'))
+                        ->live()
+                        ->default(false),
+                    Toggle::make($key('counseling_as_session'))
+                        ->label(__('Counseling has its own sitting hours'))
+                        ->helperText(__('Leave off for most clinics. On only if you add Counseling on Schedule Sessions with its own start and end.'))
+                        ->visible(fn (Get $get): bool => (bool) $get($key('floor_counseling')))
+                        ->default(false),
+                ]));
+        }
 
         if ($visible !== true) {
             $sets = array_map(function (Fieldset $set) use ($visible): Fieldset {

@@ -401,6 +401,10 @@ class DailyRoster extends Page implements HasTable, HasForms
         $todayDow = Carbon::today()->dayOfWeek;
         $todayDate = Carbon::today()->toDateString();
 
+        if (tenant()?->hasStations()) {
+            app(\App\Services\StationsHandoffService::class)->provisionFloorRoomsForDate($todayDate);
+        }
+
         $sessionsQuery = ScheduleSession::with(['doctor', 'chamber'])
             ->where('day_of_week', $todayDow)
             ->orderBy('start_time');

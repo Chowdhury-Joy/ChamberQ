@@ -97,6 +97,9 @@ class MupsSeeder extends Seeder
                 'referral_visit_taka' => 200,
                 'referral_intervention_taka' => 1000,
                 'referral_msk_taka' => 0,
+                'floor_lab' => true,
+                'floor_report' => true,
+                'floor_counseling' => true,
             ]),
             'eta_model' => Tenant::ETA_LIVE_AVERAGE,
             'call_announce_mode' => Tenant::ANNOUNCE_CHIME_AND_VOICE,
@@ -321,42 +324,6 @@ class MupsSeeder extends Seeder
             'end_time' => $visitEnd,
             'slot_cap' => 20,
             'walk_in_overflow_cap' => 6,
-        ]);
-
-        ScheduleSession::create([
-            'chamber_id' => $chamber->id,
-            'doctor_id' => $doctor->id,
-            'day_of_week' => $dayOfWeek,
-            'session_name' => 'MSK',
-            'kind' => ScheduleSession::KIND_MSK,
-            'start_time' => $visitStart,
-            'end_time' => $visitEnd,
-            'slot_cap' => 20,
-            'walk_in_overflow_cap' => 0,
-        ]);
-
-        ScheduleSession::create([
-            'chamber_id' => $chamber->id,
-            'doctor_id' => $doctor->id,
-            'day_of_week' => $dayOfWeek,
-            'session_name' => 'Report',
-            'kind' => ScheduleSession::KIND_REPORT,
-            'start_time' => $interventionStart,
-            'end_time' => $visitEnd,
-            'slot_cap' => 40,
-            'walk_in_overflow_cap' => 0,
-        ]);
-
-        ScheduleSession::create([
-            'chamber_id' => $chamber->id,
-            'doctor_id' => $doctor->id,
-            'day_of_week' => $dayOfWeek,
-            'session_name' => 'Counseling',
-            'kind' => ScheduleSession::KIND_COUNSELING,
-            'start_time' => $interventionStart,
-            'end_time' => $visitEnd,
-            'slot_cap' => 40,
-            'walk_in_overflow_cap' => 0,
         ]);
     }
 
