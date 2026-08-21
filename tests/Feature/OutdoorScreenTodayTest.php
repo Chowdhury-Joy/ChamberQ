@@ -281,6 +281,26 @@ class OutdoorScreenTodayTest extends TestCase
             ->assertSee('শব্দ চালু করতে ট্যাপ করুন', escape: false);
     }
 
+    public function test_single_room_screen_uses_fixed_contrast_not_theme_colour_on_digits(): void
+    {
+        $html = $this->get($this->host.'/screen/'.$this->session->id)
+            ->assertOk()
+            ->assertSee('theme-bar', escape: false)
+            ->assertSee('--call-fill: #f8fafc', escape: false)
+            ->assertSee('--call-ink: #0f172a', escape: false)
+            ->getContent();
+
+        $this->assertStringContainsString('.serial', $html);
+        $this->assertDoesNotMatchRegularExpression(
+            '/\.serial\s*\{[^}]*color:\s*var\(--(?:color-primary|theme)\)/',
+            $html,
+        );
+        $this->assertDoesNotMatchRegularExpression(
+            '/\.now-serving-box\.calling\s*\{[^}]*background:\s*var\(--(?:color-primary|theme)\)/',
+            $html,
+        );
+    }
+
     private function screenPollToken(int $sessionId): string
     {
         tenancy()->initialize($this->tenant);

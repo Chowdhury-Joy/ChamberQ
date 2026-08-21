@@ -929,6 +929,9 @@
 ## 2026-08-21T01:00:16+0600
 - Public SEO-first: search titles from specialty + city, `/conditions/{slug}` topic pages from the homepage condition library, Super Admin Google-ready checklist on tenant edit; solo homepage cards unchanged.
 
+## 2026-08-21T09:50:13+0600
+- One-room waiting-room TV (`screen.blade.php`) now uses the same high-contrast calling rules as the all-rooms board: white numerals, inverted calling card, brand colour only on a header bar.
+
 
 
 

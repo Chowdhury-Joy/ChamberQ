@@ -1605,3 +1605,12 @@
  <root_cause>`table.lines` was `flex: 1` inside a full-height A4 column. Browsers stretched every table row to share leftover page height.</root_cause>
  <prevention_rule>Never put `flex: 1` on a print table. Grow a spacer under the table. Pin `flex: 0 0 auto` and `lines-spacer` on the medicine voucher.</prevention_rule>
 </bug>
+
+## 2026-08-21T09:50:13+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>The one-room waiting-room TV showed a brand-blue serial on a dark card. From the back of the room the number was hard to read; a pale brand colour would also have made the calling state vanish.</symptom>
+ <root_cause>The all-rooms TV was restyled with white numerals and an inverted calling tile, but `/screen/{session}` still used `theme_color` on the digits and the calling fill.</root_cause>
+ <prevention_rule>Both waiting-room TVs use the same fixed contrast pair. Brand colour is chrome only (header bar). Pin `OutdoorScreenTodayTest::test_single_room_screen_uses_fixed_contrast_not_theme_colour_on_digits`.</prevention_rule>
+</bug>

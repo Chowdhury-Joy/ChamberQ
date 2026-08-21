@@ -3519,3 +3519,12 @@
  <reason>Like putting the visiting card and the clinic’s condition list into Google’s envelope, then checking the envelope is filled before telling a doctor they are live — without asking them to write meta tags, and without restyling the locked patient homepage.</reason>
 </decision>
 
+## 2026-08-21T09:50:13+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>The one-room waiting-room TV still painted the serial in brand blue and filled the calling card with `theme_color`. The all-rooms TV already used white numerals and an inverted calling tile because blue-on-near-black is hard to read from across the room.</context>
+ <action>Apply the same contrast rules to `/screen/{session}`: white idle serials, calling card `#f8fafc` / `#0f172a`, `theme_color` only as a 6px header bar. Voice, Sound on, and the Next strip stay.</action>
+ <reason>Like matching the one-room departure board to the multi-gate board so a patient at Pain Solution Mehedibag and a patient in a three-room clinic both see a number they can read from the back row.</reason>
+</decision>
+

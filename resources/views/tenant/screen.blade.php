@@ -25,46 +25,66 @@
     
     <style>
         :root {
-            --color-primary: {{ $themeColor }};
+            --theme: {{ $themeColor }};
             --font-family-base: '{{ $fontFamily }}', system-ui, -apple-system, sans-serif;
+            --bg: #0f172a;
+            --ink: #f8fafc;
+            --name: #e2e8f0;
+            --micro: #94a3b8;
+            --line: #475569;
+            --late: #fbbf24;
+            --call-fill: #f8fafc;
+            --call-ink: #0f172a;
         }
-        
+
+        * { box-sizing: border-box; }
         body {
             font-family: var(--font-family-base);
             margin: 0;
             padding: 0;
-            background-color: #0f172a;
-            color: white;
+            background: var(--bg);
+            color: var(--ink);
             height: 100vh;
             display: flex;
             flex-direction: column;
             overflow: hidden;
+            font-weight: 500;
+        }
+
+        .theme-bar {
+            height: 6px;
+            background: var(--theme);
+            flex-shrink: 0;
         }
 
         .header {
             padding: 2rem;
-            background: rgba(0,0,0,0.2);
             display: flex;
             justify-content: space-between;
             align-items: center;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid var(--line);
         }
 
         .chamber-name {
             font-size: 2rem;
-            font-weight: 600;
+            font-weight: 500;
         }
 
         .doctor-name {
             font-size: 1.5rem;
-            color: #94a3b8;
+            color: var(--micro);
         }
 
         .session-label {
             font-size: 1.25rem;
-            color: #64748b;
+            color: var(--micro);
             margin-top: 0.35rem;
             font-weight: 500;
+        }
+
+        .header-date {
+            font-size: 1.5rem;
+            color: var(--micro);
         }
 
         .main-content {
@@ -77,58 +97,66 @@
         }
 
         .now-serving-box {
-            background: rgba(255,255,255,0.05);
-            border: 2px solid var(--color-primary);
+            background: rgba(255,255,255,0.03);
+            border: 1px solid var(--line);
             border-radius: 2rem;
             padding: 4rem;
             width: 80%;
             max-width: 1000px;
-            box-shadow: 0 0 40px rgba(0,0,0,0.5);
-            transition: all 0.5s ease;
+            transition: background 0.35s ease, color 0.35s ease, border-color 0.35s ease;
         }
 
         .now-serving-box.calling {
-            background: var(--color-primary);
-            color: #fff;
-            transform: scale(1.05);
-            box-shadow: 0 0 80px var(--color-primary);
+            background: var(--call-fill);
+            color: var(--call-ink);
+            border-color: var(--call-ink);
         }
 
         .label {
             font-size: 2.5rem;
             letter-spacing: {{ $isBn ? '0' : '2px' }};
             margin-bottom: 2rem;
-            color: #cbd5e1;
+            color: var(--micro);
+            font-weight: 500;
             @unless($isBn)
             text-transform: uppercase;
             @endunless
         }
 
         .now-serving-box.calling .label {
-            color: rgba(255,255,255,0.9);
+            color: #334155;
         }
 
         .serial {
             font-size: 12rem;
-            font-weight: 700;
+            font-weight: 500;
             line-height: 1;
             margin: 0;
-            color: var(--color-primary);
+            color: #fff;
         }
 
         .now-serving-box.calling .serial {
-            color: #fff;
+            color: var(--call-ink);
         }
 
         .patient-name {
             font-size: 3rem;
             margin-top: 2rem;
             font-weight: 500;
+            color: var(--name);
+        }
+
+        .now-serving-box.calling .patient-name {
+            color: var(--call-ink);
         }
 
         .status-message {
             font-size: 3rem;
-            color: #f59e0b;
+            color: var(--late);
+        }
+
+        .now-serving-box.calling .status-message {
+            color: #b45309;
         }
 
         .next-up {
@@ -136,17 +164,17 @@
             background: rgba(0,0,0,0.3);
             text-align: center;
             font-size: 1.8rem;
-            border-top: 1px solid rgba(255,255,255,0.1);
+            border-top: 1px solid var(--line);
         }
 
         .next-up #nextSerial {
-            font-weight: 700;
-            color: var(--color-primary);
+            font-weight: 500;
+            color: #fff;
         }
 
         .next-up #nextEta {
             font-weight: 500;
-            color: #94a3b8;
+            color: var(--micro);
             margin-inline-start: 0.35em;
         }
 
@@ -166,13 +194,14 @@
         }
 
         .sound-enable-btn {
-            border: 2px solid var(--color-primary);
-            background: rgba(255,255,255,0.06);
-            color: #fff;
+            border: 0;
+            background: var(--call-fill);
+            color: var(--call-ink);
             border-radius: 1rem;
             padding: 1.5rem 2.5rem;
             font-size: 1.5rem;
             font-family: inherit;
+            font-weight: 500;
             cursor: pointer;
         }
 
@@ -180,7 +209,7 @@
             display: block;
             margin-top: 0.5rem;
             font-size: 1rem;
-            color: #94a3b8;
+            color: #475569;
         }
 
         .sound-toggle {
@@ -188,13 +217,14 @@
             top: 1.25rem;
             right: 1.25rem;
             z-index: 40;
-            border: 1px solid rgba(255,255,255,0.2);
-            background: rgba(0,0,0,0.35);
-            color: #e2e8f0;
+            border: 1px solid var(--line);
+            background: rgba(0,0,0,0.45);
+            color: var(--name);
             border-radius: 999px;
             padding: 0.6rem 1rem;
             font-size: 0.95rem;
             font-family: inherit;
+            font-weight: 500;
             cursor: pointer;
         }
 
@@ -210,8 +240,8 @@
             padding: 0.5rem 0.85rem;
             border-radius: 999px;
             background: rgba(0, 0, 0, 0.55);
-            border: 1px solid rgba(255, 255, 255, 0.15);
-            color: #e2e8f0;
+            border: 1px solid var(--line);
+            color: var(--name);
             font-size: 0.85rem;
             display: none;
         }
@@ -222,6 +252,8 @@
     </style>
 </head>
 <body>
+    <div class="theme-bar" aria-hidden="true"></div>
+
     <div id="soundOverlay" class="sound-overlay" role="button" tabindex="0" aria-label="{{ __('Tap to enable sound') }}">
         <button type="button" class="sound-enable-btn" id="soundEnableBtn">
             {{ __('Tap to enable sound') }}
@@ -240,7 +272,7 @@
             <div class="session-label">{{ $scheduleSession->screenLabel() }}</div>
         </div>
         <div style="text-align: right;">
-            <div id="screenDate" style="font-size: 1.5rem; color: #94a3b8;">{{ \Carbon\Carbon::parse($sessionDate)->translatedFormat('j F Y') }}</div>
+            <div id="screenDate" class="header-date">{{ \Carbon\Carbon::parse($sessionDate)->translatedFormat('j F Y') }}</div>
         </div>
     </div>
 
@@ -254,7 +286,7 @@
             
             <div id="messageView" style="display: none;">
                 <div class="status-message" id="messageText"></div>
-                <div class="patient-name" id="messageSubtext" style="color: #cbd5e1; font-size: 2rem;"></div>
+                <div class="patient-name" id="messageSubtext" style="font-size: 2rem;"></div>
             </div>
         </div>
     </div>
