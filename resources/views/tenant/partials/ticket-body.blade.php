@@ -5,10 +5,7 @@
     $isLab = $bookable instanceof \App\Models\LabCollectionSlot;
     $tenant = tenant();
     $locale = app()->getLocale();
-    $ticketUrl = \App\Support\TenancyUrl::publicAbsolute(
-        (string) $booking->tenant_id,
-        '/bookings/'.$booking->id,
-    );
+    $ticketUrl = $booking->publicTicketUrl();
     $chamber = $bookable?->chamber;
     $mapsUrl = $chamber?->googleMapsUrl();
     $shareText = $mapsUrl

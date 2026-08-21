@@ -508,10 +508,7 @@ class SmsService
 
     public function ticketUrl(Booking $booking): string
     {
-        return TenancyUrl::publicAbsolute(
-            (string) $booking->tenant_id,
-            '/bookings/'.$booking->id,
-        );
+        return $booking->publicTicketUrl();
     }
 
     private function send(

@@ -245,6 +245,14 @@ $registerTenantRoutes = function (string $routeNamePrefix = ''): void {
         ->where('date', '\d{4}-\d{2}-\d{2}')
         ->name($routeName('api.tenant.screen'));
 
+    // Deliberately short: a booking UUID in /bookings/{id} is fine on the
+    // website but steals SMS characters. /t/{token} is the outbound link;
+    // two segments so the `/{slug?}` catch-all cannot swallow it.
+    Route::get('/t/{token}', [BookingController::class, 'showByToken'])
+        ->where('token', '[A-Za-z0-9]+')
+        ->middleware(['throttle:60,1'])
+        ->name($routeName('bookings.ticket-token'));
+
     Route::get('/bookings/{booking}', [BookingController::class, 'show'])
         ->middleware(['throttle:60,1'])
         ->name($routeName('bookings.show'));

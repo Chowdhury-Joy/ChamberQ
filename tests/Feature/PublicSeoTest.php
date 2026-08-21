@@ -55,6 +55,7 @@ class PublicSeoTest extends TestCase
         $this->assertStringContainsString('Disallow: /*/admin', $body);
         $this->assertStringContainsString('Disallow: /*/portal', $body);
         $this->assertStringContainsString('Disallow: /*/bookings', $body);
+        $this->assertStringContainsString('Disallow: /*/t/', $body);
         $this->assertStringContainsString('Sitemap: http://localhost/sitemap.xml', $body);
     }
 
@@ -164,6 +165,7 @@ class PublicSeoTest extends TestCase
         $this->assertStringContainsString('Disallow: /admin', $robots);
         $this->assertStringContainsString('Disallow: /portal', $robots);
         $this->assertStringContainsString('Disallow: /bookings', $robots);
+        $this->assertStringContainsString('Disallow: /t/', $robots);
         $this->assertStringContainsString('Sitemap: http://seo-clinic.localhost/sitemap.xml', $robots);
 
         $this->get('http://seo-clinic.localhost/portal')

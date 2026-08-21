@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-21T10:21:43+0600
+Last Updated: 2026-08-21T10:26:36+0600
 
 ## Full Site Map
 
@@ -9,7 +9,7 @@ Hosts: values in `CENTRAL_DOMAINS` (e.g. `localhost`).
 | Route | Purpose | Access |
 |-------|---------|--------|
 | `/` | Sales landing for ChamberQ (**Maestro** + **Clinic** cards; modules table under pricing; WhatsApp CTAs); **Find a doctor** + **Patient login** in nav; captures `?ref=` and `?code=` into session | public |
-| `/robots.txt` | Crawler rules: allow the sales site and Find; hide Super Admin, partner, `/me`, and tenant private paths (`/*/portal`, `/*/bookings`, `/*/screen`) | public |
+| `/robots.txt` | Crawler rules: allow the sales site and Find; hide Super Admin, partner, `/me`, and tenant private paths (`/*/portal`, `/*/bookings`, `/*/t/`, `/*/screen`) | public |
 | `/sitemap.xml` | XML list of `/`, `/find`, and Front-door path-tenant public pages (custom-domain clinics are omitted here — they publish their own sitemap) | public |
 | `/find` | Directory of every Front door doctor who currently accepts online serials (search by name / specialty / area) | public |
 | `/me/login` | Patient phone OTP login (optional; not required to book) | public |
@@ -37,7 +37,8 @@ Same central host; tenant identified by URL slug (tenant `id`), e.g. `drkarim`.
 | `POST /{slug}/` | Safety net: same as `POST /{slug}/book` if the homepage form posts to the page it is sitting on | public (throttled, **Front door**) |
 | `/{slug}/book` | Booking wizard | public (**Front door**) |
 | `POST /{slug}/book` | Homepage hero form target — flashes name/phone to session, redirects to the wizard | public (throttled, **Front door**) |
-| `/{slug}/bookings/{booking}` | Patient ticket (sitting window always; live queue / come-around only with **Live queue**) | public (UUID, 60/min throttle) |
+| `/{slug}/t/{token}` | Patient ticket short link (SMS/WhatsApp). Same page as UUID ticket. Live until sitting date + 7 days | public (60/min throttle) |
+| `/{slug}/bookings/{booking}` | Patient ticket (sitting window always; live queue / come-around only with **Live queue**). Durable UUID backup | public (UUID, 60/min throttle) |
 | `/{slug}/portal` | Phone lookup — bookings and prescriptions stay open; optional password after the first completed visit (**Prescription**) | public (throttled, **Front door**) |
 | `/{slug}/screen/{session}` | Outdoor TV (always today for that schedule session — bookmark once) | public (**Live queue**) |
 | `/{slug}/screen/chamber/{chamber}` | Combined waiting-room TV for every live sitting in that chamber today | public (**Live queue**) |
@@ -93,7 +94,8 @@ When a doctor connects their own domain (e.g. `drkarim.com`), routes live at the
 | `/book` | Online serial booking wizard | public |
 | `POST /book` | Homepage hero form target — flashes name/phone (and chosen centre) to session, redirects to the wizard so patient details never enter the URL | public (throttled) |
 | `POST /` | Safety net for the same hero submit if the browser posts the homepage URL; same flash + redirect as `POST /book`. Does not render the homepage | public (throttled) |
-| `/bookings/{booking}` | Patient ticket (UUID) | public (60/min throttle) |
+| `/t/{token}` | Patient ticket short link (SMS/WhatsApp). Same page as UUID ticket | public (60/min throttle) |
+| `/bookings/{booking}` | Patient ticket (UUID, durable backup) | public (60/min throttle) |
 | `/portal` | Phone lookup — bookings and prescriptions stay open; optional password after the first completed visit | public (throttled) |
 | `/screen/{session}` | Outdoor waiting-room TV (always today — bookmark once per schedule session) | public (throttled) |
 | `/screen/chamber/{chamber}` | Combined waiting-room TV for every live sitting in that chamber today | public (throttled) |
@@ -248,7 +250,7 @@ Full clinical pad (diagnosis, notes, Inv, medicines, advice, follow-up, chamber 
 
 ### Book a serial from the desk or call centre (chosen date)
 - **Trigger:** Someone phones (or a receptionist books for a relative) for a sitting that is **not** “already standing at the door today.”
-- **Steps:** Staff or owner → **Operations → Book serial** → pick **doctor** (pre-filled when the login only sees one) → pick **visit type** (Usual, Follow-up, Intervention if Stations is on, Lab if Stations or lab tests) → if Intervention and the fee list has procedures, pick **intervention type** (PRP, epidural, …) → if Lab, pick **lab type** (MSK, a named test, or collection window) → pick **centre** only when that doctor sits at more than one place → pick a **date** (calendar greys days they do not sit) → pick the matching **sitting** → name and phone → optional Different WhatsApp → Book. Confirmation modal (Push WhatsApp / Push SMS when those are on / Open ticket / Done). Auto SMS still goes after the response when ticked. Report / counseling stay on the floor handoff, not this page. **New Walk-In** on Daily Roster / Live Queue is the same visit types for people already at the chamber **today** (overflow stools; Live Queue is already on that sitting).
+- **Steps:** Staff or owner → **Operations → Book serial** → pick **doctor** (pre-filled when the login only sees one) → pick **visit type** (Usual, Follow-up, Intervention if Stations is on, Lab if Stations or lab tests) → if Intervention and the fee list has procedures, pick **intervention type** (PRP, epidural, …) → if Lab, pick **lab type** (MSK, a named test, or collection window) → pick **centre** only when that doctor sits at more than one place → pick a **date** (calendar greys days they do not sit) → pick the matching **sitting** → name and phone → optional Different WhatsApp → Book. Confirmation modal shows serial, come-around (or sitting hours), centre, sitting, doctor, phone; Push WhatsApp pastes that same text with a short ticket link / Push SMS when those are on / Open ticket / Done. Auto SMS still goes after the response when ticked. Report / counseling stay on the floor handoff, not this page. **New Walk-In** on Daily Roster / Live Queue is the same visit types for people already at the chamber **today** (overflow stools; Live Queue is already on that sitting).
 - **Data/systems touched:** `BookingService::createBookingForBookable` (`allowOverflow` false, `sendSms` true), `schedule_sessions`, `bookings` (optional `fee_catalog_item_id`), optional `SendBookingConfirmation`.
 - **Success:** The serial appears on Daily Roster when staff pick that date; the published cap is full when the website would also say full.
 

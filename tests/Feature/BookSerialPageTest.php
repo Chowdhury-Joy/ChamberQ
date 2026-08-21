@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Filament\TenantAdmin\Pages\BookSerial;
+use App\Filament\TenantAdmin\Support\ConfirmSerialNotifyAction;
 use App\Filament\TenantAdmin\Support\StaffBookingForm;
+use App\Support\BookingConfirmationCopy;
 use App\Jobs\SendBookingConfirmation;
 use App\Models\Booking;
 use App\Models\Chamber;
@@ -114,6 +116,86 @@ class BookSerialPageTest extends TestCase
         $this->assertSame('Wheelchair', $booking->remarks);
 
         Queue::assertPushed(SendBookingConfirmation::class);
+    }
+
+    public function test_confirmation_modal_and_whatsapp_include_come_around(): void
+    {
+        Queue::fake();
+        Doctor::query()->where('id', $this->visit->doctor_id)->update([
+            'notify_channels' => [
+                Doctor::NOTIFY_BOOKING_CONFIRMATION => [
+                    Doctor::CHANNEL_AUTO_SMS => true,
+                    Doctor::CHANNEL_PUSH_SMS => false,
+                    Doctor::CHANNEL_PUSH_WHATSAPP => true,
+                ],
+            ],
+        ]);
+
+        Filament::setCurrentPanel('tenantAdmin');
+        $this->actingAs($this->staff);
+
+        $page = Livewire::test(BookSerial::class)
+            ->fillForm([
+                'booking_date' => '2026-08-22',
+                'bookable' => 'session:'.$this->visit->id,
+                'patient_phone' => '01715553030',
+                'patient_name' => 'Fatima Rahman',
+            ])
+            ->call('book')
+            ->assertHasNoFormErrors()
+            ->assertSet('showBookedSerialModal', true)
+            ->assertSet('lastBooked.come_around', '8:45am')
+            ->assertSet('lastBooked.hours', '9:00 AM – 12:00 PM')
+            ->assertSet('lastBooked.chamber', 'Main')
+            ->assertSee('Come around 8:45am')
+            ->assertSee('9:00 AM – 12:00 PM')
+            ->assertSee('Main');
+
+        $whatsapp = $page->get('lastBooked')['whatsapp'] ?? '';
+        $this->assertNotSame('', $whatsapp);
+        $decoded = urldecode((string) $whatsapp);
+        $this->assertStringContainsString('Come around 8:45am', $decoded);
+        $this->assertStringContainsString('Ticket:', $decoded);
+        $this->assertStringContainsString('9:00 AM', $decoded);
+
+        $booking = Booking::query()->first();
+        $this->assertNotNull($booking);
+        $this->assertStringContainsString(
+            'Come around 8:45am',
+            ConfirmSerialNotifyAction::message($booking),
+        );
+    }
+
+    public function test_whatsapp_copy_uses_hours_when_live_queue_is_off(): void
+    {
+        $this->tenant->update([
+            'feature_flags' => array_merge($this->tenant->feature_flags ?? [], [
+                Tenant::MODULE_LIVE_QUEUE => false,
+            ]),
+        ]);
+        tenancy()->initialize($this->tenant->fresh());
+
+        Queue::fake();
+        Filament::setCurrentPanel('tenantAdmin');
+        $this->actingAs($this->staff);
+
+        $page = Livewire::test(BookSerial::class)
+            ->fillForm([
+                'booking_date' => '2026-08-22',
+                'bookable' => 'session:'.$this->visit->id,
+                'patient_phone' => '01715553031',
+                'patient_name' => 'No Queue Patient',
+            ])
+            ->call('book')
+            ->assertSet('lastBooked.come_around', null)
+            ->assertSet('lastBooked.hours', '9:00 AM – 12:00 PM')
+            ->assertSee('9:00 AM – 12:00 PM')
+            ->assertDontSee('Come around');
+
+        $booking = Booking::query()->first();
+        $this->assertNotNull($booking);
+        $this->assertStringNotContainsString('Come around', BookingConfirmationCopy::whatsappMessage($booking));
+        $this->assertStringContainsString('9:00 AM – 12:00 PM', BookingConfirmationCopy::whatsappMessage($booking));
     }
 
     public function test_phone_booking_uses_the_published_cap_not_walk_in_stools(): void

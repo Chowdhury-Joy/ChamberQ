@@ -343,7 +343,11 @@ class BookingController extends Controller
                 // thinks it has (often localhost behind a reverse proxy). The
                 // wizard already runs on the patient's real domain, so a path
                 // keeps them there.
-                'ticket_url' => tenant_web_route('bookings.show', $booking, absolute: false),
+                'ticket_url' => tenant_web_route(
+                    'bookings.ticket-token',
+                    ['token' => $booking->ticketToken()],
+                    absolute: false,
+                ),
             ],
         ]);
     }
@@ -464,6 +468,16 @@ class BookingController extends Controller
             'options' => $options,
             'has_open_dates' => $options !== [],
         ]);
+    }
+
+    public function showByToken(string $token)
+    {
+        $booking = Booking::query()
+            ->where('ticket_token', $token)
+            ->where('ticket_token_expires_at', '>', now())
+            ->firstOrFail();
+
+        return $this->show($booking);
     }
 
     public function show(Booking $booking)

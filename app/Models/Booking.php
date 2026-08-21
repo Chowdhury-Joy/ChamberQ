@@ -4,8 +4,12 @@ namespace App\Models;
 
 use App\Casts\DateOnly;
 use App\Models\Concerns\BelongsToTenant;
+use App\Support\TenancyUrl;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\UniqueConstraintViolationException;
+use Illuminate\Support\Str;
+use RuntimeException;
 
 class Booking extends Model
 {
@@ -25,6 +29,19 @@ class Booking extends Model
     public const PROCEDURE_DOCTOR_CALLED = 'doctor_called';
 
     public const PROCEDURE_DONE = 'done';
+
+    /**
+     * Characters in an SMS/WhatsApp ticket token (`/t/{token}`).
+     * Same length as prescription `/p/{token}` — every character is an SMS unit.
+     */
+    public const TICKET_TOKEN_LENGTH = 10;
+
+    /**
+     * How long after the sitting date the short link still opens.
+     * The UUID ticket URL does not expire. This grace covers “I tapped the SMS
+     * the morning after” without keeping a guessable 10-char token forever.
+     */
+    public const TICKET_LINK_GRACE_DAYS = 7;
 
     protected $fillable = [
         'bookable_type',
@@ -69,6 +86,7 @@ class Booking extends Model
         'called_at' => 'datetime',
         'in_chamber_at' => 'datetime',
         'completed_at' => 'datetime',
+        'ticket_token_expires_at' => 'datetime',
     ];
 
     protected static function booted(): void
@@ -82,6 +100,70 @@ class Booking extends Model
                 app(\App\Services\PatientFeeRefundService::class)->refundIfMissed($booking);
             }
         });
+    }
+
+    /**
+     * Public ticket URL for SMS, WhatsApp, Copy link, and print.
+     * Short `/t/{token}` while the token is live; never Bitly.
+     */
+    public function publicTicketUrl(): string
+    {
+        return TenancyUrl::publicAbsolute(
+            (string) $this->tenant_id,
+            $this->publicTicketPath(),
+        );
+    }
+
+    /**
+     * Relative ticket path for same-host wizard redirects.
+     */
+    public function publicTicketPath(): string
+    {
+        return '/t/'.$this->ticketToken();
+    }
+
+    /**
+     * Mint or reuse the short ticket token.
+     *
+     * A still-valid token is reused so a second WhatsApp tap does not break
+     * the SMS already in the patient's thread. After expiry a new token is
+     * issued and the old `/t/…` 404s; `/bookings/{uuid}` still works.
+     */
+    public function ticketToken(): string
+    {
+        if ($this->ticket_token !== null && $this->ticket_token_expires_at?->isFuture()) {
+            return $this->ticket_token;
+        }
+
+        $expiresAt = $this->ticketTokenExpiresAt();
+
+        foreach (range(1, 5) as $ignored) {
+            $token = Str::random(self::TICKET_TOKEN_LENGTH);
+
+            try {
+                $this->forceFill([
+                    'ticket_token' => $token,
+                    'ticket_token_expires_at' => $expiresAt,
+                ])->save();
+
+                return $token;
+            } catch (UniqueConstraintViolationException) {
+                continue;
+            }
+        }
+
+        throw new RuntimeException('Could not allocate a ticket token.');
+    }
+
+    public function ticketTokenExpiresAt(): \Carbon\CarbonInterface
+    {
+        $date = $this->booking_date;
+
+        if ($date instanceof \Carbon\CarbonInterface) {
+            return $date->copy()->endOfDay()->addDays(self::TICKET_LINK_GRACE_DAYS);
+        }
+
+        return now()->addDays(self::TICKET_LINK_GRACE_DAYS)->endOfDay();
     }
 
     /**

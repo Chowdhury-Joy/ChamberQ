@@ -216,7 +216,7 @@ class SmsConfirmationTest extends TestCase
         $url = app(SmsService::class)->ticketUrl($booking);
         tenancy()->end();
 
-        $this->assertSame('http://localhost/path-sms/bookings/'.$booking->id, $url);
+        $this->assertSame('http://localhost/path-sms/t/'.$booking->ticket_token, $url);
         $this->assertStringNotContainsString('127.0.0.1', $url);
     }
 }

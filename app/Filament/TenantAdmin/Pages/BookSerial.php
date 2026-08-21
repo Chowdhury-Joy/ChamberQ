@@ -4,11 +4,7 @@ namespace App\Filament\TenantAdmin\Pages;
 
 use App\Exceptions\BookingUnavailableException;
 use App\Filament\TenantAdmin\Support\StaffBookingForm;
-use App\Models\Booking;
-use App\Models\Doctor;
-use App\Models\LabCollectionSlot;
-use App\Models\ScheduleSession;
-use App\Support\TenancyUrl;
+use App\Support\BookingConfirmationCopy;
 use Carbon\Carbon;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
@@ -41,7 +37,7 @@ class BookSerial extends Page implements HasForms
     /**
      * Last successful booking, shown in the confirmation modal.
      *
-     * @var array{serial: int, name: string, phone: string, date: string, sitting: string, whatsapp: string, ticket: string}|null
+     * @var array<string, mixed>|null
      */
     public ?array $lastBooked = null;
 
@@ -94,31 +90,7 @@ class BookSerial extends Page implements HasForms
             return;
         }
 
-        $dateLabel = $booking->booking_date?->translatedFormat('j F Y') ?? '';
-        $ticketUrl = TenancyUrl::publicAbsolute((string) $booking->tenant_id, '/bookings/'.$booking->id);
-        $waMessage = __('Hello :name, your serial is :serial on :date.', [
-            'name' => $booking->patient_name,
-            'serial' => $booking->serial_number,
-            'date' => $dateLabel,
-        ]);
-
-        $doctor = Doctor::resolveForBooking($booking);
-
-        $this->lastBooked = [
-            'serial' => (int) $booking->serial_number,
-            'name' => (string) $booking->patient_name,
-            'phone' => (string) $booking->patient_phone,
-            'date' => $dateLabel,
-            'sitting' => $this->sittingLabel($booking),
-            'whatsapp' => ($doctor?->wantsWhatsapp(Doctor::NOTIFY_BOOKING_CONFIRMATION) ?? false)
-                ? $booking->whatsappLink($waMessage)
-                : null,
-            'sms_url' => ($doctor?->wantsPushSms(Doctor::NOTIFY_BOOKING_CONFIRMATION) ?? false)
-                ? tenant_web_route('bookings.sms.confirmation', $booking)
-                : null,
-            'ticket' => $ticketUrl,
-            'auto_sms' => $doctor?->wantsAutoSms(Doctor::NOTIFY_BOOKING_CONFIRMATION) ?? false,
-        ];
+        $this->lastBooked = BookingConfirmationCopy::modalState($booking);
 
         $this->form->fill([
             'doctor_id' => $data['doctor_id'] ?? StaffBookingForm::soleDeskDoctorId(),
@@ -147,23 +119,4 @@ class BookSerial extends Page implements HasForms
         $this->showBookedSerialModal = false;
     }
 
-    protected function sittingLabel(Booking $booking): string
-    {
-        $booking->loadMissing('bookable.doctor', 'feeCatalogItem');
-
-        if ($booking->bookable instanceof LabCollectionSlot) {
-            return __('Lab collection');
-        }
-
-        if ($booking->bookable instanceof ScheduleSession) {
-            $session = $booking->bookable->session_name ?: __('Sitting');
-            $doctor = $booking->bookable->doctor?->name;
-            $procedure = $booking->feeCatalogItem?->label;
-            $base = filled($doctor) ? $session.' · '.$doctor : $session;
-
-            return filled($procedure) ? $base.' · '.$procedure : $base;
-        }
-
-        return __('Sitting');
-    }
 }

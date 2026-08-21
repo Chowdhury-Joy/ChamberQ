@@ -1606,6 +1606,15 @@
  <prevention_rule>Never put `flex: 1` on a print table. Grow a spacer under the table. Pin `flex: 0 0 auto` and `lines-spacer` on the medicine voucher.</prevention_rule>
 </bug>
 
+## 2026-08-21T09:47:47+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>After booking a serial, the confirmation box and WhatsApp said serial and date only. Patients still asked “what time?” even though SMS and the ticket already had come-around.</symptom>
+ <root_cause>Book serial and ConfirmSerialNotifyAction used a fixed “Hello … serial … date” WhatsApp line. The modal never called PublishedComeAround.</root_cause>
+ <prevention_rule>Staff-facing booking confirmation and Push WhatsApp must use the same come-around (or hours / after-serial) as SMS and the wizard. One copy helper, not a second short template.</prevention_rule>
+</bug>
+
 ## 2026-08-21T09:50:13+0600
 
 <bug>
@@ -1613,4 +1622,13 @@
  <symptom>The one-room waiting-room TV showed a brand-blue serial on a dark card. From the back of the room the number was hard to read; a pale brand colour would also have made the calling state vanish.</symptom>
  <root_cause>The all-rooms TV was restyled with white numerals and an inverted calling tile, but `/screen/{session}` still used `theme_color` on the digits and the calling fill.</root_cause>
  <prevention_rule>Both waiting-room TVs use the same fixed contrast pair. Brand colour is chrome only (header bar). Pin `OutdoorScreenTodayTest::test_single_room_screen_uses_fixed_contrast_not_theme_colour_on_digits`.</prevention_rule>
+</bug>
+
+## 2026-08-21T09:59:00+0600
+
+<bug>
+ <category>CRO</category>
+ <symptom>Booking SMS and WhatsApp carried a long `/bookings/{uuid}` ticket URL, so the message looked like spam and stole space from come-around in a one-credit SMS.</symptom>
+ <root_cause>Outbound ticket URLs were built from the booking UUID. Prescriptions already had `/p/{token}`; tickets did not.</root_cause>
+ <prevention_rule>Patient outbound ticket links (SMS, WhatsApp, Copy link, wizard confirm) must use `Booking::publicTicketUrl()` (`/t/{token}`), never paste the UUID into a third-party shortener. Pin `TicketShortLinkTest`.</prevention_rule>
 </bug>

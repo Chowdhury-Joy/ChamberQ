@@ -11,7 +11,7 @@
             background: rgba(24, 24, 27, 0.45);
         }
         .book-serial-dialog {
-            width: min(28rem, 100%);
+            width: min(34rem, 100%);
             max-height: calc(100vh - 2rem);
             overflow: auto;
             background: var(--color-white);
@@ -55,13 +55,49 @@
             color: var(--gray-950);
         }
         .dark .book-serial-confirmed__name { color: var(--color-white); }
-        .book-serial-confirmed__meta,
-        .book-serial-confirmed__sms {
-            margin: 0.35rem 0 0;
-            font-size: 0.875rem;
-            color: var(--gray-600);
+        .book-serial-confirmed__come {
+            margin: 0.85rem 0 0;
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary-600);
         }
-        .book-serial-confirmed__sms { font-size: 0.8125rem; color: var(--gray-500); }
+        .dark .book-serial-confirmed__come { color: var(--primary-400); }
+        .book-serial-confirmed__hint {
+            margin: 0.25rem 0 0;
+            font-size: 0.75rem;
+            color: var(--gray-500);
+        }
+        .book-serial-confirmed__rows {
+            margin: 1rem 0 0;
+            text-align: left;
+        }
+        .book-serial-confirmed__row {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.75rem;
+            padding: 0.4rem 0;
+            border-bottom: 1px solid var(--gray-200);
+            font-size: 0.875rem;
+        }
+        .dark .book-serial-confirmed__row { border-bottom-color: var(--gray-800); }
+        .book-serial-confirmed__row dt {
+            margin: 0;
+            color: var(--gray-500);
+            font-weight: 500;
+            flex: 0 0 5.5rem;
+        }
+        .book-serial-confirmed__row dd {
+            margin: 0;
+            color: var(--gray-950);
+            font-weight: 600;
+            text-align: right;
+        }
+        .dark .book-serial-confirmed__row dd { color: var(--color-white); }
+        .book-serial-confirmed__sms {
+            margin: 0.85rem 0 0;
+            font-size: 0.8125rem;
+            color: var(--gray-500);
+        }
         .book-serial-dialog__actions {
             display: flex;
             flex-wrap: wrap;

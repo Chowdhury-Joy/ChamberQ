@@ -937,3 +937,6 @@
 
 ## 2026-08-21T10:21:43+0600
 - Lab, report, and counseling are floor rooms on an open clinic day (`PracticeRules` ticks); `StationsHandoffService` provisions same-day lists instead of requiring MSK/Report/Counseling sittings.
+
+## 2026-08-21T10:26:36+0600
+- Book serial confirmation and Push WhatsApp share `BookingConfirmationCopy`; outbound ticket links use ChamberQ `/t/{token}` (`bookings.ticket_token`); UUID `/bookings/{id}` remains as backup after sitting date + 7 days.

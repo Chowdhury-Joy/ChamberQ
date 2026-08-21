@@ -7,6 +7,7 @@ use App\Models\Doctor;
 use App\Models\SmsMessage;
 use App\Models\User;
 use App\Services\SmsService;
+use App\Support\BookingConfirmationCopy;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 
@@ -82,13 +83,7 @@ final class ConfirmSerialNotifyAction
 
     public static function message(Booking $record): string
     {
-        $dateLabel = $record->booking_date?->translatedFormat('j F Y') ?? '';
-
-        return __('Hello :name, your serial is :serial on :date.', [
-            'name' => $record->patient_name,
-            'serial' => $record->serial_number,
-            'date' => $dateLabel,
-        ]);
+        return BookingConfirmationCopy::whatsappMessage($record);
     }
 
     private static function actorMayNotify(): bool

@@ -127,6 +127,7 @@ class FiveQueueHonestyTest extends TestCase
         $this->assertNotNull($message);
         $this->assertStringContainsString('Come around', $message->body);
         $this->assertStringContainsString('Ticket:', $message->body);
+        $this->assertStringContainsString('/t/', $message->body);
         $this->assertSame(1, GsmText::segments($message->body));
     }
 
@@ -191,6 +192,10 @@ class FiveQueueHonestyTest extends TestCase
 
         $body = app(SmsService::class)->confirmationBody($overflow);
         $this->assertStringContainsString('After serial 30', $body);
+        $this->assertStringContainsString(
+            'After serial 30',
+            \App\Support\BookingConfirmationCopy::whatsappMessage($overflow),
+        );
 
         tenancy()->end();
     }

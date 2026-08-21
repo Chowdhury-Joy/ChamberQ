@@ -9,7 +9,6 @@ use App\Models\Prescription;
 use App\Models\ScheduleSession;
 use App\Support\BdNid;
 use App\Support\BdPhone;
-use App\Support\TenancyUrl;
 use Illuminate\Support\Collection;
 
 class PlatformPatientHistoryService
@@ -225,10 +224,7 @@ class PlatformPatientHistoryService
             'booking_date' => $booking->booking_date?->format('j M Y'),
             'doctor_name' => $doctorName,
             'session_name' => $sessionName,
-            'ticket_url' => TenancyUrl::publicAbsolute(
-                (string) $booking->tenant_id,
-                '/bookings/'.$booking->id,
-            ),
+            'ticket_url' => $booking->publicTicketUrl(),
         ];
     }
 }

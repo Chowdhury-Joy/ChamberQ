@@ -3545,3 +3545,12 @@
  <reason>Like a restaurant: lunch is the sitting; kitchen and cashier are rooms, not extra lunch times. The next hospital ticks which rooms it has instead of getting a ChamberQ rebuild.</reason>
 </decision>
 
+## 2026-08-21T10:26:36+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>Call-centre Book serial showed only serial + date. Staff tapping Push WhatsApp pasted the same short line, so the patient never saw when to come — unlike SMS and the public website. Ticket links used the full `/bookings/{uuid}` URL.</context>
+ <action>One desk copy helper (`BookingConfirmationCopy`) for the confirmation modal and Push WhatsApp. Live Queue clinics show come-around; overflow says after serial N; Front-door-only shows sitting hours. ChamberQ short path `/t/{token}` (10 characters) for SMS, WhatsApp, wizard, and Copy link. UUID `/bookings/{id}` stays as backup after sitting date + 7 days. Not Bitly.</action>
+ <reason>Like reading the appointment card out loud on the phone, then sending that same card on WhatsApp with a short door code instead of the full street address.</reason>
+</decision>
+

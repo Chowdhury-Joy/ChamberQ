@@ -29,6 +29,7 @@ class StaffDeskBanglaTest extends TestCase
         'app/Filament/TenantAdmin/Support/AskReviewAction.php',
         'app/Filament/TenantAdmin/Support/ConfirmSerialNotifyAction.php',
         'app/Support/VisitShareCopy.php',
+        'app/Support/BookingConfirmationCopy.php',
         'resources/views/filament/tenant-admin/components/prescription-share-actions.blade.php',
         'app/Filament/TenantAdmin/Support/OutdoorVitalsAction.php',
         'app/Filament/TenantAdmin/Pages/BookSerial.php',
