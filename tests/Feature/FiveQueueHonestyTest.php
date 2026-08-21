@@ -346,5 +346,17 @@ class FiveQueueHonestyTest extends TestCase
         $this->assertTrue(
             \Illuminate\Support\Facades\Schema::hasColumn('bookings', 'is_overflow'),
         );
+        $this->assertTrue(
+            \Illuminate\Support\Facades\Schema::hasColumn('bookings', 'ticket_token'),
+        );
+        $this->assertTrue(
+            \Illuminate\Support\Facades\Schema::hasColumn('bookings', 'ticket_token_expires_at'),
+        );
+        $this->assertTrue(
+            \Illuminate\Support\Facades\Schema::hasColumn('pharmacy_items', 'chamber_id'),
+        );
+        $this->assertTrue(
+            \Illuminate\Support\Facades\Schema::hasColumn('pharmacy_sales', 'receipt_number'),
+        );
     }
 }

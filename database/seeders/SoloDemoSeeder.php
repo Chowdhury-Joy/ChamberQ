@@ -21,6 +21,7 @@ use App\Models\VisitRecord;
 use App\Scopes\TenantScope;
 use App\Services\CashCategoryService;
 use App\Services\ChamberCashService;
+use App\Services\SmsService;
 use App\Support\PrescriptionTiming;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
@@ -153,7 +154,7 @@ class SoloDemoSeeder extends Seeder
                 SmsMessage::create([
                     'booking_id' => $booking->id,
                     'to' => $row['patient']->phone,
-                    'body' => 'Dr Shamim: serial '.$row['serial'].' confirmed for today at Belle Vue. Pay at the chamber.',
+                    'body' => app(SmsService::class)->confirmationBody($booking),
                     'purpose' => SmsMessage::PURPOSE_BOOKING_CONFIRMATION,
                     'status' => SmsMessage::STATUS_SENT,
                     'credits' => 1,

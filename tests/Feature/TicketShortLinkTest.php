@@ -156,6 +156,18 @@ class TicketShortLinkTest extends TestCase
         $this->get('http://ticket-short.localhost/t/notarealtk')->assertNotFound();
     }
 
+    public function test_ticket_token_columns_exist(): void
+    {
+        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasColumn('bookings', 'ticket_token'));
+        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasColumn('bookings', 'ticket_token_expires_at'));
+        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasColumn('bookings', 'remarks'));
+        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasColumn('tenants', 'review_url'));
+        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasColumn('chambers', 'review_url'));
+        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasColumn('pharmacy_items', 'chamber_id'));
+        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasColumn('pharmacy_sales', 'receipt_number'));
+        $this->assertTrue(\Illuminate\Support\Facades\Schema::hasColumn('chamber_cash_entries', 'receipt_number'));
+    }
+
     private function makeBooking(): Booking
     {
         return Booking::create([
