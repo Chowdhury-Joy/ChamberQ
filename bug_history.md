@@ -1641,3 +1641,30 @@
  <root_cause>`hasRoom(intervention)` required an Intervention sitting on that weekday. A leftover visit-only day (and any visit day without OT hours) hid the button. Lab had already been treated as a room on an open clinic day.</root_cause>
  <prevention_rule>From a Stations visit, Send to intervention must appear whenever the clinic is sitting that day. Provision a same-day OT list if no Intervention sitting exists. Pin `CarePathQueueTest::test_send_to_intervention_follows_an_open_visit_day_without_an_ot_sitting`.</prevention_rule>
 </bug>
+
+## 2026-08-21T10:54:09+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>Schedule Sessions showed MSK and Report as named sittings with start and end times.</symptom>
+ <root_cause>Lab and report lists are stored as leftover `schedule_sessions` rows (old seed and auto-provision) so the queue has something to book onto. The hours page listed every row.</root_cause>
+ <prevention_rule>Settings → Schedule Sessions lists timetable hours only (`timetableHours`): hide `msk` and `report`. Rooms stay on Branding. Pin `CarePathQueueTest::test_the_hours_list_does_not_show_lab_and_report_room_rows`.</prevention_rule>
+</bug>
+
+## 2026-08-21T10:56:53+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>Faruk in chamber on a MUPS visit had Complete visit only. Daily Roster More had no Send to lab / Send to intervention.</symptom>
+ <root_cause>Today was Friday (MUPS off). Demo rows sat on a Sunday Visit sitting. `clinicIsOpenOn` required a sitting whose weekday matched today, so lab and OT looked closed even though the visit list was running.</root_cause>
+ <prevention_rule>If a patient is already on a visit/OT/consult list for that date, those rooms are open. Pin `CarePathQueueTest::test_send_to_lab_and_ot_follow_a_visit_already_on_today_even_if_the_sitting_weekday_is_wrong`.</prevention_rule>
+</bug>
+
+## 2026-08-21T11:03:23+0600
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>A day with no doctor sitting was treated as the clinic being closed: lab calendar greys, Send to lab/OT framed as “clinic not sitting.”</symptom>
+ <root_cause>Floor rooms were gated on visit/OT sittings for that weekday (`clinicIsOpenOn`, `labUsesClinicDays`). Missing sitting was modelled as an off day.</root_cause>
+ <prevention_rule>Doctor not sessioned ≠ clinic closed. Lab/report/counseling follow Branding rooms. Usual visit follows the doctor’s clock. Pin `CarePathQueueTest::test_a_day_without_a_doctor_sitting_is_not_a_closed_clinic`. Do not label a grey visit calendar as an “off-day” or “centre closed.”</prevention_rule>
+</bug>

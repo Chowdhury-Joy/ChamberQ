@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\BelongsToTenant;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class ScheduleSession extends Model
@@ -33,6 +34,22 @@ class ScheduleSession extends Model
      * @var list<string>
      */
     public const STAFF_PUSHED_KINDS = [self::KIND_MSK, self::KIND_REPORT, self::KIND_COUNSELING];
+
+    /**
+     * Clock hours staff edit on Schedule Sessions. Lab and report lists are
+     * rooms (Branding), not sittings — they may still exist as leftover rows
+     * for the queue.
+     *
+     * @param  Builder<self>  $query
+     * @return Builder<self>
+     */
+    public function scopeTimetableHours(Builder $query): Builder
+    {
+        return $query->where(function (Builder $scoped): void {
+            $scoped->whereNull('kind')
+                ->orWhereNotIn('kind', [self::KIND_MSK, self::KIND_REPORT]);
+        });
+    }
 
     protected $fillable = [
         'chamber_id',

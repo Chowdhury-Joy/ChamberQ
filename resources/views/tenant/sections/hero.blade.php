@@ -104,7 +104,7 @@
             {{-- POST, not GET: a GET here put the patient's name and phone in
                  the address bar, browser history and every access log on the
                  way. The controller flashes them to the session and redirects. --}}
-            <form class="book-card space-card hero-media" id="book" method="post" action="{{ tenant_web_url('/book') }}" data-reveal-block data-reveal-kind="fade" data-closed-day="{{ __('This centre is closed that day.') }}" data-open-days="{{ __('Open: :days') }}">
+            <form class="book-card space-card hero-media" id="book" method="post" action="{{ tenant_web_url('/book') }}" data-reveal-block data-reveal-kind="fade" data-closed-day="{{ __('This doctor is not sitting that day.') }}" data-open-days="{{ __('Sits: :days') }}">
                 @csrf
                 <h2>{{ $ctaText }}</h2>
                 @if($needsChamberPick)

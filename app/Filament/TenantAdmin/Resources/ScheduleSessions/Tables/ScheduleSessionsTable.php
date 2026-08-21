@@ -32,9 +32,11 @@ class ScheduleSessionsTable
                         : '—')
                     ->visible(fn (): bool => tenant()?->hasStations() ?? false),
                 TextColumn::make('start_time')
+                    ->label(__('Starts'))
                     ->time()
                     ->sortable(),
                 TextColumn::make('end_time')
+                    ->label(__('Ends'))
                     ->time()
                     ->sortable(),
                 TextColumn::make('slot_cap')

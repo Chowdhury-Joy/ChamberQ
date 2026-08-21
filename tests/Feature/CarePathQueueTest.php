@@ -7,9 +7,11 @@ use App\Models\Booking;
 use App\Models\Chamber;
 use App\Models\Doctor;
 use App\Models\Domain;
+use App\Models\LiveSession;
 use App\Models\Patient;
 use App\Models\ScheduleSession;
 use App\Models\Tenant;
+use App\Filament\TenantAdmin\Support\StaffBookingForm;
 use App\Services\BookingService;
 use App\Services\CarePath;
 use App\Services\PracticeRules;
@@ -269,6 +271,17 @@ class CarePathQueueTest extends TestCase
         $this->assertNotSame($this->visit->id, $procedure->bookable_id);
     }
 
+    public function test_the_hours_list_does_not_show_lab_and_report_room_rows(): void
+    {
+        $ids = ScheduleSession::query()->timetableHours()->pluck('id');
+
+        $this->assertTrue($ids->contains($this->visit->id));
+        $this->assertTrue($ids->contains($this->intervention->id));
+        $this->assertTrue($ids->contains($this->counseling->id));
+        $this->assertFalse($ids->contains($this->msk->id));
+        $this->assertFalse($ids->contains($this->report->id));
+    }
+
     public function test_lab_report_and_counseling_follow_an_open_clinic_day_without_their_own_sittings(): void
     {
         $this->msk->delete();
@@ -325,6 +338,82 @@ class CarePathQueueTest extends TestCase
 
         $this->assertFalse($handoff->canSendToReport($procedure->fresh(['bookable'])));
         $this->assertTrue($handoff->canSendToCounseling($procedure->fresh(['bookable'])));
+    }
+
+    public function test_a_day_without_a_doctor_sitting_is_not_a_closed_clinic(): void
+    {
+        $this->msk->delete();
+        $this->intervention->delete();
+        $this->visit->update([
+            'day_of_week' => Carbon::today()->addDay()->dayOfWeek,
+        ]);
+
+        $this->tenant->update([
+            'practice_rules' => PracticeRules::normalize([
+                'floor_lab' => true,
+            ]),
+        ]);
+
+        $today = Carbon::today()->dayOfWeek;
+        $labDays = StaffBookingForm::sittingWeekdays(
+            $this->doctor->id,
+            StaffBookingForm::TYPE_LAB,
+            StaffBookingForm::LAB_MSK,
+            $this->chamber->id,
+        );
+        $this->assertContains($today, $labDays);
+
+        $visit = Booking::create([
+            'bookable_type' => ScheduleSession::class,
+            'bookable_id' => $this->visit->id,
+            'booking_date' => Carbon::today()->toDateString(),
+            'patient_name' => 'Faruk Friday',
+            'patient_phone' => '01715550022',
+            'serial_number' => 5,
+            'status' => 'in_chamber',
+        ]);
+
+        $handoff = app(StationsHandoffService::class);
+        $visit = $visit->fresh(['bookable']);
+
+        $this->assertTrue($handoff->canSendToLab($visit));
+        $this->assertTrue($handoff->canSendVisit($visit));
+
+        $lab = $handoff->sendToLab($visit, ScheduleSession::KIND_MSK);
+        $this->assertSame(ScheduleSession::KIND_MSK, $lab->bookable?->kind);
+        $this->assertSame($today, (int) $lab->bookable->day_of_week);
+    }
+
+    public function test_a_running_live_queue_can_send_anyone_to_any_room_today(): void
+    {
+        LiveSession::create([
+            'schedule_session_id' => $this->visit->id,
+            'session_date' => Carbon::today(),
+            'status' => 'active',
+            'started_at' => now(),
+        ]);
+
+        $visit = $this->bookVisit('Live Desk', '01715550023');
+        $handoff = app(StationsHandoffService::class);
+        $visit = $visit->fresh(['bookable']);
+
+        $this->assertTrue($handoff->canSendToLab($visit));
+        $this->assertTrue($handoff->canSendVisit($visit));
+        $this->assertTrue($handoff->canSendToReport($visit));
+        $this->assertTrue($handoff->canSendToCounseling($visit));
+
+        $report = $handoff->sendToReport($visit);
+        $this->assertSame(ScheduleSession::KIND_REPORT, $report->bookable?->kind);
+
+        $procedure = $this->bookVisit('From Visit To Ot', '01715550024');
+        $ot = $handoff->sendVisitToIntervention(
+            $procedure->fresh(['bookable']),
+            Carbon::today()->toDateString(),
+        );
+        $this->assertTrue($handoff->canSendToLab($ot->fresh(['bookable'])));
+
+        $lab = $handoff->sendToLab($ot->fresh(['bookable']), ScheduleSession::KIND_MSK);
+        $this->assertSame(ScheduleSession::KIND_MSK, $lab->bookable?->kind);
     }
 
     private function sitting(string $name, string $kind, string $start, string $end, int $day): ScheduleSession

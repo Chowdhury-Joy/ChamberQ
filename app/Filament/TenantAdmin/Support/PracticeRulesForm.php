@@ -50,15 +50,15 @@ final class PracticeRulesForm
         ];
 
         if ($includeFloorRooms) {
-            array_unshift($sets, Fieldset::make(__('Rooms on a clinic day'))
+            array_unshift($sets, Fieldset::make(__('Rooms (not sittings)'))
                 ->schema([
                     Toggle::make($key('floor_lab'))
                         ->label(__('Lab room'))
-                        ->helperText(__('Open whenever this clinic is sitting — not a separate session. Send to lab picks the test type (MSK today; another clinic adds its own).'))
+                        ->helperText(__('A room, not a session. A day this doctor does not sit is not a closed clinic — staff can still send to lab. Send to lab picks the test type (MSK today; another clinic adds its own).'))
                         ->default(false),
                     Toggle::make($key('floor_report'))
                         ->label(__('Report room'))
-                        ->helperText(__('Same idea: a room on an open day, not its own sitting hours.'))
+                        ->helperText(__('Same idea: a room, not sitting hours. It does not wait for this doctor’s sitting weekday.'))
                         ->default(false),
                     Toggle::make($key('floor_counseling'))
                         ->label(__('Counseling'))

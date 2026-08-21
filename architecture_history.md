@@ -943,3 +943,18 @@
 
 ## 2026-08-21T10:41:44+0600
 - Send to intervention from a visit on an open clinic day even when that weekday has no OT sitting; `StationsHandoffService` provisions a same-day Intervention list.
+
+## 2026-08-21T10:54:09+0600
+- Schedule Sessions list hides leftover lab/report sitting rows (`ScheduleSession::timetableHours`); Visit/Intervention/Counseling hours stay.
+
+## 2026-08-21T10:56:53+0600
+- Send to lab/OT follows the visit list the patient is already on, even when that sitting’s weekday is not today (demo/off-day leftover).
+
+## 2026-08-21T11:03:23+0600
+- Floor rooms and Book serial Lab no longer treat a day without a doctor sitting as a closed clinic; `clinicIsOpenOn` removed. Usual visit still follows the doctor’s sitting days.
+
+## 2026-08-21T11:06:40+0600
+- Public clinic hero, booking wizard, and Book serial copy no longer call a missing doctor sitting a closed centre / off-day.
+
+## 2026-08-21T11:11:03+0600
+- Live Queue active/paused/delayed at a centre unlocks send-to any Branding room from anyone on today’s list (`StationsHandoffService::liveDeskDestinations`).

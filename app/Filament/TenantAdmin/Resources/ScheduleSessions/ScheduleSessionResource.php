@@ -46,7 +46,7 @@ class ScheduleSessionResource extends Resource
             StaffDeskScope::constrainScheduleSessions($query, $user);
         }
 
-        return $query;
+        return $query->timetableHours();
     }
 
     public static function form(Schema $schema): Schema

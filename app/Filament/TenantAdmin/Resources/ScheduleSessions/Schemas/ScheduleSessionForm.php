@@ -62,7 +62,7 @@ class ScheduleSessionForm
                     ->native(false)
                     ->visible(fn (): bool => tenant()?->hasStations() ?? false)
                     ->required(fn (): bool => tenant()?->hasStations() ?? false)
-                    ->helperText(__('Visit and intervention have hours. Lab and report are rooms on an open clinic day (Branding). Add Counseling here only if this clinic runs counseling on its own clock.')),
+                    ->helperText(__('Visit and intervention have hours. Lab and report are rooms (Branding) — a day the doctor does not sit is not a closed clinic. Add Counseling here only if this clinic runs counseling on its own clock.')),
                 TimePicker::make('start_time')
                     ->required()
                     ->seconds(false)

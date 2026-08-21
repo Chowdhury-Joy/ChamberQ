@@ -267,10 +267,10 @@ class MupsSeeder extends Seeder
         ]);
 
         // Two branches. Days never overlap — Dr. Moin is in one city at a time.
-        // Testing split so Book Serial can grey off-days per centre:
+        // Usual visit / public book greys days this doctor does not sit.
+        // That is not a closed clinic: Wed/Fri/Sat have no doctor sitting.
         // Chittagong (Mehedibag): Sun, Mon, Tue (morning + evening).
         // Dhaka (Uttara): Thursday (morning + evening).
-        // Off: Wednesday, Friday, Saturday.
         foreach ([0, 1, 2] as $day) {
             $this->seedBranchDay($mehedibag, $doctor, $day, '10:00', '13:00', '13:00', '16:00');
             $this->seedBranchDay($mehedibag, $doctor, $day, '16:00', '17:30', '17:30', '21:00');

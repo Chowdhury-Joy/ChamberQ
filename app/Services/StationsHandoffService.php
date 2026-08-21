@@ -18,8 +18,12 @@ use InvalidArgumentException;
 class StationsHandoffService
 {
     /**
-     * Visit / consult / OT sittings — the clinic clock. Lab, report and
-     * counseling lists follow this day; they are not sittings of their own.
+     * Visit / consult / OT sittings — that doctor's clock. A weekday with
+     * none of these is "this doctor is not here", not "the clinic is closed".
+     * Lab, report and counseling are rooms; they follow Branding, not the
+     * doctor's sitting days. While a Live Queue sitting is active (or paused
+     * / delayed) at that centre, staff can send anyone on today's list to
+     * any of those rooms.
      *
      * @var list<string>
      */
@@ -48,6 +52,70 @@ class StationsHandoffService
         return $user !== null && ($user->isDoctor() || $user->canWorkDesk());
     }
 
+    public function deskIsRunningOn(string $date, ?int $chamberId = null): bool
+    {
+        $query = LiveSession::query()
+            ->whereDate('session_date', $date)
+            ->whereIn('status', ['active', 'paused', 'delayed']);
+
+        if ($chamberId !== null) {
+            $query->whereHas('scheduleSession', function ($sessions) use ($chamberId): void {
+                $sessions->where('chamber_id', $chamberId);
+            });
+        }
+
+        return $query->exists();
+    }
+
+    /**
+     * @return list<string>
+     */
+    private function liveDeskDestinations(ScheduleSession $from, Booking $booking, string $date): array
+    {
+        $kinds = [
+            ScheduleSession::KIND_MSK,
+            ScheduleSession::KIND_INTERVENTION,
+            ScheduleSession::KIND_REPORT,
+            ScheduleSession::KIND_COUNSELING,
+        ];
+        $out = [];
+
+        foreach ($kinds as $kind) {
+            if ($from->kind === $kind) {
+                continue;
+            }
+
+            if (! $this->hasRoom($from, $kind, $date)) {
+                continue;
+            }
+
+            if ($this->openLinkedOfKind($booking, $kind) !== null) {
+                continue;
+            }
+
+            if ($kind === ScheduleSession::KIND_INTERVENTION && $this->openProcedureFor($booking) !== null) {
+                continue;
+            }
+
+            $out[] = $kind;
+        }
+
+        return $out;
+    }
+
+    private function deskIsRunningFor(Booking $booking): bool
+    {
+        $date = $booking->booking_date?->toDateString();
+        if ($date === null) {
+            return false;
+        }
+
+        $session = $booking->bookable;
+        $chamberId = $session instanceof ScheduleSession ? (int) $session->chamber_id : null;
+
+        return $this->deskIsRunningOn($date, $chamberId);
+    }
+
     public function canSendVisit(Booking $visitBooking): bool
     {
         if (! tenant()?->hasStations()) {
@@ -59,7 +127,9 @@ class StationsHandoffService
         }
 
         if (! $this->isVisitSitting($visitBooking) && ! $this->isMskSitting($visitBooking)) {
-            return false;
+            if (! $this->deskIsRunningFor($visitBooking) || $visitBooking->bookable_type !== ScheduleSession::class) {
+                return false;
+            }
         }
 
         if (! in_array(ScheduleSession::KIND_INTERVENTION, $this->nextRoomKinds($visitBooking), true)) {
@@ -100,7 +170,8 @@ class StationsHandoffService
 
         $session = $procedure->bookable;
         if ($session instanceof ScheduleSession && $session->isInterventionKind()
-            && $procedure->procedure_status !== Booking::PROCEDURE_DONE) {
+            && $procedure->procedure_status !== Booking::PROCEDURE_DONE
+            && ! $this->deskIsRunningFor($procedure)) {
             return false;
         }
 
@@ -204,7 +275,8 @@ class StationsHandoffService
 
         $session = $booking->bookable;
         if ($session instanceof ScheduleSession && $session->isInterventionKind()
-            && $booking->procedure_status !== Booking::PROCEDURE_DONE) {
+            && $booking->procedure_status !== Booking::PROCEDURE_DONE
+            && ! $this->deskIsRunningFor($booking)) {
             return false;
         }
 
@@ -232,6 +304,10 @@ class StationsHandoffService
         $date = $booking->booking_date?->toDateString();
         if ($date === null) {
             return [];
+        }
+
+        if ($this->deskIsRunningFor($booking)) {
+            return $this->liveDeskDestinations($session, $booking, $date);
         }
 
         $path = $this->pathOf($booking);
@@ -456,7 +532,7 @@ class StationsHandoffService
         }
 
         if (! $this->canSendVisit($visitBooking)) {
-            throw new InvalidArgumentException(__('Send to intervention is only available from a visit or MSK sitting.'));
+            throw new InvalidArgumentException(__('Send to intervention is only available from today\'s queue.'));
         }
 
         $fromSession = $this->sittingSession($visitBooking);
@@ -504,21 +580,21 @@ class StationsHandoffService
     public function sendToCounseling(Booking $from): Booking
     {
         if (! $this->canSendToCounseling($from)) {
-            throw new InvalidArgumentException(__('Send to counseling is only available from a finished procedure or a report sitting.'));
+            throw new InvalidArgumentException(__('Send to counseling is only available from today\'s queue.'));
         }
 
         return $this->sendToFreeRoom(
             $from,
             ScheduleSession::KIND_COUNSELING,
             __('This patient is already on today\'s counseling list.'),
-            __('Counseling is not open — this clinic is not sitting that day, or counseling is not a room here.'),
+            __('Counseling is not open — this centre has no counseling room.'),
         );
     }
 
     public function sendToMsk(Booking $from): Booking
     {
         if (! $this->canSendToMsk($from)) {
-            throw new InvalidArgumentException(__('Send to lab is only available from a visit sitting.'));
+            throw new InvalidArgumentException(__('Send to lab is only available from today\'s queue.'));
         }
 
         $branch = $this->pathOf($from) === CarePath::FOLLOW_UP
@@ -529,7 +605,7 @@ class StationsHandoffService
             $from,
             ScheduleSession::KIND_MSK,
             __('This patient is already on today\'s MSK list.'),
-            __('Lab is not open — this clinic is not sitting that day, or there is no lab room.'),
+            __('Lab is not open — this centre has no lab room.'),
             $branch,
         );
     }
@@ -537,14 +613,14 @@ class StationsHandoffService
     public function sendToReport(Booking $from): Booking
     {
         if (! $this->canSendToReport($from)) {
-            throw new InvalidArgumentException(__('Send to report is only available after MSK or a finished procedure.'));
+            throw new InvalidArgumentException(__('Send to report is only available from today\'s queue.'));
         }
 
         return $this->sendToFreeRoom(
             $from,
             ScheduleSession::KIND_REPORT,
             __('This patient is already on today\'s report list.'),
-            __('Report is not open — this clinic is not sitting that day, or there is no report room.'),
+            __('Report is not open — this centre has no report room.'),
         );
     }
 
@@ -738,7 +814,7 @@ class StationsHandoffService
         }
 
         if (! $match) {
-            throw new InvalidArgumentException(__('Intervention is not open — this clinic is not sitting that day.'));
+            throw new InvalidArgumentException(__('This doctor is not sitting that day, and there is no visit list to send from.'));
         }
 
         return $match;
@@ -780,7 +856,7 @@ class StationsHandoffService
 
         foreach ($sittings as $from) {
             foreach (self::FLOOR_ROOM_KINDS as $kind) {
-                if ($this->shouldProvisionFloorRoom($kind)) {
+                if ($this->shouldProvisionFloorRoom($kind, $from, $date)) {
                     $this->findSession($from, $kind, $date);
                 }
             }
@@ -810,14 +886,14 @@ class StationsHandoffService
             return $existing;
         }
 
-        if (! $this->shouldProvisionFloorRoom($kind) || ! $this->clinicIsOpenOn($from, $bookingDate)) {
+        if (! $this->shouldProvisionFloorRoom($kind, $from, $bookingDate)) {
             return null;
         }
 
         return $this->provisionRoomQueue($from, $kind, $bookingDate);
     }
 
-    private function shouldProvisionFloorRoom(string $kind): bool
+    private function shouldProvisionFloorRoom(string $kind, ?ScheduleSession $from = null, ?string $date = null): bool
     {
         if ($kind === ScheduleSession::KIND_INTERVENTION) {
             return tenant()?->hasStations() === true;
@@ -832,7 +908,9 @@ class StationsHandoffService
         }
 
         if ($kind === ScheduleSession::KIND_COUNSELING && PracticeRules::counselingIsOwnSession()) {
-            return false;
+            return $from !== null
+                && $date !== null
+                && $this->deskIsRunningOn($date, (int) $from->chamber_id);
         }
 
         return true;
@@ -850,20 +928,10 @@ class StationsHandoffService
             ->get();
     }
 
-    private function clinicIsOpenOn(ScheduleSession $from, string $date): bool
-    {
-        if ($this->clinicSittingsOnDate($from, $date)->isNotEmpty()) {
-            return true;
-        }
-
-        return in_array($from->kind, self::CLINIC_SITTING_KINDS, true)
-            && (int) $from->day_of_week === Carbon::parse($date)->dayOfWeek;
-    }
-
     private function provisionRoomQueue(ScheduleSession $from, string $kind, string $bookingDate): ScheduleSession
     {
         $sittings = $this->clinicSittingsOnDate($from, $bookingDate);
-        if ($sittings->isEmpty() && in_array($from->kind, self::CLINIC_SITTING_KINDS, true)) {
+        if ($sittings->isEmpty()) {
             $sittings = collect([$from]);
         }
 
@@ -898,7 +966,7 @@ class StationsHandoffService
             $hasSitting = $this->interventionSessions($from)
                 ->contains(fn (ScheduleSession $session): bool => (int) $session->day_of_week === $weekday);
 
-            return $hasSitting || $this->clinicIsOpenOn($from, $date);
+            return $hasSitting || tenant()?->hasStations() === true;
         }
 
         if (in_array($kind, self::FLOOR_ROOM_KINDS, true)) {
@@ -907,10 +975,14 @@ class StationsHandoffService
             }
 
             if ($kind === ScheduleSession::KIND_COUNSELING && PracticeRules::counselingIsOwnSession()) {
+                if ($this->deskIsRunningOn($date, (int) $from->chamber_id)) {
+                    return true;
+                }
+
                 return $this->lookupSession($from, $kind, $date) !== null;
             }
 
-            return $this->clinicIsOpenOn($from, $date);
+            return true;
         }
 
         return $this->lookupSession($from, $kind, $date) !== null;

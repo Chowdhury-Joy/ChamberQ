@@ -147,19 +147,26 @@ final class StaffBookingForm
                         $get('visit_type'),
                         $get('lab_type'),
                     )) {
-                        return __('Pick a doctor first. The calendar then only shows days they sit.');
+                        return __('Pick a doctor first. For a visit, the calendar then only shows days they sit.');
                     }
+
+                    $visitType = (string) ($get('visit_type') ?? self::TYPE_USUAL);
+                    $labType = $get('lab_type');
 
                     if (self::sittingWeekdays(
                         $get('doctor_id'),
-                        (string) ($get('visit_type') ?? self::TYPE_USUAL),
-                        $get('lab_type'),
+                        $visitType,
+                        $labType,
                         $get('chamber_id'),
                     ) === []) {
                         return __('This doctor has no sitting for that visit type in the booking window.');
                     }
 
-                    return __('Only days this doctor sits. Off-days stay grey.');
+                    if (self::labUsesClinicDays($visitType, $labType)) {
+                        return __('Lab is a room. Grey only when the centre is closed (vacation). A day this doctor does not sit is still bookable.');
+                    }
+
+                    return __('Only days this doctor sits. Days they are not here stay grey — that is not a closed clinic.');
                 })
                 ->native(false)
                 ->required()
@@ -459,12 +466,16 @@ final class StaffBookingForm
             && (tenant()?->hasFeature('lab_tests') ?? false);
 
         if ($includeSessions) {
-            $weekdays = $weekdays->merge(
-                self::labUsesClinicDays($visitType, $labType)
-                    ? self::clinicSessionsQuery($doctorId, $chamberId)->pluck('day_of_week')
-                    : self::matchingSessionsQuery($visitType, $labType, $doctorId, $chamberId)
+            if (self::labUsesClinicDays($visitType, $labType)) {
+                // Lab is a room. A day the doctor does not sit is not a
+                // closed clinic — only Usual visit follows the doctor's clock.
+                $weekdays = $weekdays->merge([0, 1, 2, 3, 4, 5, 6]);
+            } else {
+                $weekdays = $weekdays->merge(
+                    self::matchingSessionsQuery($visitType, $labType, $doctorId, $chamberId)
                         ->pluck('day_of_week')
-            );
+                );
+            }
         }
 
         if ($includeLabSlots) {
@@ -663,7 +674,10 @@ final class StaffBookingForm
                 $from = self::clinicSessionsQuery($doctorId, $chamberId)
                     ->where('day_of_week', $dow)
                     ->orderBy('start_time')
-                    ->first();
+                    ->first()
+                    ?? self::clinicSessionsQuery($doctorId, $chamberId)
+                        ->orderBy('start_time')
+                        ->first();
                 if ($from) {
                     app(StationsHandoffService::class)->ensureRoomQueue(
                         $from,

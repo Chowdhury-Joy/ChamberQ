@@ -3562,3 +3562,35 @@
  <reason>Like sending a diner from lunch to the grill even if the grill’s printed hours are only breakfast — lunch is on, so the grill can take a ticket.</reason>
 </decision>
 
+## 2026-08-21T10:54:09+0600
+<decision>
+ <category>UI/UX</category>
+ <context>Schedule Sessions listed leftover MSK and Report rows with start and end times, so they looked like sittings. They are rooms on an open clinic day.</context>
+ <action>The hours list (`ScheduleSession::timetableHours`) hides `msk` and `report` rows. Leftover rows stay in the database so Send to lab / report still has a list. Branding still ticks the rooms. Counseling hours stay on this page when the clinic uses them.</action>
+ <reason>Like not printing kitchen-open on the lunch timetable. The kitchen still runs; staff do not set a second lunch for it.</reason>
+</decision>
+
+## 2026-08-21T10:56:53+0600
+<decision>
+ <category>Business_Logic</category>
+ <context>Demo patients sat on a Visit list today even though that sitting’s printed weekday was Sunday (MUPS is off Friday). Send to lab/OT stayed hidden because “clinic open” only looked at the timetable weekday, not the list they were already running.</context>
+ <action>`clinicIsOpenOn` is true when visit/OT/consult sittings exist that weekday, or when the patient is already on a visit/OT/consult sitting for that date.</action>
+ <reason>Like a restaurant that opened the dining room on a printed-closed day: if lunch is being served, the kitchen can take tickets.</reason>
+</decision>
+
+## 2026-08-21T11:03:23+0600
+<decision>
+ <category>Business_Logic</category>
+ <context>Staff and the product copy treated a weekday without a doctor sitting as an “off day” / closed clinic (MUPS Friday). That hid Send to lab/OT and greys Lab on Book serial. The owner’s rule: if a doctor is not sessioned, that doctor is not there — the clinic is not closed.</context>
+ <action>Floor rooms (lab/report/counseling) follow Branding, not the doctor’s sitting weekday. `StationsHandoffService` no longer uses `clinicIsOpenOn`. Book serial Lab dates are every weekday except blocked/closed days. Usual visit and the public website still only offer days that doctor sits. Copy says “this doctor is not sitting”, never “the clinic is closed” for a missing sitting.</action>
+ <reason>Like a hospital: the surgeon’s OT list is empty on Friday, but the lab still takes a scan if the desk is working. Closing the whole building because one doctor is in another city is the wrong story.</reason>
+</decision>
+
+## 2026-08-21T11:11:03+0600
+<decision>
+ <category>Business_Logic</category>
+ <context>Staff running Live Queue still had Send to lab / OT / report / counseling hidden until the usual care-path step. The owner’s rule: as long as they are managing the live queue, they can send anyone anywhere that day.</context>
+ <action>When a Live Queue sitting at that centre is active, paused, or delayed, `StationsHandoffService::nextRoomKinds()` offers every Branding room (lab, intervention, report, counseling) from any of today’s sitting rows, as long as they are not already on that list. Public book and Book serial still follow the doctor’s sitting days. Without a running queue, the usual visit → lab and/or OT → report → counseling order stays.</action>
+ <reason>Like a hospital floor once the ward clerk has opened the board for the day: they decide who goes to lab, OT, or counseling — they do not wait for a printed order of rooms.</reason>
+</decision>
+

@@ -16,8 +16,10 @@ use App\Models\ScheduleSession;
  * Direct intervention: Intervention → Counseling
  * MSK-only (referred scan): MSK → Report
  *
- * Missing rooms are skipped. Clinics with only Visit / Intervention /
- * Counseling keep the short path.
+ * While Live Queue is active at that centre, staff can send anyone on
+ * today's list to any room the clinic has (lab / OT / report /
+ * counseling), even if the usual path would wait. Public book and Book
+ * serial still follow sitting days.
  */
 class CarePath
 {

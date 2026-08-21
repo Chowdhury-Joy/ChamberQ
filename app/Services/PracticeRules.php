@@ -16,9 +16,10 @@ use Carbon\Carbon;
  * Stored as JSON on the tenant (default) and optionally on the doctor
  * (override). Missing follow-up / room-fee keys use a 3-month window and
  * free report/counseling so the floor still runs before anyone opens
- * Branding. Lab, report, and counseling are floor rooms on an open clinic
- * day (Branding ticks), not sittings, unless a clinic turns counseling into
- * its own sitting. Outside-GP cuts default to ৳0 — each clinic types its own
+ * Branding. Lab, report, and counseling are floor rooms (Branding ticks),
+ * not sittings, unless a clinic turns counseling into its own sitting. A
+ * weekday without a doctor sitting is “that doctor is not here”, not a
+ * closed clinic. Outside-GP cuts default to ৳0 — each clinic types its own
  * amounts. MUPS-sized numbers belong in that clinic’s seed or Branding,
  * not in PHP constants for every client.
  */

@@ -113,7 +113,7 @@
     </style>
 
     <p class="text-sm text-gray-600 dark:text-gray-400 mb-4">
-        {{ __('For a phone call or the front desk when the patient is not standing in the queue. Pick the doctor first. The calendar then only shows days they sit. New Walk-In on Daily Roster is still for today only.') }}
+        {{ __('For a phone call or the front desk when the patient is not standing in the queue. Pick the doctor first. For a visit, the calendar only shows days they sit — that is not a closed clinic. Lab can be any day except vacation. New Walk-In on Daily Roster is still for today only.') }}
     </p>
 
     <form wire:submit="book" class="space-y-6">

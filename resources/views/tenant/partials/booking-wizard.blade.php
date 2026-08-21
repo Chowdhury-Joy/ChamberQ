@@ -297,7 +297,7 @@
             seeMoreDates: @json(__('See more dates')),
             showFewerDates: @json(__('Show fewer dates')),
             noOpenDatesTitle: @json(__('No seats available soon')),
-            noOpenDatesBody: @json(__('Every date in the next two months is full or closed. Please call the clinic or try again later.')),
+            noOpenDatesBody: @json(__('Every date in the next two months is full, or this doctor is not sitting. Please call the clinic or try again later.')),
             callClinic: @json(__('Call the clinic')),
         };
         
