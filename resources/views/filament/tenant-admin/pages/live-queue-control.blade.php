@@ -599,6 +599,9 @@
                 base: @js($announceBaseUrl),
                 locale: @js(tenant()?->call_announce_locale ?? 'en'),
                 blocked: false,
+                announceSequence: 0,
+                ANNOUNCE_REPEATS: 3,
+                ANNOUNCE_GAP_MS: 1000,
                 play(payload) {
                     const detail = Array.isArray(payload) ? (payload[0] ?? {}) : (payload ?? {});
                     const raw = detail.serial ?? payload?.serial ?? payload;
@@ -606,14 +609,41 @@
                     const n = parseInt(raw, 10);
                     const el = this.$refs.audio;
                     if (! el || ! Number.isFinite(n) || n < 1 || n > 99) return;
-
-                    el.muted = false;
-                    el.pause();
-                    el.onended = () => { this.speakName(name); };
-                    el.src = this.base + '/number-' + n + '.wav';
-                    el.play()
-                        .then(() => { this.blocked = false })
-                        .catch(() => { this.blocked = true });
+                    const mySeq = ++this.announceSequence;
+                    this.playSerialLoop(el, n, name, mySeq);
+                },
+                async playSerialLoop(el, n, name, mySeq) {
+                    for (let i = 0; i < this.ANNOUNCE_REPEATS; i++) {
+                        if (mySeq !== this.announceSequence) return;
+                        const ok = await this.playClip(el, n);
+                        if (mySeq !== this.announceSequence) return;
+                        if (! ok) {
+                            this.blocked = true;
+                            return;
+                        }
+                        this.blocked = false;
+                        if (i < this.ANNOUNCE_REPEATS - 1) {
+                            await new Promise((r) => setTimeout(r, this.ANNOUNCE_GAP_MS));
+                        }
+                    }
+                    if (mySeq !== this.announceSequence) return;
+                    this.speakName(name);
+                },
+                playClip(el, n) {
+                    return new Promise((resolve) => {
+                        const onEnded = () => { cleanup(); resolve(true); };
+                        const onError = () => { cleanup(); resolve(false); };
+                        const cleanup = () => {
+                            el.removeEventListener('ended', onEnded);
+                            el.removeEventListener('error', onError);
+                        };
+                        el.muted = false;
+                        el.pause();
+                        el.src = this.base + '/number-' + n + '.wav';
+                        el.addEventListener('ended', onEnded);
+                        el.addEventListener('error', onError);
+                        el.play().catch(() => { cleanup(); resolve(false); });
+                    });
                 },
                 speakName(name) {
                     const text = String(name || '').trim();

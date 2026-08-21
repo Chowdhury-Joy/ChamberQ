@@ -391,6 +391,15 @@ class LiveQueueControlPageTest extends TestCase
         $this->assertStringContainsString('Buzz this phone when a sitting needs you', $html);
     }
 
+    public function test_call_announcement_repeats_the_serial_three_times_with_a_one_second_gap(): void
+    {
+        $html = $this->queuePage()->assertSuccessful()->html();
+
+        $this->assertStringContainsString('ANNOUNCE_REPEATS: 3', $html);
+        $this->assertStringContainsString('ANNOUNCE_GAP_MS: 1000', $html);
+        $this->assertStringContainsString('playSerialLoop', $html);
+    }
+
     /** The cost warning as staff actually see it, resolved off the mounted action. */
     protected function mountedMarkLateDescription(): string
     {

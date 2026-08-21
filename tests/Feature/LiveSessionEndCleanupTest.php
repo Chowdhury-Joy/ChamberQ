@@ -294,6 +294,7 @@ class LiveSessionEndCleanupTest extends TestCase
             ->assertSee('playAnnounceClip', escape: false)
             // The serial is said three times — one pass is missed in a noisy room.
             ->assertSee('ANNOUNCE_REPEATS = 3', escape: false)
+            ->assertSee('ANNOUNCE_GAP_MS = 1000', escape: false)
             // A newer call must cut a sequence still repeating the old serial.
             ->assertSee('announceSequence', escape: false)
             // Serial stays on Karen WAVs; patient name uses browser TTS (try-it).

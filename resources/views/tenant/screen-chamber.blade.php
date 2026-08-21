@@ -247,7 +247,7 @@
         const offlineChipTemplate = @json(__('Line dropped — last update :time'));
         const MAX_ANNOUNCE_QUEUE = 4;
         const ANNOUNCE_REPEATS = 3;
-        const ANNOUNCE_GAP_MS = 700;
+        const ANNOUNCE_GAP_MS = 1000;
 
         let soundUnlocked = false;
         let soundMuted = false;
@@ -371,13 +371,19 @@
                 const voice = pickNameVoice();
                 if (voice) utterance.voice = voice;
                 let settled = false;
+                let hang = null;
                 const done = function (ok) {
                     if (settled) return;
                     settled = true;
+                    if (hang) clearTimeout(hang);
                     resolve(ok);
                 };
                 utterance.onend = function () { done(true); };
                 utterance.onerror = function () { done(false); };
+                hang = setTimeout(function () {
+                    try { window.speechSynthesis.cancel(); } catch (e) {}
+                    done(false);
+                }, 4000);
                 try { window.speechSynthesis.speak(utterance); } catch (e) {
                     logAudio('name TTS failed', e);
                     done(false);
@@ -388,18 +394,18 @@
         async function speakCall(roomLabel, serial, name) {
             if (!soundUnlocked || soundMuted) return;
             const mySequence = ++announceSequence;
+            await speakName(roomLabel);
             for (let i = 0; i < ANNOUNCE_REPEATS; i++) {
-                if (soundMuted || mySequence !== announceSequence) return;
-                await speakName(roomLabel);
                 if (soundMuted || mySequence !== announceSequence) return;
                 const played = await playAnnounceClip(serial);
                 if (!played) return;
                 if (soundMuted || mySequence !== announceSequence) return;
-                await speakName(name);
                 if (i < ANNOUNCE_REPEATS - 1) {
                     await new Promise(function (r) { setTimeout(r, ANNOUNCE_GAP_MS); });
                 }
             }
+            if (soundMuted || mySequence !== announceSequence) return;
+            await speakName(name);
         }
 
         async function drainAnnounceQueue() {

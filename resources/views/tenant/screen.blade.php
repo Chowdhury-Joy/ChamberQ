@@ -454,10 +454,10 @@
             });
         }
 
-        // Say the number (and name) three times: a waiting room is noisy and a
-        // patient who looked away for one pass still catches the second or third.
+        // Say the serial three times with a 1s gap: a waiting room is noisy
+        // and a patient who looked away for one pass still catches the next.
         const ANNOUNCE_REPEATS = 3;
-        const ANNOUNCE_GAP_MS = 700;
+        const ANNOUNCE_GAP_MS = 1000;
 
         // Bumped on every new call so a sequence still repeating for the previous
         // serial stops instead of talking over the new one.
@@ -502,14 +502,22 @@
                 if (voice) utterance.voice = voice;
 
                 let settled = false;
+                let hang = null;
                 const done = function (ok) {
                     if (settled) return;
                     settled = true;
+                    if (hang) clearTimeout(hang);
                     resolve(ok);
                 };
 
                 utterance.onend = function () { done(true); };
                 utterance.onerror = function () { done(false); };
+
+                // A TV that never fires onend must not block the next serial.
+                hang = setTimeout(function () {
+                    try { window.speechSynthesis.cancel(); } catch (e) {}
+                    done(false);
+                }, 4000);
 
                 try {
                     window.speechSynthesis.speak(utterance);
@@ -525,7 +533,7 @@
 
             const mySequence = ++announceSequence;
 
-            // Serial: pre-recorded Karen WAV only. Name: browser TTS after each pass.
+            // Serial: pre-recorded Karen WAV three times, 1s between. Name once after.
             for (let i = 0; i < ANNOUNCE_REPEATS; i++) {
                 if (soundMuted || mySequence !== announceSequence) return;
 
@@ -533,14 +541,15 @@
 
                 // Clip missing or playback blocked — do not retry two more times.
                 if (!played) return;
-
                 if (soundMuted || mySequence !== announceSequence) return;
-                await speakName(name);
 
                 if (i < ANNOUNCE_REPEATS - 1) {
                     await new Promise(function (r) { setTimeout(r, ANNOUNCE_GAP_MS); });
                 }
             }
+
+            if (soundMuted || mySequence !== announceSequence) return;
+            await speakName(name);
         }
 
         function announceCall(serial, name) {

@@ -3528,3 +3528,12 @@
  <reason>Like matching the one-room departure board to the multi-gate board so a patient at Pain Solution Mehedibag and a patient in a three-room clinic both see a number they can read from the back row.</reason>
 </decision>
 
+## 2026-08-21T09:59:28+0600
+
+<decision>
+ <category>UI/UX</category>
+ <context>A waiting room is noisy. Calling a serial once (or three times with a short 0.7s pause) is easy to miss, and the desk speaker used to say the number only once.</context>
+ <action>Every Call next / Call now voice says the serial **three times** with a **1 second** gap (`ANNOUNCE_REPEATS` / `ANNOUNCE_GAP_MS`) on the outdoor TV, the all-rooms TV, and Live Queue Control. The patient name is spoken once after those three numbers. A newer call still cuts an old sequence. Name TTS that never finishes is cut after 4s so it cannot skip the remaining numbers.</action>
+ <reason>Like a bank token machine: “twelve … twelve … twelve”. One second between passes is long enough to hear as three separate calls. Staff at the desk hear the same pattern the waiting room hears.</reason>
+</decision>
+

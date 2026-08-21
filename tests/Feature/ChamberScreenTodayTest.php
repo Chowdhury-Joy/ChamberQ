@@ -165,7 +165,9 @@ class ChamberScreenTodayTest extends TestCase
 
         $this->get($this->host.'/screen/chamber/'.$this->chamber->id)
             ->assertOk()
-            ->assertSee('Panchlaish', false);
+            ->assertSee('Panchlaish', false)
+            ->assertSee('ANNOUNCE_REPEATS = 3', false)
+            ->assertSee('ANNOUNCE_GAP_MS = 1000', false);
 
         tenancy()->initialize($this->tenant);
         $token = ScreenPollToken::forChamber($this->chamber->id);

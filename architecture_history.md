@@ -932,11 +932,6 @@
 ## 2026-08-21T09:50:13+0600
 - One-room waiting-room TV (`screen.blade.php`) now uses the same high-contrast calling rules as the all-rooms board: white numerals, inverted calling card, brand colour only on a header bar.
 
-
-
-
-
-
-
-
+## 2026-08-21T09:59:28+0600
+- Queue call voice: serial WAV three times with a 1s gap on the outdoor TV, all-rooms TV, and Live Queue Control; patient name once after the three numbers.
 
