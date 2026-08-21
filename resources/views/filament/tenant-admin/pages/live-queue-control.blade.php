@@ -48,6 +48,23 @@
         .cs-complete-visit-btn.fi-btn.fi-color-success svg {
             color: #fff;
         }
+        .cs-send-intervention-btn.fi-btn.fi-color-warning {
+            background-color: var(--warning-500, #f59e0b);
+            color: #fff;
+            --text: #fff;
+            --hover-text: #fff;
+            --dark-text: #fff;
+            --dark-hover-text: #fff;
+        }
+        .cs-send-intervention-btn.fi-btn.fi-color-warning:hover {
+            background-color: var(--warning-400, #fbbf24);
+            color: #fff;
+        }
+        .cs-send-intervention-btn.fi-btn.fi-color-warning > .fi-icon,
+        .cs-send-intervention-btn.fi-btn.fi-color-warning .fi-btn-label,
+        .cs-send-intervention-btn.fi-btn.fi-color-warning svg {
+            color: #fff;
+        }
         .lqc-btn-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
 
         .lqc-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1px; background: rgb(228 228 231); border: 1px solid rgb(228 228 231); border-radius: 0.75rem; overflow: hidden; }
@@ -442,26 +459,26 @@
                                                     {{ 'Call next patient' }}
                                                 </x-filament::button>
                                                 @if(! $collectFeePrimary && $canSendToLab)
-                                                    <x-filament::button wire:click="mountAction('sendCurrentToLab')" color="success" icon="heroicon-m-arrow-right-circle">
+                                                    <x-filament::button wire:click="mountAction('sendCurrentToLab')" :outlined="true" color="success" icon="heroicon-m-arrow-right-circle">
                                                         {{ __('Send to lab') }}
                                                     </x-filament::button>
                                                 @endif
                                                 @if(! $collectFeePrimary && $canBookIntervention)
-                                                    <x-filament::button wire:click="mountAction('bookCurrentIntervention')" color="warning" icon="heroicon-m-arrow-right-circle">
+                                                    <x-filament::button class="cs-send-intervention-btn" wire:click="mountAction('bookCurrentIntervention')" color="warning" icon="heroicon-m-arrow-right-circle">
                                                         {{ __('Send to intervention') }}
                                                     </x-filament::button>
                                                 @elseif(! $collectFeePrimary && $canMoveIntervention)
-                                                    <x-filament::button wire:click="mountAction('moveCurrentIntervention')" color="gray" icon="heroicon-m-calendar-days">
+                                                    <x-filament::button wire:click="mountAction('moveCurrentIntervention')" :outlined="true" color="gray" icon="heroicon-m-calendar-days">
                                                         {{ __('Move intervention') }}
                                                     </x-filament::button>
                                                 @endif
                                                 @if(! $collectFeePrimary && $canSendToReport)
-                                                    <x-filament::button wire:click="mountAction('sendCurrentToReport')" color="success" icon="heroicon-m-arrow-right-circle">
+                                                    <x-filament::button wire:click="mountAction('sendCurrentToReport')" :outlined="true" color="success" icon="heroicon-m-arrow-right-circle">
                                                         {{ __('Send to report') }}
                                                     </x-filament::button>
                                                 @endif
                                                 @if(! $collectFeePrimary && $canSendToCounseling)
-                                                    <x-filament::button wire:click="mountAction('sendCurrentToCounseling')" color="success" icon="heroicon-m-chat-bubble-left-right">
+                                                    <x-filament::button wire:click="mountAction('sendCurrentToCounseling')" :outlined="true" color="success" icon="heroicon-m-chat-bubble-left-right">
                                                         {{ __('Send to counseling') }}
                                                     </x-filament::button>
                                                 @endif
@@ -470,26 +487,26 @@
                                                     {{ 'Complete visit' }}
                                                 </x-filament::button>
                                                 @if($canSendToLab)
-                                                    <x-filament::button wire:click="mountAction('sendCurrentToLab')" color="success" icon="heroicon-m-arrow-right-circle">
+                                                    <x-filament::button wire:click="mountAction('sendCurrentToLab')" :outlined="true" color="success" icon="heroicon-m-arrow-right-circle">
                                                         {{ __('Send to lab') }}
                                                     </x-filament::button>
                                                 @endif
                                                 @if($canBookIntervention)
-                                                    <x-filament::button wire:click="mountAction('bookCurrentIntervention')" color="warning" icon="heroicon-m-arrow-right-circle">
+                                                    <x-filament::button class="cs-send-intervention-btn" wire:click="mountAction('bookCurrentIntervention')" color="warning" icon="heroicon-m-arrow-right-circle">
                                                         {{ __('Send to intervention') }}
                                                     </x-filament::button>
                                                 @elseif($canMoveIntervention)
-                                                    <x-filament::button wire:click="mountAction('moveCurrentIntervention')" color="gray" icon="heroicon-m-calendar-days">
+                                                    <x-filament::button wire:click="mountAction('moveCurrentIntervention')" :outlined="true" color="gray" icon="heroicon-m-calendar-days">
                                                         {{ __('Move intervention') }}
                                                     </x-filament::button>
                                                 @endif
                                                 @if($canSendToReport)
-                                                    <x-filament::button wire:click="mountAction('sendCurrentToReport')" color="success" icon="heroicon-m-arrow-right-circle">
+                                                    <x-filament::button wire:click="mountAction('sendCurrentToReport')" :outlined="true" color="success" icon="heroicon-m-arrow-right-circle">
                                                         {{ __('Send to report') }}
                                                     </x-filament::button>
                                                 @endif
                                                 @if($canSendToCounseling)
-                                                    <x-filament::button wire:click="mountAction('sendCurrentToCounseling')" color="success" icon="heroicon-m-chat-bubble-left-right">
+                                                    <x-filament::button wire:click="mountAction('sendCurrentToCounseling')" :outlined="true" color="success" icon="heroicon-m-chat-bubble-left-right">
                                                         {{ __('Send to counseling') }}
                                                     </x-filament::button>
                                                 @endif

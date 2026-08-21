@@ -3594,3 +3594,11 @@
  <reason>Like a hospital floor once the ward clerk has opened the board for the day: they decide who goes to lab, OT, or counseling — they do not wait for a printed order of rooms.</reason>
 </decision>
 
+## 2026-08-21T11:17:05+0600
+<decision>
+ <category>UI/UX</category>
+ <context>On Live Queue / Consult Screen the Send to lab / report / counseling buttons looked as loud as Complete visit — all solid colour with dark type — so the next important step did not stand out.</context>
+ <action>Only Complete visit (solid green, white type) and Send to intervention (solid amber, white type and icon) stay filled. Send to lab, Send to report, Send to counseling, and Move intervention are outline-only (white fill, coloured stroke).</action>
+ <reason>Like a checkout: Pay is the filled button, Save for later is an outline. Finishing the visit or sending to OT is the loud action; parking someone on lab/report/counseling is quieter.</reason>
+</decision>
+

@@ -6,9 +6,11 @@ use App\Filament\TenantAdmin\Resources\Patients\Pages\EditPatient;
 use App\Filament\TenantAdmin\Resources\Patients\Pages\ListPatients;
 use App\Filament\TenantAdmin\Resources\Users\Pages\CreateUser;
 use App\Filament\TenantAdmin\Resources\Users\Pages\EditUser;
+use App\Filament\TenantAdmin\Support\StationsHandoffForm;
 use App\Models\Patient;
 use App\Models\Tenant;
 use App\Models\User;
+use Filament\Actions\Action;
 use Filament\Actions\DeleteAction;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -196,5 +198,26 @@ class TenantAdminShellTest extends TestCase
             $css,
             'Yellow (warning) filled buttons must use white label text, not dark amber.',
         );
+    }
+
+    public function test_send_to_intervention_stays_filled_with_white_type(): void
+    {
+        $css = file_get_contents(resource_path('css/filament/tenantAdmin/theme.css'));
+        $this->assertStringContainsString('.cs-send-intervention-btn.fi-btn.fi-color-warning', $css);
+        $this->assertMatchesRegularExpression(
+            '/\.cs-send-intervention-btn\.fi-btn\.fi-color-warning\s*\{[^}]*color:\s*#fff/',
+            $css,
+            'Send to intervention must keep a filled amber background with white label and icon.',
+        );
+
+        $lab = StationsHandoffForm::sendToLabAction(Action::make('sendToLab'));
+        $report = StationsHandoffForm::sendToReportAction(Action::make('sendToReport'));
+        $counseling = StationsHandoffForm::sendToCounselingAction(Action::make('sendToCounseling'));
+        $intervention = StationsHandoffForm::bookAction(Action::make('bookIntervention'));
+
+        $this->assertTrue($lab->isOutlined(), 'Send to lab is outline-only.');
+        $this->assertTrue($report->isOutlined(), 'Send to report is outline-only.');
+        $this->assertTrue($counseling->isOutlined(), 'Send to counseling is outline-only.');
+        $this->assertFalse($intervention->isOutlined(), 'Send to intervention stays filled.');
     }
 }

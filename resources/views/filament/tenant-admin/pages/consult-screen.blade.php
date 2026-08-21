@@ -135,6 +135,23 @@
         .cs-complete-visit-btn.fi-btn.fi-color-success svg {
             color: #fff;
         }
+        .cs-send-intervention-btn.fi-btn.fi-color-warning {
+            background-color: var(--warning-500, #f59e0b);
+            color: #fff;
+            --text: #fff;
+            --hover-text: #fff;
+            --dark-text: #fff;
+            --dark-hover-text: #fff;
+        }
+        .cs-send-intervention-btn.fi-btn.fi-color-warning:hover {
+            background-color: var(--warning-400, #fbbf24);
+            color: #fff;
+        }
+        .cs-send-intervention-btn.fi-btn.fi-color-warning > .fi-icon,
+        .cs-send-intervention-btn.fi-btn.fi-color-warning .fi-btn-label,
+        .cs-send-intervention-btn.fi-btn.fi-color-warning svg {
+            color: #fff;
+        }
         /* The sticky bar repeats Patient arrived / Complete visit / Call next in a
            thumb-reachable strip, and it is the only copy shown on phones — the page
            header's own actions are the same three, under the same conditions, so
@@ -783,16 +800,16 @@
                     </x-filament::button>
                 @endif
                 @if ($canSendToLab)
-                    <x-filament::button class="cs-sticky-actions__btn" color="success" icon="heroicon-m-arrow-right-circle" wire:click="mountAction('sendToLab')">
+                    <x-filament::button class="cs-sticky-actions__btn" :outlined="true" color="success" icon="heroicon-m-arrow-right-circle" wire:click="mountAction('sendToLab')">
                         {{ __('Send to lab') }}
                     </x-filament::button>
                 @endif
                 @if ($canBookIntervention)
-                    <x-filament::button class="cs-sticky-actions__btn" color="warning" icon="heroicon-m-arrow-right-circle" wire:click="mountAction('bookIntervention')">
+                    <x-filament::button class="cs-sticky-actions__btn cs-send-intervention-btn" color="warning" icon="heroicon-m-arrow-right-circle" wire:click="mountAction('bookIntervention')">
                         {{ __('Send to intervention') }}
                     </x-filament::button>
                 @elseif ($canMoveIntervention)
-                    <x-filament::button class="cs-sticky-actions__btn" color="gray" icon="heroicon-m-calendar-days" wire:click="mountAction('moveIntervention')">
+                    <x-filament::button class="cs-sticky-actions__btn" :outlined="true" color="gray" icon="heroicon-m-calendar-days" wire:click="mountAction('moveIntervention')">
                         {{ __('Move intervention') }}
                     </x-filament::button>
                 @endif

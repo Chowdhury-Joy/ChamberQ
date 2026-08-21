@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament\Concerns;
 
+use App\Filament\TenantAdmin\Support\DeskActionLayout;
 use App\Filament\TenantAdmin\Widgets\TenantStatsOverview;
 use App\Filament\TenantAdmin\Widgets\TodayAppointmentsWidget;
 use App\Support\FilamentPanelUrl;
@@ -177,9 +178,16 @@ trait ConfiguresTenantAdminPanel
                 }
 
                 Table::configureUsing(function (Table $table): void {
-                    $table->modifyUngroupedRecordActionsUsing(
-                        fn (Action $action): Action => $action->button()->outlined(),
-                    );
+                    $table->modifyUngroupedRecordActionsUsing(function (Action $action): Action {
+                        $action->button();
+                        // Send to intervention stays filled (white type on amber).
+                        // Other row buttons stay outline-only.
+                        if (! str_contains($action->getName(), DeskActionLayout::KEY_BOOK_INTERVENTION)) {
+                            $action->outlined();
+                        }
+
+                        return $action;
+                    });
                 });
             });
     }
