@@ -1632,3 +1632,12 @@
  <root_cause>Outbound ticket URLs were built from the booking UUID. Prescriptions already had `/p/{token}`; tickets did not.</root_cause>
  <prevention_rule>Patient outbound ticket links (SMS, WhatsApp, Copy link, wizard confirm) must use `Booking::publicTicketUrl()` (`/t/{token}`), never paste the UUID into a third-party shortener. Pin `TicketShortLinkTest`.</prevention_rule>
 </bug>
+
+## 2026-08-21T10:41:44+0600
+
+<bug>
+ <category>UI/UX</category>
+ <symptom>Live Queue showed Send to lab on a visit but hid Send to intervention, even though staff send to OT from the visit chair.</symptom>
+ <root_cause>`hasRoom(intervention)` required an Intervention sitting on that weekday. A leftover visit-only day (and any visit day without OT hours) hid the button. Lab had already been treated as a room on an open clinic day.</root_cause>
+ <prevention_rule>From a Stations visit, Send to intervention must appear whenever the clinic is sitting that day. Provision a same-day OT list if no Intervention sitting exists. Pin `CarePathQueueTest::test_send_to_intervention_follows_an_open_visit_day_without_an_ot_sitting`.</prevention_rule>
+</bug>

@@ -940,3 +940,6 @@
 
 ## 2026-08-21T10:26:36+0600
 - Book serial confirmation and Push WhatsApp share `BookingConfirmationCopy`; outbound ticket links use ChamberQ `/t/{token}` (`bookings.ticket_token`); UUID `/bookings/{id}` remains as backup after sitting date + 7 days.
+
+## 2026-08-21T10:41:44+0600
+- Send to intervention from a visit on an open clinic day even when that weekday has no OT sitting; `StationsHandoffService` provisions a same-day Intervention list.

@@ -379,6 +379,9 @@ class StationsHandoffService
             return [];
         }
 
+        $visitDate = $booking->booking_date?->toDateString() ?? Carbon::today()->toDateString();
+        $this->ensureRoomQueue($fromSession, ScheduleSession::KIND_INTERVENTION, $visitDate);
+
         $sessions = $this->interventionSessions($fromSession);
         if ($sessions->isEmpty()) {
             return [];
@@ -731,7 +734,11 @@ class StationsHandoffService
         // Staff who want the later one pass sessionId from the picker.
         $match = $query->first();
         if (! $match) {
-            throw new InvalidArgumentException(__('No intervention sitting is scheduled for this doctor on that date.'));
+            $match = $this->ensureRoomQueue($visitSession, ScheduleSession::KIND_INTERVENTION, $bookingDate);
+        }
+
+        if (! $match) {
+            throw new InvalidArgumentException(__('Intervention is not open — this clinic is not sitting that day.'));
         }
 
         return $match;
@@ -777,6 +784,8 @@ class StationsHandoffService
                     $this->findSession($from, $kind, $date);
                 }
             }
+
+            $this->findSession($from, ScheduleSession::KIND_INTERVENTION, $date);
         }
     }
 
@@ -810,6 +819,10 @@ class StationsHandoffService
 
     private function shouldProvisionFloorRoom(string $kind): bool
     {
+        if ($kind === ScheduleSession::KIND_INTERVENTION) {
+            return tenant()?->hasStations() === true;
+        }
+
         if (! in_array($kind, self::FLOOR_ROOM_KINDS, true)) {
             return false;
         }
@@ -861,6 +874,7 @@ class StationsHandoffService
             ScheduleSession::KIND_MSK => __('Lab'),
             ScheduleSession::KIND_REPORT => __('Report'),
             ScheduleSession::KIND_COUNSELING => __('Counseling'),
+            ScheduleSession::KIND_INTERVENTION => __('Intervention'),
             default => $kind,
         };
 
@@ -873,7 +887,7 @@ class StationsHandoffService
             'start_time' => $starts->first() ?? $from->start_time,
             'end_time' => $ends->last() ?? $from->end_time,
             'slot_cap' => 40,
-            'walk_in_overflow_cap' => $kind === ScheduleSession::KIND_MSK ? 6 : 0,
+            'walk_in_overflow_cap' => in_array($kind, [ScheduleSession::KIND_MSK, ScheduleSession::KIND_INTERVENTION], true) ? 6 : 0,
         ]);
     }
 
@@ -881,9 +895,10 @@ class StationsHandoffService
     {
         if ($kind === ScheduleSession::KIND_INTERVENTION) {
             $weekday = Carbon::parse($date)->dayOfWeek;
-
-            return $this->interventionSessions($from)
+            $hasSitting = $this->interventionSessions($from)
                 ->contains(fn (ScheduleSession $session): bool => (int) $session->day_of_week === $weekday);
+
+            return $hasSitting || $this->clinicIsOpenOn($from, $date);
         }
 
         if (in_array($kind, self::FLOOR_ROOM_KINDS, true)) {

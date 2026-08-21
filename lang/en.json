@@ -499,6 +499,7 @@
     "Same-day procedure.": "Same-day procedure.",
     "They take a serial on that intervention sitting.": "They take a serial on that intervention sitting.",
     "No intervention sitting is scheduled for this doctor.": "No intervention sitting is scheduled for this doctor.",
+    "Intervention is not open — this clinic is not sitting that day.": "Intervention is not open — this clinic is not sitting that day.",
     "This patient already has an intervention sitting booked.": "This patient already has an intervention sitting booked.",
     "Choose an intervention sitting.": "Choose an intervention sitting."
 }

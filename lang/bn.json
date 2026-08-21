@@ -993,6 +993,7 @@
     "Only sitting bookings can be sent to intervention.": "শুধু সিটিং বুকিং ইন্টারভেনশনে পাঠানো যায়।",
     "That intervention sitting is not available for this doctor.": "এই ডাক্তারের জন্য এই ইন্টারভেনশন সিটিং নেই।",
     "No intervention sitting is scheduled for this doctor on that date.": "সেই তারিখে এই ডাক্তারের কোনো ইন্টারভেনশন সিটিং নেই।",
+    "Intervention is not open — this clinic is not sitting that day.": "ইন্টারভেনশন খোলা নেই — সেদিন ক্লিনিক বসে না।",
     "No counseling sitting is scheduled for this doctor on that date.": "সেই তারিখে এই ডাক্তারের কোনো কাউন্সেলিং সিটিং নেই।",
     "Next": "পরবর্তী",
     "Running late": "দেরি হচ্ছে",

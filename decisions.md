@@ -3554,3 +3554,11 @@
  <reason>Like reading the appointment card out loud on the phone, then sending that same card on WhatsApp with a short door code instead of the full street address.</reason>
 </decision>
 
+## 2026-08-21T10:41:44+0600
+<decision>
+ <category>Business_Logic</category>
+ <context>From a visit, staff must be able to send someone to intervention even when OT hours are not on the timetable for that weekday (leftover visit-only Friday). Hiding the button until an Intervention sitting existed fought “send from visit.”</context>
+ <action>**Send to intervention** follows an open clinic day (a visit/consult sitting that weekday). If no OT sitting exists, `StationsHandoffService` provisions a same-day Intervention list spanning that day’s clinic hours. Real OT sittings stay the picker when they exist. Public booking stays visit/consult only.</action>
+ <reason>Like sending a diner from lunch to the grill even if the grill’s printed hours are only breakfast — lunch is on, so the grill can take a ticket.</reason>
+</decision>
+

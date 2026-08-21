@@ -250,6 +250,25 @@ class CarePathQueueTest extends TestCase
         );
     }
 
+    public function test_send_to_intervention_follows_an_open_visit_day_without_an_ot_sitting(): void
+    {
+        $this->intervention->delete();
+
+        $visit = $this->bookVisit('Rahim Visit Only', '01715550021');
+        $handoff = app(StationsHandoffService::class);
+
+        $this->assertTrue($handoff->canSendVisit($visit->fresh(['bookable'])));
+        $this->assertNotEmpty($handoff->sittingOptions($visit->fresh(['bookable'])));
+
+        $procedure = $handoff->sendVisitToIntervention(
+            $visit->fresh(['bookable']),
+            Carbon::today()->toDateString(),
+        );
+
+        $this->assertSame(ScheduleSession::KIND_INTERVENTION, $procedure->bookable?->kind);
+        $this->assertNotSame($this->visit->id, $procedure->bookable_id);
+    }
+
     public function test_lab_report_and_counseling_follow_an_open_clinic_day_without_their_own_sittings(): void
     {
         $this->msk->delete();
