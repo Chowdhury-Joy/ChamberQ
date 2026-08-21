@@ -958,3 +958,9 @@
 
 ## 2026-08-21T11:11:03+0600
 - Live Queue active/paused/delayed at a centre unlocks send-to any Branding room from anyone on today’s list (`StationsHandoffService::liveDeskDestinations`).
+
+## 2026-08-21T11:33:28+0600
+- Patient merge/move now repoints `pharmacy_sales`; pharmacy receipt numbers lock all sale rows and retry unique collisions; portal OTP ledger stores `code: [hidden]`; `config/auth.php` defaults `AUTH_PASSWORD_TIMEOUT` to one year.
+
+## 2026-08-21T11:41:04+0600
+- Outdoor TV HTML stays bookmark-simple integer URLs; portal pads stay phone-only until the patient opts into a password (owner confirm after audit).

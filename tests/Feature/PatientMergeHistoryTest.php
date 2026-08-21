@@ -6,6 +6,7 @@ use App\Models\Booking;
 use App\Models\Chamber;
 use App\Models\Doctor;
 use App\Models\Patient;
+use App\Models\PharmacySale;
 use App\Models\Prescription;
 use App\Models\ScheduleSession;
 use App\Models\Tenant;
@@ -197,6 +198,17 @@ class PatientMergeHistoryTest extends TestCase
 
         [$booking, $visit, $prescription] = $this->completedVisitFor($wrong, 2);
 
+        $sale = PharmacySale::create([
+            'patient_id' => $wrong->id,
+            'booking_id' => $booking->id,
+            'patient_name' => $wrong->name,
+            'patient_phone' => $wrong->phone,
+            'method' => 'cash',
+            'amount' => 100,
+            'recorded_by' => $this->doctor->id,
+            'occurred_on' => Carbon::today()->toDateString(),
+        ]);
+
         app(PatientService::class)->moveBookingToPatient($booking, $right);
 
         $this->assertSame($right->id, $booking->fresh()->patient_id);
@@ -206,5 +218,38 @@ class PatientMergeHistoryTest extends TestCase
             'A mis-filed visit must not stay under the wrong patient',
         );
         $this->assertSame($right->id, $prescription->fresh()->patient_id);
+        $this->assertSame(
+            $right->id,
+            $sale->fresh()->patient_id,
+            'A pharmacy sale on that visit must not stay under the wrong patient',
+        );
+    }
+
+    public function test_merging_a_duplicate_keeps_pharmacy_sales(): void
+    {
+        $keep = Patient::create(['name' => 'Fatima Rahman', 'phone' => '01711111111']);
+        $duplicate = Patient::create(['name' => 'Fatima Rehman', 'phone' => '01711111111']);
+
+        [$booking] = $this->completedVisitFor($duplicate, 1);
+
+        $sale = PharmacySale::create([
+            'patient_id' => $duplicate->id,
+            'booking_id' => $booking->id,
+            'patient_name' => $duplicate->name,
+            'patient_phone' => $duplicate->phone,
+            'method' => 'cash',
+            'amount' => 100,
+            'recorded_by' => $this->doctor->id,
+            'occurred_on' => Carbon::today()->toDateString(),
+        ]);
+
+        app(PatientService::class)->mergePatients($keep, $duplicate);
+
+        $this->assertSame(
+            $keep->id,
+            $sale->fresh()->patient_id,
+            'Pharmacy till rows must follow the patient, same as notes and pads',
+        );
+        $this->assertNull(Patient::query()->find($duplicate->id));
     }
 }

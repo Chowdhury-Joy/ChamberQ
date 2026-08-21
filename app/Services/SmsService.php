@@ -449,6 +449,9 @@ class SmsService
         $body = GsmText::toSingleSegment(
             $clinic.' code: '.$code.'. Valid 5 min. Do not share this code.'
         );
+        $ledgerBody = GsmText::toSingleSegment(
+            $clinic.' code: [hidden]. Valid 5 min. Do not share this code.'
+        );
         $to = $this->internationalPhone($phone);
 
         if (! config('sms.enabled')) {
@@ -484,7 +487,7 @@ class SmsService
             'tenant_id' => $tenantId,
             'booking_id' => null,
             'to' => $to,
-            'body' => $body,
+            'body' => $ledgerBody,
             'purpose' => SmsMessage::PURPOSE_PORTAL_OTP,
             'status' => SmsMessage::STATUS_SENT,
             'credits' => 1,

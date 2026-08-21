@@ -14,8 +14,10 @@ use App\Models\User;
 use App\Support\PrescriptionQuantity;
 use App\Support\StaffDeskScope;
 use Carbon\CarbonInterface;
+use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use InvalidArgumentException;
+use RuntimeException;
 
 class PharmacySaleService
 {
@@ -54,116 +56,165 @@ class PharmacySaleService
 
         $occurredOn ??= now(OperationalReportService::TIMEZONE);
 
-        return DB::transaction(function () use (
-            $user, $lines, $method, $waived, $prescription, $patientName, $patientPhone, $note, $cashTaka, $onlineTaka, $onlineMethod, $discountTaka, $occurredOn
-        ): PharmacySale {
-            $allocations = $this->allocate($user, $lines);
-            $total = 0;
-            $saleChamberId = null;
-            foreach ($allocations as $row) {
-                $total += $row['qty'] * $row['item']->sell_price_taka;
-                $saleChamberId ??= $row['item']->chamber_id;
+        $lastUnique = null;
+        for ($attempt = 0; $attempt < 3; $attempt++) {
+            try {
+                return DB::transaction(function () use (
+                    $user, $lines, $method, $waived, $prescription, $patientName, $patientPhone, $note, $cashTaka, $onlineTaka, $onlineMethod, $discountTaka, $occurredOn
+                ): PharmacySale {
+                    $allocations = $this->allocate($user, $lines);
+                    $total = 0;
+                    foreach ($allocations as $row) {
+                        $total += $row['qty'] * $row['item']->sell_price_taka;
+                    }
+
+                    if (! $waived && $total < 1) {
+                        throw new InvalidArgumentException(__('Sale total must be at least ৳1, or waived.'));
+                    }
+
+                    $discount = $waived ? 0 : max(0, $discountTaka);
+                    if ($discount > $total) {
+                        throw new InvalidArgumentException(__('Discount cannot be more than the basket.'));
+                    }
+                    $collected = $waived ? 0 : $total - $discount;
+                    $lineDiscounts = $this->allocateDiscount($allocations, $discount);
+
+                    return $this->commitSale(
+                        $user,
+                        $allocations,
+                        $lineDiscounts,
+                        $method,
+                        $waived,
+                        $prescription,
+                        $patientName,
+                        $patientPhone,
+                        $note,
+                        $cashTaka,
+                        $onlineTaka,
+                        $onlineMethod,
+                        $collected,
+                        $occurredOn,
+                    );
+                });
+            } catch (UniqueConstraintViolationException $e) {
+                $lastUnique = $e;
             }
+        }
 
-            if (! $waived && $total < 1) {
-                throw new InvalidArgumentException(__('Sale total must be at least ৳1, or waived.'));
-            }
+        throw $lastUnique ?? new RuntimeException('Could not assign a medicine voucher number. Try again.');
+    }
 
-            $discount = $waived ? 0 : max(0, $discountTaka);
-            if ($discount > $total) {
-                throw new InvalidArgumentException(__('Discount cannot be more than the basket.'));
-            }
-            $collected = $waived ? 0 : $total - $discount;
-            $lineDiscounts = $this->allocateDiscount($allocations, $discount);
+    /**
+     * @param  list<array{item: PharmacyItem, delivery: PharmacyDelivery, qty: int, prescription_item_id: ?string}>  $allocations
+     * @param  list<int>  $lineDiscounts
+     */
+    private function commitSale(
+        User $user,
+        array $allocations,
+        array $lineDiscounts,
+        string $method,
+        bool $waived,
+        ?Prescription $prescription,
+        ?string $patientName,
+        ?string $patientPhone,
+        ?string $note,
+        ?int $cashTaka,
+        ?int $onlineTaka,
+        ?string $onlineMethod,
+        int $collected,
+        CarbonInterface $occurredOn,
+    ): PharmacySale {
+        $saleChamberId = null;
+        foreach ($allocations as $row) {
+            $saleChamberId ??= $row['item']->chamber_id;
+        }
 
-            $cash = null;
-            $split = ['cash_taka' => null, 'online_taka' => null, 'online_method' => null];
+        $cash = null;
+        $split = ['cash_taka' => null, 'online_taka' => null, 'online_method' => null];
 
-            if (! $waived && $collected > 0) {
-                $cashService = app(ChamberCashService::class);
-                $split = $cashService->paymentSplit($method, $collected, $cashTaka, $onlineTaka, $onlineMethod);
-                $cash = $cashService->recordLockedIncome(
-                    $user,
-                    $collected,
-                    ChamberCashEntry::CATEGORY_PHARMACY,
-                    $method,
-                    $occurredOn,
-                    $note,
-                    $cashTaka,
-                    $onlineTaka,
-                    $onlineMethod,
-                    $saleChamberId !== null ? (int) $saleChamberId : null,
-                );
-            }
+        if (! $waived && $collected > 0) {
+            $cashService = app(ChamberCashService::class);
+            $split = $cashService->paymentSplit($method, $collected, $cashTaka, $onlineTaka, $onlineMethod);
+            $cash = $cashService->recordLockedIncome(
+                $user,
+                $collected,
+                ChamberCashEntry::CATEGORY_PHARMACY,
+                $method,
+                $occurredOn,
+                $note,
+                $cashTaka,
+                $onlineTaka,
+                $onlineMethod,
+                $saleChamberId !== null ? (int) $saleChamberId : null,
+            );
+        }
 
-            $patient = null;
-            $booking = null;
-            if ($prescription) {
-                $prescription->loadMissing(['patient', 'visitRecord.booking']);
-                $patient = $prescription->patient;
-                $booking = $prescription->visitRecord?->booking;
-            }
+        $patient = null;
+        $booking = null;
+        if ($prescription) {
+            $prescription->loadMissing(['patient', 'visitRecord.booking']);
+            $patient = $prescription->patient;
+            $booking = $prescription->visitRecord?->booking;
+        }
 
-            PharmacySale::query()
-                ->whereNotNull('receipt_number')
-                ->lockForUpdate()
-                ->get(['id']);
+        // Lock every sale row, not only numbered ones — an empty numbered set
+        // locks nothing, so two first sales of the day can both take #1.
+        PharmacySale::query()->lockForUpdate()->get(['id']);
 
-            $sale = PharmacySale::create([
-                'patient_id' => $patient?->id,
-                'booking_id' => $booking?->id,
-                'prescription_id' => $prescription?->id,
-                'cash_entry_id' => $cash?->id,
-                'patient_name' => $patient?->name ?? $patientName,
-                'patient_phone' => $patient?->phone ?? $patientPhone,
-                'method' => $waived ? ChamberCashEntry::METHOD_CASH : $method,
-                'amount' => $collected,
-                'cash_taka' => $waived ? null : $split['cash_taka'],
-                'mobile_taka' => $waived ? null : $split['online_taka'],
-                'mobile_method' => $waived ? null : $split['online_method'],
-                'waived' => $waived,
-                'recorded_by' => $user->id,
-                'occurred_on' => $occurredOn->toDateString(),
-                'note' => $note,
-                'receipt_number' => ((int) PharmacySale::query()->max('receipt_number')) + 1,
+        $sale = PharmacySale::create([
+            'patient_id' => $patient?->id,
+            'booking_id' => $booking?->id,
+            'prescription_id' => $prescription?->id,
+            'cash_entry_id' => $cash?->id,
+            'patient_name' => $patient?->name ?? $patientName,
+            'patient_phone' => $patient?->phone ?? $patientPhone,
+            'method' => $waived ? ChamberCashEntry::METHOD_CASH : $method,
+            'amount' => $collected,
+            'cash_taka' => $waived ? null : $split['cash_taka'],
+            'mobile_taka' => $waived ? null : $split['online_taka'],
+            'mobile_method' => $waived ? null : $split['online_method'],
+            'waived' => $waived,
+            'recorded_by' => $user->id,
+            'occurred_on' => $occurredOn->toDateString(),
+            'note' => $note,
+            'receipt_number' => ((int) PharmacySale::query()->max('receipt_number')) + 1,
+        ]);
+
+        $stock = app(PharmacyStockService::class);
+
+        foreach ($allocations as $index => $row) {
+            /** @var PharmacyItem $item */
+            $item = $row['item'];
+            /** @var PharmacyDelivery $delivery */
+            $delivery = $row['delivery'];
+            $qty = $row['qty'];
+            $share = $delivery->company_share_taka;
+            $shopCut = max(0, ($qty * max(0, $item->sell_price_taka - $share)) - ($lineDiscounts[$index] ?? 0));
+
+            $saleItem = PharmacySaleItem::create([
+                'pharmacy_sale_id' => $sale->id,
+                'pharmacy_item_id' => $item->id,
+                'pharmacy_delivery_id' => $delivery->id,
+                'prescription_item_id' => $row['prescription_item_id'],
+                'name' => $item->name,
+                'qty' => $qty,
+                'sell_price_taka' => $item->sell_price_taka,
+                'company_share_taka' => $share,
+                'shop_cut_taka' => $shopCut,
+                'line_total_taka' => $qty * $item->sell_price_taka,
             ]);
 
-            $stock = app(PharmacyStockService::class);
+            $delivery->qty_on_hand -= $qty;
+            $delivery->qty_sold += $qty;
+            $delivery->save();
+            $stock->recordAdjustment($item, PharmacyStockAdjustment::KIND_SALE, $user, $delivery, null);
 
-            foreach ($allocations as $index => $row) {
-                /** @var PharmacyItem $item */
-                $item = $row['item'];
-                /** @var PharmacyDelivery $delivery */
-                $delivery = $row['delivery'];
-                $qty = $row['qty'];
-                $share = $delivery->company_share_taka;
-                $shopCut = max(0, ($qty * max(0, $item->sell_price_taka - $share)) - ($lineDiscounts[$index] ?? 0));
-
-                $saleItem = PharmacySaleItem::create([
-                    'pharmacy_sale_id' => $sale->id,
-                    'pharmacy_item_id' => $item->id,
-                    'pharmacy_delivery_id' => $delivery->id,
-                    'prescription_item_id' => $row['prescription_item_id'],
-                    'name' => $item->name,
-                    'qty' => $qty,
-                    'sell_price_taka' => $item->sell_price_taka,
-                    'company_share_taka' => $share,
-                    'shop_cut_taka' => $shopCut,
-                    'line_total_taka' => $qty * $item->sell_price_taka,
-                ]);
-
-                $delivery->qty_on_hand -= $qty;
-                $delivery->qty_sold += $qty;
-                $delivery->save();
-                $stock->recordAdjustment($item, PharmacyStockAdjustment::KIND_SALE, $user, $delivery, null);
-
-                if (! $waived) {
-                    app(PharmacyDoctorCommissionService::class)->accrueForLine($sale, $saleItem, $prescription);
-                }
+            if (! $waived) {
+                app(PharmacyDoctorCommissionService::class)->accrueForLine($sale, $saleItem, $prescription);
             }
+        }
 
-            return $sale->fresh('items');
-        });
+        return $sale->fresh('items');
     }
 
     public function void(PharmacySale $sale, User $user): PharmacySale

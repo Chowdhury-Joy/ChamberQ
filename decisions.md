@@ -3602,3 +3602,11 @@
  <reason>Like a checkout: Pay is the filled button, Save for later is an outline. Finishing the visit or sending to OT is the loud action; parking someone on lab/report/counseling is quieter.</reason>
 </decision>
 
+## 2026-08-21T11:41:04+0600
+<decision>
+ <category>Business_Logic</category>
+ <context>A security pass treated the waiting-room TV’s integer URL and the phone-only portal pads as holes. Staff bookmark `/screen/{session}` once on the TV box; patients at this clinic already look up pads with the phone they used to book.</context>
+ <action>Keep TV HTML at `/screen/{session}` and `/screen/chamber/{chamber}` — date-free, integer ids, public names on the board. Do not add a secret token to those bookmark URLs. The HMAC token on the JSON poll stays for scrapers only. Keep portal pads phone-only until the patient opts into a password (`prescriptionsVisible()` true unless `GATE_UNLOCK`). Do not require OTP just to read a pad while the gate is none or setup. OTP remains for set/unlock password; SMS `/p/{token}` stays 48h.</action>
+ <reason>A TV that needs a new secret every morning is a chamber that cannot turn the board on. A pad lock nobody asked for already failed once (2026-08-18). The trade-off is accepted: anyone who can guess a sitting id can read today’s names on the public board, and anyone who knows a phone can read pads until that patient sets a password.</reason>
+</decision>
+

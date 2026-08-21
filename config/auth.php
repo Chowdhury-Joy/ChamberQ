@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\PatientAccount;
 use App\Models\User;
 
 return [
@@ -74,7 +75,7 @@ return [
 
         'patient_accounts' => [
             'driver' => 'eloquent',
-            'model' => \App\Models\PatientAccount::class,
+            'model' => PatientAccount::class,
         ],
 
         // 'users' => [
@@ -118,10 +119,12 @@ return [
     |
     | Here you may define the number of seconds before a password confirmation
     | window expires and users are asked to re-enter their password via the
-    | confirmation screen. By default, the timeout lasts for three hours.
+    | confirmation screen. The default is one year so a missing env var
+    | cannot reintroduce Laravel's three-hour window (same reason
+    | SESSION_LIFETIME defaults to 525600 in config/session.php).
     |
     */
 
-    'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
+    'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 31536000),
 
 ];

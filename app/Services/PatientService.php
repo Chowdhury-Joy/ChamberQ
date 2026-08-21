@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Booking;
 use App\Models\Patient;
+use App\Models\PharmacySale;
 use App\Models\Prescription;
 use App\Models\VisitRecord;
 use App\Support\BdNid;
@@ -191,12 +192,13 @@ class PatientService
      * Fold a duplicate patient record into the one being kept.
      *
      * Every table that points at a patient has to be moved, not just bookings.
-     * `visit_records.patient_id` and `prescriptions.patient_id` are
-     * `nullOnDelete` foreign keys, so deleting the duplicate without moving
-     * them first silently NULLs them — and the consult screen reads history by
-     * `patient_id`, so the doctor is then told "no history" for a patient whose
-     * allergy note is still in the database with nothing pointing at it. There
-     * is no screen that can re-link it afterwards.
+     * `visit_records.patient_id`, `prescriptions.patient_id`, and
+     * `pharmacy_sales.patient_id` are `nullOnDelete` foreign keys, so deleting
+     * the duplicate without moving them first silently NULLs them — and the
+     * consult screen reads history by `patient_id`, so the doctor is then told
+     * "no history" for a patient whose allergy note is still in the database
+     * with nothing pointing at it. There is no screen that can re-link it
+     * afterwards.
      */
     public function mergePatients(Patient $keep, Patient $remove): Patient
     {
@@ -220,9 +222,9 @@ class PatientService
     /**
      * Move one visit to a different patient (staff correcting a mis-filed booking).
      *
-     * The visit record and prescription hang off the booking, so they have to
-     * travel with it — otherwise the clinical note stays filed under the wrong
-     * person while the appointment moves.
+     * The visit record, prescription, and any pharmacy sale on that booking
+     * hang off the visit, so they have to travel with it — otherwise the
+     * till row stays filed under the wrong person while the appointment moves.
      */
     public function moveBookingToPatient(Booking $booking, Patient $patient): Booking
     {
@@ -241,6 +243,10 @@ class PatientService
                 ->whereIn('visit_record_id', VisitRecord::query()
                     ->where('booking_id', $booking->id)
                     ->select('id'))
+                ->update(['patient_id' => $patient->id]);
+
+            PharmacySale::query()
+                ->where('booking_id', $booking->id)
                 ->update(['patient_id' => $patient->id]);
 
             return $booking->fresh();
@@ -264,6 +270,10 @@ class PatientService
             ->update(['patient_id' => $toPatientId]);
 
         Prescription::query()
+            ->where('patient_id', $fromPatientId)
+            ->update(['patient_id' => $toPatientId]);
+
+        PharmacySale::query()
             ->where('patient_id', $fromPatientId)
             ->update(['patient_id' => $toPatientId]);
     }

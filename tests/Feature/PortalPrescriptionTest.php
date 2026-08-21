@@ -12,11 +12,13 @@ use App\Models\Patient;
 use App\Models\Prescription;
 use App\Models\PrescriptionItem;
 use App\Models\ScheduleSession;
+use App\Models\SmsMessage;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Models\VisitRecord;
 use Carbon\Carbon;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Routing\Middleware\ThrottleRequests;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
@@ -286,6 +288,36 @@ class PortalPrescriptionTest extends TestCase
             ->assertSessionHasErrors('code');
     }
 
+    public function test_portal_otp_sms_log_does_not_store_the_code(): void
+    {
+        $this->makePrescription('NAPA');
+        $this->lookupPortal();
+
+        $sent = null;
+        $this->sendAndVerifyPortalOtp($sent);
+
+        $this->assertNotNull($sent);
+        $this->assertMatchesRegularExpression('/\b(\d{6})\b/', $sent);
+
+        preg_match('/\b(\d{6})\b/', $sent, $matches);
+        $code = $matches[1];
+
+        tenancy()->initialize($this->tenant);
+        $logged = SmsMessage::query()
+            ->where('purpose', SmsMessage::PURPOSE_PORTAL_OTP)
+            ->latest('id')
+            ->first();
+        tenancy()->end();
+
+        $this->assertNotNull($logged);
+        $this->assertStringContainsString('[hidden]', $logged->body);
+        $this->assertStringNotContainsString(
+            $code,
+            $logged->body,
+            'A chamber backup must not hold the SMS code that was meant for the patient phone',
+        );
+    }
+
     public function test_later_visits_need_the_password_to_open_old_prescriptions(): void
     {
         $prescription = $this->makePrescription('NAPA', 'SECRETDIAGNOSISNAME');
@@ -393,7 +425,7 @@ class PortalPrescriptionTest extends TestCase
         // This test exercises PortalPrescriptionLock's per-phone limit (5 wrong
         // guesses), not the route's HTTP throttle — OTP setup above already
         // consumes most of the 10/min POST budget on these routes.
-        $this->withoutMiddleware(\Illuminate\Routing\Middleware\ThrottleRequests::class);
+        $this->withoutMiddleware(ThrottleRequests::class);
 
         $this->makePrescription('NAPA');
 

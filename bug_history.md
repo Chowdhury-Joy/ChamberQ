@@ -1668,3 +1668,33 @@
  <root_cause>Floor rooms were gated on visit/OT sittings for that weekday (`clinicIsOpenOn`, `labUsesClinicDays`). Missing sitting was modelled as an off day.</root_cause>
  <prevention_rule>Doctor not sessioned ≠ clinic closed. Lab/report/counseling follow Branding rooms. Usual visit follows the doctor’s clock. Pin `CarePathQueueTest::test_a_day_without_a_doctor_sitting_is_not_a_closed_clinic`. Do not label a grey visit calendar as an “off-day” or “centre closed.”</prevention_rule>
 </bug>
+
+## 2026-08-21T11:33:28+0600
+
+<bug>
+ <category>Business_Logic</category>
+ <symptom>Staff merging two patient cards dropped pharmacy till rows: sales stayed on the deleted card, then `patient_id` went null.</symptom>
+ <root_cause>`PatientService::repointPatientOwnedRows()` moved bookings, visit notes, and prescriptions, but not `pharmacy_sales`. That table is `nullOnDelete`, the same trap as the earlier visit/Rx merge bug.</root_cause>
+ <prevention_rule>A new patient-owned table belongs in `repointPatientOwnedRows()` and, when it hangs off a booking, in `moveBookingToPatient()`. Pin `PatientMergeHistoryTest::test_merging_a_duplicate_keeps_pharmacy_sales`.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Code</category>
+ <symptom>Two first pharmacy sales of the day could both try to become voucher #1.</symptom>
+ <root_cause>`lockForUpdate()` only locked rows that already had a receipt number, so an empty shop locked nothing. `max()+1` then raced.</root_cause>
+ <prevention_rule>Lock every `pharmacy_sales` row (not only numbered ones) and retry on unique receipt collisions, same as voucher assignment. Pin `PharmacyModuleTest::test_voucher_numbers_run_like_a_pad`.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Code</category>
+ <symptom>The clinic SMS log (and chamber backups) stored the portal OTP in plaintext even though `portal_otp_codes` already held a bcrypt hash.</symptom>
+ <root_cause>`SmsService::sendPortalOtp()` wrote the outbound body — including the six digits — into `sms_messages.body`.</root_cause>
+ <prevention_rule>Never store an OTP in `sms_messages`. Ledger copy uses `code: [hidden]`; the real digits go only to the gateway. Pin `PortalPrescriptionTest::test_portal_otp_sms_log_does_not_store_the_code`.</prevention_rule>
+</bug>
+
+<bug>
+ <category>Code</category>
+ <symptom>A production `.env` that omitted `AUTH_PASSWORD_TIMEOUT` asked staff to re-type their password every three hours, fighting the one-year session lock.</symptom>
+ <root_cause>`config/auth.php` still used Laravel’s `10800` default. Session lifetime already shipped `525600` in `config/session.php` for the same missing-env hole.</root_cause>
+ <prevention_rule>`AUTH_PASSWORD_TIMEOUT` defaults to `31536000` in `config/auth.php`, not only in `.env.example`. Pin `SourceHygieneTest::test_password_confirmation_timeout_default_is_one_year`. Do not shorten it without `change session expiry`.</prevention_rule>
+</bug>

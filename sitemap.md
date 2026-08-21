@@ -1,5 +1,5 @@
 # Site Map
-Last Updated: 2026-08-21T11:11:03+0600
+Last Updated: 2026-08-21T11:41:04+0600
 
 ## Full Site Map
 
@@ -39,9 +39,9 @@ Same central host; tenant identified by URL slug (tenant `id`), e.g. `drkarim`.
 | `POST /{slug}/book` | Homepage hero form target — flashes name/phone to session, redirects to the wizard | public (throttled, **Front door**) |
 | `/{slug}/t/{token}` | Patient ticket short link (SMS/WhatsApp). Same page as UUID ticket. Live until sitting date + 7 days | public (60/min throttle) |
 | `/{slug}/bookings/{booking}` | Patient ticket (sitting window always; live queue / come-around only with **Live queue**). Durable UUID backup | public (UUID, 60/min throttle) |
-| `/{slug}/portal` | Phone lookup — bookings and prescriptions stay open; optional password after the first completed visit (**Prescription**) | public (throttled, **Front door**) |
-| `/{slug}/screen/{session}` | Outdoor TV (always today for that schedule session — bookmark once) | public (**Live queue**) |
-| `/{slug}/screen/chamber/{chamber}` | Combined waiting-room TV for every live sitting in that chamber today | public (**Live queue**) |
+| `/{slug}/portal` | Phone lookup — bookings and pads stay phone-only until the patient opts into a password (**Prescription**) | public (throttled, **Front door**) |
+| `/{slug}/screen/{session}` | Outdoor TV (always today for that sitting — bookmark-simple integer URL) | public (**Live queue**) |
+| `/{slug}/screen/chamber/{chamber}` | Combined waiting-room TV for every live sitting in that chamber today (bookmark-simple integer URL) | public (**Live queue**) |
 | `/{slug}/screen/{session}/{date}` | Outdoor display for a specific date (legacy / deep link) | public (**Live queue**) |
 | `/{slug}/lang/{locale}` | Switch session locale `en` / `bn` (same-host Referer; signed-in staff without Referer return to `/{slug}/admin`) | public |
 | `/{slug}/conditions` | List of condition topic pages (from the homepage condition library). 404 if the list is empty | public (**Front door**) |
@@ -96,9 +96,9 @@ When a doctor connects their own domain (e.g. `drkarim.com`), routes live at the
 | `POST /` | Safety net for the same hero submit if the browser posts the homepage URL; same flash + redirect as `POST /book`. Does not render the homepage | public (throttled) |
 | `/t/{token}` | Patient ticket short link (SMS/WhatsApp). Same page as UUID ticket | public (60/min throttle) |
 | `/bookings/{booking}` | Patient ticket (UUID, durable backup) | public (60/min throttle) |
-| `/portal` | Phone lookup — bookings and prescriptions stay open; optional password after the first completed visit | public (throttled) |
-| `/screen/{session}` | Outdoor waiting-room TV (always today — bookmark once per schedule session) | public (throttled) |
-| `/screen/chamber/{chamber}` | Combined waiting-room TV for every live sitting in that chamber today | public (throttled) |
+| `/portal` | Phone lookup — bookings and pads stay phone-only until the patient opts into a password | public (throttled) |
+| `/screen/{session}` | Outdoor waiting-room TV (always today — bookmark-simple integer URL) | public (throttled) |
+| `/screen/chamber/{chamber}` | Combined waiting-room TV for every live sitting in that chamber today (bookmark-simple integer URL) | public (throttled) |
 | `/screen/{session}/{date}` | Outdoor waiting-room display for a specific date (legacy) | public (throttled) |
 | `/lang/{locale}` | Switch session locale `en` / `bn`. Same-host Referer only (off-site Referer is ignored). Signed-in chamber staff with no Referer return to `/admin`; guests stay on the public site | public |
 | `/manifest.webmanifest`, `/sw.js`, `/pwa-icon-{192\|512}.svg` | PWA bits (`sw.js` does not intercept `/admin` or `/livewire/`) | public |

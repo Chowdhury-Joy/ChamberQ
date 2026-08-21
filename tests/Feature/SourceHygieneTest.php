@@ -98,6 +98,26 @@ class SourceHygieneTest extends TestCase
     }
 
     /**
+     * A missing AUTH_PASSWORD_TIMEOUT must not fall back to Laravel's 3-hour
+     * confirm-password window. Session lifetime already ships a one-year
+     * default in config/session.php for the same reason.
+     */
+    public function test_password_confirmation_timeout_default_is_one_year(): void
+    {
+        $source = (string) file_get_contents(config_path('auth.php'));
+
+        $this->assertMatchesRegularExpression(
+            "/env\\('AUTH_PASSWORD_TIMEOUT',\\s*31536000\\)/",
+            $source,
+            'config/auth.php must default AUTH_PASSWORD_TIMEOUT to one year, not 10800',
+        );
+        $this->assertDoesNotMatchRegularExpression(
+            "/env\\('AUTH_PASSWORD_TIMEOUT',\\s*10800\\)/",
+            $source,
+        );
+    }
+
+    /**
      * @return list<string>
      */
     private function sourceFiles(): array

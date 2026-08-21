@@ -8,6 +8,7 @@ use App\Models\Doctor;
 use App\Models\PharmacySale;
 use App\Models\PharmacySaleItem;
 use App\Models\Tenant;
+use App\Models\User;
 use App\Support\SafeUrl;
 use App\Support\TakaWords;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -35,7 +36,6 @@ class PharmacyInvoiceService
                     }
 
                     PharmacySale::query()
-                        ->whereNotNull('receipt_number')
                         ->lockForUpdate()
                         ->get(['id']);
 
@@ -126,7 +126,7 @@ class PharmacyInvoiceService
         }
 
         $prescriber = $sale->prescription?->prescribedBy;
-        if ($prescriber instanceof \App\Models\User) {
+        if ($prescriber instanceof User) {
             $fromUser = Doctor::query()->where('user_id', $prescriber->id)->first();
             if ($fromUser) {
                 return $fromUser;
