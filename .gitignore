@@ -21,6 +21,9 @@ Icon?
 /public/storage
 /storage/*.key
 /storage/pail
+# Local QA sweep output. Machine-specific run artefacts, and they carry whatever
+# names and phone numbers the sweep happened to walk past.
+/storage/qa-*.json
 # Per-tenant storage roots. stancl/tenancy suffixes storage_path() with
 # `tenant` + the tenant id (config/tenancy.php `suffix_base`), so every tenant —
 # including every one a test creates — gets a directory here holding that
