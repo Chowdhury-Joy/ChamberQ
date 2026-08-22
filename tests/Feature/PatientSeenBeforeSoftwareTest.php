@@ -33,6 +33,13 @@ class PatientSeenBeforeSoftwareTest extends TestCase
     {
         parent::setUp();
 
+        // Mid-morning on a fixed date. These tests book onto today's sitting,
+        // and `BookingService::isDateBlocked()` refuses a sitting whose end
+        // time has passed — so on a real clock the file passed all day and
+        // failed every evening after 21:00, which is how a suite teaches
+        // people to ignore it.
+        Carbon::setTestNow(Carbon::parse('2026-08-19 10:00'));
+
         $this->tenant = Tenant::create(['id' => 'paper-file', 'plan_tier' => 'solo']);
         tenancy()->initialize($this->tenant);
 
@@ -59,6 +66,7 @@ class PatientSeenBeforeSoftwareTest extends TestCase
 
     protected function tearDown(): void
     {
+        Carbon::setTestNow();
         tenancy()->end();
 
         parent::tearDown();
