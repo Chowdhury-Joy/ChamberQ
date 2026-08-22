@@ -95,6 +95,26 @@ class VisitNotesFormSchema
     public const TEMP_MAX_F = 110;
 
     /**
+     * Every measured box in the O/E vitals table.
+     *
+     * The prep desk fills exactly these — the whole set, not a subset — so the
+     * doctor never has to re-measure something the desk already did. Keep this
+     * list, `vitalsFields()`, `normalizeVitals()` and
+     * `VisitRecord::hasOutdoorVitals()` in step: they are the four places that
+     * have to agree on what counts as a vital.
+     *
+     * @var list<string>
+     */
+    public const VITAL_FIELDS = [
+        'weight_kg',
+        'bp_systolic',
+        'bp_diastolic',
+        'pulse_bpm',
+        'spo2_percent',
+        'temperature_f',
+    ];
+
+    /**
      * `0+1+0` and `SOS` joined the closed set when per-drug defaults arrived:
      * a midday-only dose and an as-needed analgesic or antacid are both
      * ordinary here, and without a chip for them the default would have had to
@@ -452,7 +472,7 @@ class VisitNotesFormSchema
                 ->columnSpanFull()
                 ->visible(fn (): bool => $patient?->hasClinicalWarnings() ?? false),
             self::prescriptionSection($prescribingDoctor, $lastItems, $patient?->allergies),
-            self::vitalsSection(),
+            self::vitalsSection($booking?->visitRecord),
             Section::make(__('Diagnosis'))
                 ->schema([
                     Select::make('diagnosis')
@@ -669,102 +689,132 @@ class VisitNotesFormSchema
     }
 
     /**
-     * Optional weight and blood pressure.
+     * The doctor's O/E vitals card.
+     *
+     * Says who measured when the prep desk got there first, so the doctor reads
+     * the numbers as somebody else's reading rather than their own — but leaves
+     * every box editable, because re-checking a high BP in the chamber is the
+     * normal next step, not an exception.
+     */
+    private static function vitalsSection(?VisitRecord $record = null): Section
+    {
+        $takenAtDesk = $record?->vitalsTakenAtDesk() ?? false;
+        $deskName = $takenAtDesk ? $record?->vitalsRecordedBy?->name : null;
+
+        $description = match (true) {
+            $takenAtDesk && filled($deskName) => __('Taken at the desk by :name — change anything you re-measure.', ['name' => $deskName]),
+            $takenAtDesk => __('Taken at the desk — change anything you re-measure.'),
+            default => __('Optional. Leave blank if you did not measure.'),
+        };
+
+        return Section::make(__('Vitals'))
+            ->description($description)
+            ->schema(self::vitalsFields())
+            ->columns(3);
+    }
+
+    /**
+     * The six vitals inputs, shared by the doctor's pad and the prep desk's
+     * **Outdoor vitals** action.
+     *
+     * One definition on purpose. When the desk had its own three hand-written
+     * boxes, it silently offered no pulse, SpO₂ or temperature and none of the
+     * doctor's range rules — a 900 °F typed at the desk was accepted where the
+     * same keystrokes in the chamber were refused.
      *
      * The rules live here, on the fields, rather than only in the save path:
-     * a doctor who mistypes must see the message next to the box they typed
-     * in, and the save path must never refuse a submission (see
-     * `normalizeVitals()` — it runs before the queue advances). Blood pressure
-     * is required as a pair in both directions, so filling one box and tapping
-     * Complete is caught on screen instead of silently dropping the reading.
+     * whoever mistypes must see the message next to the box they typed in, and
+     * the save path must never refuse a submission (see `normalizeVitals()` —
+     * it runs before the queue advances). Blood pressure is required as a pair
+     * in both directions, so filling one box and tapping Save is caught on
+     * screen instead of silently dropping the reading.
+     *
+     * @return list<\Filament\Forms\Components\Component>
      */
-    private static function vitalsSection(): Section
+    public static function vitalsFields(): array
     {
         $outOfRange = __('Blood pressure looks out of range. Check the reading.');
         $bothOrNeither = __('Enter both systolic and diastolic blood pressure, or leave both blank.');
 
-        return Section::make(__('Vitals'))
-            ->description(__('Optional. Leave blank if you did not measure.'))
-            ->schema([
-                TextInput::make('weight_kg')
-                    ->label(__('Weight (kg)'))
-                    ->numeric()
-                    ->minValue(self::WEIGHT_MIN_KG)
-                    ->maxValue(self::WEIGHT_MAX_KG)
-                    ->step(0.1)
-                    ->inputMode('decimal')
-                    ->placeholder('58.5')
-                    ->validationMessages([
-                        'numeric' => __('Weight must be between 0.5 and 300 kg.'),
-                        'min' => __('Weight must be between 0.5 and 300 kg.'),
-                        'max' => __('Weight must be between 0.5 and 300 kg.'),
-                    ]),
-                TextInput::make('bp_systolic')
-                    ->label(__('BP systolic'))
-                    ->numeric()
-                    ->minValue(self::BP_SYSTOLIC_MIN)
-                    ->maxValue(self::BP_SYSTOLIC_MAX)
-                    ->inputMode('numeric')
-                    ->placeholder('170')
-                    ->requiredWith('bp_diastolic')
-                    ->rule(static fn (Get $get) => static function (string $attribute, mixed $value, \Closure $fail) use ($get): void {
-                        $diastolic = $get('bp_diastolic');
+        return [
+            TextInput::make('weight_kg')
+                ->label(__('Weight (kg)'))
+                ->numeric()
+                ->minValue(self::WEIGHT_MIN_KG)
+                ->maxValue(self::WEIGHT_MAX_KG)
+                ->step(0.1)
+                ->inputMode('decimal')
+                ->placeholder('58.5')
+                ->validationMessages([
+                    'numeric' => __('Weight must be between 0.5 and 300 kg.'),
+                    'min' => __('Weight must be between 0.5 and 300 kg.'),
+                    'max' => __('Weight must be between 0.5 and 300 kg.'),
+                ]),
+            TextInput::make('bp_systolic')
+                ->label(__('BP systolic'))
+                ->numeric()
+                ->minValue(self::BP_SYSTOLIC_MIN)
+                ->maxValue(self::BP_SYSTOLIC_MAX)
+                ->inputMode('numeric')
+                ->placeholder('170')
+                ->requiredWith('bp_diastolic')
+                ->rule(static fn (Get $get) => static function (string $attribute, mixed $value, \Closure $fail) use ($get): void {
+                    $diastolic = $get('bp_diastolic');
 
-                        if (blank($value) || blank($diastolic) || ! is_numeric($value) || ! is_numeric($diastolic)) {
-                            return;
-                        }
+                    if (blank($value) || blank($diastolic) || ! is_numeric($value) || ! is_numeric($diastolic)) {
+                        return;
+                    }
 
-                        if ((int) $value <= (int) $diastolic) {
-                            $fail(__('Systolic pressure must be higher than diastolic.'));
-                        }
-                    })
-                    ->validationMessages([
-                        'numeric' => __('Blood pressure must be a number.'),
-                        'min' => $outOfRange,
-                        'max' => $outOfRange,
-                        'required_with' => $bothOrNeither,
-                    ]),
-                TextInput::make('bp_diastolic')
-                    ->label(__('BP diastolic'))
-                    ->numeric()
-                    ->minValue(self::BP_DIASTOLIC_MIN)
-                    ->maxValue(self::BP_DIASTOLIC_MAX)
-                    ->inputMode('numeric')
-                    ->placeholder('100')
-                    ->requiredWith('bp_systolic')
-                    ->validationMessages([
-                        'numeric' => __('Blood pressure must be a number.'),
-                        'min' => $outOfRange,
-                        'max' => $outOfRange,
-                        'required_with' => $bothOrNeither,
-                    ]),
-                TextInput::make('pulse_bpm')
-                    ->label(__('Pulse'))
-                    ->numeric()
-                    ->minValue(self::PULSE_MIN)
-                    ->maxValue(self::PULSE_MAX)
-                    ->inputMode('numeric')
-                    ->placeholder('78')
-                    ->suffix('/min'),
-                TextInput::make('spo2_percent')
-                    ->label(__('SpO₂'))
-                    ->numeric()
-                    ->minValue(self::SPO2_MIN)
-                    ->maxValue(self::SPO2_MAX)
-                    ->inputMode('numeric')
-                    ->placeholder('98')
-                    ->suffix('%'),
-                TextInput::make('temperature_f')
-                    ->label(__('Temp'))
-                    ->numeric()
-                    ->minValue(self::TEMP_MIN_F)
-                    ->maxValue(self::TEMP_MAX_F)
-                    ->step(0.1)
-                    ->inputMode('decimal')
-                    ->placeholder('100.5')
-                    ->suffix('°F'),
-            ])
-            ->columns(3);
+                    if ((int) $value <= (int) $diastolic) {
+                        $fail(__('Systolic pressure must be higher than diastolic.'));
+                    }
+                })
+                ->validationMessages([
+                    'numeric' => __('Blood pressure must be a number.'),
+                    'min' => $outOfRange,
+                    'max' => $outOfRange,
+                    'required_with' => $bothOrNeither,
+                ]),
+            TextInput::make('bp_diastolic')
+                ->label(__('BP diastolic'))
+                ->numeric()
+                ->minValue(self::BP_DIASTOLIC_MIN)
+                ->maxValue(self::BP_DIASTOLIC_MAX)
+                ->inputMode('numeric')
+                ->placeholder('100')
+                ->requiredWith('bp_systolic')
+                ->validationMessages([
+                    'numeric' => __('Blood pressure must be a number.'),
+                    'min' => $outOfRange,
+                    'max' => $outOfRange,
+                    'required_with' => $bothOrNeither,
+                ]),
+            TextInput::make('pulse_bpm')
+                ->label(__('Pulse'))
+                ->numeric()
+                ->minValue(self::PULSE_MIN)
+                ->maxValue(self::PULSE_MAX)
+                ->inputMode('numeric')
+                ->placeholder('78')
+                ->suffix('/min'),
+            TextInput::make('spo2_percent')
+                ->label(__('SpO₂'))
+                ->numeric()
+                ->minValue(self::SPO2_MIN)
+                ->maxValue(self::SPO2_MAX)
+                ->inputMode('numeric')
+                ->placeholder('98')
+                ->suffix('%'),
+            TextInput::make('temperature_f')
+                ->label(__('Temp'))
+                ->numeric()
+                ->minValue(self::TEMP_MIN_F)
+                ->maxValue(self::TEMP_MAX_F)
+                ->step(0.1)
+                ->inputMode('decimal')
+                ->placeholder('100.5')
+                ->suffix('°F'),
+        ];
     }
 
     private static function followUpSection(): Section

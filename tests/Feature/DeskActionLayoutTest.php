@@ -130,7 +130,13 @@ class DeskActionLayoutTest extends TestCase
         );
     }
 
-    public function test_running_queue_waiting_without_vitals_gap_promotes_call_as_catch_up(): void
+    /**
+     * Taking the vitals comes before calling the patient in, in every chamber
+     * that has prep staff — not only the ones running the stations module. This
+     * staff login holds all three desk jobs, so the gap is real here and Call
+     * waits under More until the reading exists.
+     */
+    public function test_running_queue_waiting_leads_with_vitals_before_the_catch_up_call(): void
     {
         LiveSession::create([
             'schedule_session_id' => $this->session->id,
@@ -140,8 +146,61 @@ class DeskActionLayoutTest extends TestCase
 
         $primaries = DeskActionLayout::primaryKeys($this->booking->fresh(), DeskActionLayout::SURFACE_ROSTER);
 
-        $this->assertContains(DeskActionLayout::KEY_CALL, $primaries);
+        $this->assertContains(DeskActionLayout::KEY_VITALS, $primaries);
+        $this->assertNotContains(DeskActionLayout::KEY_CALL, $primaries);
         $this->assertNotContains(DeskActionLayout::KEY_COLLECT_FEE, $primaries);
+        $this->assertTrue(DeskActionLayout::shows(
+            $this->booking->fresh(),
+            DeskActionLayout::KEY_CALL,
+            DeskActionLayout::SLOT_MORE,
+            DeskActionLayout::SURFACE_ROSTER,
+        ));
+    }
+
+    public function test_running_queue_waiting_promotes_call_as_catch_up_once_vitals_exist(): void
+    {
+        LiveSession::create([
+            'schedule_session_id' => $this->session->id,
+            'session_date' => Carbon::today()->toDateString(),
+            'status' => 'active',
+        ]);
+
+        VisitRecord::create([
+            'booking_id' => $this->booking->id,
+            'patient_id' => $this->booking->patient_id,
+            'recorded_by' => $this->staff->id,
+            'vitals_recorded_by' => $this->staff->id,
+            'recorded_at' => now(),
+            'bp_systolic' => 120,
+            'bp_diastolic' => 80,
+        ]);
+
+        $primaries = DeskActionLayout::primaryKeys($this->booking->fresh(), DeskActionLayout::SURFACE_ROSTER);
+
+        $this->assertContains(DeskActionLayout::KEY_CALL, $primaries);
+        $this->assertNotContains(DeskActionLayout::KEY_VITALS, $primaries);
+        $this->assertNotContains(DeskActionLayout::KEY_COLLECT_FEE, $primaries);
+    }
+
+    /**
+     * A desk login that does not hold the Prep job is never asked for vitals,
+     * so Call stays the primary catch-up action for them.
+     */
+    public function test_a_desk_without_the_prep_job_still_leads_with_call(): void
+    {
+        $this->staff->update(['desk_jobs' => [\App\Support\StaffDeskJobs::JOB_QUEUE]]);
+        $this->actingAs($this->staff->fresh());
+
+        LiveSession::create([
+            'schedule_session_id' => $this->session->id,
+            'session_date' => Carbon::today()->toDateString(),
+            'status' => 'active',
+        ]);
+
+        $primaries = DeskActionLayout::primaryKeys($this->booking->fresh(), DeskActionLayout::SURFACE_ROSTER);
+
+        $this->assertContains(DeskActionLayout::KEY_CALL, $primaries);
+        $this->assertNotContains(DeskActionLayout::KEY_VITALS, $primaries);
     }
 
     public function test_queue_table_waiting_with_stations_leads_with_vitals_then_call_now(): void

@@ -254,12 +254,20 @@ final class DeskActionLayout
             && \App\Services\PracticeRules::bookingIsFeeExempt($booking);
     }
 
+    /**
+     * Taking vitals is a desk job, not a stations feature.
+     *
+     * This used to require the intervention/OT stations module, which meant an
+     * ordinary chamber that had hired a prep staff member had no way to hand
+     * the cuff to them — the doctor measured everything, and the one thing the
+     * desk existed to do never appeared. The rule is simply: if the doctor has
+     * prep staff, the prep staff take the vitals.
+     */
     public static function canRecordVitals(Booking $record): bool
     {
         $user = auth()->user();
 
-        return (tenant()?->hasStations() ?? false)
-            && $user instanceof User
+        return $user instanceof User
             && StaffDeskJobs::canRecordPrep($user)
             && $record->status === 'waiting';
     }

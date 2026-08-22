@@ -53,6 +53,7 @@ class VisitRecord extends Model
         'pulse_bpm',
         'spo2_percent',
         'temperature_f',
+        'vitals_recorded_by',
         'clinical_notes',
         'chief_complaint',
         'history',
@@ -103,6 +104,17 @@ class VisitRecord extends Model
         return $this->belongsTo(User::class, 'recorded_by');
     }
 
+    /**
+     * The prep-desk login that measured the vitals, when the desk took them.
+     *
+     * Null means the doctor measured in the chamber (or nobody has yet) — see
+     * `vitalsTakenAtDesk()`.
+     */
+    public function vitalsRecordedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'vitals_recorded_by');
+    }
+
     public function condition(): BelongsTo
     {
         return $this->belongsTo(Condition::class);
@@ -148,11 +160,35 @@ class VisitRecord extends Model
         return $this->bp_systolic.'/'.$this->bp_diastolic;
     }
 
-    /** Outdoor desk capture: weight or a complete BP pair. */
+    /**
+     * Outdoor desk capture: any usable reading on the row.
+     *
+     * Drives whether the desk still nags for vitals, so it has to cover every
+     * box the desk can fill. When it only knew weight and BP, a staff member
+     * who took pulse, SpO₂ and temperature on a patient who refused the scale
+     * was still shown "vitals needed" for the rest of the wait.
+     *
+     * BP counts only as a complete pair — half a blood pressure is not a fact
+     * (same rule as `VisitNotesFormSchema::isUsableBloodPressure()`).
+     */
     public function hasOutdoorVitals(): bool
     {
         return $this->weight_kg !== null
-            || ($this->bp_systolic !== null && $this->bp_diastolic !== null);
+            || ($this->bp_systolic !== null && $this->bp_diastolic !== null)
+            || $this->pulse_bpm !== null
+            || $this->spo2_percent !== null
+            || $this->temperature_f !== null;
+    }
+
+    /**
+     * True when the numbers on this row were measured at the prep desk rather
+     * than by the doctor. Cleared the moment the doctor changes a reading, so
+     * the "taken at the desk" label on the pad can never sit above a number the
+     * desk did not take.
+     */
+    public function vitalsTakenAtDesk(): bool
+    {
+        return $this->vitals_recorded_by !== null && $this->hasOutdoorVitals();
     }
 
     /**

@@ -90,6 +90,7 @@ class VisitRecordService
                     'pulse_bpm' => $data['pulse_bpm'] ?? null,
                     'spo2_percent' => $data['spo2_percent'] ?? null,
                     'temperature_f' => $data['temperature_f'] ?? null,
+                    'vitals_recorded_by' => $this->vitalsAttributionAfterEdit($existing, $data),
                     'clinical_notes' => $this->nullableString($data['clinical_notes'] ?? null),
                     'chief_complaint' => $this->nullableString($data['chief_complaint'] ?? null),
                     'history' => $this->nullableString($data['history'] ?? null),
@@ -180,41 +181,94 @@ class VisitRecordService
     }
 
     /**
-     * Outdoor BP/weight before the doctor — staff only, waiting rows.
+     * Keep the desk's name on the vitals only while the numbers are still the
+     * desk's numbers.
      *
-     * @param  array{weight_kg?: mixed, bp_systolic?: mixed, bp_diastolic?: mixed}  $data
+     * The doctor's pad prefills whatever the desk measured, so completing an
+     * untouched visit must not quietly reassign the reading — and re-checking a
+     * BP in the chamber must not leave "taken at the desk by Rahim" sitting
+     * above a figure Rahim never took. One changed box drops the attribution
+     * for the whole set, which is the honest answer: after a re-measure the row
+     * is a mix, and only the doctor can vouch for it.
+     *
+     * @param  array<string, mixed>  $data  Already through `normalizeVitals()`.
+     */
+    private function vitalsAttributionAfterEdit(?VisitRecord $existing, array $data): ?int
+    {
+        if ($existing === null || $existing->vitals_recorded_by === null) {
+            return null;
+        }
+
+        foreach (VisitNotesFormSchema::VITAL_FIELDS as $field) {
+            $before = $existing->{$field};
+            $after = $data[$field] ?? null;
+
+            if (($before === null) !== ($after === null)) {
+                return null;
+            }
+
+            // Tolerance, not equality: weight and temperature round-trip
+            // through a decimal column and come back as floats.
+            if ($before !== null && abs((float) $before - (float) $after) > 0.001) {
+                return null;
+            }
+        }
+
+        return $existing->vitals_recorded_by;
+    }
+
+    /**
+     * The full outdoor O/E set before the doctor — prep staff only, waiting rows.
+     *
+     * Weight, blood pressure, pulse, SpO₂ and temperature: every box the
+     * doctor's pad has. When this only took weight and BP, the doctor still had
+     * to reach for the thermometer and the pulse oximeter on a patient who had
+     * just been through the desk, which is the whole point of the desk taking
+     * them. Ranges come from `VisitNotesFormSchema::normalizeVitals()` — the
+     * same rules the doctor's boxes enforce, so a reading that is acceptable in
+     * the chamber is acceptable at the desk and vice versa.
+     *
+     * Writes **only** the vitals columns. Anything clinical the doctor has
+     * already put on the row is left alone, including `recorded_by`: who wrote
+     * the visit and who measured it are different facts, and the second one now
+     * has its own column.
+     *
+     * @param  array<string, mixed>  $data
      */
     public function saveStaffVitals(Booking $booking, User $staff, array $data): ?VisitRecord
     {
-        if (! tenant()?->hasStations()) {
-            abort(403);
-        }
-
         if (! StaffDeskJobs::canRecordPrep($staff)) {
             abort(403);
         }
 
-        $weight = isset($data['weight_kg']) && $data['weight_kg'] !== '' ? (float) $data['weight_kg'] : null;
-        $sys = isset($data['bp_systolic']) && $data['bp_systolic'] !== '' ? (int) $data['bp_systolic'] : null;
-        $dia = isset($data['bp_diastolic']) && $data['bp_diastolic'] !== '' ? (int) $data['bp_diastolic'] : null;
+        // Half a blood pressure is caught here rather than silently dropped by
+        // normalizeVitals(): at the desk there is still a patient and a cuff in
+        // the room, so the fix is to finish the reading, not to lose it.
+        $sysGiven = isset($data['bp_systolic']) && $data['bp_systolic'] !== '' && $data['bp_systolic'] !== null;
+        $diaGiven = isset($data['bp_diastolic']) && $data['bp_diastolic'] !== '' && $data['bp_diastolic'] !== null;
 
-        if ($weight === null && $sys === null && $dia === null) {
-            return null;
-        }
-
-        if (($sys === null) !== ($dia === null)) {
+        if ($sysGiven !== $diaGiven) {
             throw new \InvalidArgumentException(__('Enter both BP numbers, or leave both blank.'));
         }
 
+        $vitals = array_intersect_key(
+            VisitNotesFormSchema::normalizeVitals($data),
+            array_flip(VisitNotesFormSchema::VITAL_FIELDS),
+        );
+
+        if (collect($vitals)->every(fn ($value): bool => $value === null)) {
+            return null;
+        }
+
+        $existing = VisitRecord::query()->where('booking_id', $booking->id)->first();
+
         return VisitRecord::query()->updateOrCreate(
             ['booking_id' => $booking->id],
-            [
+            $vitals + [
                 'tenant_id' => tenant('id'),
                 'patient_id' => $booking->patient_id,
-                'recorded_by' => $staff->id,
-                'weight_kg' => $weight,
-                'bp_systolic' => $sys,
-                'bp_diastolic' => $dia,
+                'recorded_by' => $existing?->recorded_by ?? $staff->id,
+                'vitals_recorded_by' => $staff->id,
                 'recorded_at' => now(),
             ],
         );

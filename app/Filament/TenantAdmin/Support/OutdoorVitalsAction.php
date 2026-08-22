@@ -7,7 +7,6 @@ use App\Models\User;
 use App\Services\VisitRecordService;
 use Closure;
 use Filament\Actions\Action;
-use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 
 final class OutdoorVitalsAction
@@ -18,29 +17,21 @@ final class OutdoorVitalsAction
             ->label(__('Outdoor vitals'))
             ->icon('heroicon-o-heart')
             ->color('gray')
+            ->modalDescription(__('Take every reading you can before the patient goes in. Leave a box blank only if you did not measure it.'))
             ->fillForm(function (Action $action, ...$args) use ($booking): array {
-                $record = self::resolve($booking, [$action, ...$args]);
+                $record = self::resolve($booking, [$action, ...$args])?->visitRecord;
 
-                return [
-                    'weight_kg' => $record?->visitRecord?->weight_kg,
-                    'bp_systolic' => $record?->visitRecord?->bp_systolic,
-                    'bp_diastolic' => $record?->visitRecord?->bp_diastolic,
-                ];
+                $state = [];
+                foreach (VisitNotesFormSchema::VITAL_FIELDS as $field) {
+                    $state[$field] = $record?->{$field};
+                }
+
+                return $state;
             })
-            ->schema([
-                TextInput::make('weight_kg')
-                    ->label(__('Weight (kg)'))
-                    ->numeric()
-                    ->minValue(0),
-                TextInput::make('bp_systolic')
-                    ->label(__('BP systolic'))
-                    ->numeric()
-                    ->minValue(0),
-                TextInput::make('bp_diastolic')
-                    ->label(__('BP diastolic'))
-                    ->numeric()
-                    ->minValue(0),
-            ])
+            // The doctor's own boxes, not a hand-written subset: the desk takes
+            // the whole O/E set, with the same range rules, so the doctor is
+            // never asked to re-measure a pulse the desk already counted.
+            ->schema(VisitNotesFormSchema::vitalsFields())
             ->action(function (array $data, Action $action, ...$args) use ($booking): void {
                 $record = self::resolve($booking, [$action, ...$args]);
                 if (! $record) {

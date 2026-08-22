@@ -1094,5 +1094,10 @@
     "In Word": "কথায়",
     "Received By": "গ্রহণকারী",
     "Customer Signature": "গ্রাহকের স্বাক্ষর",
-    "RETURNED": "ফেরত"
+    "RETURNED": "ফেরত",
+    "Take every reading you can before the patient goes in. Leave a box blank only if you did not measure it.": "রোগী ভেতরে যাওয়ার আগে যতগুলো মাপ নিতে পারেন নিন। যেটি মাপেননি শুধু সেই ঘরটিই খালি রাখুন।",
+    "Temp": "তাপ",
+    "Enter both BP numbers, or leave both blank.": "প্রেশারের দুটি সংখ্যাই লিখুন, নয়তো দুটিই খালি রাখুন।",
+    "Taken at the desk by :name — change anything you re-measure.": "ডেস্কে :name মেপেছেন — আপনি আবার মাপলে বদলে দিন।",
+    "Taken at the desk — change anything you re-measure.": "ডেস্কে মাপা হয়েছে — আপনি আবার মাপলে বদলে দিন।"
 }
