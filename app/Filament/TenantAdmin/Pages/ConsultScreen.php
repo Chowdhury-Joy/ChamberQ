@@ -7,7 +7,6 @@ use App\Models\Booking;
 use App\Models\Doctor;
 use App\Models\LabCollectionSlot;
 use App\Models\LiveSession;
-use App\Models\MedicineUsage;
 use App\Models\ScheduleSession;
 use App\Models\Patient;
 use App\Models\VisitRecord;
@@ -799,22 +798,7 @@ class ConsultScreen extends Page implements HasActions
             return [];
         }
 
-        return MedicineUsage::query()
-            ->where('user_id', $user->id)
-            ->whereNull('hidden_at')
-            ->orderBy('medicine_name')
-            ->limit(self::MY_MEDICINE_CHIPS)
-            ->get()
-            ->map(fn (MedicineUsage $usage): array => [
-                'brand_name' => $usage->medicine_name,
-                'generic_name' => $usage->generic_name,
-                'dose' => $usage->last_dose,
-                'frequency' => $usage->last_frequency,
-                'duration' => $usage->last_duration,
-                'timing' => $usage->last_timing,
-            ])
-            ->values()
-            ->all();
+        return app(MedicineService::class)->myMedicineChips($user, self::MY_MEDICINE_CHIPS);
     }
 
     /**

@@ -382,6 +382,35 @@ class MedicineService
     }
 
     /**
+     * The doctor's own shortlist, as one-tap chips.
+     *
+     * Alphabetical, capped, and shared by every surface that offers a
+     * "my medicines" shortcut (desktop Rx desk, phone prescription modal) —
+     * one query definition rather than a second copy that drifts.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function myMedicineChips(User $doctor, int $limit = 8): array
+    {
+        return MedicineUsage::query()
+            ->where('user_id', $doctor->id)
+            ->whereNull('hidden_at')
+            ->orderBy('medicine_name')
+            ->limit($limit)
+            ->get()
+            ->map(fn (MedicineUsage $usage): array => [
+                'brand_name' => $usage->medicine_name,
+                'generic_name' => $usage->generic_name,
+                'dose' => $usage->last_dose,
+                'frequency' => $usage->last_frequency,
+                'duration' => $usage->last_duration,
+                'timing' => $usage->last_timing,
+            ])
+            ->values()
+            ->all();
+    }
+
+    /**
      * Add or update an entry on a doctor's own **My medicines** list.
      *
      * Only ever called from My medicines, where the doctor is deliberately

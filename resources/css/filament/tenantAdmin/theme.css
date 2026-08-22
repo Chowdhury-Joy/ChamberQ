@@ -474,6 +474,14 @@ html.dark .staff-buzz-card__denied {
    white to see at all in light mode; `--gray-100` is the first step that reads. */
 .dark .cs-rx-medicines .fi-fo-repeater-item.fi-collapsed { background: rgb(255 255 255 / 0.02); }
 
+/* One-tap History/Advice chips (VisitNotesFormSchema::chipsAction()) sit right
+   above the field they fill. Without this the chip row and the textarea below
+   it read as two unrelated blocks — the label that actually names the chips
+   moved onto the chip row, so pull the field close underneath instead of
+   leaving Filament's normal full field-gap between them. */
+.cs-chip-actions { margin-bottom: -0.5rem; }
+.cs-chip-field { margin-top: 0; }
+
 .cs-copy-last { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem; justify-content: space-between; }
 .cs-copy-last__text { font-size: 0.8125rem; color: var(--gray-600); }
 .cs-prefill-hint { font-size: 0.75rem; color: var(--primary-600); margin: 0; }

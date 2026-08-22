@@ -5,10 +5,12 @@ namespace App\Filament\TenantAdmin\Support;
 use App\Models\Booking;
 use App\Models\Condition;
 use App\Models\Doctor;
+use App\Models\DoctorChip;
 use App\Models\Medicine;
 use App\Models\Patient;
 use App\Models\VisitRecord;
 use App\Services\ConditionService;
+use App\Services\DoctorChipService;
 use App\Services\MedicineService;
 use App\Services\VisitMediaService;
 use App\Support\PrescriptionTiming;
@@ -20,6 +22,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\ToggleButtons;
+use Filament\Schemas\Components\Actions;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
@@ -443,6 +446,17 @@ class VisitNotesFormSchema
     ): array {
         $medicineService = app(MedicineService::class);
         $prescribingDoctor = $medicineService->resolvePrescribingDoctor($booking);
+        $user = auth()->user();
+
+        // Same chip vocabulary as the desktop Rx desk (one doctor, one set of
+        // shortcuts, edited on My medicines) — the phone/tablet modal gets the
+        // one-tap chips instead of a blank box, without duplicating the desk's
+        // Alpine layout.
+        $doctorChips = app(DoctorChipService::class);
+        $historyChipRows = $user ? $doctorChips->forDoctor($user, DoctorChip::KIND_HISTORY) : [];
+        $historyChips = array_values(array_unique(array_map(fn (array $chip) => $chip['label'], $historyChipRows)));
+        $adviceChips = $user ? $doctorChips->forDoctor($user, DoctorChip::KIND_ADVICE) : [];
+        $myMedicines = $user?->canRecordVisitNotes() ? $medicineService->myMedicineChips($user) : [];
 
         $lastItems = $lastVisitRecord?->prescription?->items
             ? $lastVisitRecord->prescription->items
@@ -471,7 +485,7 @@ class VisitNotesFormSchema
                 ->viewData(['patient' => $patient])
                 ->columnSpanFull()
                 ->visible(fn (): bool => $patient?->hasClinicalWarnings() ?? false),
-            self::prescriptionSection($prescribingDoctor, $lastItems, $patient?->allergies),
+            self::prescriptionSection($prescribingDoctor, $lastItems, $patient?->allergies, $myMedicines),
             self::vitalsSection($booking?->visitRecord),
             Section::make(__('Diagnosis'))
                 ->schema([
@@ -516,11 +530,19 @@ class VisitNotesFormSchema
                 ->helperText(__('Chief complaint — what brought the patient in.'))
                 ->rows(2)
                 ->columnSpanFull(),
+            self::chipsAction(
+                'history_chips',
+                array_map(fn (string $chip) => ['label' => $chip, 'value' => $chip], $historyChips),
+                isActive: fn (Get $get, string $value): bool => self::textHasChip((string) ($get('history') ?? ''), $value),
+                apply: fn (Set $set, Get $get, string $value) => $set('history', self::toggleChipInText((string) ($get('history') ?? ''), $value)),
+                label: __('H/O'),
+            ),
             Textarea::make('history')
-                ->label(__('H/O'))
+                ->hiddenLabel()
                 ->helperText(__('History — HTN, DM, asthma, prior surgery, etc.'))
                 ->rows(2)
-                ->columnSpanFull(),
+                ->columnSpanFull()
+                ->extraFieldWrapperAttributes(['class' => 'cs-chip-field']),
             Textarea::make('on_examination')
                 ->label(__('O/E'))
                 ->helperText(__('On examination — findings beyond weight and blood pressure.'))
@@ -535,10 +557,17 @@ class VisitNotesFormSchema
                     && blank($get('chief_complaint'))
                     && blank($get('history'))
                     && blank($get('on_examination'))),
+            self::chipsAction(
+                'advice_chips',
+                array_map(fn (array $chip) => ['label' => $chip['label'], 'value' => (string) ($chip['text'] ?? $chip['label'])], $adviceChips),
+                apply: fn (Set $set, Get $get, string $value) => $set('advice', self::appendAdviceLine((string) ($get('advice') ?? ''), $value)),
+                label: __('Advice'),
+            ),
             Textarea::make('advice')
-                ->label(__('Advice'))
+                ->hiddenLabel()
                 ->rows(2)
-                ->columnSpanFull(),
+                ->columnSpanFull()
+                ->extraFieldWrapperAttributes(['class' => 'cs-chip-field']),
             Textarea::make('tests_advised')
                 ->label(__('Inv'))
                 ->helperText(__('Investigations / tests advised.'))
@@ -629,7 +658,10 @@ class VisitNotesFormSchema
 
 
 
-    private static function prescriptionSection(?Doctor $prescribingDoctor, array $lastItems = [], ?string $patientAllergies = null): Section
+    /**
+     * @param  list<array<string, mixed>>  $myMedicines
+     */
+    private static function prescriptionSection(?Doctor $prescribingDoctor, array $lastItems = [], ?string $patientAllergies = null, array $myMedicines = []): Section
     {
         return Section::make(__('Prescription'))
             ->schema([
@@ -637,6 +669,24 @@ class VisitNotesFormSchema
                     ->viewData(['items' => $lastItems])
                     ->columnSpanFull()
                     ->visible(fn (): bool => $lastItems !== []),
+                self::chipsAction(
+                    'my_medicine_chips',
+                    array_map(fn (array $mine) => ['label' => (string) $mine['brand_name'], 'value' => $mine], $myMedicines),
+                    apply: function (Set $set, Get $get, array $mine): void {
+                        $items = $get('prescription_items') ?? [];
+                        $items[] = self::prescriptionItemStateFromStored(
+                            $mine['brand_name'],
+                            $mine['generic_name'],
+                            $mine['dose'],
+                            $mine['frequency'],
+                            $mine['duration'],
+                            null,
+                            $mine['timing'] ?? null,
+                        );
+                        $set('prescription_items', $items);
+                    },
+                    label: __('Yours'),
+                ),
                 Repeater::make('prescription_items')
                     ->label(__('Medicines'))
                     ->schema(self::prescriptionItemSchema($prescribingDoctor))
@@ -686,6 +736,94 @@ class VisitNotesFormSchema
                     ->columnSpanFull(),
             ])
             ->columnSpanFull();
+    }
+
+    /**
+     * One-tap chips above a field — the modal's answer to the desktop Rx
+     * desk's Alpine chip rows, minus the client-side state: each tap is a
+     * normal Livewire round trip through `$set()`/`$get()`, which is what
+     * makes this portable across every host page (Consult Screen's phone
+     * modal, Live Queue Control, Daily Roster) without hand-wiring a
+     * component-specific Alpine store for each one.
+     *
+     * @param  list<array{label: string, value: mixed}>  $chips
+     * @param  \Closure(Set, Get, mixed): void  $apply
+     * @param  ?\Closure(Get, mixed): bool  $isActive
+     */
+    private static function chipsAction(
+        string $key,
+        array $chips,
+        \Closure $apply,
+        ?\Closure $isActive = null,
+        ?string $label = null,
+    ): Actions {
+        return Actions::make(
+            array_map(
+                fn (array $chip, int $index) => Action::make($key.'_'.$index)
+                    ->label($chip['label'])
+                    ->size(\Filament\Support\Enums\Size::Small)
+                    ->color(fn (Get $get): string => ($isActive && $isActive($get, $chip['value'])) ? 'success' : 'gray')
+                    ->outlined(fn (Get $get): bool => ! ($isActive && $isActive($get, $chip['value'])))
+                    ->action(fn (Set $set, Get $get) => $apply($set, $get, $chip['value'])),
+                $chips,
+                array_keys($chips),
+            )
+        )
+            ->label($label ?? '')
+            ->hiddenLabel(blank($label))
+            ->visible($chips !== [])
+            ->extraAttributes(['class' => 'cs-chip-actions'])
+            ->columnSpanFull();
+    }
+
+    /**
+     * Whether a chip's exact text already appears in a field, word-bounded so
+     * "HTN" does not falsely match inside a longer typed word.
+     */
+    private static function textHasChip(string $text, string $chip): bool
+    {
+        $pattern = '/(^|[,·\s])'.preg_quote($chip, '/').'(?=([,·\s]|$))/iu';
+
+        return $text !== '' && preg_match($pattern, $text) === 1;
+    }
+
+    /**
+     * Add or remove a history chip from the free-text box, mirroring the
+     * desktop Rx desk's `toggleHistory()` — tapping a chip that is already
+     * present removes just that phrase and tidies the leftover punctuation,
+     * rather than the doctor having to hand-edit the text.
+     */
+    private static function toggleChipInText(string $text, string $chip): string
+    {
+        if (self::textHasChip($text, $chip)) {
+            $pattern = '/\b'.preg_quote($chip, '/').'\b[,\s]*/iu';
+            $remaining = preg_replace($pattern, '', $text) ?? $text;
+            $remaining = preg_replace('/^[·,\s]+|[·,\s]+$/u', '', $remaining) ?? $remaining;
+
+            return trim(preg_replace('/\s*·\s*/u', ' · ', $remaining) ?? $remaining);
+        }
+
+        $trimmed = trim($text);
+
+        return $trimmed === '' ? $chip : $trimmed.', '.$chip;
+    }
+
+    /**
+     * Append a canned advice line, mirroring the desktop Rx desk's
+     * `applyAdviceChip()` — one line per tap, skipped if already there so a
+     * doctor cannot double-tap the same chip into two identical lines.
+     */
+    private static function appendAdviceLine(string $text, string $line): string
+    {
+        $line = trim($line);
+
+        if ($line === '' || str_contains($text, $line)) {
+            return $text;
+        }
+
+        $trimmed = trim($text);
+
+        return $trimmed === '' ? $line : $trimmed."\n".$line;
     }
 
     /**
