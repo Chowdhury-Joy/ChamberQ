@@ -53,6 +53,10 @@ class BackupTableMap
         'prescription_items',
         'medicine_usages',
         'condition_usages',
+        // A doctor's Advice / History chips are hand-curated too, and nothing
+        // regenerates them: the shipped defaults live in code, so this table
+        // holds only what he changed.
+        'doctor_chips',
         // A doctor's packs are hand-written and irreplaceable — nothing
         // regenerates them from the catalogue. Parent before child, as above.
         'prescription_templates',
@@ -123,6 +127,7 @@ class BackupTableMap
             'prescriptions',
             'medicine_usages',
             'condition_usages',
+            'doctor_chips',
             // Only the parent: template items hang off the template and reach
             // their tenant through it, like prescription_items.
             'prescription_templates',

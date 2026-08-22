@@ -5,7 +5,6 @@
 --}}
 @php
     use App\Filament\TenantAdmin\Support\VisitNotesFormSchema;
-    use App\Support\AdviceChips;
     use App\Support\ComplaintChips;
     use App\Support\FindingChips;
     use App\Support\IndicationSuggestions;
@@ -38,12 +37,19 @@
         ->map(fn (string $label, string $key) => ['key' => $key, 'label' => __($label)])
         ->values()
         ->all();
-    $historyChips = ['HTN', 'DM', 'Asthma', 'CKD', 'IHD', 'Thyroid', 'Smoker', 'COPD', 'Allergy'];
-    $historyPrimary = ['HTN', 'DM', 'Asthma'];
+    // Advice and History are the doctor's own vocabulary, edited on My
+    // medicines. The service hands back the shipped chips with this doctor's
+    // edits, removals and additions already applied.
+    $doctorChips = app(\App\Services\DoctorChipService::class);
+    $historyChipRows = $doctorChips->forDoctor(auth()->user(), \App\Models\DoctorChip::KIND_HISTORY);
+    $historyChips = array_values(array_unique(array_map(fn (array $chip) => $chip['label'], $historyChipRows)));
+    $historyPrimary = array_values(array_unique(
+        array_map(fn (array $chip) => $chip['label'], array_filter($historyChipRows, fn (array $chip) => $chip['is_primary']))
+    ));
     $complaintGroups = ComplaintChips::groups();
     $complaintDurations = ComplaintChips::durations();
     $investigationOptions = InvestigationChips::all();
-    $adviceChips = AdviceChips::all();
+    $adviceChips = $doctorChips->forDoctor(auth()->user(), \App\Models\DoctorChip::KIND_ADVICE);
     $findingChips = FindingChips::all();
     $indicationCommon = IndicationSuggestions::common();
 
@@ -869,8 +875,10 @@
                             class="cs-rx-desk__chip cs-rx-desk__chip--add"
                             data-text="{{ $chip['text'] }}"
                             x-on:click="applyAdviceChip($el.dataset.text)"
-                        >{{ __($chip['label']) }}</button>
+                        >{{ $chip['label'] }}</button>
                     @endforeach
+                    {{-- Starred during this consult: already saved to My
+                         medicines, but this pad was rendered before it existed. --}}
                     <template x-for="line in myAdvice" :key="line">
                         <button
                             type="button"
@@ -1045,12 +1053,6 @@
                 }
                 if (this.onMyPaper) {
                     $wire.set('printOnMyPaper', true);
-                }
-                try {
-                    const saved = JSON.parse(window.localStorage.getItem('cq-my-advice') || '[]');
-                    this.myAdvice = Array.isArray(saved) ? saved.filter((line) => (line || '').trim()).slice(0, 8) : [];
-                } catch (e) {
-                    this.myAdvice = [];
                 }
                 // A pad that opens as bare column headings reads as broken and
                 // gives the doctor nothing to type into. One blank row is the
@@ -1368,14 +1370,22 @@
                 this.advice = current ? `${current}\n${line}` : line;
             },
 
+            /**
+             * The ★ on the Advice card: keep this line as a chip.
+             *
+             * It used to live in this browser's localStorage, so a doctor who
+             * saw patients from the chamber desk and then from his own laptop
+             * had two different sets of "my advice" and no way to edit either.
+             * It is now a row on My medicines, saved for the doctor rather than
+             * for the machine.
+             */
             saveAdviceAsMine() {
                 const line = (this.advice || '').trim().split('\n').pop()?.trim();
                 if (!line) return;
                 if (this.myAdvice.includes(line)) return;
-                this.myAdvice = [line, ...this.myAdvice].slice(0, 8);
-                try {
-                    window.localStorage.setItem('cq-my-advice', JSON.stringify(this.myAdvice));
-                } catch (e) {}
+                if (this.adviceChips.some((chip) => (chip.text || '') === line)) return;
+                this.myAdvice = [line, ...this.myAdvice];
+                $wire.saveAdviceAsMine(line);
             },
 
             addInvestigation(test) {

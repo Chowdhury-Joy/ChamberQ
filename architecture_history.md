@@ -964,3 +964,6 @@
 
 ## 2026-08-21T11:41:04+0600
 - Outdoor TV HTML stays bookmark-simple integer URLs; portal pads stay phone-only until the patient opts into a password (owner confirm after audit).
+
+## 2026-08-22T16:00:00+0600
+- Advice and History chips became per-doctor and editable on My medicines: new `doctor_chips` table (migration `2026_08_22_160000_create_doctor_chips_table`), `DoctorChip` model, `DoctorChipService`, `HistoryChips` defaults, and `ConsultScreen::saveAdviceAsMine()` replacing the ★'s `localStorage` list.

@@ -16,6 +16,7 @@ use App\Filament\TenantAdmin\Support\CompleteBookingWithVisitNotes;
 use App\Filament\TenantAdmin\Support\StationsHandoffForm;
 use App\Filament\TenantAdmin\Support\VisitNotesFormSchema;
 use App\Services\CrossTenantClinicalHistoryService;
+use App\Services\DoctorChipService;
 use App\Services\LiveSessionService;
 use App\Services\MedicineService;
 use App\Services\PrescriptionTemplateService;
@@ -772,6 +773,33 @@ class ConsultScreen extends Page implements HasActions
         Notification::make()
             ->title(__(':medicine saved to My medicines', ['medicine' => $usage->medicine_name]))
             ->body(__('This line will fill itself next time. Edit it any time on My medicines.'))
+            ->success()
+            ->send();
+    }
+
+    /**
+     * "Save this advice" — the ★ on the Rx desk's Advice card.
+     *
+     * Same shape as `saveMedicineDefault()` above, and the same principle: an
+     * explicit tap, stored against the doctor and editable on My medicines —
+     * not a browser preference, and not something the app infers from what he
+     * happened to write.
+     */
+    public function saveAdviceAsMine(string $line, DoctorChipService $chips): void
+    {
+        $user = auth()->user();
+
+        if (! $user?->canRecordVisitNotes()) {
+            return;
+        }
+
+        if (! $chips->saveAdviceLine($user, $line)) {
+            return;
+        }
+
+        Notification::make()
+            ->title(__('Advice saved to My medicines'))
+            ->body(__('It is one tap on every prescription from now on. Edit it any time on My medicines.'))
             ->success()
             ->send();
     }

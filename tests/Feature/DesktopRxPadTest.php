@@ -948,10 +948,54 @@ class DesktopRxPadTest extends TestCase
 
         $this->assertStringContainsString('applyAdviceChip', $html);
         $this->assertStringContainsString('saveAdviceAsMine', $html);
-        $this->assertStringContainsString('cq-my-advice', $html);
         $this->assertStringContainsString(__('Avoid spicy food'), $html);
         $this->assertStringContainsString(__('Drink plenty of water'), $html);
         $this->assertStringContainsString('ঝাল খাবার এড়িয়ে চলুন', $html);
+    }
+
+    /**
+     * The ★ used to write to this browser's localStorage, so the same doctor
+     * had one set of saved advice at the chamber desk and another on his own
+     * laptop, and could edit neither. It is now a row on My medicines.
+     */
+    public function test_saving_advice_as_mine_keeps_it_for_the_doctor_not_the_browser(): void
+    {
+        tenancy()->initialize($this->tenant);
+        Filament::setCurrentPanel(Filament::getPanel('tenantAdmin'));
+        $this->actingAs($this->doctor);
+
+        Livewire::test(ConsultScreen::class)
+            ->call('saveAdviceAsMine', 'গরম পানি দিয়ে গার্গল করুন');
+
+        $chips = app(\App\Services\DoctorChipService::class)
+            ->forDoctor($this->doctor, \App\Models\DoctorChip::KIND_ADVICE);
+
+        $this->assertContains('গরম পানি দিয়ে গার্গল করুন', collect($chips)->pluck('text')->all());
+
+        // …and it is on the pad the next time it renders.
+        $this->assertStringContainsString(
+            'গরম পানি দিয়ে গার্গল করুন',
+            Livewire::test(ConsultScreen::class)->html(),
+        );
+    }
+
+    /**
+     * Advice and History are the doctor's own vocabulary now: a chip he took
+     * off on My medicines must not come back on the pad.
+     */
+    public function test_a_removed_chip_is_gone_from_the_pad(): void
+    {
+        tenancy()->initialize($this->tenant);
+        Filament::setCurrentPanel(Filament::getPanel('tenantAdmin'));
+        $this->actingAs($this->doctor);
+
+        app(\App\Services\DoctorChipService::class)
+            ->remove($this->doctor, \App\Models\DoctorChip::KIND_HISTORY, 'default:asthma');
+
+        $html = Livewire::test(ConsultScreen::class)->html();
+
+        $this->assertStringNotContainsString('>Asthma', $html);
+        $this->assertStringContainsString('HTN', $html);
     }
 
     public function test_desk_saves_temperature_with_the_pad(): void

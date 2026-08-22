@@ -5,8 +5,10 @@ namespace App\Filament\TenantAdmin\Pages;
 use App\Filament\TenantAdmin\Support\MedicinePickerFields;
 use App\Filament\TenantAdmin\Support\VisitNotesFormSchema;
 use App\Models\Condition;
+use App\Models\DoctorChip;
 use App\Models\MedicineUsage;
 use App\Services\ConditionService;
+use App\Services\DoctorChipService;
 use App\Services\MedicineService;
 use App\Services\PrescriptionTemplateService;
 use App\Support\PrescriptionTiming;
@@ -16,6 +18,7 @@ use Filament\Actions\Contracts\HasActions;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Tables\Columns\TextColumn;
@@ -329,6 +332,222 @@ class MyMedicines extends Page implements HasActions, HasTable
 
                 Notification::make()->title(__('Pack updated'))->success()->send();
             });
+    }
+
+    /**
+     * Livewire caches `getXProperty()` for the request, so a chip just added,
+     * edited or hidden would re-render from the list read before the write —
+     * the same trap the packs list has (see `forgetPacks()`).
+     */
+    private function forgetChips(): void
+    {
+        unset($this->adviceChips, $this->historyChips);
+    }
+
+    /**
+     * This doctor's Advice chips, hidden ones included so the page can offer
+     * them back. The desk itself only ever sees the visible list.
+     *
+     * @return list<array<string, mixed>>
+     */
+    public function getAdviceChipsProperty(): array
+    {
+        return app(DoctorChipService::class)
+            ->forDoctor(auth()->user(), DoctorChip::KIND_ADVICE, includeHidden: true);
+    }
+
+    /**
+     * @return list<array<string, mixed>>
+     */
+    public function getHistoryChipsProperty(): array
+    {
+        return app(DoctorChipService::class)
+            ->forDoctor(auth()->user(), DoctorChip::KIND_HISTORY, includeHidden: true);
+    }
+
+    /**
+     * The fields of a chip.
+     *
+     * Advice carries two lines because two people read it: the doctor reads
+     * the button, the patient reads what it writes into the advice box — which
+     * in this country is Bangla. History chips are clinical shorthand written
+     * onto the pad (HTN, DM), so there is nothing to translate and a second
+     * field would only be a box to leave empty.
+     *
+     * @return list<\Filament\Forms\Components\Component>
+     */
+    private function chipFormSchema(string $kind): array
+    {
+        if ($kind === DoctorChip::KIND_ADVICE) {
+            return [
+                TextInput::make('label')
+                    ->label(__('Chip label'))
+                    ->helperText(__('What you see on the button while consulting.'))
+                    ->placeholder(__('e.g. Take after food'))
+                    ->required()
+                    ->maxLength(DoctorChipService::MAX_LABEL),
+                TextInput::make('text')
+                    ->label(__('Advice in Bangla'))
+                    ->helperText(__('What the patient reads on the prescription. Leave empty to print the label as it is.'))
+                    ->placeholder('খাবারের পর খান')
+                    ->maxLength(DoctorChipService::MAX_TEXT),
+            ];
+        }
+
+        return [
+            TextInput::make('label')
+                ->label(__('Chip label'))
+                ->helperText(__('Written onto the pad exactly as typed.'))
+                ->placeholder(__('e.g. HTN'))
+                ->required()
+                ->maxLength(DoctorChipService::MAX_LABEL),
+            Toggle::make('is_primary')
+                ->label(__('Show without tapping More'))
+                ->helperText(__('Keep the first row short — the rest stay one tap away behind More…'))
+                ->default(true),
+        ];
+    }
+
+    private function chipCreateAction(string $kind): Action
+    {
+        return Action::make($kind === DoctorChip::KIND_ADVICE ? 'createAdviceChip' : 'createHistoryChip')
+            ->label(__('Add chip'))
+            ->icon('heroicon-o-plus')
+            ->modalHeading($kind === DoctorChip::KIND_ADVICE ? __('New advice chip') : __('New history chip'))
+            ->modalSubmitActionLabel(__('Save chip'))
+            ->form($this->chipFormSchema($kind))
+            ->action(function (array $data, DoctorChipService $chips) use ($kind): void {
+                $user = auth()->user();
+
+                if (! $user) {
+                    return;
+                }
+
+                $chips->save($user, $kind, null, $data);
+                $this->forgetChips();
+
+                Notification::make()->title(__('Chip saved'))->success()->send();
+            });
+    }
+
+    private function chipEditAction(string $kind): Action
+    {
+        return Action::make($kind === DoctorChip::KIND_ADVICE ? 'editAdviceChip' : 'editHistoryChip')
+            ->label(__('Edit'))
+            ->modalHeading(__('Edit chip'))
+            ->modalSubmitActionLabel(__('Save chip'))
+            ->form($this->chipFormSchema($kind))
+            ->fillForm(function (array $arguments, DoctorChipService $chips) use ($kind): array {
+                $chip = $chips->find(auth()->user(), $kind, $arguments['chipId'] ?? null);
+
+                if (! $chip) {
+                    return [];
+                }
+
+                return [
+                    'label' => $chip['label'],
+                    // A chip with no Bangla line of its own reports the label
+                    // as its text; showing that back would silently turn the
+                    // fallback into a stored duplicate on the next save.
+                    'text' => $chip['text'] === $chip['label'] ? null : $chip['text'],
+                    'is_primary' => $chip['is_primary'],
+                ];
+            })
+            ->action(function (array $data, array $arguments, DoctorChipService $chips) use ($kind): void {
+                $user = auth()->user();
+                $chipId = $arguments['chipId'] ?? null;
+
+                if (! $user || ! is_string($chipId)) {
+                    return;
+                }
+
+                $chips->save($user, $kind, $chipId, $data);
+                $this->forgetChips();
+
+                Notification::make()->title(__('Chip updated'))->success()->send();
+            });
+    }
+
+    private function chipRemoveAction(string $kind): Action
+    {
+        return Action::make($kind === DoctorChip::KIND_ADVICE ? 'removeAdviceChip' : 'removeHistoryChip')
+            ->label(__('Remove'))
+            ->color('danger')
+            ->requiresConfirmation()
+            ->modalHeading(__('Take this chip off the pad?'))
+            ->modalDescription(__('Prescriptions already written are not affected. A chip that came with the app can be brought back; one you added is deleted.'))
+            ->action(function (array $arguments, DoctorChipService $chips) use ($kind): void {
+                $user = auth()->user();
+                $chipId = $arguments['chipId'] ?? null;
+
+                if (! $user || ! is_string($chipId)) {
+                    return;
+                }
+
+                $chips->remove($user, $kind, $chipId);
+                $this->forgetChips();
+
+                Notification::make()->title(__('Chip removed'))->success()->send();
+            });
+    }
+
+    private function chipRestoreAction(string $kind): Action
+    {
+        return Action::make($kind === DoctorChip::KIND_ADVICE ? 'restoreAdviceChip' : 'restoreHistoryChip')
+            ->label(__('Restore'))
+            ->action(function (array $arguments, DoctorChipService $chips) use ($kind): void {
+                $user = auth()->user();
+                $chipId = $arguments['chipId'] ?? null;
+
+                if (! $user || ! is_string($chipId)) {
+                    return;
+                }
+
+                $chips->restore($user, $kind, $chipId);
+                $this->forgetChips();
+
+                Notification::make()->title(__('Chip restored'))->success()->send();
+            });
+    }
+
+    public function createAdviceChipAction(): Action
+    {
+        return $this->chipCreateAction(DoctorChip::KIND_ADVICE);
+    }
+
+    public function editAdviceChipAction(): Action
+    {
+        return $this->chipEditAction(DoctorChip::KIND_ADVICE);
+    }
+
+    public function removeAdviceChipAction(): Action
+    {
+        return $this->chipRemoveAction(DoctorChip::KIND_ADVICE);
+    }
+
+    public function restoreAdviceChipAction(): Action
+    {
+        return $this->chipRestoreAction(DoctorChip::KIND_ADVICE);
+    }
+
+    public function createHistoryChipAction(): Action
+    {
+        return $this->chipCreateAction(DoctorChip::KIND_HISTORY);
+    }
+
+    public function editHistoryChipAction(): Action
+    {
+        return $this->chipEditAction(DoctorChip::KIND_HISTORY);
+    }
+
+    public function removeHistoryChipAction(): Action
+    {
+        return $this->chipRemoveAction(DoctorChip::KIND_HISTORY);
+    }
+
+    public function restoreHistoryChipAction(): Action
+    {
+        return $this->chipRestoreAction(DoctorChip::KIND_HISTORY);
     }
 
     public function deletePackAction(): Action

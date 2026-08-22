@@ -3,14 +3,18 @@
 namespace App\Support;
 
 /**
- * Common patient-advice taps for the Rx desk Advice card.
+ * The advice taps every doctor starts with on the Rx desk Advice card.
  *
  * Chip *labels* follow the English staff panel. The *inserted line* is Bangla
  * because the patient (not the doctor) reads the advice box. The doctor can
- * still type anything in the textarea. Saving a line as "mine" is an explicit
- * tap stored in this browser — not inferred from past prescriptions.
+ * still type anything in the textarea.
  *
- * @phpstan-type AdviceChip array{label: string, text: string}
+ * These are a starting point, not the list: a doctor edits, hides or extends
+ * them on **My medicines**, and those departures are stored per doctor as
+ * `DoctorChip` rows keyed by the `key` below. Keep the keys stable — changing
+ * one orphans every doctor's edit of that chip.
+ *
+ * @phpstan-type AdviceChip array{key: string, label: string, text: string}
  */
 class AdviceChips
 {
@@ -20,11 +24,11 @@ class AdviceChips
     public static function all(): array
     {
         return [
-            ['label' => 'Take after food', 'text' => 'খাবারের পর খান'],
-            ['label' => 'Drink plenty of water', 'text' => 'প্রচুর পানি পান করুন'],
-            ['label' => 'Avoid spicy food', 'text' => 'ঝাল খাবার এড়িয়ে চলুন'],
-            ['label' => 'Rest', 'text' => 'বিশ্রাম নিন'],
-            ['label' => 'Come if worse', 'text' => 'অবস্থা খারাপ হলে আবার আসবেন'],
+            ['key' => 'after-food', 'label' => 'Take after food', 'text' => 'খাবারের পর খান'],
+            ['key' => 'plenty-water', 'label' => 'Drink plenty of water', 'text' => 'প্রচুর পানি পান করুন'],
+            ['key' => 'avoid-spicy', 'label' => 'Avoid spicy food', 'text' => 'ঝাল খাবার এড়িয়ে চলুন'],
+            ['key' => 'rest', 'label' => 'Rest', 'text' => 'বিশ্রাম নিন'],
+            ['key' => 'come-if-worse', 'label' => 'Come if worse', 'text' => 'অবস্থা খারাপ হলে আবার আসবেন'],
         ];
     }
 }
