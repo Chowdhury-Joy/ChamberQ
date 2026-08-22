@@ -546,7 +546,7 @@ class LiveQueueControl extends Page implements HasActions, HasTable
                 fn (Booking $record) => $this->callPatientNow($record->id),
                 fn (Booking $record) => $this->reinstatePatient($record->id),
             ))
-            ->poll('3s')
+            ->poll('12s')
             ->paginated(false);
     }
 
