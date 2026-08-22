@@ -26,6 +26,10 @@ class StationsHandoffForm
             ->modalHeading(__('Send to intervention'))
             ->modalDescription(__('Intervention hours are often in the morning, before visiting hours. Choose Same day only if they will stay or come back today.'))
             ->modalSubmitActionLabel(__('Send'))
+            // The sitting list runs long enough to push Send / Cancel off-screen,
+            // so the footer stays pinned the way the visit notes modal does.
+            ->stickyModalHeader()
+            ->stickyModalFooter()
             ->visible(function (...$args) use ($booking): bool {
                 $target = self::resolveBooking($booking, $args);
 
@@ -105,6 +109,9 @@ class StationsHandoffForm
             ->modalHeading(__('Move intervention'))
             ->modalDescription(__('If they cannot come on the booked day, pick another intervention sitting.'))
             ->modalSubmitActionLabel(__('Move'))
+            // Same sitting picker as Send, same scroll problem.
+            ->stickyModalHeader()
+            ->stickyModalFooter()
             ->visible(function (...$args) use ($booking): bool {
                 $target = self::resolveBooking($booking, $args);
 
