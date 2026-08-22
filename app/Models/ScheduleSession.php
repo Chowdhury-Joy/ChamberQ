@@ -198,6 +198,11 @@ class ScheduleSession extends Model
         return $this->hasMany(ScheduleSessionOverride::class);
     }
 
+    public function liveSessions()
+    {
+        return $this->hasMany(LiveSession::class);
+    }
+
     public function minutesPerPatient(): ?int
     {
         return \App\Support\ScheduleSessionPace::minutesPerPatient($this);

@@ -965,5 +965,11 @@
 ## 2026-08-21T11:41:04+0600
 - Outdoor TV HTML stays bookmark-simple integer URLs; portal pads stay phone-only until the patient opts into a password (owner confirm after audit).
 
+## 2026-08-22T10:21:10+0600
+- Added `cascadeOnDelete()` to `live_sessions.schedule_session_id` foreign key (migration `2026_08_22_102000_add_cascade_to_live_sessions_schedule_session_id`) and `ScheduleSession::liveSessions()` relation so deleting a schedule session cascades to related live sessions without FK errors.
+
+## 2026-08-22T14:30:00+0600
+- Consult Screen announces a prepped intervention room: new `bookings.procedure_prepped_at` stamp (migration `2026_08_22_140000_add_procedure_prepped_at_to_bookings`), `ConsultScreen::$preppedInterventionAlerts`, and the four-second spoken card in `components/intervention-ready-alert.blade.php`.
+
 ## 2026-08-22T16:00:00+0600
 - Advice and History chips became per-doctor and editable on My medicines: new `doctor_chips` table (migration `2026_08_22_160000_create_doctor_chips_table`), `DoctorChip` model, `DoctorChipService`, `HistoryChips` defaults, and `ConsultScreen::saveAdviceAsMine()` replacing the ★'s `localStorage` list.

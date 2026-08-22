@@ -93,6 +93,7 @@ class ConsultScreen extends Page implements HasActions
             $this->sharedClinicalWarnings,
             $this->lastVisitRecord,
             $this->currentVisitRecord,
+            $this->preppedInterventionAlerts,
         );
     }
 
@@ -123,6 +124,80 @@ class ConsultScreen extends Page implements HasActions
     public function getCurrentBookingProperty(): ?Booking
     {
         return $this->runningLiveSession?->currentBooking;
+    }
+
+    /**
+     * How long after OT marks a room prepped the consult screen still says so.
+     *
+     * "The room is ready" is a come-now message. A doctor who opens the screen
+     * an hour later must not be told — and read aloud — about a room that has
+     * long since moved on. OT still has **Call doctor** for a second nudge.
+     */
+    private const PREPPED_ALERT_MINUTES = 10;
+
+    /**
+     * Procedures whose room OT has just made ready, for the doctor sitting in
+     * the regular visit chamber.
+     *
+     * Scoped to this doctor's own intervention sittings at this chamber, and to
+     * today: the announcement pulls a doctor out of a consult, so it may only
+     * fire for a room that is actually waiting on him.
+     *
+     * The patient's number on the intervention list — `number`, not `serial`,
+     * because the consult screen deliberately never says "serial" about the
+     * patient in the room (`PatientRecordsStage2Test`) and the two must not be
+     * read as the same thing.
+     *
+     * @return list<array{key: string, number: int, procedure: string, patient: string, speech: string}>
+     */
+    public function getPreppedInterventionAlertsProperty(): array
+    {
+        $session = $this->runningLiveSession?->scheduleSession;
+
+        // Nothing to interrupt in the OT itself — the doctor is already there.
+        if (! $session instanceof ScheduleSession || $session->isInterventionKind()) {
+            return [];
+        }
+
+        $interventionIds = ScheduleSession::query()
+            ->where('chamber_id', $session->chamber_id)
+            ->where('doctor_id', $session->doctor_id)
+            ->where('kind', ScheduleSession::KIND_INTERVENTION)
+            ->pluck('id');
+
+        if ($interventionIds->isEmpty()) {
+            return [];
+        }
+
+        return Booking::query()
+            ->with('feeCatalogItem')
+            ->where('bookable_type', ScheduleSession::class)
+            ->whereIn('bookable_id', $interventionIds)
+            ->where('booking_date', Carbon::today()->toDateString())
+            ->whereNotIn('status', ['cancelled', 'no_show'])
+            ->where('procedure_status', Booking::PROCEDURE_PREPPED)
+            ->where('procedure_prepped_at', '>=', now()->subMinutes(self::PREPPED_ALERT_MINUTES))
+            ->orderBy('procedure_prepped_at')
+            ->get()
+            ->map(function (Booking $procedure): array {
+                $serial = (int) $procedure->serial_number;
+                $name = trim((string) ($procedure->feeCatalogItem?->label ?? ''));
+
+                return [
+                    'key' => $procedure->id.'|'.($procedure->procedure_prepped_at?->timestamp ?? 0),
+                    'number' => $serial,
+                    'procedure' => $name,
+                    'patient' => (string) $procedure->patient_name,
+                    'speech' => $name === ''
+                        ? __('Intervention room is prepared for patient number :n.', ['n' => $serial])
+                        : __('Intervention room is prepared for patient number :n, for :procedure.', [
+                            'n' => $serial,
+                            'procedure' => $name,
+                        ]),
+                ];
+            })
+            ->values()
+            ->all();
     }
 
     public function getCurrentPatientProperty(): ?Patient

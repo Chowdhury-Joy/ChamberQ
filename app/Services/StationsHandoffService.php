@@ -711,6 +711,7 @@ class StationsHandoffService
                 'is_overflow' => $nextSerial > $publishedCap,
                 'status' => 'waiting',
                 'procedure_status' => Booking::PROCEDURE_LOGGED,
+                'procedure_prepped_at' => null,
                 'called_at' => null,
                 'in_chamber_at' => null,
                 'completed_at' => null,
@@ -744,7 +745,15 @@ class StationsHandoffService
             throw new InvalidArgumentException(__('Unknown procedure status.'));
         }
 
-        $booking->update(['procedure_status' => $status]);
+        // The stamp is what the consult screen announces off, so it is written
+        // here — the one place every procedure status change passes through —
+        // rather than at each caller. Re-prepping a row (staff correcting a
+        // mis-tap) restamps it, so the doctor is told again; anything else
+        // clears it, so a room that has moved on cannot keep announcing.
+        $booking->update([
+            'procedure_status' => $status,
+            'procedure_prepped_at' => $status === Booking::PROCEDURE_PREPPED ? now() : null,
+        ]);
     }
 
     /**

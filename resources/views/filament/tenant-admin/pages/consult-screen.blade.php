@@ -28,6 +28,10 @@
         'context' => 'consult',
     ])
 
+    @include('filament.tenant-admin.components.intervention-ready-alert', [
+        'alerts' => $this->preppedInterventionAlerts,
+    ])
+
     {{--
         This panel ships Filament's precompiled stylesheet, so custom visual
         elements below are built with Filament's own CSS variables (colors,

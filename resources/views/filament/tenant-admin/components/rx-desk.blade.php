@@ -143,6 +143,7 @@
         pulseBpm: {{ \Illuminate\Support\Js::from($state['pulse_bpm'] ?? '') }},
         spo2Percent: {{ \Illuminate\Support\Js::from($state['spo2_percent'] ?? '') }},
         temperatureF: {{ \Illuminate\Support\Js::from($state['temperature_f'] ?? '') }},
+        deskVitalsBy: {{ \Illuminate\Support\Js::from($written?->vitalsTakenAtDesk() ? ($written->vitalsRecordedBy?->name ?? '') : null) }},
         lastWeightKg: {{ \Illuminate\Support\Js::from($lastVisitRecord?->weight_kg) }},
         lastBpSystolic: {{ \Illuminate\Support\Js::from($lastVisitRecord?->bp_systolic) }},
         lastBpDiastolic: {{ \Illuminate\Support\Js::from($lastVisitRecord?->bp_diastolic) }},
@@ -360,10 +361,17 @@
             <section class="cs-rx-desk__card">
                 <h3>{{ __('On examination') }}</h3>
                 {{--
-                    Vitals are never pre-filled. Last visit's reading is grey
-                    reference only — a number carried forward would put a
-                    measurement the doctor never took onto a document he signs.
+                    Vitals are never pre-filled from an *earlier* visit. Last
+                    visit's reading is grey reference only — a number carried
+                    forward would put a measurement the doctor never took onto a
+                    document he signs. Today's desk reading is different: it was
+                    measured on this patient, minutes ago, and it says who took
+                    it.
                 --}}
+                <p class="cs-rx-desk__hint cs-rx-desk__desk-vitals" x-show="vitalsStillFromDesk" x-cloak>
+                    <span x-show="deskVitalsBy" x-text="@js(__('Taken at the desk by :name — change anything you re-measure.')).replace(':name', deskVitalsBy)"></span>
+                    <span x-show="!deskVitalsBy">{{ __('Taken at the desk — change anything you re-measure.') }}</span>
+                </p>
                 <div class="cs-rx-desk__oe-table">
                     <label class="cs-rx-desk__vital">
                         <span class="cs-rx-desk__vital-label">{{ __('Wt') }}</span>
@@ -975,6 +983,19 @@
             pulseBpm: config.pulseBpm ?? '',
             spo2Percent: config.spo2Percent ?? '',
             temperatureF: config.temperatureF ?? '',
+            // Name of the prep staff who measured, or null when the doctor is
+            // the one taking these. `deskVitalsSeed` freezes what the desk
+            // handed over, so the credit disappears the moment the doctor
+            // re-measures anything rather than hanging over their own number.
+            deskVitalsBy: config.deskVitalsBy ?? null,
+            deskVitalsSeed: {
+                weightKg: config.weightKg ?? '',
+                bpSystolic: config.bpSystolic ?? '',
+                bpDiastolic: config.bpDiastolic ?? '',
+                pulseBpm: config.pulseBpm ?? '',
+                spo2Percent: config.spo2Percent ?? '',
+                temperatureF: config.temperatureF ?? '',
+            },
             lastWeightKg: config.lastWeightKg ?? null,
             lastBpSystolic: config.lastBpSystolic ?? null,
             lastBpDiastolic: config.lastBpDiastolic ?? null,
@@ -1350,6 +1371,15 @@
                 const needle = (chip || '').trim().toLowerCase();
 
                 return this.findingParts().some((part) => part.toLowerCase() === needle);
+            },
+
+            // String compare on purpose: these are the raw input values, and a
+            // doctor who retypes 120 over 120 has not re-measured anything.
+            get vitalsStillFromDesk() {
+                if (this.deskVitalsBy === null) return false;
+
+                return Object.entries(this.deskVitalsSeed)
+                    .every(([key, seeded]) => String(this[key] ?? '') === String(seeded ?? ''));
             },
 
             toggleFinding(chip) {

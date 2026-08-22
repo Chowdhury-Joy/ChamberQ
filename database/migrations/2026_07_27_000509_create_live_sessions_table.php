@@ -32,8 +32,8 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('tenant_id')->references('id')->on('tenants')->cascadeOnDelete();
-            $table->foreign('schedule_session_id')->references('id')->on('schedule_sessions');
-            $table->foreign('current_booking_id')->references('id')->on('bookings');
+            $table->foreign('schedule_session_id')->references('id')->on('schedule_sessions')->cascadeOnDelete();
+            $table->foreign('current_booking_id')->references('id')->on('bookings')->nullOnDelete();
             $table->unique(['tenant_id', 'schedule_session_id', 'session_date']);
         });
     }

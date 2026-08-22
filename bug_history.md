@@ -1698,3 +1698,12 @@
  <root_cause>`config/auth.php` still used Laravel’s `10800` default. Session lifetime already shipped `525600` in `config/session.php` for the same missing-env hole.</root_cause>
  <prevention_rule>`AUTH_PASSWORD_TIMEOUT` defaults to `31536000` in `config/auth.php`, not only in `.env.example`. Pin `SourceHygieneTest::test_password_confirmation_timeout_default_is_one_year`. Do not shorten it without `change session expiry`.</prevention_rule>
 </bug>
+
+## 2026-08-22T10:21:10+0600
+
+<bug>
+ <category>Code</category>
+ <symptom>Deleting a schedule session from the admin panel failed with SQL foreign key constraint violation (SQLSTATE 23000 error 1451) on MySQL when corresponding live sessions existed for that schedule session.</symptom>
+ <root_cause>`live_sessions.schedule_session_id` foreign key was defined without `cascadeOnDelete()`, causing MySQL foreign key RESTRICT checks to fail on parent schedule session deletion.</root_cause>
+ <prevention_rule>Always define `->cascadeOnDelete()` on child operational session and event tables referencing schedule sessions. Pin `ScheduleSessionCascadeDeleteTest::test_deleting_schedule_session_cascades_and_removes_live_sessions`.</prevention_rule>
+</bug>

@@ -3610,15 +3610,23 @@
  <reason>A TV that needs a new secret every morning is a chamber that cannot turn the board on. A pad lock nobody asked for already failed once (2026-08-18). The trade-off is accepted: anyone who can guess a sitting id can read today’s names on the public board, and anyone who knows a phone can read pads until that patient sets a password.</reason>
 </decision>
 
+## 2026-08-22T10:21:10+0600
+
+<decision>
+ <category>Code</category>
+ <context>Deleting a schedule session from the admin panel failed with SQL foreign key constraint violation (SQLSTATE 23000 error 1451) on MySQL because `live_sessions.schedule_session_id` lacked `ON DELETE CASCADE`.</context>
+ <action>Added `->cascadeOnDelete()` to `live_sessions.schedule_session_id` foreign key via migration `2026_08_22_102000_add_cascade_to_live_sessions_schedule_session_id` and updated `create_live_sessions_table` migration with `cascadeOnDelete()` for fresh runs; added `ScheduleSession::liveSessions()` Eloquent relation.</action>
+ <reason>Live sessions are child operational state of schedule sessions. When a schedule session is removed, its associated runtime live sessions should automatically cascade-delete rather than locking the parent row from deletion.</reason>
+</decision>
 
 
-## 2026-08-22T17:30:00+0600
+## 2026-08-22T14:30:00+0600
 
 <decision>
  <category>UI_UX</category>
- <context>The prep desk's **Outdoor vitals** took three readings — weight and the two blood-pressure numbers — while the doctor's O/E table asked for five. Pulse, SpO₂ and temperature had no desk box at all, so the doctor re-measured them on a patient who had just been through the desk. Worse, the button was gated on the intervention/OT **stations module**: an ordinary chamber that had hired a prep staff member had no way to hand the cuff over, and the one job the desk existed to do never appeared. The desk's own boxes were also hand-written, with none of the range rules the doctor's boxes carry, so a 900 °F typed at the desk was accepted where the same keystrokes in the chamber were refused.</context>
- <action>The desk now takes the whole O/E set. `VisitNotesFormSchema::vitalsFields()` is one definition of the six inputs — labels, ranges, BP-pair rule — used by both the doctor's pad and `OutdoorVitalsAction`, with `VITAL_FIELDS` naming the set for the save path. `canRecordVitals()` drops the stations requirement and asks only whether the login holds the **Prep** desk job. `hasOutdoorVitals()` now counts pulse, SpO₂ and temperature, so a patient who refused the scale stops showing "vitals needed". Attribution moved to its own column, `visit_records.vitals_recorded_by`: the desk stamps it, no longer overwrites `recorded_by`, and the doctor's pad labels the card "Taken at the desk by :name — change anything you re-measure." Every box stays editable, and changing any one of them clears the attribution for the whole set.</action>
- <reason>Taking vitals is a desk job, not a stations feature — if the doctor has staff, the staff take the readings (owner, 2026-08-22). The boxes stay editable because re-checking a high BP in the chamber is the normal next step, not an exception; a read-only card would have left a doctor who re-measured with nowhere to put the new number. The attribution had to be a separate column because the doctor completes the same row minutes later and `recorded_by` was already gone by the time the pad rendered — and it has to clear on edit, or "taken at the desk by Rahim" would sit above a figure Rahim never took. One consequence is deliberate and visible: on a chamber with prep staff, **Call** now waits under More on a waiting row until the reading exists, which is the desk being told to measure before it calls the patient in.</reason>
+ <context>OT staff tap **Mark prepped** when the intervention room is ready, but the doctor is in the visit chamber with the Consult Screen open and had no way to learn it without someone walking over. `procedure_status` alone carries no time, so a screen opened later would announce every prepped row of the day.</context>
+ <action>Stamp `bookings.procedure_prepped_at` inside `StationsHandoffService::advanceProcedureStatus()` — the one point every status change passes through — and clear it on any other status or on Move intervention. Consult Screen shows a four-second card and speaks "Intervention room is prepared for patient number :n, for :procedure." through browser TTS, only for that doctor's own OT sitting at that chamber, only today, and only within 10 minutes of the stamp. Suppressed when the running sitting is the OT itself. The card is dismissible on tap; the announcement never repeats for the same stamp (wire:key trigger + localStorage).</action>
+ <reason>"The room is ready" is a come-now message; announcing a stale one pulls a doctor out of a consult for nothing. The 3s Consult Screen poll would otherwise re-announce every tick, so the alert had to be keyed to the stamp rather than to the status. Speech is best-effort — a blocked or missing voice still leaves the card on screen, because the message must not depend on audio.</reason>
 </decision>
 
 
